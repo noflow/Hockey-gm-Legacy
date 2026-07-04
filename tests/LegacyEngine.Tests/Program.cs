@@ -9,6 +9,7 @@ var eventTests = new EventEngineTests();
 var worldTests = new WorldEngineTests();
 var recruitingTests = new RecruitingEngineTests();
 var contractTests = new ContractEngineTests();
+var draftTests = new DraftEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -89,6 +90,21 @@ runner.Run("junior education package clause works", contractTests.JuniorEducatio
 runner.Run("junior housing support clause works", contractTests.JuniorHousingSupportClauseWorks);
 runner.Run("contract events are created", contractTests.EventsCreatedForOfferSignRejectTerminate);
 runner.Run("contracts do not modify roster state", contractTests.NoRosterModificationOccurs);
+runner.Run("draft can be created", draftTests.DraftCreation);
+runner.Run("draft order generated from reverse standings", draftTests.DraftOrderGeneratedFromReverseStandings);
+runner.Run("draft creates correct number of picks", draftTests.CorrectNumberOfPicksCreated);
+runner.Run("draft valid selection succeeds", draftTests.ValidSelectionSucceeds);
+runner.Run("draft prevents duplicate prospect selection", draftTests.SameProspectCannotBeSelectedTwice);
+runner.Run("draft invalid round fails", draftTests.InvalidRoundFails);
+runner.Run("draft selection after completion fails", draftTests.SelectionAfterCompletionFails);
+runner.Run("draft can be marked completed", draftTests.DraftCanBeMarkedCompleted);
+runner.Run("draft board can add prospect", draftTests.DraftBoardCanAddProspect);
+runner.Run("draft board can update rank", draftTests.DraftBoardCanUpdateRank);
+runner.Run("draft board can remove prospect", draftTests.DraftBoardCanRemoveProspect);
+runner.Run("draft board entry can reference scouting report", draftTests.DraftBoardEntryCanReferenceScoutingReport);
+runner.Run("draft events are created", draftTests.EventsCreatedForStartSelectionCompletion);
+runner.Run("draft respects rule engine validation", draftTests.RuleEngineValidationIsRespected);
+runner.Run("draft does not modify roster state", draftTests.NoRosterModificationOccurs);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

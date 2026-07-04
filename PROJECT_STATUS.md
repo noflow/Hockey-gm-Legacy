@@ -27,14 +27,15 @@ The five foundation pillars remain:
 - Milestone 008 - World Engine
 - Milestone 009 - Recruiting v1
 - Milestone 010 - Contracts v1
+- Milestone 011 - Draft v1
 
 ## Current Milestone
 
-011 - Draft
+012 - Next Core Engine
 
 ## Current Goal
 
-Plan Draft as the next standalone LegacyEngine module.
+Plan the next standalone LegacyEngine module.
 
 ## Why Relationship Engine Was Next
 
@@ -44,11 +45,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-`engine/LegacyEngine/Draft`
+TBD
 
 ## Next Milestones
 
-1. Draft
+1. TBD
 
 ## Build Rule
 

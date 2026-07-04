@@ -161,3 +161,21 @@ The first build target includes:
 - optional RuleEngine validation for league-disallowed clauses
 
 Contracts v1 supports junior agreements and staff/GM/scout/coach contracts. It does not implement a full CBA, salary cap machinery, LTIR, arbitration, offer sheets, buyouts, trades, or roster modification.
+
+## Draft
+
+Milestone 011 adds the standalone Draft v1 system under `LegacyEngine.Draft`.
+
+The first build target includes:
+
+- annual draft creation
+- draft status
+- draft order from reverse standings
+- draft rounds and picks
+- draft selections
+- draft eligibility inputs
+- draft board entries with scouting report references and confidence
+- light RuleEngine validation for draft enabled, round validity, and eligibility
+- light EventEngine event creation for draft start, selection, and completion
+
+Draft v1 does not implement pick trading, draft lottery, live draft clock, roster changes, or War Room UI.
