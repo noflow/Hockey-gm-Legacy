@@ -34,7 +34,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Human Intelligence
 - Alpha Daily Simulation Pipeline
 
-Alpha 0.3 - Daily Simulation Pipeline connects the alpha world loop: advance time, process events, decay relationships, update development and injury recovery, progress recruiting lightly, generate communication messages, and return inbox-ready simulation results.
+Alpha 0.4 - Console Playable Demo makes AlphaConsole usable as a basic terminal GM demo with readable owner, staff, roster, recruit, scouting, draft board, relationship, inbox, and daily advance screens.
 
 ## Alpha Console
 
@@ -49,12 +49,15 @@ Available commands:
 - `help`
 - `status`
 - `inbox`
-- `advance`
-- `advance 7`
+- `owner`
+- `staff`
 - `roster`
 - `recruits`
+- `scouting`
 - `draftboard`
-- `clear`
+- `relationships`
+- `advance`
+- `advance 7`
 - `exit`
 
 First rulebook:

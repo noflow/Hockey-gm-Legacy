@@ -34,11 +34,12 @@ The five foundation pillars remain:
 - Alpha 0.1 - Integration Layer
 - Alpha 0.2 - Command-Line Playtest Harness
 - Alpha 0.3 - Daily Simulation Pipeline
+- Alpha 0.4 - Console Playable Demo
 - Milestone 016 - Human Intelligence System v1
 
 ## Current Milestone
 
-Alpha 0.4 - Next Engine Loop
+Alpha 0.5 - Next Engine Loop
 
 ## Current Goal
 

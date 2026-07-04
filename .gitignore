@@ -9,6 +9,7 @@ obj/
 .nuget/
 .appdata/
 .buildcheck/
+.alpha-bin/
 
 # Python
 __pycache__/
