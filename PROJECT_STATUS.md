@@ -32,10 +32,11 @@ The five foundation pillars remain:
 - Milestone 013 - Player Development v1
 - Milestone 014 - Injury Engine v1
 - Alpha 0.1 - Integration Layer
+- Alpha 0.2 - Command-Line Playtest Harness
 
 ## Current Milestone
 
-Alpha 0.2 - Next Engine Loop
+Alpha 0.3 - Next Engine Loop
 
 ## Current Goal
 

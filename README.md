@@ -30,8 +30,30 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Player Development
 - Injuries
 - Alpha Integration
+- Alpha Console
 
-Alpha 0.1 - Integration Layer creates the first simple engine-only loop: bootstrap an alpha world, process one day through WorldEngine, process queued events, and return inbox-ready results without UI or Godot.
+Alpha 0.2 - Command-Line Playtest Harness adds a terminal-based way to bootstrap the alpha world, inspect status, view inbox items, advance days, and inspect roster, recruits, and draft board without UI or Godot.
+
+## Alpha Console
+
+Run the engine-only playtest harness:
+
+```bash
+dotnet run --project tools/AlphaConsole
+```
+
+Available commands:
+
+- `help`
+- `status`
+- `inbox`
+- `advance`
+- `advance 7`
+- `roster`
+- `recruits`
+- `draftboard`
+- `clear`
+- `exit`
 
 First rulebook:
 
