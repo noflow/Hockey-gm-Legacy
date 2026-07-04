@@ -76,3 +76,20 @@ The first build target includes:
 - career timeline entries
 
 Every human in the game starts as a Person. Roles attach to people; they do not replace them.
+
+## Relationships
+
+Milestone 006 adds the standalone Relationship Engine under `LegacyEngine.Relationships`.
+
+The first build target includes:
+
+- directional relationships
+- independent reverse relationships
+- relationship types
+- trust, respect, confidence, loyalty, influence, friendship, and rivalry
+- relationship changes with clamped values
+- last interaction tracking
+- relationship history entries
+- conservative decay over time
+
+People are permanent. Roles define what they do. Relationships define how they feel about each other.

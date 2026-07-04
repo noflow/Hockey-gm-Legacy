@@ -4,6 +4,7 @@ var tests = new RuleEngineTests();
 var ownerTests = new OwnerEngineTests();
 var scoutingTests = new ScoutingEngineTests();
 var personTests = new PersonEngineTests();
+var relationshipTests = new RelationshipEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -33,6 +34,16 @@ runner.Run("person can hold multiple roles", personTests.HoldingMultipleRoles);
 runner.Run("person reputation changes are clamped and recorded", personTests.ReputationChanges);
 runner.Run("person status changes are recorded", personTests.StatusChanges);
 runner.Run("person career timeline entries are stored chronologically", personTests.CareerTimelineEntries);
+runner.Run("relationship engine creates directional relationships", relationshipTests.CreateRelationship);
+runner.Run("relationship reverse direction remains independent", relationshipTests.DirectionalityAndReverseIndependence);
+runner.Run("relationship trust can increase and decrease", relationshipTests.TrustChanges);
+runner.Run("relationship dimensions can change", relationshipTests.AllDimensionsChange);
+runner.Run("relationship values clamp between zero and one hundred", relationshipTests.ValueClamping);
+runner.Run("relationship changes update last interaction and history", relationshipTests.LastInteractionAndHistory);
+runner.Run("relationship stores multiple history entries", relationshipTests.MultipleHistoryEntries);
+runner.Run("relationship decay moves trust toward neutral", relationshipTests.DecayMovesTrustTowardNeutral);
+runner.Run("relationship decay reduces friendship and rivalry slowly", relationshipTests.DecayReducesFriendshipAndRivalry);
+runner.Run("inactive relationship does not change by default", relationshipTests.InactiveRelationshipDoesNotChangeByDefault);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
