@@ -110,3 +110,37 @@ The first build target includes:
 - event history queries
 
 The v1 Event Engine records, queues, processes, and archives events. It does not directly mutate People, Relationships, Owners, Scouting, or Rule Engine state.
+
+## World
+
+Milestone 008 adds the standalone World Engine under `LegacyEngine.World`.
+
+The first build target includes:
+
+- world identity
+- world clock and date
+- world phase
+- world settings
+- world state
+- daily simulation results
+- simple EventEngine coordination
+
+The v1 World Engine coordinates time and queued event processing only. It does not directly mutate People, Owners, Scouting, Relationships, or Rule Engine state.
+
+## Recruiting
+
+Milestone 009 adds the standalone Recruiting v1 system under `LegacyEngine.Recruiting`.
+
+The first build target includes:
+
+- recruit profiles
+- recruit status
+- recruit priorities
+- organization interest tracking
+- recruiting pitches
+- recruiting promises
+- recruiting visits
+- recruiting decision results
+- light EventEngine event creation for offers, commitments, and rejections
+
+Recruiting v1 considers opportunity, development, education, family comfort, promises, trust, facilities, and pathway. It does not create contracts or modify rosters.

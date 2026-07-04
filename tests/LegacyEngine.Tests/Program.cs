@@ -6,6 +6,8 @@ var scoutingTests = new ScoutingEngineTests();
 var personTests = new PersonEngineTests();
 var relationshipTests = new RelationshipEngineTests();
 var eventTests = new EventEngineTests();
+var worldTests = new WorldEngineTests();
+var recruitingTests = new RecruitingEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -52,6 +54,27 @@ runner.Run("event engine processes queued events in date order", eventTests.Proc
 runner.Run("event engine marks processed events and archives history", eventTests.ProcessAndArchiveEvents);
 runner.Run("event history can query by person organization type and date range", eventTests.QueryEventHistory);
 runner.Run("event engine does not mutate external domain state", eventTests.EventEngineDoesNotMutateExternalDomainState);
+runner.Run("world engine creates a world with unique id", worldTests.WorldCreation);
+runner.Run("world engine stores current date", worldTests.CurrentDateStored);
+runner.Run("world engine advances one day", worldTests.AdvanceOneDay);
+runner.Run("world engine advances multiple days", worldTests.AdvanceMultipleDays);
+runner.Run("world engine updates season year", worldTests.SeasonYearUpdates);
+runner.Run("world engine phase can be set", worldTests.PhaseCanBeSet);
+runner.Run("world engine returns daily simulation result", worldTests.DailySimulationResultReturned);
+runner.Run("world engine processes queued events", worldTests.EventQueueProcessingIsCalled);
+runner.Run("world engine does not mutate external domain state", worldTests.WorldEngineDoesNotMutateExternalDomainState);
+runner.Run("recruit profile can be created", recruitingTests.RecruitProfileCreation);
+runner.Run("recruit starts as available", recruitingTests.RecruitStartsAsAvailable);
+runner.Run("recruit interest can increase and decrease", recruitingTests.InterestCanIncreaseAndDecrease);
+runner.Run("recruiting offer changes status to offered", recruitingTests.OfferChangesStatusToOffered);
+runner.Run("recruiting visit can be recorded", recruitingTests.VisitCanBeRecorded);
+runner.Run("recruiting promise can be added", recruitingTests.PromiseCanBeAdded);
+runner.Run("recruiting decision can commit", recruitingTests.DecisionCanCommit);
+runner.Run("recruiting decision can reject", recruitingTests.DecisionCanReject);
+runner.Run("higher interest improves recruiting decision score", recruitingTests.HigherInterestImprovesDecisionScore);
+runner.Run("promises influence recruiting decision", recruitingTests.PromisesInfluenceDecision);
+runner.Run("recruiting creates events for offer commit and reject", recruitingTests.EventsCreatedForOfferCommitAndReject);
+runner.Run("recruiting does not modify roster state", recruitingTests.NoRosterModificationOccurs);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
