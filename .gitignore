@@ -8,6 +8,7 @@ bin/
 obj/
 .nuget/
 .appdata/
+.buildcheck/
 
 # Python
 __pycache__/

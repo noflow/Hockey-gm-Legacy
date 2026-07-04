@@ -31,8 +31,9 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Injuries
 - Alpha Integration
 - Alpha Console
+- Human Intelligence
 
-Alpha 0.2 - Command-Line Playtest Harness adds a terminal-based way to bootstrap the alpha world, inspect status, view inbox items, advance days, and inspect roster, recruits, and draft board without UI or Godot.
+Milestone 016 - Human Intelligence System v1 adds an explainable decision-support engine that scores options using weighted factors, personality inputs, relationship inputs, and context inputs without building full AI agents.
 
 ## Alpha Console
 

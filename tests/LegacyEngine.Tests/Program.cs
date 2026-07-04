@@ -14,6 +14,7 @@ var rosterTests = new RosterEngineTests();
 var developmentTests = new DevelopmentEngineTests();
 var injuryTests = new InjuryEngineTests();
 var alphaIntegrationTests = new AlphaIntegrationTests();
+var humanIntelligenceTests = new HumanIntelligenceEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -168,6 +169,18 @@ runner.Run("alpha daily simulation processes event queue", alphaIntegrationTests
 runner.Run("alpha inbox items can be generated", alphaIntegrationTests.InboxItemsCanBeGenerated);
 runner.Run("alpha registry shares event engine", alphaIntegrationTests.RegistrySharesEventEngine);
 runner.Run("alpha integration layer has no UI or Godot dependency", alphaIntegrationTests.IntegrationLayerHasNoUiOrGodotDependency);
+runner.Run("human intelligence decision option can be created", humanIntelligenceTests.DecisionOptionCreation);
+runner.Run("human intelligence decision context can be created", humanIntelligenceTests.DecisionContextCreation);
+runner.Run("human intelligence factor weighting affects score", humanIntelligenceTests.FactorWeighting);
+runner.Run("human intelligence selects highest scored option", humanIntelligenceTests.HighestScoredOptionSelected);
+runner.Run("human intelligence returns ranked options", humanIntelligenceTests.RankedOptionsReturned);
+runner.Run("human intelligence personality affects score", humanIntelligenceTests.PersonalityAffectsScore);
+runner.Run("human intelligence relationship trust affects score", humanIntelligenceTests.RelationshipTrustAffectsScore);
+runner.Run("human intelligence risk tolerance improves risky option", humanIntelligenceTests.HighRiskToleranceImprovesRiskyOptionScore);
+runner.Run("human intelligence loyalty improves loyal option", humanIntelligenceTests.HighLoyaltyImprovesLoyalOptionScore);
+runner.Run("human intelligence returns plain-language reasons", humanIntelligenceTests.PlainLanguageReasonsReturned);
+runner.Run("human intelligence deterministic tests are stable", humanIntelligenceTests.DeterministicTestsAreStable);
+runner.Run("human intelligence module has no UI or Godot dependency", humanIntelligenceTests.NoUiOrGodotDependencyExists);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
