@@ -57,6 +57,16 @@ internal sealed class AlphaIntegrationTests
         Assert.True(snapshot.DraftBoard.Entries.Count >= 3, "Alpha draft board should include recruit prospects.");
     }
 
+    public void BootstrapCreatesPipelineWorldObjects()
+    {
+        var (_, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+
+        Assert.True(snapshot.CoachPerson is not null, "Alpha world should include a coach person.");
+        Assert.True(snapshot.Relationships.Count > 0, "Alpha world should include relationships.");
+        Assert.True(snapshot.DevelopmentProfiles.Count > 0, "Alpha world should include development profiles.");
+        Assert.True(snapshot.Injuries.Count > 0, "Alpha world should include injury records.");
+    }
+
     public void AdvanceOneDayAdvancesDate()
     {
         var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
@@ -73,6 +83,16 @@ internal sealed class AlphaIntegrationTests
 
         Assert.True(!string.IsNullOrWhiteSpace(result.Summary), "Alpha simulation result should include summary text.");
         Assert.True(result.WorldSnapshot.People.Count > 0, "Alpha simulation result should include a world snapshot.");
+        Assert.True(result.LogEntries.Count > 0, "Alpha simulation result should include pipeline log entries.");
+    }
+
+    public void AdvanceMultipleDaysChangesDateCorrectly()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var results = new DailySimulationCoordinator().AdvanceDays(registry, snapshot, 7);
+
+        Assert.Equal(7, results.Count);
+        Assert.Equal(new DateOnly(2026, 9, 8), results[^1].CurrentDate);
     }
 
     public void EventQueueIsProcessed()
@@ -83,7 +103,7 @@ internal sealed class AlphaIntegrationTests
         var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
 
         Assert.True(result.ProcessedEventCount > 0, "Alpha daily simulation should process queued events.");
-        Assert.Equal(0, registry.EventEngine.Queue.Count);
+        Assert.True(registry.EventEngine.History.Count >= result.ProcessedEventCount, "Processed events should be archived into event history.");
     }
 
     public void InboxItemsCanBeGenerated()
@@ -93,6 +113,72 @@ internal sealed class AlphaIntegrationTests
 
         Assert.True(result.InboxItems.Count > 0, "Important processed events should become inbox items.");
         Assert.True(result.InboxItems.Any(item => item.EventType == LegacyEventType.OwnerGoalSet), "Owner goal event should become an inbox item.");
+    }
+
+    public void RelationshipDecayRuns()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var originalTrust = snapshot.Relationships[0].Trust;
+        var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
+
+        Assert.True(result.WorldSnapshot.Relationships[0].Trust < originalTrust, "Relationship trust should decay toward neutral.");
+        Assert.True(result.LogEntries.Any(item => item.Step == DailySimulationStep.ApplyRelationshipDecay), "Relationship decay step should be logged.");
+    }
+
+    public void DevelopmentUpdateStepRuns()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
+
+        Assert.Equal(result.CurrentDate, result.WorldSnapshot.DevelopmentProfiles[0].LastUpdated);
+        Assert.True(result.LogEntries.Any(item => item.Step == DailySimulationStep.ApplyPlayerDevelopmentUpdates), "Development update step should be logged.");
+    }
+
+    public void InjuryRecoveryStepRuns()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var originalProgress = snapshot.Injuries[0].RecoveryProgress;
+        var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
+
+        Assert.True(result.WorldSnapshot.Injuries[0].RecoveryProgress > originalProgress, "Injury recovery should progress.");
+        Assert.True(result.LogEntries.Any(item => item.Step == DailySimulationStep.ApplyInjuryRecoveryUpdates), "Injury recovery step should be logged.");
+    }
+
+    public void CommunicationMessagesGeneratedFromImportantEvents()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
+
+        Assert.True(result.CommunicationMessages.Count > 0, "Important events should generate communication messages.");
+        Assert.True(result.CommunicationMessages.Any(item => item.SourceEventType == LegacyEventType.PlayerInjured), "Player injury event should generate a communication message.");
+    }
+
+    public void PipelineOrderIsStable()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
+        var steps = result.LogEntries.Select(item => item.Step).ToArray();
+
+        Assert.Equal(DailySimulationStep.AdvanceWorldClock, steps[0]);
+        Assert.Equal(DailySimulationStep.ProcessQueuedEvents, steps[1]);
+        Assert.Equal(DailySimulationStep.ApplyRelationshipDecay, steps[2]);
+        Assert.Equal(DailySimulationStep.ApplyPlayerDevelopmentUpdates, steps[3]);
+        Assert.Equal(DailySimulationStep.ApplyInjuryRecoveryUpdates, steps[4]);
+        Assert.Equal(DailySimulationStep.CheckContractStatuses, steps[5]);
+        Assert.Equal(DailySimulationStep.ProgressRecruiting, steps[6]);
+        Assert.Equal(DailySimulationStep.GenerateCommunicationMessages, steps[7]);
+        Assert.Equal(DailySimulationStep.ConvertInboxItems, steps[8]);
+        Assert.Equal(DailySimulationStep.ReturnSimulationResult, steps[9]);
+    }
+
+    public void PipelineResultContainsSnapshotDateLogAndInbox()
+    {
+        var (registry, snapshot) = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
+        var result = new DailySimulationCoordinator().AdvanceOneDay(registry, snapshot);
+
+        Assert.Equal(result.CurrentDate, result.WorldSnapshot.CurrentDate);
+        Assert.True(result.LogEntries.Count == 10, "Daily pipeline should return all pipeline log entries.");
+        Assert.True(result.InboxItems.Count > 0, "Daily pipeline should return inbox items.");
     }
 
     public void RegistrySharesEventEngine()

@@ -1,7 +1,10 @@
 using LegacyEngine.Draft;
+using LegacyEngine.Development;
+using LegacyEngine.Injuries;
 using LegacyEngine.Owners;
 using LegacyEngine.People;
 using LegacyEngine.Recruiting;
+using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
 using LegacyEngine.Scouting;
 using LegacyEngine.World;
@@ -15,11 +18,15 @@ public sealed record AlphaWorldSnapshot(
     Person GeneralManager,
     Scout Scout,
     Person ScoutPerson,
+    Person? CoachPerson,
     IReadOnlyList<Person> People,
     IReadOnlyList<Person> Players,
     IReadOnlyList<RecruitProfile> Recruits,
     Roster Roster,
-    DraftBoard DraftBoard)
+    DraftBoard DraftBoard,
+    IReadOnlyList<Relationship> Relationships,
+    IReadOnlyList<PlayerDevelopmentProfile> DevelopmentProfiles,
+    IReadOnlyList<Injury> Injuries)
 {
     public DateOnly CurrentDate => WorldState.CurrentDate.Value;
 
@@ -30,6 +37,7 @@ public sealed record AlphaWorldSnapshot(
         GeneralManager.Validate();
         Scout.Validate();
         ScoutPerson.Validate();
+        CoachPerson?.Validate();
         Roster.Validate();
         DraftBoard.Validate();
 
@@ -51,6 +59,21 @@ public sealed record AlphaWorldSnapshot(
         if (Recruits.Count == 0)
         {
             throw new ArgumentException("Alpha world must contain recruits.", nameof(Recruits));
+        }
+
+        foreach (var relationship in Relationships)
+        {
+            relationship.Validate();
+        }
+
+        foreach (var profile in DevelopmentProfiles)
+        {
+            profile.Validate();
+        }
+
+        foreach (var injury in Injuries)
+        {
+            injury.Validate();
         }
     }
 }

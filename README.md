@@ -32,8 +32,9 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha Integration
 - Alpha Console
 - Human Intelligence
+- Alpha Daily Simulation Pipeline
 
-Milestone 016 - Human Intelligence System v1 adds an explainable decision-support engine that scores options using weighted factors, personality inputs, relationship inputs, and context inputs without building full AI agents.
+Alpha 0.3 - Daily Simulation Pipeline connects the alpha world loop: advance time, process events, decay relationships, update development and injury recovery, progress recruiting lightly, generate communication messages, and return inbox-ready simulation results.
 
 ## Alpha Console
 

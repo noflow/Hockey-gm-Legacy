@@ -1,8 +1,11 @@
 using LegacyEngine.Draft;
+using LegacyEngine.Development;
 using LegacyEngine.Events;
+using LegacyEngine.Injuries;
 using LegacyEngine.Owners;
 using LegacyEngine.People;
 using LegacyEngine.Recruiting;
+using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
@@ -19,8 +22,10 @@ public sealed class AlphaWorldBootstrapper
             .AddRole(new PersonRole("role-gm-001", PersonRoleType.GeneralManager, organizationId, startDate, null, "General Manager"));
         var scoutPerson = CreatePerson("person-scout-001", "Mara", "Keane", Gender.Female, new DateOnly(1979, 7, 19), "Canada", "Halifax, NS")
             .AddRole(new PersonRole("role-scout-001", PersonRoleType.Scout, organizationId, startDate, null, "Regional Scout"));
+        var coachPerson = CreatePerson("person-coach-001", "Theo", "Larsen", Gender.Male, new DateOnly(1975, 11, 6), "Canada", "Red Deer, AB")
+            .AddRole(new PersonRole("role-coach-001", PersonRoleType.Coach, organizationId, startDate, null, "Head Coach"));
         var players = CreatePlayers(startDate);
-        var people = new[] { gm, scoutPerson }.Concat(players).ToArray();
+        var people = new[] { gm, scoutPerson, coachPerson }.Concat(players).ToArray();
 
         var owner = new Owner(
             OwnerId: "owner-001",
@@ -70,6 +75,22 @@ public sealed class AlphaWorldBootstrapper
                 ProjectionText: "Useful junior prospect with room to grow."));
         }
 
+        var relationships = CreateRelationships(gm, scoutPerson, coachPerson, players, startDate);
+        var developmentProfiles = CreateDevelopmentProfiles(registry, players, startDate);
+        var injuries = new[]
+        {
+            registry.InjuryEngine.CreateInjury(
+                players[1].PersonId,
+                startDate,
+                InjuryBodyPart.Shoulder,
+                InjuryType.Sprain,
+                InjurySeverity.Minor,
+                expectedReturnDate: startDate.AddDays(7),
+                recurrenceRisk: 10,
+                longTermImpact: 4,
+                injuryId: "injury-alpha-001").Injury
+        };
+
         QueueBootstrapEvent(registry.EventEngine, startDate, organizationId, gm.PersonId);
 
         var snapshot = new AlphaWorldSnapshot(
@@ -79,11 +100,15 @@ public sealed class AlphaWorldBootstrapper
             GeneralManager: gm,
             Scout: scout,
             ScoutPerson: scoutPerson,
+            CoachPerson: coachPerson,
             People: people,
             Players: players,
             Recruits: recruits,
             Roster: roster,
-            DraftBoard: draftBoard);
+            DraftBoard: draftBoard,
+            Relationships: relationships,
+            DevelopmentProfiles: developmentProfiles,
+            Injuries: injuries);
         snapshot.Validate();
         return snapshot;
     }
@@ -142,6 +167,59 @@ public sealed class AlphaWorldBootstrapper
         person.Validate();
         return person;
     }
+
+    private static IReadOnlyList<Relationship> CreateRelationships(
+        Person gm,
+        Person scout,
+        Person coach,
+        IReadOnlyList<Person> players,
+        DateOnly startDate)
+    {
+        var defaults = new RelationshipDefaults(
+            Trust: 65,
+            Respect: 60,
+            Confidence: 58,
+            Loyalty: 55,
+            Influence: 50,
+            Friendship: 12,
+            Rivalry: 0);
+
+        return new[]
+        {
+            Relationship.Create("relationship-owner-gm-alpha", "owner-001", gm.PersonId, RelationshipType.OwnerToGM, startDate, defaults),
+            Relationship.Create("relationship-gm-scout-alpha", gm.PersonId, scout.PersonId, RelationshipType.GMToScout, startDate, defaults),
+            Relationship.Create("relationship-coach-player-alpha", coach.PersonId, players[0].PersonId, RelationshipType.CoachToPlayer, startDate, defaults)
+        };
+    }
+
+    private static IReadOnlyList<PlayerDevelopmentProfile> CreateDevelopmentProfiles(
+        EngineRegistry registry,
+        IReadOnlyList<Person> players,
+        DateOnly startDate) =>
+        players
+            .Take(3)
+            .Select((player, index) => registry.DevelopmentEngine.CreateProfile(
+                personId: player.PersonId,
+                currentAbility: 42 + (index * 3),
+                potential: 68 + (index * 4),
+                stage: DevelopmentStage.Junior,
+                traits: CreateDevelopmentTraits(index),
+                lastUpdated: startDate))
+            .ToArray();
+
+    private static IReadOnlyList<DevelopmentTrait> CreateDevelopmentTraits(int index) =>
+        new[]
+        {
+            new DevelopmentTrait(DevelopmentAttribute.Skating, 50 + index),
+            new DevelopmentTrait(DevelopmentAttribute.Shooting, 48 + index),
+            new DevelopmentTrait(DevelopmentAttribute.Passing, 49 + index),
+            new DevelopmentTrait(DevelopmentAttribute.Defense, 47 + index),
+            new DevelopmentTrait(DevelopmentAttribute.Physicality, 46 + index),
+            new DevelopmentTrait(DevelopmentAttribute.HockeyIQ, 52 + index),
+            new DevelopmentTrait(DevelopmentAttribute.WorkEthic, 68 + index),
+            new DevelopmentTrait(DevelopmentAttribute.Coachability, 66 + index),
+            new DevelopmentTrait(DevelopmentAttribute.Confidence, 60 + index)
+        };
 
     private static RosterMove AddMove(Person player, RosterPosition position, DateOnly date) =>
         new(
