@@ -28,10 +28,11 @@ The five foundation pillars remain:
 - Milestone 009 - Recruiting v1
 - Milestone 010 - Contracts v1
 - Milestone 011 - Draft v1
+- Milestone 012 - Roster Engine v1
 
 ## Current Milestone
 
-012 - Next Core Engine
+013 - Next Core Engine
 
 ## Current Goal
 

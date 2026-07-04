@@ -10,6 +10,7 @@ var worldTests = new WorldEngineTests();
 var recruitingTests = new RecruitingEngineTests();
 var contractTests = new ContractEngineTests();
 var draftTests = new DraftEngineTests();
+var rosterTests = new RosterEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -105,6 +106,20 @@ runner.Run("draft board entry can reference scouting report", draftTests.DraftBo
 runner.Run("draft events are created", draftTests.EventsCreatedForStartSelectionCompletion);
 runner.Run("draft respects rule engine validation", draftTests.RuleEngineValidationIsRespected);
 runner.Run("draft does not modify roster state", draftTests.NoRosterModificationOccurs);
+runner.Run("roster can be created", rosterTests.RosterCreation);
+runner.Run("roster can add player", rosterTests.AddPlayer);
+runner.Run("roster can remove player", rosterTests.RemovePlayer);
+runner.Run("roster rejects duplicate active player", rosterTests.DuplicateActivePlayerRejected);
+runner.Run("roster can move player to reserve", rosterTests.MovePlayerToReserve);
+runner.Run("roster can move player to injured reserve", rosterTests.MovePlayerToInjuredReserve);
+runner.Run("roster can release player", rosterTests.ReleasePlayer);
+runner.Run("roster stores released date", rosterTests.ReleasedDateStored);
+runner.Run("roster validates max roster size", rosterTests.ValidateMaxRosterSize);
+runner.Run("roster validates active roster size", rosterTests.ValidateActiveRosterSize);
+runner.Run("roster validates goalie requirement", rosterTests.ValidateGoalieRequirement);
+runner.Run("roster validates overage slots", rosterTests.ValidateOverageSlots);
+runner.Run("roster validates import slots", rosterTests.ValidateImportSlots);
+runner.Run("roster creates events for add remove IR and release", rosterTests.EventsCreatedForAddRemoveIrRelease);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

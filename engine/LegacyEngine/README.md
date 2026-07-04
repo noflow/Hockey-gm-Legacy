@@ -179,3 +179,19 @@ The first build target includes:
 - light EventEngine event creation for draft start, selection, and completion
 
 Draft v1 does not implement pick trading, draft lottery, live draft clock, roster changes, or War Room UI.
+
+## Rosters
+
+Milestone 012 adds the standalone Roster Engine v1 system under `LegacyEngine.Rosters`.
+
+The first build target includes:
+
+- roster membership
+- roster player status
+- roster position
+- roster moves and move results
+- roster validation results
+- light RuleEngine roster validation
+- light EventEngine event creation for add, remove, injured reserve, and release moves
+
+Roster v1 tracks who is on an organization. It does not build lines, depth charts, contracts, injuries, trades, waivers, salary cap, or gameplay simulation.
