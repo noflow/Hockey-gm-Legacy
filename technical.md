@@ -2,33 +2,9 @@
 
 ## Core Tables
 
-- universes
-- people
-- person_roles
-- organizations
-- organization_members
-- leagues
-- rulebooks
-- seasons
-- players
-- staff
-- owners
-- relationships
-- events
-- games
-- standings
-- stat_lines
-- injuries
-- contracts
-- scouting_reports
-- recruits
-- facilities
-- drafts
-- draft_picks
-- history_records
-- news_items
+universes, people, person_roles, organizations, organization_members, leagues, rulebooks, seasons, players, staff, owners, relationships, events, games, standings, stat_lines, injuries, contracts, scouting_reports, recruits, facilities, drafts, draft_picks, history_records, news_items.
 
-## New Rule Engine Table
+## Rulebook Table
 
 ```sql
 CREATE TABLE rulebooks (
@@ -41,13 +17,3 @@ CREATE TABLE rulebooks (
     active INTEGER DEFAULT 1
 );
 ```
-
-## Leagues Update
-
-```sql
-ALTER TABLE leagues ADD COLUMN rulebook_id TEXT;
-```
-
-## Rule
-
-Never delete historical data. If an entity becomes inactive, mark it inactive.
