@@ -8,6 +8,7 @@ var relationshipTests = new RelationshipEngineTests();
 var eventTests = new EventEngineTests();
 var worldTests = new WorldEngineTests();
 var recruitingTests = new RecruitingEngineTests();
+var contractTests = new ContractEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -75,6 +76,19 @@ runner.Run("higher interest improves recruiting decision score", recruitingTests
 runner.Run("promises influence recruiting decision", recruitingTests.PromisesInfluenceDecision);
 runner.Run("recruiting creates events for offer commit and reject", recruitingTests.EventsCreatedForOfferCommitAndReject);
 runner.Run("recruiting does not modify roster state", recruitingTests.NoRosterModificationOccurs);
+runner.Run("contract offer can be created", contractTests.ContractOfferCreation);
+runner.Run("contract can be signed", contractTests.ContractSigning);
+runner.Run("contract can be rejected", contractTests.ContractRejection);
+runner.Run("contract can be terminated", contractTests.ContractTermination);
+runner.Run("contract status changes are tracked", contractTests.StatusChanges);
+runner.Run("contract start and end dates are tracked", contractTests.StartAndEndDateTracking);
+runner.Run("contract money and stipend are tracked", contractTests.MoneyAndStipendTracking);
+runner.Run("contract allowed clause is accepted", contractTests.AllowedClauseAccepted);
+runner.Run("contract disallowed clause is rejected by rule engine", contractTests.DisallowedClauseRejectedWhenRuleEngineSaysNo);
+runner.Run("junior education package clause works", contractTests.JuniorEducationPackageClauseWorks);
+runner.Run("junior housing support clause works", contractTests.JuniorHousingSupportClauseWorks);
+runner.Run("contract events are created", contractTests.EventsCreatedForOfferSignRejectTerminate);
+runner.Run("contracts do not modify roster state", contractTests.NoRosterModificationOccurs);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

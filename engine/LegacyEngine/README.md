@@ -144,3 +144,20 @@ The first build target includes:
 - light EventEngine event creation for offers, commitments, and rejections
 
 Recruiting v1 considers opportunity, development, education, family comfort, promises, trust, facilities, and pathway. It does not create contracts or modify rosters.
+
+## Contracts
+
+Milestone 010 adds the standalone Contracts v1 system under `LegacyEngine.Contracts`.
+
+The first build target includes:
+
+- contract offers
+- contract type and status
+- contract term and money
+- contract clauses
+- contract decisions and results
+- junior player agreement clauses
+- light EventEngine event creation for offers, signatures, rejections, and terminations
+- optional RuleEngine validation for league-disallowed clauses
+
+Contracts v1 supports junior agreements and staff/GM/scout/coach contracts. It does not implement a full CBA, salary cap machinery, LTIR, arbitration, offer sheets, buyouts, trades, or roster modification.

@@ -16,6 +16,8 @@ public enum LegacyEventType
     RecruitRejected,
     ContractOffered,
     ContractSigned,
+    ContractRejected,
+    ContractTerminated,
     PlayerInjured,
     GamePlayed,
     SeasonStarted,
