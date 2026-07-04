@@ -30,14 +30,16 @@ The five foundation pillars remain:
 - Milestone 011 - Draft v1
 - Milestone 012 - Roster Engine v1
 - Milestone 013 - Player Development v1
+- Milestone 014 - Injury Engine v1
+- Alpha 0.1 - Integration Layer
 
 ## Current Milestone
 
-014 - Next Core Engine
+Alpha 0.2 - Next Engine Loop
 
 ## Current Goal
 
-Plan the next standalone LegacyEngine module.
+Plan the next engine-only alpha loop.
 
 ## Why Relationship Engine Was Next
 
@@ -55,6 +57,6 @@ TBD
 
 ## Build Rule
 
-Do not build UI, Godot scenes, Trades, gameplay, save systems, or full simulation systems yet.
+Do not build UI, Godot scenes, Trades, gameplay, schedule generation, save systems, or database persistence yet.
 
 Keep all work inside the standalone LegacyEngine and unit tests.

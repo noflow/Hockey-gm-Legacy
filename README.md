@@ -28,8 +28,10 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Draft
 - Rosters
 - Player Development
+- Injuries
+- Alpha Integration
 
-Milestone 013 - Player Development v1 tracks hidden current ability, hidden potential, development stages, development attributes, monthly development updates, and development events without exposing true ratings through dossier-facing output.
+Alpha 0.1 - Integration Layer creates the first simple engine-only loop: bootstrap an alpha world, process one day through WorldEngine, process queued events, and return inbox-ready results without UI or Godot.
 
 First rulebook:
 
