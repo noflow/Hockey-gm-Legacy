@@ -17,6 +17,13 @@
     "max_age": 20
   },
   "contract_rules": {
+    "allowed_contract_types": [
+      "junior_player_agreement",
+      "staff_contract",
+      "gm_contract",
+      "scout_contract",
+      "coach_contract"
+    ],
     "salary_cap_enabled": false,
     "junior_stipends_enabled": true,
     "education_packages_enabled": true,

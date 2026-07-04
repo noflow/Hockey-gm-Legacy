@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/engine/">
+    <Project Path="engine/LegacyEngine/LegacyEngine.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LegacyEngine.Tests/LegacyEngine.Tests.csproj" />
+  </Folder>
+</Solution>

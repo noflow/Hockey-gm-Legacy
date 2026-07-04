@@ -6,6 +6,8 @@ export_presets.cfg
 # C# / .NET
 bin/
 obj/
+.nuget/
+.appdata/
 
 # Python
 __pycache__/
