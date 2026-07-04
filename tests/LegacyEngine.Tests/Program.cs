@@ -1,6 +1,7 @@
 using LegacyEngine.RuleEngine;
 
 var tests = new RuleEngineTests();
+var ownerTests = new OwnerEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -11,6 +12,12 @@ runner.Run("contract validator returns valid and invalid rule codes", tests.Cont
 runner.Run("draft validator returns valid and invalid rule codes", tests.DraftValidator);
 runner.Run("playoff validator returns valid and invalid rule codes", tests.PlayoffValidator);
 runner.Run("budget validator returns valid and invalid rule codes", tests.BudgetValidator);
+runner.Run("owner archetypes expose expected profiles", ownerTests.OwnerArchetypeProfiles);
+runner.Run("owner model validates budgets, goals, scores, and autonomy", ownerTests.OwnerModelValidation);
+runner.Run("owner can be assigned to an organization", ownerTests.OwnerAssignment);
+runner.Run("owner evaluation can extend the GM", ownerTests.OwnerEvaluationExtendsGm);
+runner.Run("owner evaluation can warn, final warn, or fire the GM", ownerTests.OwnerEvaluationConsequences);
+runner.Run("owner evaluation applies trust confidence and patience changes", ownerTests.OwnerEvaluationAppliesRelationshipChanges);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
@@ -209,8 +216,8 @@ internal sealed class TestRunner
     {
         Console.WriteLine();
         Console.WriteLine(_failures.Count == 0
-            ? "All LegacyEngine rule tests passed."
-            : $"{_failures.Count} LegacyEngine rule test(s) failed.");
+            ? "All LegacyEngine tests passed."
+            : $"{_failures.Count} LegacyEngine test(s) failed.");
     }
 }
 
@@ -229,6 +236,22 @@ internal static class Assert
         if (!values.Contains(expected, StringComparer.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Expected collection to contain '{expected}'.");
+        }
+    }
+
+    public static void True(bool condition, string message)
+    {
+        if (!condition)
+        {
+            throw new InvalidOperationException(message);
+        }
+    }
+
+    public static void False(bool condition, string message)
+    {
+        if (condition)
+        {
+            throw new InvalidOperationException(message);
         }
     }
 

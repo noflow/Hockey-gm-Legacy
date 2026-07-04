@@ -27,3 +27,19 @@ Run the milestone tests from the repository root:
 $env:APPDATA = (Join-Path (Get-Location) '.appdata')
 dotnet run --project tests/LegacyEngine.Tests/LegacyEngine.Tests.csproj --no-restore
 ```
+
+## Owners
+
+Milestone 003 starts the standalone Owners system under `LegacyEngine.Owners`.
+
+The first build target includes:
+
+- owner model
+- owner archetypes and archetype profiles
+- budgets
+- goals
+- trust, confidence, and patience
+- autonomy levels
+- owner evaluation results
+
+Owners set resources and expectations, then evaluate the GM. They do not approve every hockey decision.
