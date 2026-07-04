@@ -1,18 +1,29 @@
 # TODO
 
-## In Progress
-- [ ] Implement Rulebook loader
-- [ ] Implement RuleValidationResult
-- [ ] Implement roster validator
-- [ ] Implement eligibility validator
-- [ ] Implement contract validator
-- [ ] Implement draft validator
-- [ ] Implement playoff validator
-- [ ] Implement budget validator
-- [ ] Write unit tests
+## Current – Milestone 006 Relationship Engine
+
+- [ ] Create Relationship model
+- [ ] Create RelationshipType enum
+- [ ] Create RelationshipDimension values
+- [ ] Support directional relationships
+- [ ] Track trust
+- [ ] Track respect
+- [ ] Track confidence
+- [ ] Track loyalty
+- [ ] Track influence
+- [ ] Track friendship
+- [ ] Track rivalry
+- [ ] Track last interaction date
+- [ ] Add relationship history entries
+- [ ] Add relationship change method
+- [ ] Clamp all relationship values between 0 and 100
+- [ ] Add relationship decay over time
+- [ ] Add unit tests
 
 ## Next
-- [ ] Owners
-- [ ] Scouting
+
+- [ ] Event Engine
+- [ ] World Engine
 - [ ] Recruiting
-- [ ] Coaches & Staff
+- [ ] Contracts
+- [ ] Draft

@@ -3,6 +3,7 @@ using LegacyEngine.RuleEngine;
 var tests = new RuleEngineTests();
 var ownerTests = new OwnerEngineTests();
 var scoutingTests = new ScoutingEngineTests();
+var personTests = new PersonEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -24,6 +25,14 @@ runner.Run("scouting assignments validate targets focus and dates", scoutingTest
 runner.Run("scouting reports are imperfect and language based", scoutingTests.ScoutingReportsAreImperfect);
 runner.Run("confidence levels respond to scout fit and GM scouting bonus", scoutingTests.ConfidenceLevelsUseScoutFitAndGmBonus);
 runner.Run("player dossier stores required sections reports and GM notes", scoutingTests.PlayerDossierStructure);
+runner.Run("person model creates and validates identity", personTests.CreatingAPerson);
+runner.Run("person age calculation handles birthdays", personTests.CalculatingAge);
+runner.Run("person can add a role", personTests.AddingARole);
+runner.Run("person can end a role", personTests.EndingARole);
+runner.Run("person can hold multiple roles", personTests.HoldingMultipleRoles);
+runner.Run("person reputation changes are clamped and recorded", personTests.ReputationChanges);
+runner.Run("person status changes are recorded", personTests.StatusChanges);
+runner.Run("person career timeline entries are stored chronologically", personTests.CareerTimelineEntries);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

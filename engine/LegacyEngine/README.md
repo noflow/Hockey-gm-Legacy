@@ -59,3 +59,20 @@ The first build target includes:
 - GM personal scouting bonus
 
 Scouting reduces uncertainty. It reports facts, observations, opinions, unknowns, and confidence without exposing hidden true ratings by default.
+
+## People
+
+Milestone 005 starts the standalone Person Engine under `LegacyEngine.People`.
+
+The first build target includes:
+
+- person model and identity
+- gender, birth date, age calculation, nationality, and birthplace
+- active, retired, and deceased status
+- role system with multiple roles per person
+- role start and end dates
+- basic reputation
+- basic personality profile
+- career timeline entries
+
+Every human in the game starts as a Person. Roles attach to people; they do not replace them.
