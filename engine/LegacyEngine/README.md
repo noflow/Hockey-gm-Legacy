@@ -93,3 +93,20 @@ The first build target includes:
 - conservative decay over time
 
 People are permanent. Roles define what they do. Relationships define how they feel about each other.
+
+## Events
+
+Milestone 007 adds the standalone Event Engine under `LegacyEngine.Events`.
+
+The first build target includes:
+
+- legacy events
+- event type, severity, visibility, and status
+- optional event context for related people, organizations, leagues, seasons, games, relationships, and rulebooks
+- event metadata
+- event queue
+- date-ordered processing
+- processed event archival
+- event history queries
+
+The v1 Event Engine records, queues, processes, and archives events. It does not directly mutate People, Relationships, Owners, Scouting, or Rule Engine state.

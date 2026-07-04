@@ -5,6 +5,7 @@ var ownerTests = new OwnerEngineTests();
 var scoutingTests = new ScoutingEngineTests();
 var personTests = new PersonEngineTests();
 var relationshipTests = new RelationshipEngineTests();
+var eventTests = new EventEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -44,6 +45,13 @@ runner.Run("relationship stores multiple history entries", relationshipTests.Mul
 runner.Run("relationship decay moves trust toward neutral", relationshipTests.DecayMovesTrustTowardNeutral);
 runner.Run("relationship decay reduces friendship and rivalry slowly", relationshipTests.DecayReducesFriendshipAndRivalry);
 runner.Run("inactive relationship does not change by default", relationshipTests.InactiveRelationshipDoesNotChangeByDefault);
+runner.Run("event engine creates events with unique IDs", eventTests.CreateEventsWithUniqueIds);
+runner.Run("event stores date type severity visibility status context and metadata", eventTests.EventStoresRequiredFields);
+runner.Run("event queue stores queued events", eventTests.QueueEvents);
+runner.Run("event engine processes queued events in date order", eventTests.ProcessQueuedEventsInDateOrder);
+runner.Run("event engine marks processed events and archives history", eventTests.ProcessAndArchiveEvents);
+runner.Run("event history can query by person organization type and date range", eventTests.QueryEventHistory);
+runner.Run("event engine does not mutate external domain state", eventTests.EventEngineDoesNotMutateExternalDomainState);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
