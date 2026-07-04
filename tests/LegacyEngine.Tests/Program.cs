@@ -11,6 +11,7 @@ var recruitingTests = new RecruitingEngineTests();
 var contractTests = new ContractEngineTests();
 var draftTests = new DraftEngineTests();
 var rosterTests = new RosterEngineTests();
+var developmentTests = new DevelopmentEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -120,6 +121,22 @@ runner.Run("roster validates goalie requirement", rosterTests.ValidateGoalieRequ
 runner.Run("roster validates overage slots", rosterTests.ValidateOverageSlots);
 runner.Run("roster validates import slots", rosterTests.ValidateImportSlots);
 runner.Run("roster creates events for add remove IR and release", rosterTests.EventsCreatedForAddRemoveIrRelease);
+runner.Run("development profile can be created", developmentTests.DevelopmentProfileCreation);
+runner.Run("development monthly update changes attributes", developmentTests.MonthlyUpdateChangesAttributes);
+runner.Run("high work ethic improves development", developmentTests.HighWorkEthicImprovesDevelopment);
+runner.Run("low coachability slows development", developmentTests.LowCoachabilitySlowsDevelopment);
+runner.Run("confidence affects development", developmentTests.ConfidenceAffectsDevelopment);
+runner.Run("injury penalty reduces development", developmentTests.InjuryPenaltyReducesDevelopment);
+runner.Run("facility bonus improves development", developmentTests.FacilityBonusImprovesDevelopment);
+runner.Run("coaching bonus improves development", developmentTests.CoachingBonusImprovesDevelopment);
+runner.Run("current ability cannot exceed potential", developmentTests.CurrentAbilityCannotExceedPotential);
+runner.Run("veteran and declining stages can regress", developmentTests.VeteranDecliningStageCanRegress);
+runner.Run("development result includes summary", developmentTests.DevelopmentResultIncludesSummary);
+runner.Run("development update creates event", developmentTests.EventsCreatedForDevelopmentUpdate);
+runner.Run("development breakout event can be created", developmentTests.BreakoutEventCanBeCreated);
+runner.Run("development regression event can be created", developmentTests.RegressionEventCanBeCreated);
+runner.Run("development does not expose true ratings in dossier-facing output", developmentTests.TrueRatingsAreNotExposedInDossierFacingOutput);
+runner.Run("development module has no UI or Godot dependency", developmentTests.NoUiOrGodotDependencyExists);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

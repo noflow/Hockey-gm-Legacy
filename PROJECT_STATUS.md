@@ -29,10 +29,11 @@ The five foundation pillars remain:
 - Milestone 010 - Contracts v1
 - Milestone 011 - Draft v1
 - Milestone 012 - Roster Engine v1
+- Milestone 013 - Player Development v1
 
 ## Current Milestone
 
-013 - Next Core Engine
+014 - Next Core Engine
 
 ## Current Goal
 
@@ -54,6 +55,6 @@ TBD
 
 ## Build Rule
 
-Do not build UI, Godot scenes, Recruiting, Contracts, Trades, Draft, or gameplay yet.
+Do not build UI, Godot scenes, Trades, gameplay, save systems, or full simulation systems yet.
 
 Keep all work inside the standalone LegacyEngine and unit tests.

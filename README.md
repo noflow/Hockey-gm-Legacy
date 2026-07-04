@@ -14,11 +14,22 @@ Hockey GM Legacy is a living hockey universe simulator where the player builds a
 
 ## Current Implementation Anchor
 
-The first system to build is:
+The current implementation is focused on standalone LegacyEngine modules:
 
-**Milestone 002 – Rule Engine**
+- Rule Engine
+- Owners
+- Scouting
+- People
+- Relationships
+- Events
+- World
+- Recruiting
+- Contracts
+- Draft
+- Rosters
+- Player Development
 
-The Rule Engine validates what is legal in a league using configurable JSON rulebooks.
+Milestone 013 - Player Development v1 tracks hidden current ability, hidden potential, development stages, development attributes, monthly development updates, and development events without exposing true ratings through dossier-facing output.
 
 First rulebook:
 
