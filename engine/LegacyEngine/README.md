@@ -43,3 +43,19 @@ The first build target includes:
 - owner evaluation results
 
 Owners set resources and expectations, then evaluate the GM. They do not approve every hockey decision.
+
+## Scouting
+
+Milestone 004 starts the standalone Scouting system under `LegacyEngine.Scouting`.
+
+The first build target includes:
+
+- scout model
+- scout specialties
+- scouting assignments
+- imperfect scouting reports
+- confidence levels
+- player dossier structure
+- GM personal scouting bonus
+
+Scouting reduces uncertainty. It reports facts, observations, opinions, unknowns, and confidence without exposing hidden true ratings by default.

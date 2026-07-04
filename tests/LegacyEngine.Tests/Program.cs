@@ -2,6 +2,7 @@ using LegacyEngine.RuleEngine;
 
 var tests = new RuleEngineTests();
 var ownerTests = new OwnerEngineTests();
+var scoutingTests = new ScoutingEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -18,6 +19,11 @@ runner.Run("owner can be assigned to an organization", ownerTests.OwnerAssignmen
 runner.Run("owner evaluation can extend the GM", ownerTests.OwnerEvaluationExtendsGm);
 runner.Run("owner evaluation can warn, final warn, or fire the GM", ownerTests.OwnerEvaluationConsequences);
 runner.Run("owner evaluation applies trust confidence and patience changes", ownerTests.OwnerEvaluationAppliesRelationshipChanges);
+runner.Run("scout model validates specialties and skill scores", scoutingTests.ScoutModelValidation);
+runner.Run("scouting assignments validate targets focus and dates", scoutingTests.ScoutingAssignmentValidation);
+runner.Run("scouting reports are imperfect and language based", scoutingTests.ScoutingReportsAreImperfect);
+runner.Run("confidence levels respond to scout fit and GM scouting bonus", scoutingTests.ConfidenceLevelsUseScoutFitAndGmBonus);
+runner.Run("player dossier stores required sections reports and GM notes", scoutingTests.PlayerDossierStructure);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
