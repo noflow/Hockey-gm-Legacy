@@ -9,5 +9,14 @@ public enum RecruitingPromiseType
     FamilySupport,
     FacilitiesAccess,
     CoachingAttention,
-    PathwaySupport
+    PathwaySupport,
+    TopSixRole,
+    PowerPlayOpportunity,
+    PenaltyKillOpportunity,
+    DevelopmentFocus,
+    EducationPackage,
+    LeadershipOpportunity,
+    HigherLeaguePathway,
+    ImmediateRosterSpot,
+    CampInvite
 }

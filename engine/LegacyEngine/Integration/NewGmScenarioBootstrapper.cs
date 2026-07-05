@@ -545,7 +545,10 @@ public sealed class NewGmScenarioBootstrapper
             [RecruitPriority.Facilities] = 63 + (index % 14),
             [RecruitPriority.Coaching] = 78 - (index % 9),
             [RecruitPriority.PathwayToHigherHockey] = 80 - (index % 10),
-            [RecruitPriority.FamilyComfort] = 60 + (index % 12)
+            [RecruitPriority.FamilyComfort] = 60 + (index % 12),
+            [RecruitPriority.TeamCulture] = 58 + (index % 15),
+            [RecruitPriority.TrustInGm] = 62 + (index % 10),
+            [RecruitPriority.PlayingRole] = 66 + (index % 16)
         };
 
     private static string ProjectionFor(int index) =>

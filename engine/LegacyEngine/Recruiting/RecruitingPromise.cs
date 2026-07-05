@@ -6,7 +6,10 @@ public sealed record RecruitingPromise(
     RecruitingPromiseType PromiseType,
     int Strength,
     DateOnly Date,
-    string Description)
+    string Description,
+    DateOnly? TargetDate = null,
+    bool IsFulfilled = false,
+    bool IsBroken = false)
 {
     public void Validate()
     {

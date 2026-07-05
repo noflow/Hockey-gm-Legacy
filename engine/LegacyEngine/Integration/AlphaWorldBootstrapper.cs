@@ -242,7 +242,10 @@ public sealed class AlphaWorldBootstrapper
             [RecruitPriority.Facilities] = 65,
             [RecruitPriority.Coaching] = 80,
             [RecruitPriority.PathwayToHigherHockey] = 78,
-            [RecruitPriority.FamilyComfort] = 60
+            [RecruitPriority.FamilyComfort] = 60,
+            [RecruitPriority.TeamCulture] = 62,
+            [RecruitPriority.TrustInGm] = 64,
+            [RecruitPriority.PlayingRole] = 70
         };
 
     private static void QueueBootstrapEvent(EventEngine eventEngine, DateOnly date, string organizationId, string gmPersonId)

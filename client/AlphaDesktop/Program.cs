@@ -19,7 +19,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -248,7 +248,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.2 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.3 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1220,13 +1220,17 @@ internal sealed class MainWindow : Window
             .Select(group => group.First())
             .OrderByDescending(recruit => recruit.GetInterest(State.Snapshot.OrganizationId))
             .ThenBy(recruit => FindPersonName(recruit.RecruitPersonId), StringComparer.Ordinal)
-            .Select(recruit => new SelectablePersonRow(
-                recruit.RecruitPersonId,
-                RecruitDisplayName(recruit.RecruitPersonId),
-                "Recruit",
-                $"{State.PersonPosition(recruit.RecruitPersonId)} - age {State.PersonAge(recruit.RecruitPersonId)?.ToString() ?? "unknown"} - {recruit.Status}",
-                $"Interest {recruit.GetInterest(State.Snapshot.OrganizationId)} | {State.RecruitPrioritySummary(recruit.RecruitPersonId)}",
-                State.RecruitLookingFor(recruit.RecruitPersonId)))
+            .Select(recruit =>
+            {
+                var profile = State.RecruitingProfileFor(recruit.RecruitPersonId);
+                return new SelectablePersonRow(
+                    recruit.RecruitPersonId,
+                    RecruitDisplayName(recruit.RecruitPersonId),
+                    "Recruit",
+                    $"{profile.Position} - age {profile.Age?.ToString() ?? "unknown"} - {profile.Status}",
+                    $"Interest {profile.InterestLevel} | top: {State.RecruitPrioritySummary(recruit.RecruitPersonId, 1)} | offers: {State.RecruitOfferState(recruit.RecruitPersonId)}",
+                    $"{profile.RegionOrHometown} | {profile.CurrentTeam} | {profile.ProjectionSummary}");
+            })
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
@@ -1440,15 +1444,31 @@ internal sealed class MainWindow : Window
             var recruit = State.Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == row.PersonId);
             if (recruit is not null)
             {
-                AddLine(panel, "Position", State.PersonPosition(row.PersonId));
-                AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
-                AddLine(panel, "Interest", recruit.GetInterest(State.Snapshot.OrganizationId));
+                var profile = State.RecruitingProfileFor(row.PersonId);
+                AddLine(panel, "Position", profile.Position);
+                AddLine(panel, "Age", profile.Age?.ToString() ?? "unknown");
+                AddLine(panel, "Region / hometown", profile.RegionOrHometown);
+                AddLine(panel, "Current team", profile.CurrentTeam);
+                AddLine(panel, "Interest", $"{profile.InterestLevel}/100");
+                AddLine(panel, "Relationship / trust", $"{profile.RelationshipWithGm}/100");
+                AddLine(panel, "Decision style", profile.DecisionStyle);
                 AddLine(panel, "Looking for", State.RecruitLookingFor(row.PersonId));
                 AddLine(panel, "Development priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.Development));
                 AddLine(panel, "Ice time priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.IceTime));
                 AddLine(panel, "Coaching priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.Coaching));
                 AddLine(panel, "Facilities priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.Facilities));
                 AddLine(panel, "Pathway priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.PathwayToHigherHockey));
+                AddLine(panel, "Family priorities", State.RecruitFamilyPrioritySummary(row.PersonId));
+                AddLine(panel, "Scouting confidence", profile.ScoutingConfidence);
+                AddLine(panel, "Projection", profile.ProjectionSummary);
+                AddLine(panel, "Risk", profile.RiskSummary);
+                AddLine(panel, "Current offers", profile.CurrentOffers.Count == 0 ? "none" : string.Join(", ", profile.CurrentOffers));
+                AddLine(panel, "Top competitor", profile.TopCompetitor is null ? "none" : $"{profile.TopCompetitor.TeamName} ({profile.TopCompetitor.InterestStrength}/100)");
+                AddLine(panel, "Why they are interested", profile.WhyTheyAreInterested);
+                AddLine(panel, "Why they may choose us", profile.WhyTheyMayChooseUs);
+                AddLine(panel, "Why they may reject us", profile.WhyTheyMayRejectUs);
+                AddLine(panel, "Promises made", profile.PromisesMade.Count == 0 ? "none" : string.Join(", ", profile.PromisesMade));
+                AddLine(panel, "GM notes", profile.GmNotes);
             }
         }
 
@@ -1561,7 +1581,14 @@ internal sealed class MainWindow : Window
 
         if (tab == "Recruits")
         {
-            yield return CreateDetailButton("Offer Recruit", () => State.MakeRecruitingOfferFor(row.PersonId), State.CanOfferRecruit(row.PersonId));
+            yield return CreateDetailButton("Call Recruit", () => State.CallRecruitFor(row.PersonId));
+            yield return CreateDetailButton("Call Family", () => State.CallRecruitFamilyFor(row.PersonId));
+            yield return CreateDetailButton("Invite Visit", () => State.InviteRecruitVisitFor(row.PersonId));
+            yield return CreateDetailButton("Make Offer", () => State.MakeRecruitingOfferFor(row.PersonId), State.CanOfferRecruit(row.PersonId));
+            yield return CreateDetailButton("Make Promise", () => State.MakeRecruitingPromiseFor(row.PersonId));
+            yield return CreateDetailButton("Education Package", () => State.OfferRecruitEducationPackageFor(row.PersonId));
+            yield return CreateDetailButton("Ask Scout", () => State.AskScoutForRecruitFor(row.PersonId));
+            yield return CreateDetailButton("Withdraw Offer", () => State.WithdrawRecruitOfferFor(row.PersonId), State.CanWithdrawRecruitOffer(row.PersonId));
             yield break;
         }
 
@@ -3005,6 +3032,7 @@ internal sealed class AlphaDesktopState
     private readonly PlayerDossierService _playerDossiers = new();
     private readonly StaffOfficeService _staffOffice = new();
     private readonly BudgetOverviewService _budgetOverview = new();
+    private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
@@ -3747,6 +3775,9 @@ internal sealed class AlphaDesktopState
         Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId)
             ?.Priorities.GetValueOrDefault(priority) ?? 0;
 
+    public RecruitingV2Profile RecruitingProfileFor(string recruitPersonId) =>
+        _recruitingV2.BuildProfile(ScenarioSnapshot, recruitPersonId);
+
     public string RecruitPrioritySummary(string recruitPersonId, int take = 3)
     {
         var recruit = Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId);
@@ -3766,6 +3797,21 @@ internal sealed class AlphaDesktopState
         var summary = RecruitPrioritySummary(recruitPersonId);
         var interest = Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId)?.GetInterest(Snapshot.OrganizationId) ?? 0;
         return $"Looking for {summary}; current interest {interest}/100.";
+    }
+
+    public string RecruitFamilyPrioritySummary(string recruitPersonId)
+    {
+        var profile = RecruitingProfileFor(recruitPersonId);
+        return string.Join(", ", profile.FamilyPriorities
+            .OrderByDescending(priority => priority.Value)
+            .Take(3)
+            .Select(priority => $"{priority.Key} {priority.Value}"));
+    }
+
+    public string RecruitOfferState(string recruitPersonId)
+    {
+        var profile = RecruitingProfileFor(recruitPersonId);
+        return profile.CurrentOffers.Count == 0 ? "none" : string.Join(", ", profile.CurrentOffers);
     }
 
     private static string DisplayRecruitPriority(RecruitPriority priority) =>
@@ -3805,6 +3851,38 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruitPersonId));
+    }
+
+    public bool CanWithdrawRecruitOffer(string recruitPersonId) =>
+        Snapshot.Recruits.Any(recruit => recruit.RecruitPersonId == recruitPersonId && recruit.Status == LegacyEngine.Recruiting.RecruitStatus.Offered);
+
+    public void CallRecruitFor(string recruitPersonId) =>
+        ApplyRecruitingV2(_recruitingV2.CallRecruit(_registry, ScenarioSnapshot, recruitPersonId));
+
+    public void CallRecruitFamilyFor(string recruitPersonId) =>
+        ApplyRecruitingV2(_recruitingV2.CallFamily(_registry, ScenarioSnapshot, recruitPersonId));
+
+    public void InviteRecruitVisitFor(string recruitPersonId) =>
+        ApplyRecruitingV2(_recruitingV2.InviteVisit(_registry, ScenarioSnapshot, recruitPersonId));
+
+    public void MakeRecruitingPromiseFor(string recruitPersonId) =>
+        ApplyRecruitingV2(_recruitingV2.MakePromise(_registry, ScenarioSnapshot, recruitPersonId, RecruitingPromiseType.TopSixRole));
+
+    public void OfferRecruitEducationPackageFor(string recruitPersonId) =>
+        ApplyRecruitingV2(_recruitingV2.OfferEducationPackage(_registry, ScenarioSnapshot, recruitPersonId));
+
+    public void AskScoutForRecruitFor(string recruitPersonId) =>
+        ApplyRecruitingV2(_recruitingV2.AskScoutForMoreInformation(_registry, ScenarioSnapshot, recruitPersonId));
+
+    public void WithdrawRecruitOfferFor(string recruitPersonId)
+    {
+        if (!CanWithdrawRecruitOffer(recruitPersonId))
+        {
+            LatestSummary = "Selected recruit does not have an active offer to withdraw.";
+            return;
+        }
+
+        ApplyRecruitingV2(_recruitingV2.WithdrawOffer(_registry, ScenarioSnapshot, recruitPersonId));
     }
 
     public void ViewNextDossier()
@@ -4342,6 +4420,16 @@ internal sealed class AlphaDesktopState
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
+    }
+
+    private void ApplyRecruitingV2(RecruitingV2Result result)
+    {
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        EnsureSelectedDossierStillExists();
+        InboxManager.AddRange(result.InboxItems);
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
     }
 
     private void ApplyDraftResult(DraftExperienceResult result)

@@ -107,12 +107,15 @@ internal sealed class AlphaDesktopInteractionTests
 
         Assert.True(source.Contains(".GroupBy(recruit => recruit.RecruitPersonId", StringComparison.Ordinal), "Recruit rows should collapse duplicate person entries.");
         Assert.True(source.Contains("RecruitDisplayName", StringComparison.Ordinal), "Recruit rows should clarify same-name recruits without numeric suffixes.");
-        Assert.True(source.Contains("State.PersonPosition(recruit.RecruitPersonId)", StringComparison.Ordinal), "Recruit rows should show position.");
-        Assert.True(source.Contains("State.PersonAge(recruit.RecruitPersonId)", StringComparison.Ordinal), "Recruit rows should show age.");
+        Assert.True(source.Contains("State.RecruitingProfileFor(recruit.RecruitPersonId)", StringComparison.Ordinal), "Recruit rows should use the richer recruiting profile.");
+        Assert.True(source.Contains("profile.Position", StringComparison.Ordinal), "Recruit rows should show position.");
+        Assert.True(source.Contains("profile.Age", StringComparison.Ordinal), "Recruit rows should show age.");
         Assert.True(source.Contains("Looking for", StringComparison.Ordinal), "Recruit details should show looking-for priorities.");
         Assert.True(source.Contains("Development priority", StringComparison.Ordinal), "Recruit details should show development priority.");
         Assert.True(source.Contains("Ice time priority", StringComparison.Ordinal), "Recruit details should show ice time priority.");
         Assert.True(source.Contains("Pathway priority", StringComparison.Ordinal), "Recruit details should show pathway priority when applicable.");
+        Assert.True(source.Contains("Family priorities", StringComparison.Ordinal), "Recruit details should show family priorities.");
+        Assert.True(source.Contains("Top competitor", StringComparison.Ordinal), "Recruit details should show competing teams.");
     }
 
     public void DashboardSummaryDisplaysCounts()

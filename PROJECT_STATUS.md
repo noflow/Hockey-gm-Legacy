@@ -58,14 +58,15 @@ The five foundation pillars remain:
 - Alpha UI Interaction Pass - Selectable People Rows
 - Alpha 2.2 - UI/UX Structural Pass v1
 - Alpha 2.2.1 - Dossier Window, Roster Filters, Budget Overview, and Scouting Cleanup
+- Alpha 2.3 - Recruiting v2
 
 ## Current Milestone
 
-Alpha 2.2.1 - Dossier Window, Roster Filters, Budget Overview, and Scouting Cleanup
+Alpha 2.3 - Recruiting v2
 
 ## Current Goal
 
-Improve the AlphaDesktop GM workspace with dossier windows, roster filters, visible budget context, and clearer scouting assignment flow.
+Make recruiting a richer GM workflow with recruit priorities, family concerns, competitor pressure, careful promises, and explainable decisions.
 
 ## Why Relationship Engine Was Next
 
@@ -75,11 +76,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.3 - Opening Week Setup
+Alpha 2.4 - Opening Week Setup
 
 ## Next Milestones
 
-1. Alpha 2.3 - Opening Week Setup
+1. Alpha 2.4 - Opening Week Setup
 
 ## Build Rule
 

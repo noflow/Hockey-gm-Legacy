@@ -10,5 +10,8 @@ public enum RecruitPriority
     Facilities,
     Coaching,
     PathwayToHigherHockey,
-    FamilyComfort
+    FamilyComfort,
+    TeamCulture,
+    TrustInGm,
+    PlayingRole
 }
