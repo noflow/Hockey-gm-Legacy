@@ -212,14 +212,11 @@ internal sealed class MainWindow : Window
         var header = new Border
         {
             Background = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
-            Padding = new Thickness(16)
+            Padding = new Thickness(16, 12, 16, 12)
         };
 
-        var panel = new Grid();
-        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-        var textPanel = new StackPanel();
+        var panel = new StackPanel();
+        var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
             Text = "Hockey GM Legacy - Alpha 1.6 - Training Camp",
@@ -242,13 +239,11 @@ internal sealed class MainWindow : Window
         _processedText.Margin = new Thickness(0, 4, 0, 0);
         textPanel.Children.Add(_processedText);
 
-        Grid.SetColumn(textPanel, 0);
         panel.Children.Add(textPanel);
 
-        var buttonPanel = new StackPanel
+        var buttonPanel = new WrapPanel
         {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center
+            Orientation = Orientation.Horizontal
         };
 
         buttonPanel.Children.Add(CreateButton("Advance Day", () => Advance(1)));
@@ -275,7 +270,6 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Assign/Return", AssignOrReturnTrainingCampPlayer));
         buttonPanel.Children.Add(CreateButton("Complete Camp", CompleteTrainingCamp));
 
-        Grid.SetColumn(buttonPanel, 1);
         panel.Children.Add(buttonPanel);
 
         header.Child = panel;
@@ -287,9 +281,11 @@ internal sealed class MainWindow : Window
         var button = new Button
         {
             Content = text,
-            Padding = new Thickness(14, 9, 14, 9),
-            Margin = new Thickness(8, 0, 0, 0),
-            FontWeight = FontWeights.SemiBold
+            MinWidth = 92,
+            Padding = new Thickness(10, 7, 10, 7),
+            Margin = new Thickness(0, 0, 8, 8),
+            FontWeight = FontWeights.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Left
         };
 
         button.Click += (_, _) =>
