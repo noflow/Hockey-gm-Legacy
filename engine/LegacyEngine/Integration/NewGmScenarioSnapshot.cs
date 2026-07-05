@@ -32,6 +32,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<PendingGmAction> PendingActions { get; init; } = Array.Empty<PendingGmAction>();
 
+    public IReadOnlyList<ScoutingOperationAssignment> ScoutingOperations { get; init; } = Array.Empty<ScoutingOperationAssignment>();
+
+    public IReadOnlyList<ScoutingReport> CompletedScoutingReports { get; init; } = Array.Empty<ScoutingReport>();
+
     public SeasonReadinessState SeasonReadiness { get; init; } = new();
 
     public ExecutiveReportArchive ExecutiveReports { get; init; } = ExecutiveReportArchive.Empty;
@@ -66,6 +70,16 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var assignment in ScoutingAssignments)
         {
             assignment.Validate();
+        }
+
+        foreach (var assignment in ScoutingOperations)
+        {
+            assignment.Validate();
+        }
+
+        foreach (var report in CompletedScoutingReports)
+        {
+            report.Validate();
         }
 
         DraftExperience?.Validate();

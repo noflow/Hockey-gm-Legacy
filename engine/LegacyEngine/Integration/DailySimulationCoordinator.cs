@@ -22,18 +22,20 @@ public sealed class DailySimulationCoordinator
         };
 
         var camp = new TrainingCampService().AdvanceCalendar(registry, updatedScenario);
-        var report = camp.ScenarioSnapshot.Season.Status == LegacyEngine.Seasons.SeasonStatus.Completed
-            && camp.ScenarioSnapshot.ExecutiveReports.Find($"executive-report:{camp.ScenarioSnapshot.Season.SeasonId}:{ExecutiveReportKind.EndOfSeasonExecutiveReview}") is null
-            ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, camp.ScenarioSnapshot)
+        var scouting = new ScoutingOperationsService().AdvanceAssignments(registry, camp.ScenarioSnapshot);
+        var report = scouting.ScenarioSnapshot.Season.Status == LegacyEngine.Seasons.SeasonStatus.Completed
+            && scouting.ScenarioSnapshot.ExecutiveReports.Find($"executive-report:{scouting.ScenarioSnapshot.Season.SeasonId}:{ExecutiveReportKind.EndOfSeasonExecutiveReview}") is null
+            ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, scouting.ScenarioSnapshot)
             : null;
-        var finalScenario = report?.Success == true ? report.ScenarioSnapshot : camp.ScenarioSnapshot;
+        var finalScenario = report?.Success == true ? report.ScenarioSnapshot : scouting.ScenarioSnapshot;
         var inbox = simulation.InboxItems
             .Concat(camp.InboxItems)
+            .Concat(scouting.InboxItems)
             .Concat(report?.InboxItems ?? Array.Empty<AlphaInboxItem>())
             .ToArray();
-        var summary = camp.InboxItems.Count == 0 && report?.Success != true
+        var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && report?.Success != true
             ? simulation.Summary
-            : $"{simulation.Summary} {camp.Summary}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
+            : $"{simulation.Summary} {camp.Summary} {scouting.Message}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
 
         return new NewGmDailySimulationResult(finalScenario, simulation, inbox, summary);
     }

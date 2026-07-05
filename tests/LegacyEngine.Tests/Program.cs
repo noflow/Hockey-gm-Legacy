@@ -30,6 +30,7 @@ var pendingGmActionTests = new PendingGmActionTests();
 var prospectDecisionTests = new ProspectDecisionTests();
 var seasonReadinessTests = new SeasonReadinessTests();
 var executiveReportTests = new ExecutiveReportTests();
+var scoutingOperationsTests = new ScoutingOperationsTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -384,6 +385,20 @@ runner.Run("executive reports stored permanently", executiveReportTests.ReportsS
 runner.Run("executive reports archive retrieval works", executiveReportTests.ArchiveRetrievalWorks);
 runner.Run("executive reports begin season stores readiness report", executiveReportTests.BeginSeasonStoresReadinessReport);
 runner.Run("AlphaDesktop exposes executive reports", executiveReportTests.AlphaDesktopExposesExecutiveReports);
+runner.Run("scouting operations scout can be assigned to region", scoutingOperationsTests.ScoutCanBeAssignedToRegion);
+runner.Run("scouting operations scout can be assigned to player", scoutingOperationsTests.ScoutCanBeAssignedToPlayer);
+runner.Run("scouting operations assignment stores priority notes and dates", scoutingOperationsTests.AssignmentStoresPriorityNotesAndDates);
+runner.Run("scouting operations assignment progresses over days", scoutingOperationsTests.AssignmentProgressesOverDays);
+runner.Run("scouting operations completed assignment creates report", scoutingOperationsTests.CompletedAssignmentCreatesReport);
+runner.Run("scouting operations region fit improves confidence", scoutingOperationsTests.RegionFitImprovesConfidence);
+runner.Run("scouting operations heavy workload delays report", scoutingOperationsTests.HeavyWorkloadDelaysReport);
+runner.Run("scouting operations poor relationship affects communication quality", scoutingOperationsTests.PoorRelationshipAffectsCommunicationQuality);
+runner.Run("scouting operations staff relationship warning can be generated", scoutingOperationsTests.StaffRelationshipWarningCanBeGenerated);
+runner.Run("scouting operations staff role can be reassigned", scoutingOperationsTests.StaffRoleCanBeReassigned);
+runner.Run("scouting operations staff can be released", scoutingOperationsTests.StaffCanBeReleased);
+runner.Run("scouting operations placeholder staff candidate can be hired", scoutingOperationsTests.PlaceholderStaffCandidateCanBeHired);
+runner.Run("AlphaDesktop exposes scout assignment UI", scoutingOperationsTests.AlphaDesktopExposesScoutAssignmentUi);
+runner.Run("scouting operations have no Godot save or game simulation dependency", scoutingOperationsTests.ScoutingOperationsHaveNoGodotSaveOrGameSimulationDependency);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

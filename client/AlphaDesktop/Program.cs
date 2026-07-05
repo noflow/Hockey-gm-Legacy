@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.8.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -199,6 +199,7 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Roster");
         AddTab(tabs, "Recruits");
         AddTab(tabs, "Scouting");
+        AddTab(tabs, "Scouting Operations");
         AddTab(tabs, "Pending Actions");
         if (State.IsDraftUiEnabled)
         {
@@ -228,7 +229,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 1.8.1 - Executive Reports",
+            Text = "Hockey GM Legacy - Alpha 1.9 - Staff & Scouting Operations",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -270,6 +271,12 @@ internal sealed class MainWindow : Window
             buttonPanel.Children.Add(CreateButton("Release Rights", ReleaseProspectRights));
         }
         buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
+        buttonPanel.Children.Add(CreateButton("Assign Region", AssignScoutToRegion));
+        buttonPanel.Children.Add(CreateButton("Assign Player", AssignScoutToPlayer));
+        buttonPanel.Children.Add(CreateButton("Staff Warning", GenerateStaffConflictWarning));
+        buttonPanel.Children.Add(CreateButton("Reassign Staff", ReassignStaffRole));
+        buttonPanel.Children.Add(CreateButton("Release Staff", ReleaseStaff));
+        buttonPanel.Children.Add(CreateButton("Hire Staff", HirePlaceholderStaff));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
         buttonPanel.Children.Add(CreateButton("Approve Pending", ApprovePendingAction));
         buttonPanel.Children.Add(CreateButton("Decline Pending", DeclinePendingAction));
@@ -472,6 +479,18 @@ internal sealed class MainWindow : Window
 
     private void AssignScoutFocus() => State.AssignScoutFocus();
 
+    private void AssignScoutToRegion() => State.AssignScoutToRegion();
+
+    private void AssignScoutToPlayer() => State.AssignScoutToPlayer();
+
+    private void GenerateStaffConflictWarning() => State.GenerateStaffConflictWarning();
+
+    private void ReassignStaffRole() => State.ReassignStaffRole();
+
+    private void ReleaseStaff() => State.ReleaseStaff();
+
+    private void HirePlaceholderStaff() => State.HirePlaceholderStaff();
+
     private void MakeRecruitingOffer() => State.MakeRecruitingOffer();
 
     private void StarTopProspect() => State.StarTopProspect();
@@ -544,6 +563,7 @@ internal sealed class MainWindow : Window
         _tabs["Roster"].Text = BuildRoster();
         _tabs["Recruits"].Text = BuildRecruits();
         _tabs["Scouting"].Text = BuildScouting();
+        _tabs["Scouting Operations"].Text = BuildScoutingOperations();
         _tabs["Pending Actions"].Text = BuildPendingActions();
         if (_tabs.ContainsKey("Draft Board"))
         {
@@ -814,6 +834,8 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Training camp: {State.TrainingCampStatusText}");
         builder.AppendLine($"Season readiness: {State.SeasonReadinessReport.RosterStatus}");
         builder.AppendLine($"Executive reports archived: {State.ScenarioSnapshot.ExecutiveReports.Reports.Count}");
+        builder.AppendLine($"Scouting assignments: {State.ScenarioSnapshot.ScoutingOperations.Count}");
+        builder.AppendLine($"Completed scouting reports: {State.ScenarioSnapshot.CompletedScoutingReports.Count}");
         builder.AppendLine($"Pending GM actions: {State.OpenPendingActions.Count}");
         if (State.ScenarioSnapshot.DraftExperience is { } draftState)
         {
@@ -1231,7 +1253,11 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"{FindPersonName(member.PersonId)} - {member.CurrentRole} - {member.EmploymentStatus}");
             builder.AppendLine($"  Department: {member.Department}  Experience: {member.Profile.YearsExperience} years  Reputation: {member.Profile.Reputation}");
+            builder.AppendLine($"  GM relationship: {State.RelationshipWithGm(member.PersonId)}");
+            builder.AppendLine($"  Fit: {State.StaffFitSummary(member.PersonId)}");
+            builder.AppendLine($"  Communication/Loyalty/Professionalism: {State.StaffQualitySummary(member.PersonId)}");
             builder.AppendLine($"  Contract: {member.ContractId ?? "reference not assigned"}");
+            builder.AppendLine($"  Controls: reassign role, release staff, hire placeholder candidate where allowed.");
         }
 
         return builder.ToString();
@@ -1292,6 +1318,70 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  {entry.ProjectionText}");
         }
 
+        return builder.ToString();
+    }
+
+    private string BuildScoutingOperations()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Scouting Operations");
+        builder.AppendLine("===================");
+        builder.AppendLine("Scout list on left; selected scout profile on right.");
+        builder.AppendLine("Assignment controls: region assignment, player assignment, priority, notes, Assign button.");
+        builder.AppendLine();
+        builder.AppendLine("Regions / Focuses");
+        builder.AppendLine("Western Canada, Eastern Canada, USA, Europe, Goalies, Defensemen, Forwards, Character, Medical");
+        builder.AppendLine();
+
+        builder.AppendLine("Scout Profiles");
+        foreach (var profile in State.ScoutProfiles)
+        {
+            builder.AppendLine($"{profile.Name} - {profile.Role}");
+            builder.AppendLine($"  Region specialty: {profile.RegionSpecialty}");
+            builder.AppendLine($"  Strengths: {string.Join(", ", profile.Strengths)}");
+            builder.AppendLine($"  Weaknesses: {string.Join(", ", profile.Weaknesses)}");
+            builder.AppendLine($"  Reputation: {profile.Reputation}");
+            builder.AppendLine($"  Relationship with GM: {profile.RelationshipWithGm}");
+            builder.AppendLine($"  Current assignment: {profile.CurrentAssignment}");
+            builder.AppendLine($"  Workload: {profile.Workload}");
+            builder.AppendLine($"  Warning: {profile.ConflictWarning}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Active Scouting Assignments");
+        var active = State.ScenarioSnapshot.ScoutingOperations.Where(assignment => assignment.IsOpen).ToArray();
+        if (active.Length == 0)
+        {
+            builder.AppendLine("  No active scouting assignments.");
+        }
+
+        foreach (var assignment in active.OrderBy(assignment => assignment.ExpectedReportDate))
+        {
+            builder.AppendLine($"{assignment.ScoutName} -> {assignment.TargetName}");
+            builder.AppendLine($"  Type: {assignment.AssignmentType}  Priority: {assignment.Priority}  Status: {assignment.Status}");
+            builder.AppendLine($"  Start: {assignment.StartDate:yyyy-MM-dd}  Expected report: {assignment.ExpectedReportDate:yyyy-MM-dd}");
+            builder.AppendLine($"  Workload: {assignment.WorkloadAtAssignment}  Relationship: {assignment.RelationshipQualityAtAssignment}  Communication: {assignment.CommunicationQuality}");
+            builder.AppendLine($"  Notes: {assignment.Notes}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Completed Reports");
+        if (State.ScenarioSnapshot.CompletedScoutingReports.Count == 0)
+        {
+            builder.AppendLine("  No completed reports yet.");
+        }
+
+        foreach (var report in State.ScenarioSnapshot.CompletedScoutingReports.OrderByDescending(report => report.CreatedOn).Take(12))
+        {
+            builder.AppendLine($"{FindPersonName(report.PlayerId)} - {report.Confidence} confidence - {report.Recommendation}");
+            builder.AppendLine($"  Assignment: {report.AssignmentId}  Created: {report.CreatedOn:yyyy-MM-dd}");
+            builder.AppendLine($"  Facts: {string.Join(" ", report.Facts)}");
+            builder.AppendLine($"  Observation: {report.Observations.FirstOrDefault() ?? "No observation."}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Inbox Updates");
+        builder.AppendLine("Completed assignments create Scouting inbox messages and Event Engine records.");
         return builder.ToString();
     }
 
@@ -1654,6 +1744,7 @@ internal sealed class AlphaDesktopState
     private readonly ProspectDecisionService _prospectDecisions = new();
     private readonly SeasonReadinessService _seasonReadiness = new();
     private readonly ExecutiveReportService _executiveReports = new();
+    private readonly ScoutingOperationsService _scoutingOperations = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
@@ -1693,6 +1784,8 @@ internal sealed class AlphaDesktopState
     public ProspectListSummary ProspectSummary => _prospectDecisions.BuildSummary(ScenarioSnapshot);
 
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
+
+    public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles => _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
 
     public string TrainingCampStatusText =>
         ScenarioSnapshot.TrainingCamp switch
@@ -1772,6 +1865,80 @@ internal sealed class AlphaDesktopState
         var focus = focusCycle[ScenarioSnapshot.ScoutingAssignments.Count % focusCycle.Length];
         ApplyAction(_actions.AssignDraftPreparationFocus(_registry, ScenarioSnapshot, focus));
     }
+
+    public void AssignScoutToRegion()
+    {
+        var scout = ScoutProfiles.OrderBy(profile => profile.Workload).FirstOrDefault();
+        if (scout is null)
+        {
+            LatestSummary = "No scouting staff are available for region assignment.";
+            return;
+        }
+
+        var regions = Enum.GetValues<ScoutingRegionFocus>();
+        var region = regions[ScenarioSnapshot.ScoutingOperations.Count % regions.Length];
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToRegion(
+            _registry,
+            ScenarioSnapshot,
+            scout.ScoutPersonId,
+            region,
+            ScoutingOperationPriority.High,
+            $"GM assignment from AlphaDesktop on {Snapshot.CurrentDate:yyyy-MM-dd}."));
+    }
+
+    public void AssignScoutToPlayer()
+    {
+        var scout = ScoutProfiles.OrderBy(profile => profile.Workload).FirstOrDefault();
+        var prospect = Snapshot.DraftBoard.Entries
+            .OrderBy(entry => entry.Rank)
+            .FirstOrDefault(entry => ScenarioSnapshot.ScoutingOperations.All(assignment => assignment.TargetPlayerId != entry.ProspectPersonId || !assignment.IsOpen));
+        if (scout is null || prospect is null)
+        {
+            LatestSummary = "No scout or draft-board prospect is available for player assignment.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToPlayer(
+            _registry,
+            ScenarioSnapshot,
+            scout.ScoutPersonId,
+            prospect.ProspectPersonId,
+            ScoutingOperationPriority.High,
+            $"Specific prospect review requested from AlphaDesktop on {Snapshot.CurrentDate:yyyy-MM-dd}."));
+    }
+
+    public void GenerateStaffConflictWarning() =>
+        ApplyScoutingOperationResult(_scoutingOperations.GenerateStaffConflictWarning(_registry, ScenarioSnapshot));
+
+    public void ReassignStaffRole()
+    {
+        var staff = Snapshot.StaffMembers.FirstOrDefault(member => member.CurrentRole == LegacyEngine.Staff.StaffRole.AssistantCoach);
+        if (staff is null)
+        {
+            LatestSummary = "No eligible assistant coach is available for reassignment.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.ReassignStaffRole(_registry, ScenarioSnapshot, staff.PersonId, LegacyEngine.Staff.StaffRole.DevelopmentCoach));
+    }
+
+    public void ReleaseStaff()
+    {
+        var staff = Snapshot.StaffMembers
+            .Where(member => member.CurrentRole is not LegacyEngine.Staff.StaffRole.HeadCoach and not LegacyEngine.Staff.StaffRole.HeadScout)
+            .OrderBy(member => member.Profile.Reputation)
+            .FirstOrDefault();
+        if (staff is null)
+        {
+            LatestSummary = "No eligible staff member is available for release.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.ReleaseStaff(_registry, ScenarioSnapshot, staff.PersonId, "GM staff control test action."));
+    }
+
+    public void HirePlaceholderStaff() =>
+        ApplyScoutingOperationResult(_scoutingOperations.HirePlaceholderStaffCandidate(_registry, ScenarioSnapshot, LegacyEngine.Staff.StaffRole.Scout));
 
     public void MakeRecruitingOffer()
     {
@@ -2059,6 +2226,40 @@ internal sealed class AlphaDesktopState
     public void GenerateEndOfSeasonExecutiveReview() =>
         ApplyExecutiveReportResult(_executiveReports.GenerateEndOfSeasonExecutiveReview(_registry, ScenarioSnapshot));
 
+    public int RelationshipWithGm(string personId) =>
+        Snapshot.Relationships
+            .Where(relationship => relationship.FromPersonId == Snapshot.GeneralManager.PersonId && relationship.ToPersonId == personId)
+            .Select(relationship => (relationship.Trust + relationship.Respect + relationship.Confidence + relationship.Loyalty) / 4)
+            .DefaultIfEmpty(50)
+            .First();
+
+    public string StaffFitSummary(string personId)
+    {
+        var member = Snapshot.StaffMembers.SingleOrDefault(member => member.PersonId == personId);
+        if (member is null)
+        {
+            return "not tracked";
+        }
+
+        var departmentFit = member.Department switch
+        {
+            LegacyEngine.Staff.StaffDepartment.Scouting => member.Attributes.ScoutingAttributes.Count == 0 ? "thin scouting fit" : "scouting fit",
+            LegacyEngine.Staff.StaffDepartment.Coaching => member.Attributes.CoachingAttributes.Count == 0 ? "thin coaching fit" : "coaching fit",
+            LegacyEngine.Staff.StaffDepartment.Medical => member.Attributes.MedicalAttributes.Count == 0 ? "thin medical fit" : "medical fit",
+            _ => "operations fit"
+        };
+        return $"{departmentFit}, reputation {member.Profile.Reputation}, department {member.Department}";
+    }
+
+    public string StaffQualitySummary(string personId)
+    {
+        var relation = RelationshipWithGm(personId);
+        var loyalty = relation >= 60 ? "loyal" : relation >= 45 ? "neutral" : "strained";
+        var communication = relation >= 60 ? "clear" : relation >= 45 ? "uneven" : "poor";
+        var professionalism = relation >= 40 ? "professional" : "needs attention";
+        return $"{communication} communication, {loyalty} loyalty, {professionalism}";
+    }
+
     private void ApplyCampDecisionToNext(TrainingCampDecisionType decisionType, string emptyMessage)
     {
         var player = NextActionableCampPlayer();
@@ -2171,6 +2372,19 @@ internal sealed class AlphaDesktopState
     }
 
     private void ApplyExecutiveReportResult(ExecutiveReportGenerationResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            InboxManager.AddRange(result.InboxItems);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyScoutingOperationResult(ScoutingOperationResult result)
     {
         if (result.Success)
         {
