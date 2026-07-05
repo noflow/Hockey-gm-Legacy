@@ -33,6 +33,7 @@ var executiveReportTests = new ExecutiveReportTests();
 var scoutingOperationsTests = new ScoutingOperationsTests();
 var playerDossierIntegrationTests = new PlayerDossierIntegrationTests();
 var staffControlTests = new StaffControlTests();
+var alphaDesktopInteractionTests = new AlphaDesktopInteractionTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -424,6 +425,9 @@ runner.Run("staff control events created", staffControlTests.EventsCreated);
 runner.Run("staff control inbox messages created", staffControlTests.InboxMessagesCreated);
 runner.Run("AlphaDesktop exposes staff controls v2", staffControlTests.AlphaDesktopExposesStaffControls);
 runner.Run("staff control has no Godot save or game simulation dependency", staffControlTests.NoGodotSaveOrGameSimulation);
+runner.Run("AlphaDesktop staff selected item exposes staff actions", alphaDesktopInteractionTests.StaffSelectedItemExposesStaffActions);
+runner.Run("AlphaDesktop roster and prospect selected item exposes player actions", alphaDesktopInteractionTests.PlayerAndProspectSelectedItemsExposePlayerActions);
+runner.Run("AlphaDesktop view dossier works from selected player", alphaDesktopInteractionTests.ViewDossierWorksFromSelectedPlayer);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

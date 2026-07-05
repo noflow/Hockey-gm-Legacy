@@ -34,6 +34,9 @@ internal sealed class MainWindow : Window
     private readonly TextBlock _summaryText = new();
     private readonly TextBlock _processedText = new();
     private readonly Dictionary<string, TextBox> _tabs = [];
+    private readonly Dictionary<string, ListBox> _selectableLists = [];
+    private readonly Dictionary<string, StackPanel> _selectableDetails = [];
+    private readonly Dictionary<string, string> _selectedPeopleByTab = [];
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
     private Border? _inboxReader;
@@ -195,19 +198,19 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Dashboard");
         AddInboxTab(tabs);
         AddTab(tabs, "Owner");
-        AddTab(tabs, "Staff");
-        AddTab(tabs, "Roster");
-        AddTab(tabs, "Recruits");
-        AddTab(tabs, "Scouting");
-        AddTab(tabs, "Scouting Operations");
+        AddSelectablePeopleTab(tabs, "Staff");
+        AddSelectablePeopleTab(tabs, "Roster");
+        AddSelectablePeopleTab(tabs, "Recruits");
+        AddSelectablePeopleTab(tabs, "Scouting");
+        AddSelectablePeopleTab(tabs, "Scouting Operations");
         AddTab(tabs, "Pending Actions");
-        AddTab(tabs, "Player Dossier");
+        AddSelectablePeopleTab(tabs, "Player Dossier");
         if (State.IsDraftUiEnabled)
         {
-            AddTab(tabs, "Draft Board");
+            AddSelectablePeopleTab(tabs, "Draft Board");
         }
-        AddTab(tabs, "Prospect List");
-        AddTab(tabs, "Training Camp");
+        AddSelectablePeopleTab(tabs, "Prospect List");
+        AddSelectablePeopleTab(tabs, "Training Camp");
         AddTab(tabs, "Season Readiness");
         AddTab(tabs, "Executive Reports");
         AddTab(tabs, "Relationships");
@@ -259,43 +262,8 @@ internal sealed class MainWindow : Window
 
         buttonPanel.Children.Add(CreateButton("Advance Day", () => Advance(1)));
         buttonPanel.Children.Add(CreateButton("Advance 7 Days", () => Advance(7)));
-        if (State.IsDraftUiEnabled)
-        {
-            buttonPanel.Children.Add(CreateButton("Board Up", MoveDraftBoardPlayerUp));
-            buttonPanel.Children.Add(CreateButton("Board Down", MoveDraftBoardPlayerDown));
-            buttonPanel.Children.Add(CreateButton("Star", StarTopProspect));
-            buttonPanel.Children.Add(CreateButton("GM Note", AddDraftNote));
-            buttonPanel.Children.Add(CreateButton("Offer Contract", OfferProspectContract));
-            buttonPanel.Children.Add(CreateButton("Invite Prospect", InviteProspectToCamp));
-            buttonPanel.Children.Add(CreateButton("Return Prospect", ReturnProspectToJuniorOrYouth));
-            buttonPanel.Children.Add(CreateButton("Assign Prospect", AssignProspectToAffiliate));
-            buttonPanel.Children.Add(CreateButton("Release Rights", ReleaseProspectRights));
-        }
-        buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
-        buttonPanel.Children.Add(CreateButton("Assign Region", AssignScoutToRegion));
-        buttonPanel.Children.Add(CreateButton("Assign Player", AssignScoutToPlayer));
-        buttonPanel.Children.Add(CreateButton("Staff Warning", GenerateStaffConflictWarning));
-        buttonPanel.Children.Add(CreateButton("Reassign Staff", ReassignStaffRole));
-        buttonPanel.Children.Add(CreateButton("Release Staff", ReleaseStaff));
-        buttonPanel.Children.Add(CreateButton("Hire Staff", HirePlaceholderStaff));
-        buttonPanel.Children.Add(CreateButton("Candidates", GenerateStaffCandidates));
-        buttonPanel.Children.Add(CreateButton("Development Focus", SetDevelopmentCoachFocus));
-        buttonPanel.Children.Add(CreateButton("Medical Focus", SetMedicalStaffFocus));
-        buttonPanel.Children.Add(CreateButton("Scouting Focus", SetScoutingDepartmentFocus));
-        buttonPanel.Children.Add(CreateButton("Staff Evaluation", GenerateStaffEvaluation));
-        buttonPanel.Children.Add(CreateButton("View Dossier", ViewDossier));
-        buttonPanel.Children.Add(CreateButton("Dossier Note", AddDossierNote));
-        buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
         buttonPanel.Children.Add(CreateButton("Approve Pending", ApprovePendingAction));
         buttonPanel.Children.Add(CreateButton("Decline Pending", DeclinePendingAction));
-        buttonPanel.Children.Add(CreateButton("Keep", KeepTrainingCampPlayer));
-        buttonPanel.Children.Add(CreateButton("Cut", CutTrainingCampPlayer));
-        buttonPanel.Children.Add(CreateButton("Release", ReleaseTrainingCampPlayer));
-        buttonPanel.Children.Add(CreateButton("Return Junior", ReturnTrainingCampPlayerToJunior));
-        buttonPanel.Children.Add(CreateButton("Assign/Return", AssignOrReturnTrainingCampPlayer));
-        buttonPanel.Children.Add(CreateButton("Waivers", PlaceTrainingCampPlayerOnWaivers));
-        buttonPanel.Children.Add(CreateButton("Mark Injured", MarkTrainingCampPlayerInjured));
-        buttonPanel.Children.Add(CreateButton("Complete Camp", CompleteTrainingCamp));
         buttonPanel.Children.Add(CreateButton("Reviews", GenerateSeasonReadinessReviews));
         buttonPanel.Children.Add(CreateButton("Begin Season", BeginSeason));
         buttonPanel.Children.Add(CreateButton("Front Report", GenerateFrontOfficeReadinessReport));
@@ -361,6 +329,50 @@ internal sealed class MainWindow : Window
         {
             Header = title,
             Content = text
+        });
+    }
+
+    private void AddSelectablePeopleTab(TabControl tabs, string title)
+    {
+        var root = new Grid { Background = Brushes.White };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var list = new ListBox
+        {
+            BorderThickness = new Thickness(0, 0, 1, 0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
+            Background = new SolidColorBrush(Color.FromRgb(248, 250, 253)),
+            Padding = new Thickness(8),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is SelectablePersonRow row)
+            {
+                _selectedPeopleByTab[title] = row.PersonId;
+                RenderSelectableDetail(title);
+            }
+        };
+
+        var detail = new StackPanel { Margin = new Thickness(18) };
+        var detailScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = detail
+        };
+
+        Grid.SetColumn(list, 0);
+        Grid.SetColumn(detailScroll, 1);
+        root.Children.Add(list);
+        root.Children.Add(detailScroll);
+
+        _selectableLists[title] = list;
+        _selectableDetails[title] = detail;
+        tabs.Items.Add(new TabItem
+        {
+            Header = title,
+            Content = root
         });
     }
 
@@ -581,23 +593,536 @@ internal sealed class MainWindow : Window
         _tabs["Dashboard"].Text = BuildDashboard();
         RefreshInboxPanels();
         _tabs["Owner"].Text = BuildOwner();
-        _tabs["Staff"].Text = BuildStaff();
-        _tabs["Roster"].Text = BuildRoster();
-        _tabs["Recruits"].Text = BuildRecruits();
-        _tabs["Scouting"].Text = BuildScouting();
-        _tabs["Scouting Operations"].Text = BuildScoutingOperations();
+        RefreshSelectableTab("Staff", BuildStaffRows());
+        RefreshSelectableTab("Roster", BuildRosterRows());
+        RefreshSelectableTab("Recruits", BuildRecruitRows());
+        RefreshSelectableTab("Scouting", BuildScoutingRows());
+        RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         _tabs["Pending Actions"].Text = BuildPendingActions();
-        _tabs["Player Dossier"].Text = BuildPlayerDossier();
-        if (_tabs.ContainsKey("Draft Board"))
+        RefreshSelectableTab("Player Dossier", BuildDossierRows());
+        if (_selectableLists.ContainsKey("Draft Board"))
         {
-            _tabs["Draft Board"].Text = BuildDraftBoard();
+            RefreshSelectableTab("Draft Board", BuildDraftBoardRows());
         }
-        _tabs["Prospect List"].Text = BuildProspectList();
-        _tabs["Training Camp"].Text = BuildTrainingCamp();
+        RefreshSelectableTab("Prospect List", BuildProspectRows());
+        RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
         _tabs["Season Readiness"].Text = BuildSeasonReadiness();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
         _tabs["Relationships"].Text = BuildRelationships();
         RefreshDraftModal();
+    }
+
+    private void RefreshSelectableTab(string title, IReadOnlyList<SelectablePersonRow> rows)
+    {
+        if (!_selectableLists.TryGetValue(title, out var list))
+        {
+            return;
+        }
+
+        var previous = _selectedPeopleByTab.GetValueOrDefault(title);
+        list.ItemsSource = null;
+        list.ItemsSource = rows;
+
+        var selected = rows.FirstOrDefault(row => string.Equals(row.PersonId, previous, StringComparison.Ordinal))
+            ?? rows.FirstOrDefault();
+        if (selected is not null)
+        {
+            list.SelectedItem = selected;
+            _selectedPeopleByTab[title] = selected.PersonId;
+        }
+        else
+        {
+            _selectedPeopleByTab.Remove(title);
+        }
+
+        RenderSelectableDetail(title);
+    }
+
+    private void RenderSelectableDetail(string title)
+    {
+        if (!_selectableDetails.TryGetValue(title, out var detail))
+        {
+            return;
+        }
+
+        var row = _selectableLists.TryGetValue(title, out var list)
+            ? list.SelectedItem as SelectablePersonRow
+            : null;
+
+        detail.Children.Clear();
+        detail.Children.Add(title switch
+        {
+            "Staff" => BuildStaffDetail(row),
+            "Roster" => BuildPlayerDetail(title, row),
+            "Recruits" => BuildPlayerDetail(title, row),
+            "Scouting" => BuildPlayerDetail(title, row),
+            "Scouting Operations" => BuildScoutingOperationDetail(row),
+            "Draft Board" => BuildPlayerDetail(title, row),
+            "Prospect List" => BuildPlayerDetail(title, row),
+            "Training Camp" => BuildTrainingCampDetail(row),
+            "Player Dossier" => BuildDossierDetail(row),
+            _ => EmptyDetail(title, "No detail panel is configured for this view.")
+        });
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildStaffRows()
+    {
+        var rows = State.StaffProfiles
+            .Select(profile => new SelectablePersonRow(
+                profile.PersonId,
+                profile.Name,
+                "Staff",
+                profile.CurrentRole.ToString(),
+                $"{profile.Department} | GM relationship {profile.RelationshipWithGm}",
+                profile.Chemistry.Summary))
+            .ToList();
+
+        rows.AddRange(State.ScenarioSnapshot.StaffCandidates.Select(candidate => new SelectablePersonRow(
+            candidate.Person.PersonId,
+            candidate.Person.Identity.DisplayName,
+            "Candidate",
+            $"Candidate - {candidate.StaffMember.CurrentRole}",
+            $"Role fit {candidate.RoleFit} | department fit {candidate.DepartmentFit}",
+            candidate.HiringRecommendation)));
+
+        return rows;
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildRosterRows() =>
+        State.Snapshot.Roster.Players
+            .OrderBy(player => player.Status)
+            .ThenBy(player => FindPersonName(player.PersonId), StringComparer.Ordinal)
+            .Select(player =>
+            {
+                var injury = State.Snapshot.Injuries.FirstOrDefault(injury => injury.PersonId == player.PersonId && injury.IsActive);
+                var health = injury is null ? "Available" : $"{injury.Severity} {injury.InjuryType}";
+                return new SelectablePersonRow(
+                    player.PersonId,
+                    FindPersonName(player.PersonId),
+                    "RosterPlayer",
+                    $"{player.Position} - {player.Status}",
+                    $"Age {player.Age?.ToString() ?? "unknown"} | {health}",
+                    $"Roster member since {player.JoinedDate:yyyy-MM-dd}. Use the detail panel for dossier and notes.");
+            })
+            .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildRecruitRows() =>
+        State.Snapshot.Recruits
+            .OrderByDescending(recruit => recruit.GetInterest(State.Snapshot.OrganizationId))
+            .ThenBy(recruit => FindPersonName(recruit.RecruitPersonId), StringComparer.Ordinal)
+            .Select(recruit => new SelectablePersonRow(
+                recruit.RecruitPersonId,
+                FindPersonName(recruit.RecruitPersonId),
+                "Recruit",
+                recruit.Status.ToString(),
+                $"Interest {recruit.GetInterest(State.Snapshot.OrganizationId)}",
+                $"Top priorities: {string.Join(", ", recruit.Priorities.OrderByDescending(priority => priority.Value).Take(3).Select(priority => priority.Key))}"))
+            .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
+        State.Snapshot.DraftBoard.Entries
+            .OrderBy(entry => entry.Rank)
+            .Select(entry => new SelectablePersonRow(
+                entry.ProspectPersonId,
+                FindPersonName(entry.ProspectPersonId),
+                "ScoutingProspect",
+                $"Rank #{entry.Rank}",
+                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}",
+                entry.ProjectionText))
+            .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildScoutingOperationRows() =>
+        State.ScoutProfiles
+            .OrderBy(profile => profile.Workload)
+            .ThenBy(profile => profile.Name, StringComparer.Ordinal)
+            .Select(profile => new SelectablePersonRow(
+                profile.ScoutPersonId,
+                profile.Name,
+                "Scout",
+                profile.Role,
+                $"{profile.RegionSpecialty} | workload {profile.Workload}",
+                profile.ConflictWarning))
+            .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildDraftBoardRows() =>
+        State.Snapshot.DraftBoard.Entries
+            .OrderBy(entry => entry.Rank)
+            .Select(entry => new SelectablePersonRow(
+                entry.ProspectPersonId,
+                FindPersonName(entry.ProspectPersonId),
+                "DraftBoard",
+                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank}",
+                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}",
+                entry.ProjectionText))
+            .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildProspectRows() =>
+        State.ScenarioSnapshot.ProspectRights
+            .OrderBy(prospect => prospect.PickNumber)
+            .Select(prospect => new SelectablePersonRow(
+                prospect.ProspectPersonId,
+                prospect.ProspectName,
+                "Prospect",
+                $"{prospect.Position} - {prospect.Status}",
+                $"Age {prospect.Age} | R{prospect.RoundNumber} P{prospect.PickNumber}",
+                prospect.ProjectionText))
+            .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildTrainingCampRows() =>
+        State.ScenarioSnapshot.TrainingCamp?.Players
+            .OrderBy(player => player.Status)
+            .ThenBy(player => player.PlayerName, StringComparer.Ordinal)
+            .Select(player => new SelectablePersonRow(
+                player.PersonId,
+                player.PlayerName,
+                "CampPlayer",
+                $"{player.Position} - {player.Status}",
+                $"{player.InviteType} | {player.AcquisitionSource}",
+                State.ScenarioSnapshot.TrainingCamp.FindEvaluation(player.PersonId)?.Recommendation ?? "Evaluation pending."))
+            .ToArray()
+        ?? Array.Empty<SelectablePersonRow>();
+
+    private IReadOnlyList<SelectablePersonRow> BuildDossierRows() =>
+        BuildRosterRows()
+            .Concat(BuildRecruitRows())
+            .Concat(BuildScoutingRows())
+            .Concat(BuildProspectRows())
+            .Concat(BuildTrainingCampRows())
+            .GroupBy(row => row.PersonId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderBy(row => row.Name, StringComparer.Ordinal)
+            .ToArray();
+
+    private UIElement BuildStaffDetail(SelectablePersonRow? row)
+    {
+        if (row is null)
+        {
+            var empty = EmptyDetail("Staff", "Select a staff member or generate a candidate pool.");
+            AddActions(empty, CreateDetailButton("Generate Candidates", GenerateStaffCandidates), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
+            return empty;
+        }
+
+        if (row.Kind == "Candidate")
+        {
+            var candidate = State.ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == row.PersonId);
+            if (candidate is null)
+            {
+                return EmptyDetail("Staff Candidate", "This candidate is no longer available.");
+            }
+
+            var panel = CreateDetailPanel(candidate.Person.Identity.DisplayName, "Staff candidate");
+            AddLine(panel, "Role", candidate.StaffMember.CurrentRole);
+            AddLine(panel, "Department", candidate.StaffMember.Department);
+            AddLine(panel, "Role fit", candidate.RoleFit);
+            AddLine(panel, "Department fit", candidate.DepartmentFit);
+            AddLine(panel, "Reputation", candidate.Reputation);
+            AddLine(panel, "Strengths", string.Join(", ", candidate.Strengths));
+            AddLine(panel, "Weaknesses", string.Join(", ", candidate.Weaknesses));
+            AddLine(panel, "Chemistry risk", candidate.ChemistryRisk);
+            AddParagraph(panel, candidate.HiringRecommendation);
+            AddActions(panel,
+                CreateDetailButton("Hire Staff", () => State.HireCandidateFor(row.PersonId)),
+                CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
+            return panel;
+        }
+
+        var profile = State.StaffProfiles.FirstOrDefault(profile => profile.PersonId == row.PersonId);
+        if (profile is null)
+        {
+            return EmptyDetail("Staff", "This staff member is no longer active.");
+        }
+
+        var detail = CreateDetailPanel(profile.Name, "Selected staff profile");
+        AddLine(detail, "Role", profile.CurrentRole);
+        AddLine(detail, "Department", profile.Department);
+        AddLine(detail, "Contract", profile.ContractStatus);
+        AddLine(detail, "GM relationship", $"{profile.RelationshipWithGm}/100");
+        AddLine(detail, "Fit / chemistry", profile.Chemistry.Summary);
+        AddLine(detail, "Strengths", string.Join(", ", profile.Strengths));
+        AddLine(detail, "Weaknesses", string.Join(", ", profile.Weaknesses));
+        AddLine(detail, "Assignment", profile.CurrentAssignment);
+        AddLine(detail, "Focus", profile.CurrentFocus);
+        AddActions(detail,
+            CreateDetailButton("View Profile", () => State.FocusStaffProfile(row.PersonId)),
+            CreateDetailButton("View Dossier/Profile", () => State.OpenDossier(row.PersonId)),
+            CreateDetailButton("Reassign Role", () => State.ReassignStaffRoleFor(row.PersonId)),
+            CreateDetailButton("Release Staff", () => State.ReleaseStaffFor(row.PersonId)),
+            CreateDetailButton("Set Focus", () => State.SetStaffFocusFor(row.PersonId)),
+            CreateDetailButton("Generate Evaluation", () => State.GenerateStaffEvaluationFor(row.PersonId)));
+        return detail;
+    }
+
+    private UIElement BuildScoutingOperationDetail(SelectablePersonRow? row)
+    {
+        if (row is null)
+        {
+            return EmptyDetail("Scouting Operations", "Select a scout to assign regional or player-specific work.");
+        }
+
+        var profile = State.ScoutProfiles.FirstOrDefault(profile => profile.ScoutPersonId == row.PersonId);
+        if (profile is null)
+        {
+            return EmptyDetail("Scouting Operations", "This scout is no longer available.");
+        }
+
+        var panel = CreateDetailPanel(profile.Name, "Selected scout");
+        AddLine(panel, "Role", profile.Role);
+        AddLine(panel, "Region specialty", profile.RegionSpecialty);
+        AddLine(panel, "Reputation", profile.Reputation);
+        AddLine(panel, "GM relationship", $"{profile.RelationshipWithGm}/100");
+        AddLine(panel, "Current assignment", profile.CurrentAssignment);
+        AddLine(panel, "Workload", profile.Workload);
+        AddLine(panel, "Strengths", string.Join(", ", profile.Strengths));
+        AddLine(panel, "Weaknesses", string.Join(", ", profile.Weaknesses));
+        AddLine(panel, "Warning", profile.ConflictWarning);
+        AddActions(panel,
+            CreateDetailButton("Assign Region", () => State.AssignScoutToRegionFor(row.PersonId)),
+            CreateDetailButton("Assign Player", () => State.AssignScoutToPlayerFor(row.PersonId)),
+            CreateDetailButton("Set Scouting Focus", () => State.SetStaffFocusFor(row.PersonId)),
+            CreateDetailButton("View Profile", () => State.FocusStaffProfile(row.PersonId)));
+
+        AddSubHeader(panel, "Active Assignments");
+        foreach (var assignment in State.ScenarioSnapshot.ScoutingOperations.Where(assignment => assignment.ScoutPersonId == row.PersonId && assignment.IsOpen))
+        {
+            AddParagraph(panel, $"{assignment.TargetName} | {assignment.Priority} | due {assignment.ExpectedReportDate:yyyy-MM-dd} | {assignment.Notes}");
+        }
+
+        return panel;
+    }
+
+    private UIElement BuildPlayerDetail(string tab, SelectablePersonRow? row)
+    {
+        if (row is null)
+        {
+            return EmptyDetail(tab, "Select a player, recruit, or prospect to see valid actions.");
+        }
+
+        var panel = CreateDetailPanel(row.Name, row.Primary);
+        AddLine(panel, "Status / role", row.Primary);
+        AddLine(panel, "Context", row.Secondary);
+        AddLine(panel, "GM relationship", $"{State.RelationshipWithGm(row.PersonId)}/100");
+        AddParagraph(panel, row.Summary);
+
+        if (tab == "Draft Board")
+        {
+            var entry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == row.PersonId);
+            if (entry is not null)
+            {
+                AddLine(panel, "Report", entry.ScoutingReportId ?? "none");
+                AddLine(panel, "Analytics", string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary);
+                AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes);
+            }
+        }
+
+        if (tab == "Prospect List")
+        {
+            var prospect = State.ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == row.PersonId);
+            if (prospect is not null)
+            {
+                AddLine(panel, "Draft", $"Round {prospect.RoundNumber}, pick {prospect.PickNumber}");
+                AddLine(panel, "Rights status", prospect.Status);
+                AddLine(panel, "Confidence", prospect.ScoutingConfidence?.ToString() ?? "Unknown");
+                AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(prospect.GmNotes) ? "none" : prospect.GmNotes);
+            }
+        }
+
+        AddActions(panel, BuildPlayerActionButtons(tab, row).ToArray());
+        return panel;
+    }
+
+    private UIElement BuildTrainingCampDetail(SelectablePersonRow? row)
+    {
+        var calendar = State.TrainingCampCalendar;
+        if (row is null)
+        {
+            var panel = CreateDetailPanel("Training Camp", State.TrainingCampStatusText);
+            AddLine(panel, "Camp Opens", calendar.OpensOn.ToString("yyyy-MM-dd"));
+            AddLine(panel, "Camp Closes / Deadline", calendar.ClosesOn.ToString("yyyy-MM-dd"));
+            AddLine(panel, "Days until roster deadline", calendar.DaysUntilRosterDeadline);
+            AddLine(panel, "Current camp roster count", calendar.CurrentCampRosterCount);
+            AddLine(panel, "Required opening roster size", calendar.RequiredOpeningRosterSize);
+            AddLine(panel, "Players that must be cut/moved", calendar.PlayersOverLimit);
+            AddLine(panel, "Roster status", calendar.IsRosterCompliant ? "Roster Compliant" : calendar.RosterValidationResult.Message);
+            AddActions(panel, CreateDetailButton("Complete Camp", CompleteTrainingCamp, State.CanCompleteTrainingCamp));
+            return panel;
+        }
+
+        var panelWithPlayer = (StackPanel)BuildPlayerDetail("Training Camp", row);
+        var camp = State.ScenarioSnapshot.TrainingCamp;
+        var evaluation = camp?.FindEvaluation(row.PersonId);
+        if (evaluation is not null)
+        {
+            AddSubHeader(panelWithPlayer, "Camp Evaluation");
+            AddLine(panelWithPlayer, "Score", $"{evaluation.CampScore}/100");
+            AddLine(panelWithPlayer, "Readiness", evaluation.Readiness);
+            AddLine(panelWithPlayer, "Upside", evaluation.DevelopmentUpside);
+            AddLine(panelWithPlayer, "Coach note", evaluation.CoachNote);
+            AddLine(panelWithPlayer, "Scout note", evaluation.ScoutNote);
+            AddLine(panelWithPlayer, "Risk", evaluation.RiskNote);
+            AddLine(panelWithPlayer, "Recommendation", evaluation.Recommendation);
+        }
+
+        AddActions(panelWithPlayer, CreateDetailButton("Complete Camp", CompleteTrainingCamp, State.CanCompleteTrainingCamp));
+        return panelWithPlayer;
+    }
+
+    private UIElement BuildDossierDetail(SelectablePersonRow? row)
+    {
+        if (row is not null)
+        {
+            State.OpenDossier(row.PersonId);
+        }
+
+        var dossier = State.CurrentDossier;
+        if (dossier is null)
+        {
+            return EmptyDetail("Player Dossier", "Select a roster player, recruit, prospect, or camp invitee.");
+        }
+
+        var panel = CreateDetailPanel(dossier.PlayerName, $"Age {dossier.Age} | {dossier.Position}");
+        AddLine(panel, "Status", dossier.Status);
+        AddLine(panel, "Team / rights", dossier.TeamOrRights);
+        AddLine(panel, "Source", dossier.Source);
+        AddActions(panel, CreateDetailButton("Add GM Note", () => State.AddDossierNoteFor(dossier.PersonId)));
+        foreach (var section in dossier.Sections)
+        {
+            AddSubHeader(panel, section.Title);
+            foreach (var line in section.Lines)
+            {
+                AddParagraph(panel, line);
+            }
+        }
+
+        return panel;
+    }
+
+    private IEnumerable<Button> BuildPlayerActionButtons(string tab, SelectablePersonRow row)
+    {
+        yield return CreateDetailButton("View Dossier", () => State.OpenDossier(row.PersonId));
+        yield return CreateDetailButton("Add GM Note", () => State.AddDossierNoteFor(row.PersonId));
+
+        if (tab == "Recruits")
+        {
+            yield return CreateDetailButton("Offer Recruit", () => State.MakeRecruitingOfferFor(row.PersonId), State.CanOfferRecruit(row.PersonId));
+            yield break;
+        }
+
+        if (tab is "Scouting" or "Draft Board")
+        {
+            yield return CreateDetailButton("Board Up", () => State.MoveDraftBoardPlayer(row.PersonId, -1), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Board Down", () => State.MoveDraftBoardPlayer(row.PersonId, 1), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Star", () => State.ToggleStarProspect(row.PersonId), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("GM Note", () => State.AddDraftNoteFor(row.PersonId), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Assign Scout", () => State.AssignScoutToSelectedPlayer(row.PersonId), State.ScoutProfiles.Count > 0);
+        }
+
+        var available = State.AvailableProspectActions(row.PersonId);
+        yield return CreateDetailButton("Offer Contract", () => State.OfferProspectContractFor(row.PersonId), available.Contains(ProspectDecisionType.OfferContract));
+        yield return CreateDetailButton("Invite Prospect", () => State.InviteProspectToCampFor(row.PersonId), available.Contains(ProspectDecisionType.InviteToCamp));
+        yield return CreateDetailButton("Return Prospect", () => State.ReturnProspectToJuniorOrYouthFor(row.PersonId), available.Contains(ProspectDecisionType.ReturnToJunior) || available.Contains(ProspectDecisionType.ReturnToYouthTeam));
+        yield return CreateDetailButton("Assign Prospect", () => State.AssignProspectToAffiliateFor(row.PersonId), available.Contains(ProspectDecisionType.AssignToAffiliate));
+        yield return CreateDetailButton("Release Rights", () => State.ReleaseProspectRightsFor(row.PersonId), available.Contains(ProspectDecisionType.ReleaseRights));
+
+        if (tab == "Training Camp")
+        {
+            yield return CreateDetailButton("Keep", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Keep), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Cut", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Cut), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Release", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Release), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Return Junior", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.ReturnToJuniorTeam), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Assign/Return", () => State.AssignOrReturnTrainingCampPlayerFor(row.PersonId), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Waivers", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.PlaceOnWaivers), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Mark Injured", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.MarkInjured), State.CanApplyCampDecision(row.PersonId));
+        }
+    }
+
+    private StackPanel EmptyDetail(string title, string message)
+    {
+        var panel = CreateDetailPanel(title, "No selection");
+        AddParagraph(panel, message);
+        return panel;
+    }
+
+    private StackPanel CreateDetailPanel(string title, string subtitle)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 22,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = subtitle,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(92, 105, 120)),
+            Margin = new Thickness(0, 4, 0, 14),
+            TextWrapping = TextWrapping.Wrap
+        });
+        return panel;
+    }
+
+    private static void AddSubHeader(StackPanel panel, string text)
+    {
+        panel.Children.Add(new TextBlock
+        {
+            Text = text,
+            FontSize = 15,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(38, 58, 82)),
+            Margin = new Thickness(0, 16, 0, 6)
+        });
+    }
+
+    private static void AddLine(StackPanel panel, string label, object? value)
+    {
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"{label}: {value ?? "unknown"}",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+    }
+
+    private static void AddParagraph(StackPanel panel, string text)
+    {
+        panel.Children.Add(new TextBlock
+        {
+            Text = text,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.FromRgb(52, 65, 82)),
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+    }
+
+    private static void AddActions(StackPanel panel, params Button[] buttons)
+    {
+        if (buttons.Length == 0)
+        {
+            return;
+        }
+
+        var actions = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 10, 0, 6)
+        };
+        foreach (var button in buttons)
+        {
+            actions.Children.Add(button);
+        }
+
+        panel.Children.Add(actions);
+    }
+
+    private Button CreateDetailButton(string text, Action action, bool enabled = true)
+    {
+        var button = CreateButton(text, action);
+        button.MinWidth = 118;
+        button.IsEnabled = enabled;
+        return button;
     }
 
     private void RefreshDraftModal()
@@ -1849,6 +2374,17 @@ internal sealed class MainWindow : Window
     }
 }
 
+internal sealed record SelectablePersonRow(
+    string PersonId,
+    string Name,
+    string Kind,
+    string Primary,
+    string Secondary,
+    string Summary)
+{
+    public override string ToString() => $"{Name}\n{Primary}\n{Secondary}";
+}
+
 internal sealed class AlphaDesktopState
 {
     private readonly DailySimulationCoordinator _coordinator = new();
@@ -2034,6 +2570,57 @@ internal sealed class AlphaDesktopState
             $"Specific prospect review requested from AlphaDesktop on {Snapshot.CurrentDate:yyyy-MM-dd}."));
     }
 
+    public void AssignScoutToRegionFor(string scoutPersonId)
+    {
+        var regions = Enum.GetValues<ScoutingRegionFocus>();
+        var region = regions[ScenarioSnapshot.ScoutingOperations.Count % regions.Length];
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToRegion(
+            _registry,
+            ScenarioSnapshot,
+            scoutPersonId,
+            region,
+            ScoutingOperationPriority.High,
+            $"GM assigned selected scout to {region} on {Snapshot.CurrentDate:yyyy-MM-dd}."));
+    }
+
+    public void AssignScoutToPlayerFor(string scoutPersonId)
+    {
+        var prospect = Snapshot.DraftBoard.Entries
+            .OrderBy(entry => entry.Rank)
+            .FirstOrDefault(entry => ScenarioSnapshot.ScoutingOperations.All(assignment => assignment.TargetPlayerId != entry.ProspectPersonId || !assignment.IsOpen));
+        if (prospect is null)
+        {
+            LatestSummary = "No unassigned draft-board prospect is available for this scout.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToPlayer(
+            _registry,
+            ScenarioSnapshot,
+            scoutPersonId,
+            prospect.ProspectPersonId,
+            ScoutingOperationPriority.High,
+            $"Selected scout assigned to {FindPersonName(prospect.ProspectPersonId)} on {Snapshot.CurrentDate:yyyy-MM-dd}."));
+    }
+
+    public void AssignScoutToSelectedPlayer(string playerPersonId)
+    {
+        var scout = ScoutProfiles.OrderBy(profile => profile.Workload).FirstOrDefault();
+        if (scout is null)
+        {
+            LatestSummary = "No scout is available for a player assignment.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToPlayer(
+            _registry,
+            ScenarioSnapshot,
+            scout.ScoutPersonId,
+            playerPersonId,
+            ScoutingOperationPriority.High,
+            $"Selected player review requested from AlphaDesktop on {Snapshot.CurrentDate:yyyy-MM-dd}."));
+    }
+
     public void GenerateStaffConflictWarning() =>
         ApplyStaffOfficeResult(_staffOffice.GenerateChemistryWarning(_registry, ScenarioSnapshot));
 
@@ -2137,6 +2724,94 @@ internal sealed class AlphaDesktopState
         ApplyStaffOfficeResult(_staffOffice.GenerateStaffEvaluation(_registry, ScenarioSnapshot, staff.PersonId));
     }
 
+    public void FocusStaffProfile(string personId)
+    {
+        var profile = StaffProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        LatestSummary = profile is null
+            ? "Selected staff profile is unavailable."
+            : $"{profile.Name}: {profile.CurrentRole}, {profile.Department}, {profile.Chemistry.Summary}";
+    }
+
+    public void ReassignStaffRoleFor(string personId)
+    {
+        var staff = Snapshot.StaffMembers.FirstOrDefault(member => member.PersonId == personId);
+        if (staff is null)
+        {
+            LatestSummary = "Selected staff member is unavailable for reassignment.";
+            return;
+        }
+
+        if (staff.CurrentRole is LegacyEngine.Staff.StaffRole.HeadCoach or LegacyEngine.Staff.StaffRole.HeadScout)
+        {
+            LatestSummary = "Head coach and head scout roles are locked in this alpha pass.";
+            return;
+        }
+
+        var target = staff.CurrentRole == LegacyEngine.Staff.StaffRole.DevelopmentCoach
+            ? LegacyEngine.Staff.StaffRole.AssistantCoach
+            : LegacyEngine.Staff.StaffRole.DevelopmentCoach;
+        ApplyStaffOfficeResult(_staffOffice.ReassignStaffRole(_registry, ScenarioSnapshot, personId, target));
+    }
+
+    public void ReleaseStaffFor(string personId)
+    {
+        var staff = Snapshot.StaffMembers.FirstOrDefault(member => member.PersonId == personId);
+        if (staff is null)
+        {
+            LatestSummary = "Selected staff member is unavailable for release.";
+            return;
+        }
+
+        if (staff.CurrentRole is LegacyEngine.Staff.StaffRole.HeadCoach or LegacyEngine.Staff.StaffRole.HeadScout)
+        {
+            LatestSummary = "Head coach and head scout cannot be released in this alpha pass.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.ReleaseStaff(_registry, ScenarioSnapshot, personId, "Released from selected staff detail panel."));
+    }
+
+    public void HireCandidateFor(string candidatePersonId)
+    {
+        var candidate = ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == candidatePersonId);
+        if (candidate is null)
+        {
+            LatestSummary = "Selected staff candidate is no longer available.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.HireCandidate(_registry, ScenarioSnapshot, candidate.CandidateId));
+    }
+
+    public void SetStaffFocusFor(string personId)
+    {
+        var staff = Snapshot.StaffMembers.FirstOrDefault(member => member.PersonId == personId);
+        if (staff is null)
+        {
+            LatestSummary = "Selected staff member is unavailable for focus assignment.";
+            return;
+        }
+
+        switch (staff.Department)
+        {
+            case LegacyEngine.Staff.StaffDepartment.Coaching:
+                ApplyStaffOfficeResult(_staffOffice.SetDevelopmentCoachFocus(_registry, ScenarioSnapshot, personId, DevelopmentCoachFocus.Confidence));
+                break;
+            case LegacyEngine.Staff.StaffDepartment.Medical:
+                ApplyStaffOfficeResult(_staffOffice.SetMedicalStaffFocus(_registry, ScenarioSnapshot, personId, MedicalStaffFocus.InjuryPrevention));
+                break;
+            case LegacyEngine.Staff.StaffDepartment.Scouting:
+                ApplyStaffOfficeResult(_staffOffice.SetScoutingDepartmentFocus(_registry, ScenarioSnapshot, personId, ScoutingDepartmentFocus.WesternCanada));
+                break;
+            default:
+                LatestSummary = "No focus control is available for this staff department yet.";
+                break;
+        }
+    }
+
+    public void GenerateStaffEvaluationFor(string personId) =>
+        ApplyStaffOfficeResult(_staffOffice.GenerateStaffEvaluation(_registry, ScenarioSnapshot, personId));
+
     public void MakeRecruitingOffer()
     {
         var recruit = Snapshot.Recruits.FirstOrDefault(recruit => recruit.Status is not LegacyEngine.Recruiting.RecruitStatus.Offered and not LegacyEngine.Recruiting.RecruitStatus.Committed);
@@ -2147,6 +2822,23 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruit.RecruitPersonId));
+    }
+
+    public bool CanOfferRecruit(string recruitPersonId) =>
+        Snapshot.Recruits.Any(recruit =>
+            recruit.RecruitPersonId == recruitPersonId
+            && recruit.Status is not LegacyEngine.Recruiting.RecruitStatus.Offered
+                and not LegacyEngine.Recruiting.RecruitStatus.Committed);
+
+    public void MakeRecruitingOfferFor(string recruitPersonId)
+    {
+        if (!CanOfferRecruit(recruitPersonId))
+        {
+            LatestSummary = "Selected recruit is not available for a new offer.";
+            return;
+        }
+
+        ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruitPersonId));
     }
 
     public void ViewNextDossier()
@@ -2183,6 +2875,30 @@ internal sealed class AlphaDesktopState
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
+    }
+
+    public void OpenDossier(string personId)
+    {
+        if (!DossierPersonIds().Contains(personId, StringComparer.Ordinal) && Snapshot.People.All(person => person.PersonId != personId))
+        {
+            LatestSummary = "Selected person does not have a dossier entry yet.";
+            return;
+        }
+
+        _selectedDossierPersonId = personId;
+        var dossier = _playerDossiers.CreateDossier(ScenarioSnapshot, personId);
+        LatestSummary = $"Opened dossier for {dossier.PlayerName}.";
+    }
+
+    public void AddDossierNoteFor(string personId)
+    {
+        OpenDossier(personId);
+        if (_selectedDossierPersonId is null)
+        {
+            return;
+        }
+
+        AddDossierNote();
     }
 
     public void ApprovePendingAction()
@@ -2234,8 +2950,17 @@ internal sealed class AlphaDesktopState
         ApplyAction(_draftExperience.UpdatePersonalNotes(_registry, ScenarioSnapshot, prospect.ProspectPersonId, note));
     }
 
-    public IReadOnlyList<ProspectDecisionType> AvailableProspectActions(string prospectPersonId) =>
-        _prospectDecisions.AvailableDecisions(_registry, ScenarioSnapshot, prospectPersonId);
+    public IReadOnlyList<ProspectDecisionType> AvailableProspectActions(string prospectPersonId)
+    {
+        try
+        {
+            return _prospectDecisions.AvailableDecisions(_registry, ScenarioSnapshot, prospectPersonId);
+        }
+        catch (ArgumentException)
+        {
+            return Array.Empty<ProspectDecisionType>();
+        }
+    }
 
     public void OfferProspectContract() =>
         ApplyProspectDecisionToNext(ProspectDecisionType.OfferContract, "No prospect is available for a contract offer.");
@@ -2264,6 +2989,70 @@ internal sealed class AlphaDesktopState
 
     public void ReleaseProspectRights() =>
         ApplyProspectDecisionToNext(ProspectDecisionType.ReleaseRights, "No prospect rights are available for release.");
+
+    public void MoveDraftBoardPlayer(string prospectPersonId, int direction)
+    {
+        if (Snapshot.DraftBoard.Entries.All(entry => entry.ProspectPersonId != prospectPersonId))
+        {
+            LatestSummary = "Selected prospect is not on the draft board.";
+            return;
+        }
+
+        ApplyAction(_actions.MoveDraftBoardPlayer(_registry, ScenarioSnapshot, prospectPersonId, direction));
+    }
+
+    public void ToggleStarProspect(string prospectPersonId)
+    {
+        var prospect = Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == prospectPersonId);
+        if (prospect is null)
+        {
+            LatestSummary = "Selected prospect is not on the draft board.";
+            return;
+        }
+
+        ApplyAction(_draftExperience.StarProspect(_registry, ScenarioSnapshot, prospectPersonId, !prospect.IsStarred));
+    }
+
+    public void AddDraftNoteFor(string prospectPersonId)
+    {
+        if (Snapshot.DraftBoard.Entries.All(entry => entry.ProspectPersonId != prospectPersonId))
+        {
+            LatestSummary = "Selected prospect is not on the draft board.";
+            return;
+        }
+
+        var note = $"GM note added on {Snapshot.CurrentDate:yyyy-MM-dd}: selected prospect review.";
+        ApplyAction(_draftExperience.UpdatePersonalNotes(_registry, ScenarioSnapshot, prospectPersonId, note));
+    }
+
+    public void OfferProspectContractFor(string prospectPersonId) =>
+        ApplyProspectDecisionFor(prospectPersonId, ProspectDecisionType.OfferContract, "Selected prospect is not available for a contract offer.");
+
+    public void InviteProspectToCampFor(string prospectPersonId) =>
+        ApplyProspectDecisionFor(prospectPersonId, ProspectDecisionType.InviteToCamp, "Selected prospect is not available for a camp invite.");
+
+    public void ReturnProspectToJuniorOrYouthFor(string prospectPersonId)
+    {
+        var available = AvailableProspectActions(prospectPersonId);
+        var decision = available.Contains(ProspectDecisionType.ReturnToJunior)
+            ? ProspectDecisionType.ReturnToJunior
+            : available.Contains(ProspectDecisionType.ReturnToYouthTeam)
+                ? ProspectDecisionType.ReturnToYouthTeam
+                : (ProspectDecisionType?)null;
+        if (decision is null)
+        {
+            LatestSummary = "Selected prospect is not available for junior/youth return.";
+            return;
+        }
+
+        ApplyProspectDecisionFor(prospectPersonId, decision.Value, "Selected prospect is not available for junior/youth return.");
+    }
+
+    public void AssignProspectToAffiliateFor(string prospectPersonId) =>
+        ApplyProspectDecisionFor(prospectPersonId, ProspectDecisionType.AssignToAffiliate, "Selected prospect is not available for affiliate assignment.");
+
+    public void ReleaseProspectRightsFor(string prospectPersonId) =>
+        ApplyProspectDecisionFor(prospectPersonId, ProspectDecisionType.ReleaseRights, "Selected prospect rights are not available for release.");
 
     public void StartDraft()
     {
@@ -2429,6 +3218,60 @@ internal sealed class AlphaDesktopState
 
     public void MarkTrainingCampPlayerInjured() => ApplyCampDecisionToNext(TrainingCampDecisionType.MarkInjured, "No camp player is available to mark injured.");
 
+    public bool CanApplyCampDecision(string personId) =>
+        ScenarioSnapshot.TrainingCamp?.Players.Any(player =>
+            player.PersonId == personId
+            && player.Status is TrainingCampStatus.Invited or TrainingCampStatus.InCamp) == true;
+
+    public bool CanCompleteTrainingCamp
+    {
+        get
+        {
+            if (ScenarioSnapshot.TrainingCamp is null)
+            {
+                return false;
+            }
+
+            var calendar = TrainingCampCalendar;
+            return Snapshot.CurrentDate >= calendar.ClosesOn || calendar.IsRosterCompliant;
+        }
+    }
+
+    public void ApplyCampDecisionFor(string personId, TrainingCampDecisionType decisionType)
+    {
+        if (!CanApplyCampDecision(personId))
+        {
+            LatestSummary = "Selected camp player is not available for this decision.";
+            return;
+        }
+
+        ApplyCampDecision(_trainingCamp.ApplyDecision(
+            _registry,
+            ScenarioSnapshot,
+            new TrainingCampDecision(personId, decisionType, Snapshot.CurrentDate)));
+    }
+
+    public void AssignOrReturnTrainingCampPlayerFor(string personId)
+    {
+        var player = ScenarioSnapshot.TrainingCamp?.Players.FirstOrDefault(player => player.PersonId == personId);
+        if (player is null || !CanApplyCampDecision(personId))
+        {
+            LatestSummary = "Selected camp player is not available for assignment or return.";
+            return;
+        }
+
+        var decisionType = player.InviteType is TrainingCampInviteType.AssignedFromParentClub
+                or TrainingCampInviteType.LoanedFromParentClub
+                or TrainingCampInviteType.TwoWayContract
+            ? TrainingCampDecisionType.ReturnToParent
+            : TrainingCampDecisionType.AssignToAffiliate;
+
+        ApplyCampDecision(_trainingCamp.ApplyDecision(
+            _registry,
+            ScenarioSnapshot,
+            new TrainingCampDecision(personId, decisionType, Snapshot.CurrentDate)));
+    }
+
     public void CompleteTrainingCamp()
     {
         if (ScenarioSnapshot.TrainingCamp is null)
@@ -2531,6 +3374,20 @@ internal sealed class AlphaDesktopState
     private void ApplyProspectDecisionToNext(ProspectDecisionType decisionType, string emptyMessage)
     {
         var prospect = NextActionableProspect(decisionType);
+        if (prospect is null)
+        {
+            LatestSummary = emptyMessage;
+            return;
+        }
+
+        ApplyProspectDecision(prospect, decisionType);
+    }
+
+    private void ApplyProspectDecisionFor(string prospectPersonId, ProspectDecisionType decisionType, string emptyMessage)
+    {
+        var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect =>
+            prospect.ProspectPersonId == prospectPersonId
+            && AvailableProspectActions(prospect.ProspectPersonId).Contains(decisionType));
         if (prospect is null)
         {
             LatestSummary = emptyMessage;
@@ -2675,6 +3532,18 @@ internal sealed class AlphaDesktopState
 
         StartDraft();
         return ScenarioSnapshot.DraftExperience is not null;
+    }
+
+    private string FindPersonName(string personId)
+    {
+        if (string.Equals(personId, Snapshot.Owner.OwnerId, StringComparison.Ordinal))
+        {
+            return Snapshot.Owner.Name;
+        }
+
+        var person = Snapshot.People.FirstOrDefault(person => person.PersonId == personId)
+            ?? ScenarioSnapshot.StaffCandidates.Select(candidate => candidate.Person).FirstOrDefault(person => person.PersonId == personId);
+        return person?.Identity.DisplayName ?? personId;
     }
 
     private string? FirstDossierPersonId() => DossierPersonIds().FirstOrDefault();

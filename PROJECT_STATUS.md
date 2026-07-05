@@ -55,14 +55,15 @@ The five foundation pillars remain:
 - Alpha 1.9 - Staff & Scouting Operations v1
 - Alpha 2.0 - Player Dossier v1 + Name Cleanup
 - Alpha 2.1 - Staff Control v2
+- Alpha UI Interaction Pass - Selectable People Rows
 
 ## Current Milestone
 
-Alpha 2.1 - Staff Control v2
+Alpha UI Interaction Pass - Selectable People Rows
 
 ## Current Goal
 
-Make staff management feel like a front office system with staff profiles, candidate pool, chemistry, department focuses, evaluations, role changes, hiring, and release actions.
+Make AlphaDesktop people screens use selectable staff/player/recruit/prospect rows with person-specific detail panels and actions instead of confusing global action buttons.
 
 ## Why Relationship Engine Was Next
 
