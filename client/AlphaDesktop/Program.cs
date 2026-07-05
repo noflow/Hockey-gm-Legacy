@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using LegacyEngine.Integration;
 using LegacyEngine.People;
+using LegacyEngine.Rosters;
 using LegacyEngine.Scouting;
 
 namespace AlphaDesktop;
@@ -196,6 +197,7 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Roster");
         AddTab(tabs, "Recruits");
         AddTab(tabs, "Scouting");
+        AddTab(tabs, "Pending Actions");
         if (State.IsDraftUiEnabled)
         {
             AddTab(tabs, "Draft Board");
@@ -257,6 +259,8 @@ internal sealed class MainWindow : Window
         }
         buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
+        buttonPanel.Children.Add(CreateButton("Approve Pending", ApprovePendingAction));
+        buttonPanel.Children.Add(CreateButton("Decline Pending", DeclinePendingAction));
         if (State.IsDraftUiEnabled)
         {
             buttonPanel.Children.Add(CreateButton("Start Draft", StartDraft));
@@ -455,6 +459,10 @@ internal sealed class MainWindow : Window
 
     private void DraftTopProspect() => State.DraftTopProspect();
 
+    private void ApprovePendingAction() => State.ApprovePendingAction();
+
+    private void DeclinePendingAction() => State.DeclinePendingAction();
+
     private void OpenTrainingCamp() => State.OpenTrainingCamp();
 
     private void EvaluateTrainingCamp() => State.EvaluateTrainingCamp();
@@ -489,6 +497,7 @@ internal sealed class MainWindow : Window
         _tabs["Roster"].Text = BuildRoster();
         _tabs["Recruits"].Text = BuildRecruits();
         _tabs["Scouting"].Text = BuildScouting();
+        _tabs["Pending Actions"].Text = BuildPendingActions();
         if (_tabs.ContainsKey("Draft Board"))
         {
             _tabs["Draft Board"].Text = BuildDraftBoard();
@@ -511,6 +520,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Draft UI: {(State.IsDraftUiEnabled ? "enabled by rulebook" : "disabled by rulebook")}");
         builder.AppendLine($"Draft status: {State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft"}");
         builder.AppendLine($"Training camp: {State.TrainingCampStatusText}");
+        builder.AppendLine($"Pending GM actions: {State.OpenPendingActions.Count}");
         if (State.ScenarioSnapshot.DraftExperience is { } draftState)
         {
             builder.AppendLine($"Draft round: {draftState.CurrentRound}/{draftState.TotalRounds}");
@@ -532,6 +542,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Active injuries: {snapshot.Injuries.Count(injury => injury.IsActive)}");
         builder.AppendLine($"Staff members: {snapshot.StaffMembers.Count}");
         builder.AppendLine($"Contract references: {snapshot.Contracts.Count}");
+        builder.AppendLine($"Pending actions: {State.OpenPendingActions.Count}");
         builder.AppendLine();
         builder.AppendLine("Latest Summary");
         builder.AppendLine(State.LatestSummary);
@@ -989,6 +1000,49 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildPendingActions()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Pending GM Actions");
+        builder.AppendLine("==================");
+        builder.AppendLine("Daily simulation can recommend actions here, but it will not sign contracts or change the roster without approval.");
+        builder.AppendLine();
+
+        if (State.ScenarioSnapshot.PendingActions.Count == 0)
+        {
+            builder.AppendLine("No pending GM actions.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine("Open Actions");
+        var open = State.OpenPendingActions;
+        if (open.Count == 0)
+        {
+            builder.AppendLine("  None.");
+        }
+
+        foreach (var action in open)
+        {
+            builder.AppendLine($"{action.Title}");
+            builder.AppendLine($"  Person: {action.PersonName}");
+            builder.AppendLine($"  Type: {action.ActionType}");
+            builder.AppendLine($"  Created: {action.CreatedOn:yyyy-MM-dd}");
+            builder.AppendLine($"  Reason: {action.Reason}");
+            builder.AppendLine($"  Recommended action: {action.RecommendedAction}");
+            builder.AppendLine($"  Approve button: approves only this kind of pending action; Decline button makes no roster/contract change.");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Recently Resolved");
+        foreach (var action in State.ScenarioSnapshot.PendingActions.Where(action => !action.IsOpen).OrderByDescending(action => action.CreatedOn).Take(8))
+        {
+            builder.AppendLine($"{action.Status}: {action.Title}");
+            builder.AppendLine($"  {action.Reason}");
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildDraftBoard()
     {
         var builder = new StringBuilder();
@@ -1133,6 +1187,7 @@ internal sealed class AlphaDesktopState
     private readonly NewGmScenarioActions _actions = new();
     private readonly AlphaDraftExperienceService _draftExperience = new();
     private readonly TrainingCampService _trainingCamp = new();
+    private readonly PendingGmActionService _pendingActions = new();
     private readonly EngineRegistry _registry;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
@@ -1150,6 +1205,13 @@ internal sealed class AlphaDesktopState
     public InboxManager InboxManager { get; } = new();
 
     public IReadOnlyList<InboxMessage> Inbox => InboxManager.Query(new InboxFilter());
+
+    public IReadOnlyList<PendingGmAction> OpenPendingActions =>
+        ScenarioSnapshot.PendingActions
+            .Where(action => action.IsOpen)
+            .OrderBy(action => action.CreatedOn)
+            .ThenBy(action => action.Title, StringComparer.Ordinal)
+            .ToArray();
 
     public bool IsDraftUiEnabled => DraftUiPolicy.IsDraftUiEnabled(_registry.Rulebook);
 
@@ -1246,6 +1308,30 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruit.RecruitPersonId));
+    }
+
+    public void ApprovePendingAction()
+    {
+        var action = OpenPendingActions.FirstOrDefault();
+        if (action is null)
+        {
+            LatestSummary = "No pending GM action is waiting for approval.";
+            return;
+        }
+
+        ApplyPendingResult(_pendingActions.Approve(_registry, ScenarioSnapshot, action.ActionId));
+    }
+
+    public void DeclinePendingAction()
+    {
+        var action = OpenPendingActions.FirstOrDefault();
+        if (action is null)
+        {
+            LatestSummary = "No pending GM action is waiting for decline.";
+            return;
+        }
+
+        ApplyPendingResult(_pendingActions.Decline(_registry, ScenarioSnapshot, action.ActionId));
     }
 
     public void StarTopProspect()
@@ -1450,6 +1536,19 @@ internal sealed class AlphaDesktopState
     }
 
     private void ApplyCampDecision(TrainingCampDecisionResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            InboxManager.AddRange(result.InboxItems);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyPendingResult(PendingGmActionResult result)
     {
         if (result.Success)
         {

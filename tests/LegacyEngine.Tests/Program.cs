@@ -26,6 +26,7 @@ var alphaDraftExperienceTests = new AlphaDraftExperienceTests();
 var developmentInboxPolicyTests = new DevelopmentInboxPolicyTests();
 var ahlAffiliateRulebookTests = new AhlAffiliateRulebookTests();
 var trainingCampTests = new TrainingCampTests();
+var pendingGmActionTests = new PendingGmActionTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -317,6 +318,16 @@ runner.Run("training camp events are created", trainingCampTests.CampEventsAreCr
 runner.Run("training camp inbox items can be generated", trainingCampTests.InboxItemsCanBeGeneratedForCampEvents);
 runner.Run("AlphaDesktop exposes training camp surface and actions", trainingCampTests.AlphaDesktopExposesTrainingCampSurfaceAndActions);
 runner.Run("training camp has no Godot save or game simulation dependency", trainingCampTests.TrainingCampHasNoGodotSaveOrGameSimulationDependency);
+runner.Run("pending GM action advance day does not auto-sign recruit", pendingGmActionTests.AdvanceDayDoesNotAutoSignRecruit);
+runner.Run("pending GM action advance day does not auto-add roster player", pendingGmActionTests.AdvanceDayDoesNotAutoAddPlayerToRoster);
+runner.Run("pending GM action recruit commitment creates pending action", pendingGmActionTests.RecruitCommitmentCreatesPendingGmAction);
+runner.Run("pending GM action approving sign recruit creates contract", pendingGmActionTests.ApprovingSignRecruitCreatesContract);
+runner.Run("pending GM action declining sign recruit does not create contract", pendingGmActionTests.DecliningSignRecruitDoesNotCreateContract);
+runner.Run("pending GM action approving add to roster adds player", pendingGmActionTests.ApprovingAddToRosterAddsPlayer);
+runner.Run("pending GM action declining add to roster does not add player", pendingGmActionTests.DecliningAddToRosterDoesNotAddPlayer);
+runner.Run("pending GM action creates inbox message", pendingGmActionTests.InboxMessageIsGeneratedForPendingAction);
+runner.Run("AlphaDesktop exposes pending GM actions", pendingGmActionTests.AlphaDesktopExposesPendingActions);
+runner.Run("pending GM actions have no Godot save or full game simulation dependency", pendingGmActionTests.PendingActionsHaveNoGodotSaveOrFullGameSimulationDependency);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

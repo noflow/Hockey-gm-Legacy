@@ -209,8 +209,14 @@ public sealed class AlphaDraftExperienceService
             $"{scenario.AlphaSnapshot.Scout.Name} updated the staff notes after the {prospectName} selection.",
             scenario.AlphaSnapshot.ScoutPerson.PersonId);
 
-        return BuildResult(
+        var pendingSigning = new PendingGmActionService().CreateForDraftPickReady(
+            registry,
             updatedScenario,
+            prospectPersonId,
+            $"{prospectName} was drafted by {scenario.Organization.Name} and needs a GM decision before any agreement is signed.");
+
+        return BuildResult(
+            pendingSigning.ScenarioSnapshot,
             updatedState,
             $"Selected {prospectName} at pick {pick.PickNumber}.",
             new[]
@@ -225,7 +231,7 @@ public sealed class AlphaDraftExperienceService
                     LegacyEventType.ScoutRecommendationUpdated,
                     "Head scout reaction",
                     $"{scenario.AlphaSnapshot.Scout.Name}: We had enough confidence to make that pick.")
-            });
+            }.Concat(pendingSigning.InboxItems).ToArray());
     }
 
     public DraftExperienceResult SimulateToCompletion(

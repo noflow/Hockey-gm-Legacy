@@ -26,6 +26,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public TrainingCamp? TrainingCamp { get; init; }
 
+    public IReadOnlyList<PendingGmAction> PendingActions { get; init; } = Array.Empty<PendingGmAction>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -60,5 +62,9 @@ public sealed record NewGmScenarioSnapshot(
 
         DraftExperience?.Validate();
         TrainingCamp?.Validate();
+        foreach (var pendingAction in PendingActions)
+        {
+            pendingAction.Validate();
+        }
     }
 }
