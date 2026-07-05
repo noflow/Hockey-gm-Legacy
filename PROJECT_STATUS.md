@@ -56,14 +56,15 @@ The five foundation pillars remain:
 - Alpha 2.0 - Player Dossier v1 + Name Cleanup
 - Alpha 2.1 - Staff Control v2
 - Alpha UI Interaction Pass - Selectable People Rows
+- Alpha 2.2 - UI/UX Structural Pass v1
 
 ## Current Milestone
 
-Alpha UI Interaction Pass - Selectable People Rows
+Alpha 2.2 - UI/UX Structural Pass v1
 
 ## Current Goal
 
-Make AlphaDesktop people screens use selectable staff/player/recruit/prospect rows with person-specific detail panels and actions instead of confusing global action buttons.
+Move AlphaDesktop toward a playable GM workspace with a card-based dashboard, notification counts, selectable people rows, and person/decision-specific action panels.
 
 ## Why Relationship Engine Was Next
 
@@ -73,11 +74,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.2 - Opening Week Setup
+Alpha 2.3 - Opening Week Setup
 
 ## Next Milestones
 
-1. Alpha 2.2 - Opening Week Setup
+1. Alpha 2.3 - Opening Week Setup
 
 ## Build Rule
 

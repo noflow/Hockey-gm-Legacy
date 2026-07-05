@@ -36,6 +36,21 @@ internal sealed class AlphaDesktopInteractionTests
         Assert.True(source.Contains("Add GM Note", StringComparison.Ordinal), "Selected player detail should expose GM notes.");
     }
 
+    public void DashboardSummaryDisplaysCounts()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains("RefreshDashboard", StringComparison.Ordinal), "Dashboard should be refreshed as a structured workspace.");
+        Assert.True(source.Contains("CreateDashboardMetric", StringComparison.Ordinal), "Dashboard should use readable metric cards.");
+        Assert.True(source.Contains("Inbox Unread", StringComparison.Ordinal), "Dashboard should show inbox unread count.");
+        Assert.True(source.Contains("Pending Decisions", StringComparison.Ordinal), "Dashboard should show pending decision count.");
+        Assert.True(source.Contains("Roster Issues", StringComparison.Ordinal), "Dashboard should show roster issue count.");
+        Assert.True(source.Contains("Scouting Reports", StringComparison.Ordinal), "Dashboard should show scouting report count.");
+        Assert.True(source.Contains("Review Inbox", StringComparison.Ordinal), "Dashboard should expose Review Inbox quick action.");
+        Assert.True(source.Contains("Review Draft Board", StringComparison.Ordinal), "Dashboard should expose Review Draft Board quick action.");
+        Assert.True(source.Contains("Review Pending Actions", StringComparison.Ordinal), "Dashboard should expose Review Pending Actions quick action.");
+    }
+
     private static string ReadAlphaDesktopSource() =>
         File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 

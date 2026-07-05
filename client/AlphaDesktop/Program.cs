@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -34,9 +34,12 @@ internal sealed class MainWindow : Window
     private readonly TextBlock _summaryText = new();
     private readonly TextBlock _processedText = new();
     private readonly Dictionary<string, TextBox> _tabs = [];
+    private readonly Dictionary<string, TabItem> _tabItems = [];
     private readonly Dictionary<string, ListBox> _selectableLists = [];
     private readonly Dictionary<string, StackPanel> _selectableDetails = [];
     private readonly Dictionary<string, string> _selectedPeopleByTab = [];
+    private TabControl? _mainTabs;
+    private StackPanel? _dashboardPanel;
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
     private Border? _inboxReader;
@@ -189,13 +192,19 @@ internal sealed class MainWindow : Window
         DockPanel.SetDock(header, Dock.Top);
         app.Children.Add(header);
 
+        _tabs.Clear();
+        _tabItems.Clear();
+        _selectableLists.Clear();
+        _selectableDetails.Clear();
+
         var tabs = new TabControl
         {
             Margin = new Thickness(12),
             Background = Brushes.White
         };
+        _mainTabs = tabs;
 
-        AddTab(tabs, "Dashboard");
+        AddDashboardTab(tabs);
         AddInboxTab(tabs);
         AddTab(tabs, "Owner");
         AddSelectablePeopleTab(tabs, "Staff");
@@ -233,7 +242,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.1 - Staff Control",
+            Text = "Hockey GM Legacy - Alpha 2.2 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -325,11 +334,32 @@ internal sealed class MainWindow : Window
         };
 
         _tabs[title] = text;
-        tabs.Items.Add(new TabItem
+        var item = new TabItem
         {
             Header = title,
             Content = text
-        });
+        };
+        _tabItems[title] = item;
+        tabs.Items.Add(item);
+    }
+
+    private void AddDashboardTab(TabControl tabs)
+    {
+        _dashboardPanel = new StackPanel { Margin = new Thickness(16) };
+        var scroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = Brushes.White,
+            Content = _dashboardPanel
+        };
+
+        var item = new TabItem
+        {
+            Header = "Dashboard",
+            Content = scroll
+        };
+        _tabItems["Dashboard"] = item;
+        tabs.Items.Add(item);
     }
 
     private void AddSelectablePeopleTab(TabControl tabs, string title)
@@ -369,20 +399,24 @@ internal sealed class MainWindow : Window
 
         _selectableLists[title] = list;
         _selectableDetails[title] = detail;
-        tabs.Items.Add(new TabItem
+        var item = new TabItem
         {
             Header = title,
             Content = root
-        });
+        };
+        _tabItems[title] = item;
+        tabs.Items.Add(item);
     }
 
     private void AddInboxTab(TabControl tabs)
     {
-        tabs.Items.Add(new TabItem
+        var item = new TabItem
         {
             Header = "Inbox",
             Content = BuildInboxLayout()
-        });
+        };
+        _tabItems["Inbox"] = item;
+        tabs.Items.Add(item);
     }
 
     private UIElement BuildInboxLayout()
@@ -590,7 +624,7 @@ internal sealed class MainWindow : Window
         _summaryText.Text = State.LatestSummary;
         _processedText.Text = $"Last processed events: {State.LastProcessedEventCount} | Inbox items: {State.Inbox.Count}";
 
-        _tabs["Dashboard"].Text = BuildDashboard();
+        RefreshDashboard();
         RefreshInboxPanels();
         _tabs["Owner"].Text = BuildOwner();
         RefreshSelectableTab("Staff", BuildStaffRows());
@@ -609,7 +643,161 @@ internal sealed class MainWindow : Window
         _tabs["Season Readiness"].Text = BuildSeasonReadiness();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
         _tabs["Relationships"].Text = BuildRelationships();
+        UpdateTabBadges();
         RefreshDraftModal();
+    }
+
+    private void RefreshDashboard()
+    {
+        if (_dashboardPanel is null || _state is null)
+        {
+            return;
+        }
+
+        var snapshot = State.Snapshot;
+        var readiness = State.SeasonReadinessReport;
+        var roster = readiness.RosterReport;
+        _dashboardPanel.Children.Clear();
+
+        _dashboardPanel.Children.Add(new TextBlock
+        {
+            Text = "Dashboard",
+            FontSize = 26,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+        _dashboardPanel.Children.Add(new TextBlock
+        {
+            Text = $"{snapshot.Organization?.Name ?? snapshot.OrganizationId} | {snapshot.WorldState.WorldName}",
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.FromRgb(74, 88, 105)),
+            Margin = new Thickness(0, 0, 0, 16)
+        });
+
+        var metrics = new WrapPanel { Orientation = Orientation.Horizontal };
+        metrics.Children.Add(CreateDashboardMetric("Current Date", snapshot.CurrentDate.ToString("yyyy-MM-dd"), snapshot.Season?.CurrentPhase.ToString() ?? snapshot.WorldState.CurrentPhase.ToString(), false));
+        metrics.Children.Add(CreateDashboardMetric("Draft Countdown", State.DraftCountdownText, State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft", false));
+        metrics.Children.Add(CreateDashboardMetric("Training Camp", State.TrainingCampCountdownText, State.TrainingCampStatusText, State.RosterWarningCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Inbox Unread", State.UnreadInboxCount.ToString(), "messages needing review", State.UnreadInboxCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
+        _dashboardPanel.Children.Add(metrics);
+
+        var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
+        lower.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.25, GridUnitType.Star) });
+        lower.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var actionsCard = CreateDashboardCard("Quick Actions", out var actions);
+        AddActions(actions,
+            CreateDetailButton("Advance Day", () => Advance(1)),
+            CreateDetailButton("Advance 7 Days", () => Advance(7)),
+            CreateDetailButton("Review Inbox", () => SelectTab("Inbox")),
+            CreateDetailButton("Review Draft Board", () => SelectTab(State.IsDraftUiEnabled ? "Draft Board" : "Scouting")),
+            CreateDetailButton("Review Pending Actions", () => SelectTab("Pending Actions")));
+        Grid.SetColumn(actionsCard, 0);
+        lower.Children.Add(actionsCard);
+
+        var summaryCard = CreateDashboardCard("Today At A Glance", out var summary);
+        AddLine(summary, "Owner", snapshot.Owner.Name);
+        AddLine(summary, "GM", snapshot.GeneralManager.Identity.DisplayName);
+        AddLine(summary, "Head scout", snapshot.Scout.Name);
+        AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
+        AddLine(summary, "Season readiness", readiness.RosterStatus);
+        AddParagraph(summary, State.LatestSummary);
+        Grid.SetColumn(summaryCard, 1);
+        lower.Children.Add(summaryCard);
+        _dashboardPanel.Children.Add(lower);
+    }
+
+    private Border CreateDashboardMetric(string label, string value, string note, bool warning)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock
+        {
+            Text = label,
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(87, 100, 118))
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = value,
+            FontSize = 24,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(warning ? Color.FromRgb(156, 64, 44) : Color.FromRgb(20, 40, 64)),
+            Margin = new Thickness(0, 4, 0, 2)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = note,
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.FromRgb(91, 106, 124))
+        });
+
+        return new Border
+        {
+            Child = panel,
+            Width = 190,
+            MinHeight = 116,
+            Margin = new Thickness(0, 0, 12, 12),
+            Padding = new Thickness(14),
+            BorderThickness = new Thickness(1),
+            BorderBrush = new SolidColorBrush(warning ? Color.FromRgb(224, 174, 160) : Color.FromRgb(221, 229, 238)),
+            Background = new SolidColorBrush(warning ? Color.FromRgb(255, 247, 244) : Color.FromRgb(248, 250, 253)),
+            CornerRadius = new CornerRadius(6)
+        };
+    }
+
+    private Border CreateDashboardCard(string title, out StackPanel panel)
+    {
+        panel = new StackPanel();
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 17,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            Margin = new Thickness(0, 0, 0, 10)
+        });
+
+        return new Border
+        {
+            Child = panel,
+            Margin = new Thickness(0, 0, 12, 0),
+            Padding = new Thickness(16),
+            BorderThickness = new Thickness(1),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(221, 229, 238)),
+            Background = new SolidColorBrush(Color.FromRgb(252, 253, 255)),
+            CornerRadius = new CornerRadius(6)
+        };
+    }
+
+    private void UpdateTabBadges()
+    {
+        SetTabHeader("Dashboard", "Dashboard");
+        SetTabHeader("Inbox", $"Inbox ({State.UnreadInboxCount})");
+        SetTabHeader("Roster", $"Roster ({State.RosterWarningCount})");
+        SetTabHeader("Scouting", $"Scouting ({State.ScoutingReportCount})");
+        SetTabHeader("Pending Actions", $"Pending Actions ({State.PendingDecisionCount})");
+    }
+
+    private void SetTabHeader(string title, string header)
+    {
+        if (_tabItems.TryGetValue(title, out var item))
+        {
+            item.Header = header;
+        }
+    }
+
+    private void SelectTab(string title)
+    {
+        if (_mainTabs is not null && _tabItems.TryGetValue(title, out var item))
+        {
+            _mainTabs.SelectedItem = item;
+        }
     }
 
     private void RefreshSelectableTab(string title, IReadOnlyList<SelectablePersonRow> rows)
@@ -2419,6 +2607,8 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<InboxMessage> Inbox => InboxManager.Query(new InboxFilter());
 
+    public int UnreadInboxCount => Inbox.Count(message => message.IsUnread);
+
     public IReadOnlyList<PendingGmAction> OpenPendingActions =>
         ScenarioSnapshot.PendingActions
             .Where(action => action.IsOpen)
@@ -2439,6 +2629,70 @@ internal sealed class AlphaDesktopState
     public ProspectListSummary ProspectSummary => _prospectDecisions.BuildSummary(ScenarioSnapshot);
 
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
+
+    public int PendingDecisionCount => OpenPendingActions.Count;
+
+    public int ScoutingReportCount => ScenarioSnapshot.CompletedScoutingReports.Count;
+
+    public int RosterWarningCount
+    {
+        get
+        {
+            var roster = SeasonReadinessReport.RosterReport;
+            var warnings = 0;
+            if (!roster.ValidationResult.IsValid)
+            {
+                warnings++;
+            }
+
+            if (roster.CurrentRosterSize != roster.RequiredRosterSize)
+            {
+                warnings++;
+            }
+
+            if (roster.UnsignedPlayers > 0)
+            {
+                warnings++;
+            }
+
+            if (roster.PlayersRequiringDecisions > 0)
+            {
+                warnings++;
+            }
+
+            return warnings;
+        }
+    }
+
+    public string DraftCountdownText =>
+        ScenarioSnapshot.DaysUntilDraft switch
+        {
+            < 0 => "Draft complete",
+            0 => "Draft day",
+            1 => "1 day",
+            var days => $"{days} days"
+        };
+
+    public string TrainingCampCountdownText
+    {
+        get
+        {
+            var calendar = TrainingCampCalendar;
+            if (ScenarioSnapshot.TrainingCamp is { IsCompleted: true })
+            {
+                return "Complete";
+            }
+
+            if (Snapshot.CurrentDate < calendar.OpensOn)
+            {
+                var days = calendar.OpensOn.DayNumber - Snapshot.CurrentDate.DayNumber;
+                return days == 1 ? "opens in 1 day" : $"opens in {days} days";
+            }
+
+            var deadline = Math.Max(0, calendar.ClosesOn.DayNumber - Snapshot.CurrentDate.DayNumber);
+            return deadline == 0 ? "deadline today" : $"{deadline} days to deadline";
+        }
+    }
 
     public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles => _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
 
