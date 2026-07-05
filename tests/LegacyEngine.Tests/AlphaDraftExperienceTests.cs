@@ -189,6 +189,7 @@ internal sealed class AlphaDraftExperienceTests
 
         Assert.True(text.Contains("Start Draft", StringComparison.Ordinal), "AlphaDesktop should expose Start Draft.");
         Assert.True(text.Contains("Draft Player", StringComparison.Ordinal), "AlphaDesktop should expose player drafting.");
+        Assert.True(text.Contains("Select a prospect, then click Draft Player.", StringComparison.Ordinal), "Draft Player action should be visible and explained in the modal.");
         Assert.True(text.Contains("End Draft", StringComparison.Ordinal), "AlphaDesktop should expose End Draft.");
     }
 

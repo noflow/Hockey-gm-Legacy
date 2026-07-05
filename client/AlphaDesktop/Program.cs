@@ -653,9 +653,9 @@ internal sealed class MainWindow : Window
             prospectList.SelectedIndex = 0;
         }
 
-        var left = new DockPanel { Margin = new Thickness(0, 0, 16, 0) };
-        DockPanel.SetDock(prospectList, Dock.Top);
-        left.Children.Add(prospectList);
+        var left = new Grid { Margin = new Thickness(0, 0, 16, 0) };
+        left.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        left.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         var draftButton = CreateButton("Draft Player", () =>
         {
@@ -668,9 +668,34 @@ internal sealed class MainWindow : Window
             }
         });
         draftButton.IsEnabled = state.IsPlayerTurn && state.Status == DraftExperienceStatus.AwaitingPlayerPick && prospectList.Items.Count > 0;
-        draftButton.Margin = new Thickness(0, 10, 8, 0);
-        DockPanel.SetDock(draftButton, Dock.Bottom);
-        left.Children.Add(draftButton);
+        draftButton.MinWidth = 170;
+        draftButton.MinHeight = 44;
+        draftButton.FontSize = 16;
+        draftButton.Margin = new Thickness(0, 0, 12, 12);
+        draftButton.Background = new SolidColorBrush(Color.FromRgb(24, 85, 142));
+        draftButton.Foreground = Brushes.White;
+
+        var actionBar = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        actionBar.Children.Add(draftButton);
+        actionBar.Children.Add(new TextBlock
+        {
+            Text = state.IsPlayerTurn
+                ? "Select a prospect, then click Draft Player."
+                : "Waiting for your next pick.",
+            VerticalAlignment = VerticalAlignment.Center,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(55, 70, 88)),
+            TextWrapping = TextWrapping.Wrap
+        });
+        Grid.SetRow(actionBar, 0);
+        left.Children.Add(actionBar);
+
+        Grid.SetRow(prospectList, 1);
+        left.Children.Add(prospectList);
 
         Grid.SetColumn(left, 0);
         root.Children.Add(left);
