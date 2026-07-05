@@ -428,6 +428,8 @@ runner.Run("staff control has no Godot save or game simulation dependency", staf
 runner.Run("AlphaDesktop staff selected item exposes staff actions", alphaDesktopInteractionTests.StaffSelectedItemExposesStaffActions);
 runner.Run("AlphaDesktop roster and prospect selected item exposes player actions", alphaDesktopInteractionTests.PlayerAndProspectSelectedItemsExposePlayerActions);
 runner.Run("AlphaDesktop view dossier works from selected player", alphaDesktopInteractionTests.ViewDossierWorksFromSelectedPlayer);
+runner.Run("AlphaDesktop staff profile and focus actions are wired", alphaDesktopInteractionTests.StaffProfileAndFocusActionsAreWired);
+runner.Run("AlphaDesktop recruit rows and details show position age and priorities", alphaDesktopInteractionTests.RecruitRowsAndDetailsShowPositionAgeAndPriorities);
 runner.Run("AlphaDesktop dashboard summary displays counts", alphaDesktopInteractionTests.DashboardSummaryDisplaysCounts);
 
 runner.Report();

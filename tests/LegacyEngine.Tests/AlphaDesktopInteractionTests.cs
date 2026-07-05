@@ -32,8 +32,32 @@ internal sealed class AlphaDesktopInteractionTests
 
         Assert.True(source.Contains("AddSelectablePeopleTab(tabs, \"Player Dossier\")", StringComparison.Ordinal), "Player Dossier should use selectable rows.");
         Assert.True(source.Contains("View Dossier", StringComparison.Ordinal), "Selected player detail should expose View Dossier.");
-        Assert.True(source.Contains("State.OpenDossier(row.PersonId)", StringComparison.Ordinal), "View Dossier should open the selected person's dossier.");
+        Assert.True(source.Contains("OpenDossierFor(row.PersonId)", StringComparison.Ordinal), "View Dossier should route to the selected person's dossier tab.");
         Assert.True(source.Contains("Add GM Note", StringComparison.Ordinal), "Selected player detail should expose GM notes.");
+    }
+
+    public void StaffProfileAndFocusActionsAreWired()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains("ShowStaffProfile(row.PersonId)", StringComparison.Ordinal), "Staff View Profile should open a staff profile surface.");
+        Assert.True(source.Contains("StaffProfileText", StringComparison.Ordinal), "Staff profile text should be built for the profile surface.");
+        Assert.True(source.Contains("SetStaffFocusFor(row.PersonId)", StringComparison.Ordinal), "Staff Set Focus should call the selected staff focus action.");
+        Assert.True(source.Contains("MessageBox.Show(State.LatestSummary, \"Staff Focus\"", StringComparison.Ordinal), "Staff focus action should show confirmation.");
+    }
+
+    public void RecruitRowsAndDetailsShowPositionAgeAndPriorities()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains(".GroupBy(recruit => recruit.RecruitPersonId", StringComparison.Ordinal), "Recruit rows should collapse duplicate person entries.");
+        Assert.True(source.Contains("RecruitDisplayName", StringComparison.Ordinal), "Recruit rows should clarify same-name recruits without numeric suffixes.");
+        Assert.True(source.Contains("State.PersonPosition(recruit.RecruitPersonId)", StringComparison.Ordinal), "Recruit rows should show position.");
+        Assert.True(source.Contains("State.PersonAge(recruit.RecruitPersonId)", StringComparison.Ordinal), "Recruit rows should show age.");
+        Assert.True(source.Contains("Looking for", StringComparison.Ordinal), "Recruit details should show looking-for priorities.");
+        Assert.True(source.Contains("Development priority", StringComparison.Ordinal), "Recruit details should show development priority.");
+        Assert.True(source.Contains("Ice time priority", StringComparison.Ordinal), "Recruit details should show ice time priority.");
+        Assert.True(source.Contains("Pathway priority", StringComparison.Ordinal), "Recruit details should show pathway priority when applicable.");
     }
 
     public void DashboardSummaryDisplaysCounts()

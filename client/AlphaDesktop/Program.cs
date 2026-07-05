@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using LegacyEngine.Integration;
 using LegacyEngine.People;
+using LegacyEngine.Recruiting;
 using LegacyEngine.Rosters;
 using LegacyEngine.Scouting;
 
@@ -617,6 +618,25 @@ internal sealed class MainWindow : Window
 
     private void DeleteLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Delete);
 
+    private void OpenDossierFor(string personId)
+    {
+        State.OpenDossier(personId);
+        _selectedPeopleByTab["Player Dossier"] = personId;
+        SelectTab("Player Dossier");
+    }
+
+    private void ShowStaffProfile(string personId)
+    {
+        State.FocusStaffProfile(personId);
+        MessageBox.Show(State.StaffProfileText(personId), "Staff Profile", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void SetStaffFocusFor(string personId)
+    {
+        State.SetStaffFocusFor(personId);
+        MessageBox.Show(State.LatestSummary, "Staff Focus", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     private void RefreshAll()
     {
         var snapshot = State.Snapshot;
@@ -896,15 +916,17 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildRecruitRows() =>
         State.Snapshot.Recruits
+            .GroupBy(recruit => recruit.RecruitPersonId, StringComparer.Ordinal)
+            .Select(group => group.First())
             .OrderByDescending(recruit => recruit.GetInterest(State.Snapshot.OrganizationId))
             .ThenBy(recruit => FindPersonName(recruit.RecruitPersonId), StringComparer.Ordinal)
             .Select(recruit => new SelectablePersonRow(
                 recruit.RecruitPersonId,
-                FindPersonName(recruit.RecruitPersonId),
+                RecruitDisplayName(recruit.RecruitPersonId),
                 "Recruit",
-                recruit.Status.ToString(),
-                $"Interest {recruit.GetInterest(State.Snapshot.OrganizationId)}",
-                $"Top priorities: {string.Join(", ", recruit.Priorities.OrderByDescending(priority => priority.Value).Take(3).Select(priority => priority.Key))}"))
+                $"{State.PersonPosition(recruit.RecruitPersonId)} - age {State.PersonAge(recruit.RecruitPersonId)?.ToString() ?? "unknown"} - {recruit.Status}",
+                $"Interest {recruit.GetInterest(State.Snapshot.OrganizationId)} | {State.RecruitPrioritySummary(recruit.RecruitPersonId)}",
+                State.RecruitLookingFor(recruit.RecruitPersonId)))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
@@ -972,6 +994,7 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildDossierRows() =>
         BuildRosterRows()
+            .Concat(BuildStaffRows().Where(row => row.Kind == "Staff"))
             .Concat(BuildRecruitRows())
             .Concat(BuildScoutingRows())
             .Concat(BuildProspectRows())
@@ -1031,11 +1054,11 @@ internal sealed class MainWindow : Window
         AddLine(detail, "Assignment", profile.CurrentAssignment);
         AddLine(detail, "Focus", profile.CurrentFocus);
         AddActions(detail,
-            CreateDetailButton("View Profile", () => State.FocusStaffProfile(row.PersonId)),
-            CreateDetailButton("View Dossier/Profile", () => State.OpenDossier(row.PersonId)),
+            CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)),
+            CreateDetailButton("View Dossier/Profile", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Reassign Role", () => State.ReassignStaffRoleFor(row.PersonId)),
             CreateDetailButton("Release Staff", () => State.ReleaseStaffFor(row.PersonId)),
-            CreateDetailButton("Set Focus", () => State.SetStaffFocusFor(row.PersonId)),
+            CreateDetailButton("Set Focus", () => SetStaffFocusFor(row.PersonId)),
             CreateDetailButton("Generate Evaluation", () => State.GenerateStaffEvaluationFor(row.PersonId)));
         return detail;
     }
@@ -1066,8 +1089,8 @@ internal sealed class MainWindow : Window
         AddActions(panel,
             CreateDetailButton("Assign Region", () => State.AssignScoutToRegionFor(row.PersonId)),
             CreateDetailButton("Assign Player", () => State.AssignScoutToPlayerFor(row.PersonId)),
-            CreateDetailButton("Set Scouting Focus", () => State.SetStaffFocusFor(row.PersonId)),
-            CreateDetailButton("View Profile", () => State.FocusStaffProfile(row.PersonId)));
+            CreateDetailButton("Set Scouting Focus", () => SetStaffFocusFor(row.PersonId)),
+            CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)));
 
         AddSubHeader(panel, "Active Assignments");
         foreach (var assignment in State.ScenarioSnapshot.ScoutingOperations.Where(assignment => assignment.ScoutPersonId == row.PersonId && assignment.IsOpen))
@@ -1090,6 +1113,23 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Context", row.Secondary);
         AddLine(panel, "GM relationship", $"{State.RelationshipWithGm(row.PersonId)}/100");
         AddParagraph(panel, row.Summary);
+
+        if (tab == "Recruits")
+        {
+            var recruit = State.Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == row.PersonId);
+            if (recruit is not null)
+            {
+                AddLine(panel, "Position", State.PersonPosition(row.PersonId));
+                AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
+                AddLine(panel, "Interest", recruit.GetInterest(State.Snapshot.OrganizationId));
+                AddLine(panel, "Looking for", State.RecruitLookingFor(row.PersonId));
+                AddLine(panel, "Development priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.Development));
+                AddLine(panel, "Ice time priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.IceTime));
+                AddLine(panel, "Coaching priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.Coaching));
+                AddLine(panel, "Facilities priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.Facilities));
+                AddLine(panel, "Pathway priority", State.RecruitPriorityValue(row.PersonId, RecruitPriority.PathwayToHigherHockey));
+            }
+        }
 
         if (tab == "Draft Board")
         {
@@ -1186,7 +1226,7 @@ internal sealed class MainWindow : Window
 
     private IEnumerable<Button> BuildPlayerActionButtons(string tab, SelectablePersonRow row)
     {
-        yield return CreateDetailButton("View Dossier", () => State.OpenDossier(row.PersonId));
+        yield return CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId));
         yield return CreateDetailButton("Add GM Note", () => State.AddDossierNoteFor(row.PersonId));
 
         if (tab == "Recruits")
@@ -1310,6 +1350,11 @@ internal sealed class MainWindow : Window
         var button = CreateButton(text, action);
         button.MinWidth = 118;
         button.IsEnabled = enabled;
+        if (!enabled)
+        {
+            button.ToolTip = "Coming soon";
+        }
+
         return button;
     }
 
@@ -2560,6 +2605,21 @@ internal sealed class MainWindow : Window
         var person = State.Snapshot.People.SingleOrDefault(person => person.PersonId == personId);
         return person is null ? personId : person.Identity.DisplayName;
     }
+
+    private string RecruitDisplayName(string personId)
+    {
+        var name = FindPersonName(personId);
+        var sameNameCount = State.Snapshot.Recruits
+            .Select(recruit => recruit.RecruitPersonId)
+            .Distinct(StringComparer.Ordinal)
+            .Count(recruitPersonId => string.Equals(FindPersonName(recruitPersonId), name, StringComparison.Ordinal));
+        if (sameNameCount <= 1)
+        {
+            return name;
+        }
+
+        return $"{name} ({State.PersonPosition(personId)}, age {State.PersonAge(personId)?.ToString() ?? "unknown"})";
+    }
 }
 
 internal sealed record SelectablePersonRow(
@@ -2986,6 +3046,37 @@ internal sealed class AlphaDesktopState
             : $"{profile.Name}: {profile.CurrentRole}, {profile.Department}, {profile.Chemistry.Summary}";
     }
 
+    public string StaffProfileText(string personId)
+    {
+        var profile = StaffProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        if (profile is null)
+        {
+            return "Selected staff profile is unavailable.";
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine(profile.Name);
+        builder.AppendLine($"{profile.CurrentRole} | {profile.Department}");
+        builder.AppendLine();
+        builder.AppendLine($"Contract: {profile.ContractStatus}");
+        builder.AppendLine($"Reputation/Fit: {StaffFitSummary(personId)}");
+        builder.AppendLine($"GM relationship: {profile.RelationshipWithGm}/100");
+        builder.AppendLine($"Communication/loyalty: {StaffQualitySummary(personId)}");
+        builder.AppendLine($"Current assignment: {profile.CurrentAssignment}");
+        builder.AppendLine($"Current focus: {profile.CurrentFocus}");
+        builder.AppendLine();
+        builder.AppendLine($"Strengths: {string.Join(", ", profile.Strengths)}");
+        builder.AppendLine($"Weaknesses: {string.Join(", ", profile.Weaknesses)}");
+        builder.AppendLine();
+        builder.AppendLine(profile.Chemistry.Summary);
+        if (profile.Chemistry.ConflictWarnings.Count > 0)
+        {
+            builder.AppendLine($"Warnings: {string.Join(" ", profile.Chemistry.ConflictWarnings)}");
+        }
+
+        return builder.ToString();
+    }
+
     public void ReassignStaffRoleFor(string personId)
     {
         var staff = Snapshot.StaffMembers.FirstOrDefault(member => member.PersonId == personId);
@@ -3065,6 +3156,74 @@ internal sealed class AlphaDesktopState
 
     public void GenerateStaffEvaluationFor(string personId) =>
         ApplyStaffOfficeResult(_staffOffice.GenerateStaffEvaluation(_registry, ScenarioSnapshot, personId));
+
+    public int? PersonAge(string personId) =>
+        Snapshot.People.FirstOrDefault(person => person.PersonId == personId)?.CalculateAge(Snapshot.CurrentDate);
+
+    public RosterPosition PersonPosition(string personId)
+    {
+        var rosterPosition = Snapshot.Roster.Players.FirstOrDefault(player => player.PersonId == personId)?.Position;
+        if (rosterPosition is not null)
+        {
+            return rosterPosition.Value;
+        }
+
+        var prospectPosition = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId)?.Position;
+        if (prospectPosition is not null)
+        {
+            return prospectPosition.Value;
+        }
+
+        var campPosition = ScenarioSnapshot.TrainingCamp?.Players.FirstOrDefault(player => player.PersonId == personId)?.Position;
+        if (campPosition is not null)
+        {
+            return campPosition.Value;
+        }
+
+        try
+        {
+            return _playerDossiers.CreateDossier(ScenarioSnapshot, personId).Position;
+        }
+        catch (ArgumentException)
+        {
+            return RosterPosition.Unknown;
+        }
+    }
+
+    public int RecruitPriorityValue(string recruitPersonId, RecruitPriority priority) =>
+        Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId)
+            ?.Priorities.GetValueOrDefault(priority) ?? 0;
+
+    public string RecruitPrioritySummary(string recruitPersonId, int take = 3)
+    {
+        var recruit = Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId);
+        if (recruit is null)
+        {
+            return "No priority profile";
+        }
+
+        return string.Join(", ", recruit.Priorities
+            .OrderByDescending(priority => priority.Value)
+            .Take(take)
+            .Select(priority => $"{DisplayRecruitPriority(priority.Key)} {priority.Value}"));
+    }
+
+    public string RecruitLookingFor(string recruitPersonId)
+    {
+        var summary = RecruitPrioritySummary(recruitPersonId);
+        var interest = Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId)?.GetInterest(Snapshot.OrganizationId) ?? 0;
+        return $"Looking for {summary}; current interest {interest}/100.";
+    }
+
+    private static string DisplayRecruitPriority(RecruitPriority priority) =>
+        priority switch
+        {
+            RecruitPriority.IceTime => "ice time",
+            RecruitPriority.DistanceFromHome => "distance from home",
+            RecruitPriority.PathwayToHigherHockey => "pathway",
+            RecruitPriority.FamilyComfort => "family comfort",
+            _ => priority.ToString()
+        };
 
     public void MakeRecruitingOffer()
     {
@@ -3804,6 +3963,7 @@ internal sealed class AlphaDesktopState
 
     private IReadOnlyList<string> DossierPersonIds() =>
         Snapshot.Roster.Players.Select(player => player.PersonId)
+            .Concat(Snapshot.StaffMembers.Select(member => member.PersonId))
             .Concat(Snapshot.Recruits.Select(recruit => recruit.RecruitPersonId))
             .Concat(Snapshot.DraftBoard.Entries.Select(entry => entry.ProspectPersonId))
             .Concat(ScenarioSnapshot.ProspectRights.Select(prospect => prospect.ProspectPersonId))
