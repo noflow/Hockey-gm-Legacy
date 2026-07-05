@@ -24,7 +24,7 @@ public static class RulebookPresets
     }
 
     public static Rulebook CreateNhlStyle() =>
-        BaseRulebook("nhl_style_default", "nhl_style", true, 7);
+        BaseRulebook("nhl_style_default", "nhl_style", true, 7, activeRoster: 23, maxRoster: 23);
 
     public static Rulebook CreateAhlStyle() =>
         BaseRulebook("ahl_style_default", "ahl_style", false, 0, CreateAhlAffiliateRules());
@@ -40,7 +40,9 @@ public static class RulebookPresets
         string leagueType,
         bool draftEnabled,
         int rounds,
-        AffiliateRules? affiliateRules = null) =>
+        AffiliateRules? affiliateRules = null,
+        int activeRoster = 20,
+        int maxRoster = 25) =>
         new()
         {
             RulebookId = rulebookId,
@@ -49,8 +51,8 @@ public static class RulebookPresets
             RosterRules = new RosterRules
             {
                 MinRoster = 18,
-                MaxRoster = 25,
-                ActiveRoster = 20,
+                MaxRoster = maxRoster,
+                ActiveRoster = activeRoster,
                 GoaliesRequired = 2,
                 OverageSlots = 3,
                 ImportSlots = 2,

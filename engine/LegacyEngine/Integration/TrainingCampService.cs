@@ -4,11 +4,96 @@ using LegacyEngine.Injuries;
 using LegacyEngine.People;
 using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
+using LegacyEngine.Seasons;
 
 namespace LegacyEngine.Integration;
 
 public sealed class TrainingCampService
 {
+    public TrainingCampCalendarInfo GetCalendarInfo(EngineRegistry registry, NewGmScenarioSnapshot scenario)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(scenario);
+
+        var rulebook = ResolveRulebook(registry);
+        var calendar = CalendarForCurrentCamp(scenario);
+        var opens = MilestoneDate(calendar, SeasonMilestoneType.TrainingCampOpens);
+        var closes = MilestoneDate(calendar, SeasonMilestoneType.SeasonBegins);
+        var validation = registry.RosterEngine.ValidateRoster(
+            scenario.AlphaSnapshot.Roster,
+            rulebook.RosterRules is null ? null : new RosterRuleValidator(rulebook));
+        var required = rulebook.RosterRules?.ActiveRoster ?? 0;
+        var currentCount = scenario.TrainingCamp?.Players.Count(player => player.Status is not TrainingCampStatus.Cut
+            and not TrainingCampStatus.Released
+            and not TrainingCampStatus.ReturnedToJuniorTeam
+            and not TrainingCampStatus.AssignedToAffiliate
+            and not TrainingCampStatus.ReturnedToParent) ?? scenario.AlphaSnapshot.Roster.CurrentPlayers.Count;
+
+        return new TrainingCampCalendarInfo(
+            OpensOn: opens,
+            ClosesOn: closes,
+            DaysUntilRosterDeadline: closes.DayNumber - scenario.CurrentDate.DayNumber,
+            CurrentCampRosterCount: currentCount,
+            RequiredOpeningRosterSize: required,
+            PlayersOverLimit: Math.Max(0, scenario.AlphaSnapshot.Roster.ActivePlayers.Count - required),
+            RosterValidationResult: validation);
+    }
+
+    public TrainingCampCalendarResult AdvanceCalendar(EngineRegistry registry, NewGmScenarioSnapshot scenario)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(scenario);
+        scenario.Validate();
+
+        var info = GetCalendarInfo(registry, scenario);
+        var inbox = new List<AlphaInboxItem>();
+        var current = scenario;
+        var summaries = new List<string>();
+
+        if (current.TrainingCamp is null && current.CurrentDate >= info.OpensOn && current.CurrentDate < info.ClosesOn)
+        {
+            var opened = OpenCampForCalendar(registry, current);
+            current = opened.ScenarioSnapshot;
+            inbox.AddRange(opened.InboxItems);
+            summaries.Add(opened.Summary);
+        }
+
+        if (current.TrainingCamp is { IsCompleted: false } camp && current.CurrentDate >= info.OpensOn && current.CurrentDate < info.ClosesOn)
+        {
+            var shouldRefresh = camp.Evaluations.Count == 0
+                || camp.Evaluations.Max(evaluation => evaluation.CreatedOn).AddDays(7) <= current.CurrentDate;
+            if (shouldRefresh)
+            {
+                var evaluated = RefreshEvaluations(registry, current, inboxLimit: 2);
+                current = evaluated.ScenarioSnapshot;
+                inbox.AddRange(evaluated.InboxItems);
+                summaries.Add(evaluated.Summary);
+            }
+        }
+
+        var latestInfo = GetCalendarInfo(registry, current);
+        if (current.TrainingCamp is { IsCompleted: false } && !latestInfo.IsRosterCompliant)
+        {
+            var urgent = CreateRosterDeadlinePendingActions(registry, current, latestInfo);
+            current = urgent.ScenarioSnapshot;
+            inbox.AddRange(urgent.InboxItems);
+            summaries.Add(urgent.Summary);
+        }
+
+        if (current.TrainingCamp is { IsCompleted: false } && current.CurrentDate >= latestInfo.ClosesOn)
+        {
+            var completed = CompleteCamp(registry, current);
+            current = completed.ScenarioSnapshot;
+            inbox.AddRange(completed.InboxItems);
+            summaries.Add(completed.Summary);
+        }
+
+        return new TrainingCampCalendarResult(
+            current,
+            inbox,
+            summaries.Count == 0 ? "Training camp calendar check made no changes." : string.Join(" ", summaries));
+    }
+
     public bool CanOpenCamp(EngineRegistry registry, NewGmScenarioSnapshot scenario)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -40,6 +125,21 @@ public sealed class TrainingCampService
             throw new InvalidOperationException("Training camp cannot open until draft/offseason setup is complete.");
         }
 
+        return OpenCampCore(registry, scenario, "Training camp opened");
+    }
+
+    private TrainingCampResult OpenCampForCalendar(EngineRegistry registry, NewGmScenarioSnapshot scenario)
+    {
+        if (scenario.TrainingCamp is { } existing)
+        {
+            return BuildResult(scenario, existing, Array.Empty<AlphaInboxItem>(), "Training camp is already open.");
+        }
+
+        return OpenCampCore(registry, scenario, "Training camp opened automatically from the season calendar");
+    }
+
+    private TrainingCampResult OpenCampCore(EngineRegistry registry, NewGmScenarioSnapshot scenario, string eventTitle)
+    {
         var date = scenario.CurrentDate;
         var players = new List<TrainingCampPlayer>();
         foreach (var rosterPlayer in scenario.AlphaSnapshot.Roster.CurrentPlayers)
@@ -93,7 +193,7 @@ public sealed class TrainingCampService
             scenario,
             LegacyEventType.TrainingCampOpened,
             LegacyEventSeverity.Notice,
-            "Training camp opened",
+            eventTitle,
             $"Training camp opened for {scenario.Organization.Name}.",
             date);
 
@@ -148,13 +248,18 @@ public sealed class TrainingCampService
 
     public TrainingCampResult EvaluateCamp(EngineRegistry registry, NewGmScenarioSnapshot scenario)
     {
+        return RefreshEvaluations(registry, scenario, inboxLimit: 3);
+    }
+
+    public TrainingCampResult RefreshEvaluations(EngineRegistry registry, NewGmScenarioSnapshot scenario, int inboxLimit = 2)
+    {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(scenario);
         var camp = RequireCamp(scenario);
 
         var date = scenario.CurrentDate;
         var evaluations = camp.Players
-            .Where(player => camp.FindEvaluation(player.PersonId) is null)
+            .Where(player => player.Status is TrainingCampStatus.Invited or TrainingCampStatus.InCamp or TrainingCampStatus.Kept)
             .Select(player => CreateEvaluation(scenario, player, date))
             .ToArray();
 
@@ -165,7 +270,10 @@ public sealed class TrainingCampService
                     ? player with { Status = TrainingCampStatus.InCamp }
                     : player)
                 .ToArray(),
-            Evaluations = camp.Evaluations.Concat(evaluations).ToArray()
+            Evaluations = camp.Evaluations
+                .Where(existing => evaluations.All(next => next.PersonId != existing.PersonId))
+                .Concat(evaluations)
+                .ToArray()
         };
         updatedCamp.Validate();
 
@@ -185,7 +293,7 @@ public sealed class TrainingCampService
         var updatedScenario = scenario with { TrainingCamp = updatedCamp };
         var inbox = evaluations
             .OrderByDescending(evaluation => evaluation.CampScore)
-            .Take(3)
+            .Take(inboxLimit)
             .Select(evaluation => CreateInboxItem(
                 date,
                 LegacyEventType.TrainingCampEvaluationCreated,
@@ -195,7 +303,7 @@ public sealed class TrainingCampService
                 evaluation.PersonId))
             .ToArray();
 
-        return BuildResult(updatedScenario, updatedCamp, inbox, $"Created {evaluations.Length} camp evaluation(s).");
+        return BuildResult(updatedScenario, updatedCamp, inbox, $"Refreshed {evaluations.Length} camp evaluation(s).");
     }
 
     public TrainingCampDecisionResult ApplyDecision(
@@ -270,7 +378,9 @@ public sealed class TrainingCampService
 
         var kept = camp.Players.Count(player => player.Status == TrainingCampStatus.Kept);
         var cutOrReleased = camp.Players.Count(player => player.Status is TrainingCampStatus.Cut or TrainingCampStatus.Released);
-        var assignedOrReturned = camp.Players.Count(player => player.Status is TrainingCampStatus.AssignedToAffiliate or TrainingCampStatus.ReturnedToParent);
+        var assignedOrReturned = camp.Players.Count(player => player.Status is TrainingCampStatus.AssignedToAffiliate
+            or TrainingCampStatus.ReturnedToParent
+            or TrainingCampStatus.ReturnedToJuniorTeam);
         var injuryConcerns = camp.Players.Count(player => player.Status == TrainingCampStatus.Injured)
             + scenario.AlphaSnapshot.Injuries.Count(injury => injury.IsActive);
 
@@ -399,6 +509,21 @@ public sealed class TrainingCampService
         TrainingCampPlayer player,
         TrainingCampDecisionType decisionType)
     {
+        if (decisionType == TrainingCampDecisionType.ReturnToJuniorTeam && !SupportsJuniorReturn(rulebook, player))
+        {
+            return "Return to junior/youth team is unavailable for this player/rulebook.";
+        }
+
+        if (decisionType == TrainingCampDecisionType.PlaceOnWaivers && !IsNhlStyle(rulebook))
+        {
+            return "Waiver placement is only available for NHL-style rulebooks in v1.";
+        }
+
+        if (decisionType == TrainingCampDecisionType.AssignToAffiliate && IsNhlStyle(rulebook) && !IsWaiverExempt(player))
+        {
+            return "This player requires waivers before AHL assignment.";
+        }
+
         if (decisionType == TrainingCampDecisionType.AssignToAffiliate && !SupportsAffiliateAssignment(scenario, rulebook))
         {
             return "Assign to affiliate is unavailable for this organization/rulebook.";
@@ -416,7 +541,7 @@ public sealed class TrainingCampService
     }
 
     private static bool SupportsAffiliateAssignment(NewGmScenarioSnapshot scenario, Rulebook rulebook) =>
-        rulebook.AffiliateRules is { AffiliateEnabled: true }
+        (rulebook.AffiliateRules is { AffiliateEnabled: true } || IsNhlStyle(rulebook))
         && !string.IsNullOrWhiteSpace(scenario.Organization.AffiliateOrganizationId);
 
     private static bool SupportsParentReturn(
@@ -435,8 +560,10 @@ public sealed class TrainingCampService
             TrainingCampDecisionType.Keep => TrainingCampStatus.Kept,
             TrainingCampDecisionType.Cut => TrainingCampStatus.Cut,
             TrainingCampDecisionType.Release => TrainingCampStatus.Released,
+            TrainingCampDecisionType.ReturnToJuniorTeam => TrainingCampStatus.ReturnedToJuniorTeam,
             TrainingCampDecisionType.AssignToAffiliate => TrainingCampStatus.AssignedToAffiliate,
             TrainingCampDecisionType.ReturnToParent => TrainingCampStatus.ReturnedToParent,
+            TrainingCampDecisionType.PlaceOnWaivers => TrainingCampStatus.PlacedOnWaivers,
             TrainingCampDecisionType.MarkInjured => TrainingCampStatus.Injured,
             _ => throw new ArgumentOutOfRangeException(nameof(decisionType), decisionType, "Unknown training camp decision.")
         };
@@ -445,9 +572,93 @@ public sealed class TrainingCampService
         decisionType switch
         {
             TrainingCampDecisionType.Keep => LegacyEventType.TrainingCampPlayerKept,
-            TrainingCampDecisionType.AssignToAffiliate or TrainingCampDecisionType.ReturnToParent => LegacyEventType.TrainingCampPlayerAssigned,
+            TrainingCampDecisionType.AssignToAffiliate or TrainingCampDecisionType.ReturnToParent or TrainingCampDecisionType.ReturnToJuniorTeam or TrainingCampDecisionType.PlaceOnWaivers => LegacyEventType.TrainingCampPlayerAssigned,
             _ => LegacyEventType.TrainingCampPlayerCut
         };
+
+    private TrainingCampCalendarResult CreateRosterDeadlinePendingActions(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        TrainingCampCalendarInfo info)
+    {
+        var pendingService = new PendingGmActionService();
+        var current = scenario;
+        var inbox = new List<AlphaInboxItem>();
+        var needed = Math.Max(1, info.PlayersOverLimit);
+        var candidates = current.TrainingCamp?.Players
+            .Where(player => player.Status is TrainingCampStatus.Invited or TrainingCampStatus.InCamp or TrainingCampStatus.Kept)
+            .OrderBy(player => current.TrainingCamp!.FindEvaluation(player.PersonId)?.CampScore ?? 100)
+            .ThenBy(player => player.PlayerName, StringComparer.Ordinal)
+            .Take(needed)
+            .ToArray() ?? Array.Empty<TrainingCampPlayer>();
+
+        foreach (var player in candidates)
+        {
+            if (current.PendingActions.Any(action => action.IsOpen && action.PersonId == player.PersonId && action.ActionType is PendingGmActionType.CutPlayer
+                    or PendingGmActionType.ReleasePlayer
+                    or PendingGmActionType.AssignToAffiliate
+                    or PendingGmActionType.ReturnToParent
+                    or PendingGmActionType.ReturnToJuniorTeam
+                    or PendingGmActionType.PlaceOnWaivers))
+            {
+                continue;
+            }
+
+            var pendingType = SuggestedPendingActionType(ResolveRulebook(registry), player);
+            var result = pendingService.CreatePendingAction(
+                registry,
+                current,
+                pendingType,
+                player.PersonId,
+                $"Roster deadline is approaching and the club is over the rulebook limit: {info.RosterValidationResult.Message}",
+                "GM must approve a roster cutdown decision before opening night.",
+                player.Position,
+                player.AcquisitionSource);
+            current = result.ScenarioSnapshot;
+            inbox.AddRange(result.InboxItems);
+        }
+
+        return new TrainingCampCalendarResult(
+            current,
+            inbox,
+            inbox.Count == 0
+                ? "Roster remains over limit; existing pending GM cutdown actions are still open."
+                : $"Created {inbox.Count} urgent pending GM roster cutdown action(s).");
+    }
+
+    private static PendingGmActionType SuggestedPendingActionType(Rulebook rulebook, TrainingCampPlayer player)
+    {
+        if (rulebook.LeagueType.Contains("ahl", StringComparison.OrdinalIgnoreCase)
+            && player.InviteType is TrainingCampInviteType.AssignedFromParentClub or TrainingCampInviteType.LoanedFromParentClub or TrainingCampInviteType.TwoWayContract)
+        {
+            return PendingGmActionType.ReturnToParent;
+        }
+
+        if (IsNhlStyle(rulebook))
+        {
+            return IsWaiverExempt(player) ? PendingGmActionType.AssignToAffiliate : PendingGmActionType.PlaceOnWaivers;
+        }
+
+        return player.InviteType is TrainingCampInviteType.Tryout
+            ? PendingGmActionType.ReleasePlayer
+            : PendingGmActionType.ReturnToJuniorTeam;
+    }
+
+    private static bool SupportsJuniorReturn(Rulebook rulebook, TrainingCampPlayer player) =>
+        rulebook.LeagueType.Contains("junior", StringComparison.OrdinalIgnoreCase)
+        || (IsNhlStyle(rulebook) && player.InviteType is TrainingCampInviteType.DraftedProspect or TrainingCampInviteType.Recruit);
+
+    private static bool IsWaiverExempt(TrainingCampPlayer player) =>
+        player.InviteType is TrainingCampInviteType.DraftedProspect or TrainingCampInviteType.Recruit or TrainingCampInviteType.Tryout;
+
+    private static bool IsNhlStyle(Rulebook rulebook) =>
+        rulebook.LeagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase);
+
+    private static SeasonCalendar CalendarForCurrentCamp(NewGmScenarioSnapshot scenario) =>
+        SeasonCalendar.Build(scenario.CurrentDate.Year, scenario.Season.Settings);
+
+    private static DateOnly MilestoneDate(SeasonCalendar calendar, SeasonMilestoneType type) =>
+        calendar.Milestones.Single(milestone => milestone.Type == type).Date.Value;
 
     private static IReadOnlyList<AlphaInboxItem> CreateInboxForDecision(
         TrainingCampDecision decision,

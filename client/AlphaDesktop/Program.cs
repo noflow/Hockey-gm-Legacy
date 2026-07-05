@@ -267,11 +267,13 @@ internal sealed class MainWindow : Window
             buttonPanel.Children.Add(CreateButton("AI Picks", RunAiDrafting));
             buttonPanel.Children.Add(CreateButton("Draft Top", DraftTopProspect));
         }
-        buttonPanel.Children.Add(CreateButton("Open Camp", OpenTrainingCamp));
-        buttonPanel.Children.Add(CreateButton("Evaluate Camp", EvaluateTrainingCamp));
-        buttonPanel.Children.Add(CreateButton("Keep Camp", KeepTrainingCampPlayer));
-        buttonPanel.Children.Add(CreateButton("Cut Camp", CutTrainingCampPlayer));
+        buttonPanel.Children.Add(CreateButton("Keep", KeepTrainingCampPlayer));
+        buttonPanel.Children.Add(CreateButton("Cut", CutTrainingCampPlayer));
+        buttonPanel.Children.Add(CreateButton("Release", ReleaseTrainingCampPlayer));
+        buttonPanel.Children.Add(CreateButton("Return Junior", ReturnTrainingCampPlayerToJunior));
         buttonPanel.Children.Add(CreateButton("Assign/Return", AssignOrReturnTrainingCampPlayer));
+        buttonPanel.Children.Add(CreateButton("Waivers", PlaceTrainingCampPlayerOnWaivers));
+        buttonPanel.Children.Add(CreateButton("Mark Injured", MarkTrainingCampPlayerInjured));
         buttonPanel.Children.Add(CreateButton("Complete Camp", CompleteTrainingCamp));
 
         panel.Children.Add(buttonPanel);
@@ -463,15 +465,19 @@ internal sealed class MainWindow : Window
 
     private void DeclinePendingAction() => State.DeclinePendingAction();
 
-    private void OpenTrainingCamp() => State.OpenTrainingCamp();
-
-    private void EvaluateTrainingCamp() => State.EvaluateTrainingCamp();
-
     private void KeepTrainingCampPlayer() => State.KeepTrainingCampPlayer();
 
     private void CutTrainingCampPlayer() => State.CutTrainingCampPlayer();
 
+    private void ReleaseTrainingCampPlayer() => State.ReleaseTrainingCampPlayer();
+
+    private void ReturnTrainingCampPlayerToJunior() => State.ReturnTrainingCampPlayerToJunior();
+
     private void AssignOrReturnTrainingCampPlayer() => State.AssignOrReturnTrainingCampPlayer();
+
+    private void PlaceTrainingCampPlayerOnWaivers() => State.PlaceTrainingCampPlayerOnWaivers();
+
+    private void MarkTrainingCampPlayerInjured() => State.MarkTrainingCampPlayerInjured();
 
     private void CompleteTrainingCamp() => State.CompleteTrainingCamp();
 
@@ -1088,22 +1094,29 @@ internal sealed class MainWindow : Window
     private string BuildTrainingCamp()
     {
         var builder = new StringBuilder();
+        var calendar = State.TrainingCampCalendar;
         builder.AppendLine("Training Camp");
         builder.AppendLine("=============");
         builder.AppendLine($"Availability: {State.TrainingCampStatusText}");
+        builder.AppendLine($"Camp Opens: {calendar.OpensOn:yyyy-MM-dd}");
+        builder.AppendLine($"Camp Closes / Roster Deadline: {calendar.ClosesOn:yyyy-MM-dd}");
+        builder.AppendLine($"Days until roster deadline: {calendar.DaysUntilRosterDeadline}");
+        builder.AppendLine($"Current camp roster count: {calendar.CurrentCampRosterCount}");
+        builder.AppendLine($"Required opening roster size: {calendar.RequiredOpeningRosterSize}");
+        builder.AppendLine($"Players that must be cut/moved: {calendar.PlayersOverLimit}");
+        builder.AppendLine(calendar.IsRosterCompliant
+            ? "Roster Compliant"
+            : $"WARNING: Roster over limit or invalid - {calendar.RosterValidationResult.Message}");
         builder.AppendLine();
 
         if (State.ScenarioSnapshot.TrainingCamp is not { } camp)
         {
-            builder.AppendLine(State.CanOpenTrainingCamp
-                ? "Camp is ready. Use Open Camp to invite returning players, drafted prospects, and recruits."
-                : "Camp unlocks after draft/offseason setup is complete.");
+            builder.AppendLine("Training camp opens automatically from the SeasonEngine calendar.");
             builder.AppendLine();
-            builder.AppendLine("Expected camp work");
-            builder.AppendLine("- Review returning roster players");
-            builder.AppendLine("- Check drafted prospects and recruits");
-            builder.AppendLine("- Use staff evaluations before cuts");
-            builder.AppendLine("- Set an opening roster after decisions");
+            builder.AppendLine("Expected camp work once open");
+            builder.AppendLine("- Review returning players, drafted prospects, recruits, and invitees");
+            builder.AppendLine("- Use staff evaluations before individual cutdown decisions");
+            builder.AppendLine("- Reduce the roster before opening night");
             return builder.ToString();
         }
 
@@ -1112,6 +1125,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Completed: {(camp.CompletedOn is null ? "No" : camp.CompletedOn.Value.ToString("yyyy-MM-dd"))}");
         builder.AppendLine($"Players invited: {camp.Players.Count}");
         builder.AppendLine($"Evaluations: {camp.Evaluations.Count}");
+        builder.AppendLine($"Complete Camp availability: {(State.Snapshot.CurrentDate >= calendar.ClosesOn || calendar.IsRosterCompliant ? "Available" : "Locked until roster is compliant or deadline arrives")}");
         builder.AppendLine();
 
         if (camp.Summary is not null)
@@ -1215,15 +1229,16 @@ internal sealed class AlphaDesktopState
 
     public bool IsDraftUiEnabled => DraftUiPolicy.IsDraftUiEnabled(_registry.Rulebook);
 
-    public bool CanOpenTrainingCamp => _trainingCamp.CanOpenCamp(_registry, ScenarioSnapshot);
+    public TrainingCampCalendarInfo TrainingCampCalendar => _trainingCamp.GetCalendarInfo(_registry, ScenarioSnapshot);
 
     public string TrainingCampStatusText =>
         ScenarioSnapshot.TrainingCamp switch
         {
             { IsCompleted: true } camp => $"Completed on {camp.CompletedOn:yyyy-MM-dd}",
             { } camp => $"Open with {camp.Players.Count} player(s)",
-            _ when CanOpenTrainingCamp => "Ready to open",
-            _ => "Locked until draft/offseason setup is complete"
+            _ => ScenarioSnapshot.CurrentDate < TrainingCampCalendar.OpensOn
+                ? $"Opens on {TrainingCampCalendar.OpensOn:yyyy-MM-dd}"
+                : "Awaiting season calendar"
         };
 
     public string LatestSummary { get; private set; }
@@ -1258,15 +1273,12 @@ internal sealed class AlphaDesktopState
 
         for (var day = 0; day < days; day++)
         {
-            latest = _coordinator.AdvanceOneDay(_registry, Snapshot);
-            Snapshot = latest.WorldSnapshot;
-            ScenarioSnapshot = ScenarioSnapshot with
-            {
-                AlphaSnapshot = Snapshot,
-                Season = Snapshot.Season ?? ScenarioSnapshot.Season
-            };
+            var scenarioResult = _coordinator.AdvanceScenarioOneDay(_registry, ScenarioSnapshot);
+            latest = scenarioResult.SimulationResult;
+            ScenarioSnapshot = scenarioResult.ScenarioSnapshot;
+            Snapshot = ScenarioSnapshot.AlphaSnapshot;
             totalProcessed += latest.ProcessedEventCount;
-            newInboxItems.AddRange(latest.InboxItems);
+            newInboxItems.AddRange(scenarioResult.InboxItems);
         }
 
         InboxManager.AddRange(newInboxItems);
@@ -1415,28 +1427,6 @@ internal sealed class AlphaDesktopState
         ApplyDraftResult(_draftExperience.MakePlayerSelection(_registry, ScenarioSnapshot, prospect.ProspectPersonId));
     }
 
-    public void OpenTrainingCamp()
-    {
-        if (!CanOpenTrainingCamp)
-        {
-            LatestSummary = "Training camp unlocks after draft/offseason setup is complete.";
-            return;
-        }
-
-        ApplyCampResult(_trainingCamp.OpenCamp(_registry, ScenarioSnapshot));
-    }
-
-    public void EvaluateTrainingCamp()
-    {
-        if (ScenarioSnapshot.TrainingCamp is null)
-        {
-            LatestSummary = "Open training camp before requesting evaluations.";
-            return;
-        }
-
-        ApplyCampResult(_trainingCamp.EvaluateCamp(_registry, ScenarioSnapshot));
-    }
-
     public void KeepTrainingCampPlayer()
     {
         var player = NextActionableCampPlayer();
@@ -1466,6 +1456,10 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot,
             new TrainingCampDecision(player.PersonId, TrainingCampDecisionType.Cut, Snapshot.CurrentDate)));
     }
+
+    public void ReleaseTrainingCampPlayer() => ApplyCampDecisionToNext(TrainingCampDecisionType.Release, "No camp player is available for release.");
+
+    public void ReturnTrainingCampPlayerToJunior() => ApplyCampDecisionToNext(TrainingCampDecisionType.ReturnToJuniorTeam, "No camp player is available to return to junior/youth team.");
 
     public void AssignOrReturnTrainingCampPlayer()
     {
@@ -1497,15 +1491,41 @@ internal sealed class AlphaDesktopState
         ApplyCampDecision(_trainingCamp.ApplyDecision(_registry, ScenarioSnapshot, decision));
     }
 
+    public void PlaceTrainingCampPlayerOnWaivers() => ApplyCampDecisionToNext(TrainingCampDecisionType.PlaceOnWaivers, "No camp player is available for waivers.");
+
+    public void MarkTrainingCampPlayerInjured() => ApplyCampDecisionToNext(TrainingCampDecisionType.MarkInjured, "No camp player is available to mark injured.");
+
     public void CompleteTrainingCamp()
     {
         if (ScenarioSnapshot.TrainingCamp is null)
         {
-            LatestSummary = "Open training camp before completing it.";
+            LatestSummary = "Training camp has not opened on the season calendar yet.";
+            return;
+        }
+
+        var calendar = TrainingCampCalendar;
+        if (Snapshot.CurrentDate < calendar.ClosesOn && !calendar.IsRosterCompliant)
+        {
+            LatestSummary = "Complete Camp is locked until the roster is compliant or the roster deadline is reached.";
             return;
         }
 
         ApplyCampResult(_trainingCamp.CompleteCamp(_registry, ScenarioSnapshot));
+    }
+
+    private void ApplyCampDecisionToNext(TrainingCampDecisionType decisionType, string emptyMessage)
+    {
+        var player = NextActionableCampPlayer();
+        if (player is null)
+        {
+            LatestSummary = emptyMessage;
+            return;
+        }
+
+        ApplyCampDecision(_trainingCamp.ApplyDecision(
+            _registry,
+            ScenarioSnapshot,
+            new TrainingCampDecision(player.PersonId, decisionType, Snapshot.CurrentDate)));
     }
 
     private void ApplyAction(GmActionResult result)

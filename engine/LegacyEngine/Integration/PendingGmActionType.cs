@@ -8,8 +8,10 @@ public enum PendingGmActionType
     AddToRoster,
     ReleasePlayer,
     CutPlayer,
+    ReturnToJuniorTeam,
     AssignToAffiliate,
     ReturnToParent,
+    PlaceOnWaivers,
     ApproveContract,
     DeclineContract
 }

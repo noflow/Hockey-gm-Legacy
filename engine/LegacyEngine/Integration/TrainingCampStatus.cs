@@ -7,8 +7,10 @@ public enum TrainingCampStatus
     Kept,
     Cut,
     Released,
+    ReturnedToJuniorTeam,
     AssignedToAffiliate,
     ReturnedToParent,
+    PlacedOnWaivers,
     Injured,
     Withdrawn
 }

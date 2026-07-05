@@ -198,9 +198,116 @@ internal sealed class TrainingCampTests
         var text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 
         Assert.True(text.Contains("Training Camp", StringComparison.Ordinal), "AlphaDesktop should expose a Training Camp surface.");
-        Assert.True(text.Contains("Open Camp", StringComparison.Ordinal), "AlphaDesktop should expose Open Camp.");
-        Assert.True(text.Contains("Evaluate Camp", StringComparison.Ordinal), "AlphaDesktop should expose Evaluate Camp.");
+        Assert.False(text.Contains("\"Open Camp\"", StringComparison.Ordinal), "AlphaDesktop should not expose artificial Open Camp flow.");
+        Assert.False(text.Contains("\"Evaluate Camp\"", StringComparison.Ordinal), "AlphaDesktop should not expose artificial Evaluate Camp flow.");
         Assert.True(text.Contains("Complete Camp", StringComparison.Ordinal), "AlphaDesktop should expose Complete Camp.");
+        Assert.True(text.Contains("Return Junior", StringComparison.Ordinal), "AlphaDesktop should expose junior return decisions.");
+        Assert.True(text.Contains("Waivers", StringComparison.Ordinal), "AlphaDesktop should expose waivers decisions.");
+    }
+
+    public void CampOpensAutomaticallyOnCalendarDate()
+    {
+        var scenario = AdvanceScenarioTo(NewGmScenarioBootstrapper.CreateScenario(), new DateOnly(2026, 9, 1));
+
+        Assert.True(scenario.ScenarioSnapshot.TrainingCamp is not null, "Camp should open from the SeasonEngine calendar.");
+    }
+
+    public void CampClosesBySeasonStartDeadline()
+    {
+        var scenario = AdvanceScenarioTo(NewGmScenarioBootstrapper.CreateScenario(), new DateOnly(2026, 9, 22));
+
+        Assert.True(scenario.ScenarioSnapshot.TrainingCamp?.IsCompleted == true, "Camp should close by the season start/deadline.");
+    }
+
+    public void JuniorYoungPlayerCanBeReturnedToYouthTeam()
+    {
+        var scenario = AdvanceScenarioTo(NewGmScenarioBootstrapper.CreateScenario(), new DateOnly(2026, 9, 1));
+        var player = scenario.ScenarioSnapshot.TrainingCamp!.Players.First(item => item.InviteType == TrainingCampInviteType.Recruit);
+        var result = new TrainingCampService().ApplyDecision(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            new TrainingCampDecision(player.PersonId, TrainingCampDecisionType.ReturnToJuniorTeam, scenario.ScenarioSnapshot.CurrentDate));
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(TrainingCampStatus.ReturnedToJuniorTeam, result.Camp.FindPlayer(player.PersonId)!.Status);
+    }
+
+    public void NhlWaiverExemptPlayerCanBeAssignedToAhl()
+    {
+        var scenario = AdvanceScenarioTo(CreateScenarioWithRulebook(RulebookPresets.Create(DraftLeaguePreset.NhlStyle), affiliateOrganizationId: "org-ahl-affiliate"), new DateOnly(2026, 9, 1));
+        var player = scenario.ScenarioSnapshot.TrainingCamp!.Players.First(item => item.InviteType == TrainingCampInviteType.Recruit);
+        var result = new TrainingCampService().ApplyDecision(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            new TrainingCampDecision(player.PersonId, TrainingCampDecisionType.AssignToAffiliate, scenario.ScenarioSnapshot.CurrentDate));
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(TrainingCampStatus.AssignedToAffiliate, result.Camp.FindPlayer(player.PersonId)!.Status);
+    }
+
+    public void NhlWaiverRequiredPlayerRequiresWaiverAction()
+    {
+        var scenario = AdvanceScenarioTo(CreateScenarioWithRulebook(RulebookPresets.Create(DraftLeaguePreset.NhlStyle), affiliateOrganizationId: "org-ahl-affiliate"), new DateOnly(2026, 9, 1));
+        var player = scenario.ScenarioSnapshot.TrainingCamp!.Players.First(item => item.InviteType == TrainingCampInviteType.ReturningRosterPlayer);
+        var assign = new TrainingCampService().ApplyDecision(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            new TrainingCampDecision(player.PersonId, TrainingCampDecisionType.AssignToAffiliate, scenario.ScenarioSnapshot.CurrentDate));
+        var waivers = new TrainingCampService().ApplyDecision(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            new TrainingCampDecision(player.PersonId, TrainingCampDecisionType.PlaceOnWaivers, scenario.ScenarioSnapshot.CurrentDate));
+
+        Assert.False(assign.Success, "NHL returning roster player should require waivers before AHL assignment in v1.");
+        Assert.True(waivers.Success, waivers.Message);
+        Assert.Equal(TrainingCampStatus.PlacedOnWaivers, waivers.Camp.FindPlayer(player.PersonId)!.Status);
+    }
+
+    public void AhlAssignedPlayerCanBeReturnedToParent()
+    {
+        var scenario = AdvanceScenarioTo(CreateScenarioWithRulebook(RulebookPresets.Create(DraftLeaguePreset.AhlStyle), parentOrganizationId: "org-nhl-parent"), new DateOnly(2026, 9, 1));
+        var service = new TrainingCampService();
+        var invited = service.InvitePlayer(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            "person-parent-assigned-001",
+            RosterPosition.Center,
+            TrainingCampInviteType.AssignedFromParentClub,
+            PlayerAcquisitionSource.AssignedFromParentClub,
+            "org-nhl-parent");
+        var result = service.ApplyDecision(
+            scenario.Registry,
+            invited.ScenarioSnapshot,
+            new TrainingCampDecision("person-parent-assigned-001", TrainingCampDecisionType.ReturnToParent, invited.ScenarioSnapshot.CurrentDate));
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(TrainingCampStatus.ReturnedToParent, result.Camp.FindPlayer("person-parent-assigned-001")!.Status);
+    }
+
+    public void RosterOverLimitCreatesWarningPendingAction()
+    {
+        var scenario = AdvanceScenarioTo(NewGmScenarioBootstrapper.CreateScenario(), new DateOnly(2026, 9, 1));
+
+        Assert.True(scenario.ScenarioSnapshot.PendingActions.Any(action => action.IsOpen && action.ActionType is PendingGmActionType.CutPlayer or PendingGmActionType.ReleasePlayer or PendingGmActionType.ReturnToJuniorTeam), "Over-limit camp should create pending GM cutdown action.");
+    }
+
+    public void CalendarCampDoesNotAutoCutOrAddRosterPlayers()
+    {
+        var original = NewGmScenarioBootstrapper.CreateScenario();
+        var originalRosterCount = original.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Count;
+        var scenario = AdvanceScenarioTo(original, new DateOnly(2026, 9, 1));
+
+        Assert.Equal(originalRosterCount, scenario.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Count);
+        Assert.False(scenario.ScenarioSnapshot.TrainingCamp!.Players.Any(player => player.Status is TrainingCampStatus.Cut or TrainingCampStatus.Released or TrainingCampStatus.AssignedToAffiliate or TrainingCampStatus.ReturnedToParent), "Calendar camp should not auto-cut or auto-assign players.");
+    }
+
+    public void RuleEngineRosterSizeIsRespectedByCampCalendar()
+    {
+        var scenario = AdvanceScenarioTo(NewGmScenarioBootstrapper.CreateScenario(), new DateOnly(2026, 9, 1));
+        var info = new TrainingCampService().GetCalendarInfo(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.Equal(scenario.Registry.Rulebook!.RosterRules!.ActiveRoster, info.RequiredOpeningRosterSize);
+        Assert.False(info.IsRosterCompliant, "Default alpha roster should show RuleEngine over-limit warning before cutdown.");
     }
 
     public void TrainingCampHasNoGodotSaveOrGameSimulationDependency()
@@ -244,6 +351,47 @@ internal sealed class TrainingCampTests
         };
 
         return (registry, scenarioSnapshot);
+    }
+
+    private static NewGmScenarioResult CreateScenarioWithRulebook(
+        Rulebook rulebook,
+        string? parentOrganizationId = null,
+        string? affiliateOrganizationId = null)
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario(rulebook: rulebook);
+        var organization = scenario.ScenarioSnapshot.Organization with
+        {
+            ParentOrganizationId = parentOrganizationId,
+            AffiliateOrganizationId = affiliateOrganizationId
+        };
+        var scenarioSnapshot = scenario.ScenarioSnapshot with
+        {
+            Organization = organization,
+            AlphaSnapshot = scenario.ScenarioSnapshot.AlphaSnapshot with { Organization = organization }
+        };
+
+        return scenario with
+        {
+            ScenarioSnapshot = scenarioSnapshot,
+            AlphaSnapshot = scenarioSnapshot.AlphaSnapshot
+        };
+    }
+
+    private static NewGmScenarioResult AdvanceScenarioTo(NewGmScenarioResult scenario, DateOnly targetDate)
+    {
+        var coordinator = new DailySimulationCoordinator();
+        var current = scenario;
+        while (current.ScenarioSnapshot.CurrentDate < targetDate)
+        {
+            var result = coordinator.AdvanceScenarioOneDay(current.Registry, current.ScenarioSnapshot);
+            current = current with
+            {
+                ScenarioSnapshot = result.ScenarioSnapshot,
+                AlphaSnapshot = result.ScenarioSnapshot.AlphaSnapshot
+            };
+        }
+
+        return current;
     }
 
     private static NewGmScenarioResult AdvanceToDraftDay(NewGmScenarioResult scenario)

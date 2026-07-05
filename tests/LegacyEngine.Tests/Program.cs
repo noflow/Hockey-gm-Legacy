@@ -317,6 +317,15 @@ runner.Run("training camp summary is generated", trainingCampTests.CampSummaryIs
 runner.Run("training camp events are created", trainingCampTests.CampEventsAreCreated);
 runner.Run("training camp inbox items can be generated", trainingCampTests.InboxItemsCanBeGeneratedForCampEvents);
 runner.Run("AlphaDesktop exposes training camp surface and actions", trainingCampTests.AlphaDesktopExposesTrainingCampSurfaceAndActions);
+runner.Run("training camp opens automatically on calendar date", trainingCampTests.CampOpensAutomaticallyOnCalendarDate);
+runner.Run("training camp closes by season start deadline", trainingCampTests.CampClosesBySeasonStartDeadline);
+runner.Run("training camp junior young player can return to youth team", trainingCampTests.JuniorYoungPlayerCanBeReturnedToYouthTeam);
+runner.Run("training camp NHL waiver-exempt player can be assigned to AHL", trainingCampTests.NhlWaiverExemptPlayerCanBeAssignedToAhl);
+runner.Run("training camp NHL waiver-required player requires waiver action", trainingCampTests.NhlWaiverRequiredPlayerRequiresWaiverAction);
+runner.Run("training camp AHL assigned player can return to parent", trainingCampTests.AhlAssignedPlayerCanBeReturnedToParent);
+runner.Run("training camp over-limit roster creates pending action", trainingCampTests.RosterOverLimitCreatesWarningPendingAction);
+runner.Run("training camp calendar does not auto cut or add players", trainingCampTests.CalendarCampDoesNotAutoCutOrAddRosterPlayers);
+runner.Run("training camp calendar respects RuleEngine roster size", trainingCampTests.RuleEngineRosterSizeIsRespectedByCampCalendar);
 runner.Run("training camp has no Godot save or game simulation dependency", trainingCampTests.TrainingCampHasNoGodotSaveOrGameSimulationDependency);
 runner.Run("pending GM action advance day does not auto-sign recruit", pendingGmActionTests.AdvanceDayDoesNotAutoSignRecruit);
 runner.Run("pending GM action advance day does not auto-add roster player", pendingGmActionTests.AdvanceDayDoesNotAutoAddPlayerToRoster);

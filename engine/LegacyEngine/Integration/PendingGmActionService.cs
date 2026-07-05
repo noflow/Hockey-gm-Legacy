@@ -95,7 +95,7 @@ public sealed class PendingGmActionService
                 ApproveRosterAdd(registry, scenario, action),
             PendingGmActionType.InviteToCamp =>
                 CompleteWithoutDomainMutation(registry, scenario, action, "Camp invite approved."),
-            PendingGmActionType.ReleasePlayer or PendingGmActionType.CutPlayer or PendingGmActionType.AssignToAffiliate or PendingGmActionType.ReturnToParent =>
+            PendingGmActionType.ReleasePlayer or PendingGmActionType.CutPlayer or PendingGmActionType.ReturnToJuniorTeam or PendingGmActionType.AssignToAffiliate or PendingGmActionType.ReturnToParent or PendingGmActionType.PlaceOnWaivers =>
                 CompleteWithoutDomainMutation(registry, scenario, action, "GM-controlled camp/roster action approved for manual processing."),
             PendingGmActionType.DeclineContract =>
                 Decline(registry, scenario, actionId),
@@ -269,8 +269,10 @@ public sealed class PendingGmActionService
             PendingGmActionType.AddToRoster => $"Add to roster: {personName}",
             PendingGmActionType.ReleasePlayer => $"Release player: {personName}",
             PendingGmActionType.CutPlayer => $"Cut player: {personName}",
+            PendingGmActionType.ReturnToJuniorTeam => $"Return to junior/youth team: {personName}",
             PendingGmActionType.AssignToAffiliate => $"Assign to affiliate: {personName}",
             PendingGmActionType.ReturnToParent => $"Return to parent: {personName}",
+            PendingGmActionType.PlaceOnWaivers => $"Place on waivers: {personName}",
             PendingGmActionType.ApproveContract => $"Approve contract: {personName}",
             PendingGmActionType.DeclineContract => $"Decline contract: {personName}",
             _ => $"Pending GM action: {personName}"
