@@ -34,6 +34,7 @@ var scoutingOperationsTests = new ScoutingOperationsTests();
 var playerDossierIntegrationTests = new PlayerDossierIntegrationTests();
 var staffControlTests = new StaffControlTests();
 var alphaDesktopInteractionTests = new AlphaDesktopInteractionTests();
+var budgetOverviewTests = new BudgetOverviewTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -391,8 +392,11 @@ runner.Run("AlphaDesktop exposes executive reports", executiveReportTests.AlphaD
 runner.Run("scouting operations scout can be assigned to region", scoutingOperationsTests.ScoutCanBeAssignedToRegion);
 runner.Run("scouting operations scout can be assigned to player", scoutingOperationsTests.ScoutCanBeAssignedToPlayer);
 runner.Run("scouting operations assignment stores priority notes and dates", scoutingOperationsTests.AssignmentStoresPriorityNotesAndDates);
+runner.Run("scouting operations assignment stores duration and return date", scoutingOperationsTests.AssignmentStoresDurationAndReturnDate);
+runner.Run("scouting operations area assignment uses duration and return date", scoutingOperationsTests.AreaAssignmentUsesDurationAndReturnDate);
 runner.Run("scouting operations assignment progresses over days", scoutingOperationsTests.AssignmentProgressesOverDays);
 runner.Run("scouting operations completed assignment creates report", scoutingOperationsTests.CompletedAssignmentCreatesReport);
+runner.Run("scouting operations completed assignment inbox names trip and duration", scoutingOperationsTests.CompletedAssignmentInboxNamesTripAndDuration);
 runner.Run("scouting operations region fit improves confidence", scoutingOperationsTests.RegionFitImprovesConfidence);
 runner.Run("scouting operations heavy workload delays report", scoutingOperationsTests.HeavyWorkloadDelaysReport);
 runner.Run("scouting operations poor relationship affects communication quality", scoutingOperationsTests.PoorRelationshipAffectsCommunicationQuality);
@@ -409,6 +413,8 @@ runner.Run("dossier can be created for draft prospect", playerDossierIntegration
 runner.Run("dossier hides true ratings", playerDossierIntegrationTests.DossierHidesTrueRatings);
 runner.Run("GM note can be added to dossier", playerDossierIntegrationTests.GmNoteCanBeAdded);
 runner.Run("dossier sections populate when data exists", playerDossierIntegrationTests.ScoutingDevelopmentInjuryAndContractSectionsPopulateWhenDataExists);
+runner.Run("budget overview calculates contract totals", budgetOverviewTests.BudgetOverviewCalculatesContractTotals);
+runner.Run("budget overview warns when over budget", budgetOverviewTests.BudgetOverviewWarnsWhenOverBudget);
 runner.Run("staff control candidate generated", staffControlTests.StaffCandidateGenerated);
 runner.Run("staff control candidate has role and department fit", staffControlTests.CandidateHasRoleAndDepartmentFit);
 runner.Run("staff control candidate has strengths and weaknesses", staffControlTests.CandidateHasStrengthsAndWeaknesses);
@@ -428,6 +434,10 @@ runner.Run("staff control has no Godot save or game simulation dependency", staf
 runner.Run("AlphaDesktop staff selected item exposes staff actions", alphaDesktopInteractionTests.StaffSelectedItemExposesStaffActions);
 runner.Run("AlphaDesktop roster and prospect selected item exposes player actions", alphaDesktopInteractionTests.PlayerAndProspectSelectedItemsExposePlayerActions);
 runner.Run("AlphaDesktop view dossier works from selected player", alphaDesktopInteractionTests.ViewDossierWorksFromSelectedPlayer);
+runner.Run("AlphaDesktop dossier window supports editable GM notes", alphaDesktopInteractionTests.DossierWindowSupportsEditableGmNotes);
+runner.Run("AlphaDesktop roster filters and readable fields are exposed", alphaDesktopInteractionTests.RosterFiltersAndReadableFieldsAreExposed);
+runner.Run("AlphaDesktop budget overview is shown on dashboard and owner screen", alphaDesktopInteractionTests.BudgetOverviewIsShownOnDashboardAndOwnerScreen);
+runner.Run("AlphaDesktop scouting cleanup and duration UI is exposed", alphaDesktopInteractionTests.ScoutingCleanupAndDurationUiIsExposed);
 runner.Run("AlphaDesktop staff profile and focus actions are wired", alphaDesktopInteractionTests.StaffProfileAndFocusActionsAreWired);
 runner.Run("AlphaDesktop recruit rows and details show position age and priorities", alphaDesktopInteractionTests.RecruitRowsAndDetailsShowPositionAgeAndPriorities);
 runner.Run("AlphaDesktop dashboard summary displays counts", alphaDesktopInteractionTests.DashboardSummaryDisplaysCounts);

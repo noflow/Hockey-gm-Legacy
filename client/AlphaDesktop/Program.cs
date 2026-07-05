@@ -41,6 +41,12 @@ internal sealed class MainWindow : Window
     private readonly Dictionary<string, string> _selectedPeopleByTab = [];
     private TabControl? _mainTabs;
     private StackPanel? _dashboardPanel;
+    private TextBox? _rosterSearchInput;
+    private ComboBox? _rosterPositionFilter;
+    private ComboBox? _rosterStatusFilter;
+    private ComboBox? _rosterPlayerTypeFilter;
+    private ComboBox? _rosterRoleFilter;
+    private ComboBox? _rosterAgeFilter;
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
     private Border? _inboxReader;
@@ -214,7 +220,6 @@ internal sealed class MainWindow : Window
         AddSelectablePeopleTab(tabs, "Scouting");
         AddSelectablePeopleTab(tabs, "Scouting Operations");
         AddTab(tabs, "Pending Actions");
-        AddSelectablePeopleTab(tabs, "Player Dossier");
         if (State.IsDraftUiEnabled)
         {
             AddSelectablePeopleTab(tabs, "Draft Board");
@@ -366,6 +371,8 @@ internal sealed class MainWindow : Window
     private void AddSelectablePeopleTab(TabControl tabs, string title)
     {
         var root = new Grid { Background = Brushes.White };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -393,7 +400,17 @@ internal sealed class MainWindow : Window
             Content = detail
         };
 
+        if (title == "Roster")
+        {
+            var filters = BuildRosterFilters();
+            Grid.SetRow(filters, 0);
+            Grid.SetColumnSpan(filters, 2);
+            root.Children.Add(filters);
+        }
+
+        Grid.SetRow(list, 1);
         Grid.SetColumn(list, 0);
+        Grid.SetRow(detailScroll, 1);
         Grid.SetColumn(detailScroll, 1);
         root.Children.Add(list);
         root.Children.Add(detailScroll);
@@ -407,6 +424,65 @@ internal sealed class MainWindow : Window
         };
         _tabItems[title] = item;
         tabs.Items.Add(item);
+    }
+
+    private UIElement BuildRosterFilters()
+    {
+        var panel = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(12, 12, 12, 6)
+        };
+
+        _rosterSearchInput = new TextBox { Width = 170, MinHeight = 30, Margin = new Thickness(0, 0, 8, 8) };
+        _rosterSearchInput.TextChanged += (_, _) => RefreshAll();
+        panel.Children.Add(LabeledControl("Search", _rosterSearchInput));
+
+        _rosterPositionFilter = CreateRosterFilter(Enum.GetNames<RosterPosition>().Prepend("All").ToArray());
+        panel.Children.Add(LabeledControl("Position", _rosterPositionFilter));
+
+        _rosterStatusFilter = CreateRosterFilter(Enum.GetNames<RosterStatus>().Prepend("All").ToArray());
+        panel.Children.Add(LabeledControl("Status", _rosterStatusFilter));
+
+        _rosterPlayerTypeFilter = CreateRosterFilter(new[] { "All", "Goalie", "Defense", "Forward", "Prospect", "Veteran", "Injured" });
+        panel.Children.Add(LabeledControl("Player type", _rosterPlayerTypeFilter));
+
+        _rosterRoleFilter = CreateRosterFilter(new[] { "All", "Top Line", "Middle Six", "Depth", "Starter", "Backup", "Development" });
+        panel.Children.Add(LabeledControl("Role", _rosterRoleFilter));
+
+        _rosterAgeFilter = CreateRosterFilter(new[] { "All", "Under 18", "18-19", "20+", "Unknown" });
+        panel.Children.Add(LabeledControl("Age", _rosterAgeFilter));
+
+        return panel;
+    }
+
+    private ComboBox CreateRosterFilter(string[] items)
+    {
+        var combo = new ComboBox
+        {
+            ItemsSource = items,
+            SelectedIndex = 0,
+            MinWidth = 120,
+            MinHeight = 30,
+            Margin = new Thickness(0, 0, 8, 8)
+        };
+        combo.SelectionChanged += (_, _) => RefreshAll();
+        return combo;
+    }
+
+    private static UIElement LabeledControl(string label, Control control)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = label,
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 12,
+            Foreground = new SolidColorBrush(Color.FromRgb(70, 84, 102)),
+            Margin = new Thickness(0, 0, 0, 3)
+        });
+        panel.Children.Add(control);
+        return panel;
     }
 
     private void AddInboxTab(TabControl tabs)
@@ -621,8 +697,74 @@ internal sealed class MainWindow : Window
     private void OpenDossierFor(string personId)
     {
         State.OpenDossier(personId);
-        _selectedPeopleByTab["Player Dossier"] = personId;
-        SelectTab("Player Dossier");
+        var dossier = State.CurrentDossier;
+        if (dossier is null)
+        {
+            MessageBox.Show(State.LatestSummary, "Player Dossier", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var window = new Window
+        {
+            Title = $"Dossier - {dossier.PlayerName}",
+            Width = 760,
+            Height = 680,
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = BuildDossierWindowContent(dossier)
+        };
+        window.ShowDialog();
+        RefreshAll();
+    }
+
+    private UIElement BuildDossierWindowContent(PlayerDossierView dossier)
+    {
+        var root = new Grid { Margin = new Thickness(18) };
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var panel = CreateDetailPanel(dossier.PlayerName, $"Age {dossier.Age} | {dossier.Position} | {dossier.Status}");
+        AddLine(panel, "Team / rights", dossier.TeamOrRights);
+        AddLine(panel, "Source", dossier.Source);
+
+        foreach (var section in dossier.Sections.Where(section => section.Title != "GM Notes"))
+        {
+            AddSubHeader(panel, section.Title);
+            foreach (var line in section.Lines)
+            {
+                AddParagraph(panel, line);
+            }
+        }
+
+        AddSubHeader(panel, "GM Notes");
+        var notes = new TextBox
+        {
+            Text = dossier.GmNotes,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 90,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+        panel.Children.Add(notes);
+
+        var scroll = new ScrollViewer
+        {
+            Content = panel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+        Grid.SetRow(scroll, 0);
+        root.Children.Add(scroll);
+
+        var footer = new WrapPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        footer.Children.Add(CreateButton("Save GM Note", () => State.SaveDossierNoteFor(dossier.PersonId, notes.Text)));
+        footer.Children.Add(CreateButton("Close", () => Window.GetWindow(root)?.Close()));
+        Grid.SetRow(footer, 1);
+        root.Children.Add(footer);
+        return root;
     }
 
     private void ShowStaffProfile(string personId)
@@ -635,6 +777,111 @@ internal sealed class MainWindow : Window
     {
         State.SetStaffFocusFor(personId);
         MessageBox.Show(State.LatestSummary, "Staff Focus", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ShowScoutAssignmentDialog(string? playerPersonId, string? scoutPersonId = null, ScoutingRegionFocus? region = null)
+    {
+        var availableScouts = State.AvailableScoutProfiles.ToArray();
+        if (scoutPersonId is not null)
+        {
+            var selected = State.ScoutProfiles.FirstOrDefault(profile => profile.ScoutPersonId == scoutPersonId);
+            if (selected is not null && availableScouts.All(profile => profile.ScoutPersonId != scoutPersonId))
+            {
+                availableScouts = availableScouts.Append(selected).ToArray();
+            }
+        }
+
+        if (availableScouts.Length == 0)
+        {
+            MessageBox.Show("No scouts are currently available. Deployed scouts return when their assignments complete.", "Assign Scout", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var scoutBox = new ComboBox
+        {
+            ItemsSource = availableScouts,
+            SelectedItem = scoutPersonId is null ? availableScouts.First() : availableScouts.FirstOrDefault(profile => profile.ScoutPersonId == scoutPersonId) ?? availableScouts.First(),
+            DisplayMemberPath = nameof(ScoutingOperationScoutProfile.Name),
+            MinWidth = 240,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        var durationBox = new ComboBox
+        {
+            ItemsSource = new[] { "1 week", "2 weeks", "3 weeks", "1 month" },
+            SelectedIndex = 0,
+            MinWidth = 160,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        var priorityBox = new ComboBox
+        {
+            ItemsSource = Enum.GetValues<ScoutingOperationPriority>(),
+            SelectedItem = ScoutingOperationPriority.High,
+            MinWidth = 160,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        var notes = new TextBox
+        {
+            Text = playerPersonId is not null
+                ? $"Scout {FindPersonName(playerPersonId)} with a focused update."
+                : $"Area scouting trip for {region?.ToString() ?? "selected region"}.",
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinHeight = 70
+        };
+
+        var panel = new StackPanel { Margin = new Thickness(18) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = playerPersonId is not null ? $"Assign Scout: {FindPersonName(playerPersonId)}" : $"Assign Area Scout: {region}",
+            FontSize = 20,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        panel.Children.Add(LabeledControl("Scout", scoutBox));
+        panel.Children.Add(LabeledControl("Duration", durationBox));
+        panel.Children.Add(LabeledControl("Priority", priorityBox));
+        panel.Children.Add(LabeledControl("Notes", notes));
+
+        var window = new Window
+        {
+            Title = "Assign Scout",
+            Width = 420,
+            Height = 430,
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = panel
+        };
+        var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
+        actions.Children.Add(CreateButton("Assign", () =>
+        {
+            if (scoutBox.SelectedItem is not ScoutingOperationScoutProfile scout)
+            {
+                return;
+            }
+
+            var days = durationBox.SelectedItem?.ToString() switch
+            {
+                "2 weeks" => 14,
+                "3 weeks" => 21,
+                "1 month" => 30,
+                _ => 7
+            };
+            var priority = priorityBox.SelectedItem is ScoutingOperationPriority selectedPriority ? selectedPriority : ScoutingOperationPriority.High;
+            if (playerPersonId is not null)
+            {
+                State.AssignScoutToSelectedPlayerForDuration(playerPersonId, scout.ScoutPersonId, days, priority, notes.Text);
+            }
+            else if (region is not null)
+            {
+                State.AssignScoutToRegionForDuration(scout.ScoutPersonId, region.Value, days, priority, notes.Text);
+            }
+
+            window.Close();
+        }));
+        actions.Children.Add(CreateButton("Cancel", window.Close));
+        panel.Children.Add(actions);
+        window.ShowDialog();
+        RefreshAll();
     }
 
     private void RefreshAll()
@@ -677,6 +924,7 @@ internal sealed class MainWindow : Window
         var snapshot = State.Snapshot;
         var readiness = State.SeasonReadinessReport;
         var roster = readiness.RosterReport;
+        var budget = State.BudgetOverview;
         _dashboardPanel.Children.Clear();
 
         _dashboardPanel.Children.Add(new TextBlock
@@ -703,6 +951,7 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
+        metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
         _dashboardPanel.Children.Add(metrics);
 
         var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
@@ -725,6 +974,7 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Head scout", snapshot.Scout.Name);
         AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
         AddLine(summary, "Season readiness", readiness.RosterStatus);
+        AddLine(summary, "Budget", $"{budget.UsedBudget:C0} used of {budget.TotalBudget:C0}");
         AddParagraph(summary, State.LatestSummary);
         Grid.SetColumn(summaryCard, 1);
         lower.Children.Add(summaryCard);
@@ -898,21 +1148,71 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildRosterRows() =>
         State.Snapshot.Roster.Players
+            .Where(PassesRosterFilters)
             .OrderBy(player => player.Status)
             .ThenBy(player => FindPersonName(player.PersonId), StringComparer.Ordinal)
             .Select(player =>
             {
-                var injury = State.Snapshot.Injuries.FirstOrDefault(injury => injury.PersonId == player.PersonId && injury.IsActive);
-                var health = injury is null ? "Available" : $"{injury.Severity} {injury.InjuryType}";
                 return new SelectablePersonRow(
                     player.PersonId,
                     FindPersonName(player.PersonId),
                     "RosterPlayer",
-                    $"{player.Position} - {player.Status}",
-                    $"Age {player.Age?.ToString() ?? "unknown"} | {health}",
-                    $"Roster member since {player.JoinedDate:yyyy-MM-dd}. Use the detail panel for dossier and notes.");
+                    $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {player.Status}",
+                    $"{State.PlayerType(player.PersonId)} | {State.CurrentLineupRole(player.PersonId)} now | {State.PotentialLineupRole(player.PersonId)} potential",
+                    $"Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
             })
             .ToArray();
+
+    private bool PassesRosterFilters(RosterPlayer player)
+    {
+        var name = FindPersonName(player.PersonId);
+        var search = _rosterSearchInput?.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(search) && !name.Contains(search, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!FilterMatches(_rosterPositionFilter, player.Position.ToString()))
+        {
+            return false;
+        }
+
+        if (!FilterMatches(_rosterStatusFilter, player.Status.ToString()))
+        {
+            return false;
+        }
+
+        if (!FilterMatches(_rosterPlayerTypeFilter, State.PlayerType(player.PersonId)))
+        {
+            return false;
+        }
+
+        var roleFilter = SelectedFilter(_rosterRoleFilter);
+        if (roleFilter != "All"
+            && !State.CurrentLineupRole(player.PersonId).Contains(roleFilter, StringComparison.OrdinalIgnoreCase)
+            && !State.PotentialLineupRole(player.PersonId).Contains(roleFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var age = State.PersonAge(player.PersonId) ?? player.Age;
+        return SelectedFilter(_rosterAgeFilter) switch
+        {
+            "Under 18" => age is < 18,
+            "18-19" => age is >= 18 and <= 19,
+            "20+" => age is >= 20,
+            "Unknown" => age is null,
+            _ => true
+        };
+    }
+
+    private static bool FilterMatches(ComboBox? combo, string value)
+    {
+        var selected = SelectedFilter(combo);
+        return selected == "All" || value.Contains(selected, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string SelectedFilter(ComboBox? combo) => combo?.SelectedItem?.ToString() ?? "All";
 
     private IReadOnlyList<SelectablePersonRow> BuildRecruitRows() =>
         State.Snapshot.Recruits
@@ -931,14 +1231,16 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
         State.Snapshot.DraftBoard.Entries
+            .GroupBy(entry => entry.ProspectPersonId, StringComparer.Ordinal)
+            .Select(group => group.OrderBy(entry => entry.Rank).First())
             .OrderBy(entry => entry.Rank)
             .Select(entry => new SelectablePersonRow(
                 entry.ProspectPersonId,
-                FindPersonName(entry.ProspectPersonId),
+                ScoutingDisplayName(entry.ProspectPersonId),
                 "ScoutingProspect",
-                $"Rank #{entry.Rank}",
-                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}",
-                entry.ProjectionText))
+                $"{State.PersonPosition(entry.ProspectPersonId)} - age {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"} - rank #{entry.Rank}",
+                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
+                $"{State.RegionTeamText(entry.ProspectPersonId)} | {State.ScoutingReportStatus(entry.ProspectPersonId)} | {entry.ProjectionText}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingOperationRows() =>
@@ -1087,15 +1389,21 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Weaknesses", string.Join(", ", profile.Weaknesses));
         AddLine(panel, "Warning", profile.ConflictWarning);
         AddActions(panel,
-            CreateDetailButton("Assign Region", () => State.AssignScoutToRegionFor(row.PersonId)),
-            CreateDetailButton("Assign Player", () => State.AssignScoutToPlayerFor(row.PersonId)),
+            CreateDetailButton("Assign Region", () => ShowScoutAssignmentDialog(null, row.PersonId, ScoutingRegionFocus.WesternCanada), State.IsScoutAvailable(row.PersonId)),
+            CreateDetailButton("Assign Player", () => ShowScoutAssignmentDialog(State.NextUnassignedScoutingTargetId(), row.PersonId), State.IsScoutAvailable(row.PersonId) && State.NextUnassignedScoutingTargetId() is not null),
             CreateDetailButton("Set Scouting Focus", () => SetStaffFocusFor(row.PersonId)),
             CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)));
 
         AddSubHeader(panel, "Active Assignments");
-        foreach (var assignment in State.ScenarioSnapshot.ScoutingOperations.Where(assignment => assignment.ScoutPersonId == row.PersonId && assignment.IsOpen))
+        var assignments = State.ScenarioSnapshot.ScoutingOperations.Where(assignment => assignment.ScoutPersonId == row.PersonId && assignment.IsOpen).ToArray();
+        if (assignments.Length == 0)
         {
-            AddParagraph(panel, $"{assignment.TargetName} | {assignment.Priority} | due {assignment.ExpectedReportDate:yyyy-MM-dd} | {assignment.Notes}");
+            AddParagraph(panel, "Available for assignment.");
+        }
+
+        foreach (var assignment in assignments)
+        {
+            AddParagraph(panel, $"{assignment.TargetName} | {assignment.Priority} | duration {assignment.DurationDays} days | return {(assignment.ReturnDate ?? assignment.ExpectedReportDate):yyyy-MM-dd} | {assignment.Notes}");
         }
 
         return panel;
@@ -1113,6 +1421,19 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Context", row.Secondary);
         AddLine(panel, "GM relationship", $"{State.RelationshipWithGm(row.PersonId)}/100");
         AddParagraph(panel, row.Summary);
+
+        if (tab == "Roster")
+        {
+            AddLine(panel, "Name", row.Name);
+            AddLine(panel, "Position", State.PersonPosition(row.PersonId));
+            AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
+            AddLine(panel, "Player type", State.PlayerType(row.PersonId));
+            AddLine(panel, "Current lineup role", State.CurrentLineupRole(row.PersonId));
+            AddLine(panel, "Potential lineup role", State.PotentialLineupRole(row.PersonId));
+            AddLine(panel, "Contract / rights status", State.ContractRightsStatus(row.PersonId));
+            AddLine(panel, "Development trend", State.DevelopmentTrend(row.PersonId));
+            AddLine(panel, "Injury status", State.InjuryStatus(row.PersonId));
+        }
 
         if (tab == "Recruits")
         {
@@ -1140,6 +1461,15 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Analytics", string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary);
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes);
             }
+        }
+
+        if (tab is "Scouting" or "Draft Board")
+        {
+            AddLine(panel, "Position", State.PersonPosition(row.PersonId));
+            AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
+            AddLine(panel, "Region/team", State.RegionTeamText(row.PersonId));
+            AddLine(panel, "Assigned scout", State.AssignedScoutText(row.PersonId));
+            AddLine(panel, "Report status", State.ScoutingReportStatus(row.PersonId));
         }
 
         if (tab == "Prospect List")
@@ -1241,7 +1571,7 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Board Down", () => State.MoveDraftBoardPlayer(row.PersonId, 1), State.IsDraftUiEnabled);
             yield return CreateDetailButton("Star", () => State.ToggleStarProspect(row.PersonId), State.IsDraftUiEnabled);
             yield return CreateDetailButton("GM Note", () => State.AddDraftNoteFor(row.PersonId), State.IsDraftUiEnabled);
-            yield return CreateDetailButton("Assign Scout", () => State.AssignScoutToSelectedPlayer(row.PersonId), State.ScoutProfiles.Count > 0);
+            yield return CreateDetailButton("Assign Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0);
         }
 
         var available = State.AvailableProspectActions(row.PersonId);
@@ -2007,6 +2337,19 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Facilities: {owner.Budget.Facilities:C0}");
         builder.AppendLine($"Operations: {owner.Budget.Operations:C0}");
         builder.AppendLine();
+        builder.AppendLine("Budget Overview");
+        var budget = State.BudgetOverview;
+        builder.AppendLine($"Status: {budget.Status}");
+        builder.AppendLine($"Total budget: {budget.TotalBudget:C0}");
+        builder.AppendLine($"Used budget: {budget.UsedBudget:C0}");
+        builder.AppendLine($"Remaining budget: {budget.RemainingBudget:C0}");
+        builder.AppendLine($"Over/under budget: {budget.OverUnderBudget:C0}");
+        builder.AppendLine($"Player contracts total: {budget.PlayerContractsTotal:C0}");
+        builder.AppendLine($"Staff contracts total: {budget.StaffContractsTotal:C0}");
+        builder.AppendLine($"Scouting budget: {budget.ScoutingBudget:C0}");
+        builder.AppendLine($"Medical/staff operations placeholder: {budget.MedicalAndStaffOperationsBudget:C0}");
+        builder.AppendLine($"Owner status: {budget.OwnerBudgetConfidence}");
+        builder.AppendLine();
         builder.AppendLine("Goals");
         foreach (var goal in owner.Goals.OrderByDescending(goal => goal.Priority))
         {
@@ -2620,6 +2963,21 @@ internal sealed class MainWindow : Window
 
         return $"{name} ({State.PersonPosition(personId)}, age {State.PersonAge(personId)?.ToString() ?? "unknown"})";
     }
+
+    private string ScoutingDisplayName(string personId)
+    {
+        var name = FindPersonName(personId);
+        var sameNameCount = State.Snapshot.DraftBoard.Entries
+            .Select(entry => entry.ProspectPersonId)
+            .Distinct(StringComparer.Ordinal)
+            .Count(prospectId => string.Equals(FindPersonName(prospectId), name, StringComparison.Ordinal));
+        if (sameNameCount <= 1)
+        {
+            return name;
+        }
+
+        return $"{name} ({State.PersonPosition(personId)}, age {State.PersonAge(personId)?.ToString() ?? "unknown"}, {State.RegionTeamText(personId)})";
+    }
 }
 
 internal sealed record SelectablePersonRow(
@@ -2646,6 +3004,7 @@ internal sealed class AlphaDesktopState
     private readonly ScoutingOperationsService _scoutingOperations = new();
     private readonly PlayerDossierService _playerDossiers = new();
     private readonly StaffOfficeService _staffOffice = new();
+    private readonly BudgetOverviewService _budgetOverview = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
@@ -2689,6 +3048,8 @@ internal sealed class AlphaDesktopState
     public ProspectListSummary ProspectSummary => _prospectDecisions.BuildSummary(ScenarioSnapshot);
 
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
+
+    public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot);
 
     public int PendingDecisionCount => OpenPendingActions.Count;
 
@@ -2755,6 +3116,11 @@ internal sealed class AlphaDesktopState
     }
 
     public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles => _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
+
+    public IReadOnlyList<ScoutingOperationScoutProfile> AvailableScoutProfiles =>
+        ScoutProfiles
+            .Where(profile => ScenarioSnapshot.ScoutingOperations.All(assignment => assignment.ScoutPersonId != profile.ScoutPersonId || !assignment.IsOpen))
+            .ToArray();
 
     public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot);
 
@@ -2933,6 +3299,61 @@ internal sealed class AlphaDesktopState
             playerPersonId,
             ScoutingOperationPriority.High,
             $"Selected player review requested from AlphaDesktop on {Snapshot.CurrentDate:yyyy-MM-dd}."));
+    }
+
+    public bool IsScoutAvailable(string scoutPersonId) =>
+        ScenarioSnapshot.ScoutingOperations.All(assignment => assignment.ScoutPersonId != scoutPersonId || !assignment.IsOpen);
+
+    public string? NextUnassignedScoutingTargetId() =>
+        Snapshot.DraftBoard.Entries
+            .OrderBy(entry => entry.Rank)
+            .FirstOrDefault(entry => ScenarioSnapshot.ScoutingOperations.All(assignment => assignment.TargetPlayerId != entry.ProspectPersonId || !assignment.IsOpen))
+            ?.ProspectPersonId;
+
+    public void AssignScoutToSelectedPlayerForDuration(
+        string playerPersonId,
+        string scoutPersonId,
+        int durationDays,
+        ScoutingOperationPriority priority,
+        string notes)
+    {
+        if (!IsScoutAvailable(scoutPersonId))
+        {
+            LatestSummary = "Selected scout is already deployed and unavailable until the current assignment ends.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToPlayer(
+            _registry,
+            ScenarioSnapshot,
+            scoutPersonId,
+            playerPersonId,
+            priority,
+            string.IsNullOrWhiteSpace(notes) ? $"Scout {FindPersonName(playerPersonId)} for {durationDays} day(s)." : notes,
+            Snapshot.CurrentDate.AddDays(Math.Max(1, durationDays))));
+    }
+
+    public void AssignScoutToRegionForDuration(
+        string scoutPersonId,
+        ScoutingRegionFocus region,
+        int durationDays,
+        ScoutingOperationPriority priority,
+        string notes)
+    {
+        if (!IsScoutAvailable(scoutPersonId))
+        {
+            LatestSummary = "Selected scout is already deployed and unavailable until the current assignment ends.";
+            return;
+        }
+
+        ApplyScoutingOperationResult(_scoutingOperations.AssignScoutToRegion(
+            _registry,
+            ScenarioSnapshot,
+            scoutPersonId,
+            region,
+            priority,
+            string.IsNullOrWhiteSpace(notes) ? $"Scout {region} for {durationDays} day(s)." : notes,
+            Snapshot.CurrentDate.AddDays(Math.Max(1, durationDays))));
     }
 
     public void GenerateStaffConflictWarning() =>
@@ -3190,6 +3611,138 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public string PlayerType(string personId)
+    {
+        var position = PersonPosition(personId);
+        if (InjuryStatus(personId) != "Available")
+        {
+            return "Injured";
+        }
+
+        if (position == RosterPosition.Goalie)
+        {
+            return "Goalie";
+        }
+
+        if (position == RosterPosition.Defense)
+        {
+            return "Defense";
+        }
+
+        var age = PersonAge(personId);
+        if (age is <= 17)
+        {
+            return "Prospect";
+        }
+
+        if (age is >= 20)
+        {
+            return "Veteran";
+        }
+
+        return "Forward";
+    }
+
+    public string CurrentLineupRole(string personId)
+    {
+        var position = PersonPosition(personId);
+        var development = Snapshot.DevelopmentProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        if (position == RosterPosition.Goalie)
+        {
+            return development?.CurrentAbility >= 55 ? "Starter" : "Backup";
+        }
+
+        return development?.CurrentAbility switch
+        {
+            >= 65 => "Top Line",
+            >= 52 => "Middle Six",
+            >= 40 => "Depth",
+            _ => "Development"
+        };
+    }
+
+    public string PotentialLineupRole(string personId)
+    {
+        var position = PersonPosition(personId);
+        var development = Snapshot.DevelopmentProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        if (position == RosterPosition.Goalie)
+        {
+            return development?.Potential >= 60 ? "Starter" : "Backup";
+        }
+
+        return development?.Potential switch
+        {
+            >= 72 => "Top Line",
+            >= 58 => "Middle Six",
+            >= 45 => "Depth",
+            _ => "Development"
+        };
+    }
+
+    public string ContractRightsStatus(string personId)
+    {
+        var contract = ScenarioSnapshot.Contracts.Concat(Snapshot.Contracts)
+            .Where(contract => contract.PersonId == personId)
+            .OrderByDescending(contract => contract.SignedOn ?? contract.OfferedOn)
+            .FirstOrDefault();
+        if (contract is not null)
+        {
+            return $"{contract.ContractType} {contract.Status}";
+        }
+
+        var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId);
+        return prospect is null ? "No contract/rights record" : $"Draft rights {prospect.Status}";
+    }
+
+    public string DevelopmentTrend(string personId)
+    {
+        var profile = Snapshot.DevelopmentProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        if (profile is null)
+        {
+            return "No development profile";
+        }
+
+        return $"{profile.Stage}, last updated {profile.LastUpdated:yyyy-MM-dd}";
+    }
+
+    public string InjuryStatus(string personId)
+    {
+        var injury = Snapshot.Injuries.FirstOrDefault(injury => injury.PersonId == personId && injury.IsActive);
+        return injury is null ? "Available" : $"{injury.Severity} {injury.InjuryType}, {injury.Status}";
+    }
+
+    public string RegionTeamText(string personId)
+    {
+        var role = Snapshot.People.FirstOrDefault(person => person.PersonId == personId)
+            ?.ActiveRolesOn(Snapshot.CurrentDate)
+            .FirstOrDefault();
+        return role?.OrganizationId ?? Snapshot.Organization?.Name ?? Snapshot.OrganizationId;
+    }
+
+    public string AssignedScoutText(string personId)
+    {
+        var assignment = ScenarioSnapshot.ScoutingOperations
+            .Where(assignment => assignment.TargetPlayerId == personId && assignment.IsOpen)
+            .OrderBy(assignment => assignment.ExpectedReportDate)
+            .FirstOrDefault();
+        return assignment is null ? "Unassigned" : $"{assignment.ScoutName} until {(assignment.ReturnDate ?? assignment.ExpectedReportDate):yyyy-MM-dd}";
+    }
+
+    public string ScoutingReportStatus(string personId)
+    {
+        var active = ScenarioSnapshot.ScoutingOperations.FirstOrDefault(assignment => assignment.TargetPlayerId == personId && assignment.IsOpen);
+        if (active is not null)
+        {
+            return $"{active.Status}, due {(active.ReturnDate ?? active.ExpectedReportDate):yyyy-MM-dd}";
+        }
+
+        var report = ScenarioSnapshot.CompletedScoutingReports
+            .Where(report => report.PlayerId == personId)
+            .OrderByDescending(report => report.CreatedOn)
+            .FirstOrDefault();
+        return report is null ? "No report yet" : $"Report complete {report.CreatedOn:yyyy-MM-dd}, confidence {report.Confidence}";
+    }
+
     public int RecruitPriorityValue(string recruitPersonId, RecruitPriority priority) =>
         Snapshot.Recruits.FirstOrDefault(recruit => recruit.RecruitPersonId == recruitPersonId)
             ?.Priorities.GetValueOrDefault(priority) ?? 0;
@@ -3312,6 +3865,23 @@ internal sealed class AlphaDesktopState
         }
 
         AddDossierNote();
+    }
+
+    public void SaveDossierNoteFor(string personId, string note)
+    {
+        try
+        {
+            var result = _playerDossiers.AddOrUpdateGmNote(ScenarioSnapshot, personId, string.IsNullOrWhiteSpace(note) ? "No GM note." : note);
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            LastProcessedEventCount = 0;
+            _selectedDossierPersonId = personId;
+            LatestSummary = result.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            LatestSummary = ex.Message;
+        }
     }
 
     public void ApprovePendingAction()

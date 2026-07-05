@@ -162,7 +162,20 @@ public sealed class ScoutingOperationsService
 
             QueueEvent(registry, scenario, LegacyEventType.ScoutAssignmentCompleted, "Scouting assignment completed", $"{assignment.ScoutName} completed a report on {assignment.TargetName}.", assignment.ScoutPersonId, report.PlayerId);
             QueueEvent(registry, scenario, LegacyEventType.ScoutingReportUpdated, "Scouting report updated", $"{assignment.TargetName} report confidence: {report.Confidence}.", assignment.ScoutPersonId, report.PlayerId);
-            inbox.Add(Inbox(scenario, LegacyEventType.ScoutAssignmentCompleted, "Scouting assignment completed", $"{assignment.ScoutName} completed {assignment.TargetName}. Confidence: {report.Confidence}."));
+            var subject = assignment.AssignmentType == ScoutingOperationAssignmentType.Player
+                ? $"Scout Report Complete: {assignment.TargetName}"
+                : $"{assignment.TargetName} Scouting Trip Complete";
+            var duration = assignment.DurationDays <= 0 ? "same-day" : $"{assignment.DurationDays} day";
+            if (assignment.DurationDays > 1)
+            {
+                duration += "s";
+            }
+
+            inbox.Add(Inbox(
+                scenario,
+                LegacyEventType.ScoutAssignmentCompleted,
+                subject,
+                $"{assignment.ScoutName} completed {assignment.TargetName} after a {duration} assignment. Confidence: {report.Confidence}. Recommendation: {report.Recommendation}."));
         }
 
         var updated = scenario with
@@ -325,7 +338,9 @@ public sealed class ScoutingOperationsService
             Status: ScoutingOperationStatus.Active,
             WorkloadAtAssignment: workload,
             RelationshipQualityAtAssignment: relationship,
-            CommunicationQuality: Math.Clamp((relationship + member.Attributes.ScoutingScore(StaffScoutingAttribute.CharacterEvaluation)) / 2, 0, 100));
+            CommunicationQuality: Math.Clamp((relationship + member.Attributes.ScoutingScore(StaffScoutingAttribute.CharacterEvaluation)) / 2, 0, 100),
+            DurationDays: Math.Max(0, due.DayNumber - scenario.CurrentDate.DayNumber),
+            ReturnDate: due);
         assignment.Validate();
         return assignment;
     }

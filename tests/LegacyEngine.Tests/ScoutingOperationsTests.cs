@@ -59,6 +59,40 @@ internal sealed class ScoutingOperationsTests
         Assert.Equal(due, result.Assignment.ExpectedReportDate);
     }
 
+    public void AssignmentStoresDurationAndReturnDate()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var due = scenario.ScenarioSnapshot.CurrentDate.AddDays(14);
+        var result = new ScoutingOperationsService().AssignScoutToPlayer(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            RegionalScoutPersonId(scenario.ScenarioSnapshot),
+            scenario.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.First().ProspectPersonId,
+            ScoutingOperationPriority.High,
+            "Two-week player viewing.",
+            due);
+
+        Assert.Equal(14, result.Assignment!.DurationDays);
+        Assert.Equal(due, result.Assignment.ReturnDate);
+    }
+
+    public void AreaAssignmentUsesDurationAndReturnDate()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var due = scenario.ScenarioSnapshot.CurrentDate.AddDays(30);
+        var result = new ScoutingOperationsService().AssignScoutToRegion(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            RegionalScoutPersonId(scenario.ScenarioSnapshot),
+            ScoutingRegionFocus.Europe,
+            ScoutingOperationPriority.Low,
+            "One-month Europe watch.",
+            due);
+
+        Assert.Equal(30, result.Assignment!.DurationDays);
+        Assert.Equal(due, result.Assignment.ReturnDate);
+    }
+
     public void AssignmentProgressesOverDays()
     {
         var scenario = NewGmScenarioBootstrapper.CreateScenario();
@@ -82,6 +116,16 @@ internal sealed class ScoutingOperationsTests
 
         Assert.True(result.ScenarioSnapshot.CompletedScoutingReports.Count > 0, "Completed assignment should create report.");
         Assert.True(result.InboxItems.Any(item => item.EventType == LegacyEventType.ScoutAssignmentCompleted), "Completed assignment should create inbox item.");
+    }
+
+    public void CompletedAssignmentInboxNamesTripAndDuration()
+    {
+        var result = CompleteSingleRegionAssignment(ScoutingRegionFocus.WesternCanada);
+        var inbox = result.InboxItems.Single(item => item.EventType == LegacyEventType.ScoutAssignmentCompleted);
+
+        Assert.True(inbox.Title.Contains("Scouting Trip Complete", StringComparison.Ordinal), "Completed area assignment should have a clear scouting trip subject.");
+        Assert.True(inbox.Summary.Contains("assignment", StringComparison.Ordinal), "Completed assignment inbox should describe the assignment duration.");
+        Assert.True(inbox.Summary.Contains("Confidence", StringComparison.Ordinal), "Completed assignment inbox should include report confidence.");
     }
 
     public void RegionFitImprovesConfidence()

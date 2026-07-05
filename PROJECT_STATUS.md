@@ -57,14 +57,15 @@ The five foundation pillars remain:
 - Alpha 2.1 - Staff Control v2
 - Alpha UI Interaction Pass - Selectable People Rows
 - Alpha 2.2 - UI/UX Structural Pass v1
+- Alpha 2.2.1 - Dossier Window, Roster Filters, Budget Overview, and Scouting Cleanup
 
 ## Current Milestone
 
-Alpha 2.2 - UI/UX Structural Pass v1
+Alpha 2.2.1 - Dossier Window, Roster Filters, Budget Overview, and Scouting Cleanup
 
 ## Current Goal
 
-Move AlphaDesktop toward a playable GM workspace with a card-based dashboard, notification counts, selectable people rows, and person/decision-specific action panels.
+Improve the AlphaDesktop GM workspace with dossier windows, roster filters, visible budget context, and clearer scouting assignment flow.
 
 ## Why Relationship Engine Was Next
 

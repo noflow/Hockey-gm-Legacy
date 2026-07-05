@@ -30,10 +30,65 @@ internal sealed class AlphaDesktopInteractionTests
     {
         var source = ReadAlphaDesktopSource();
 
-        Assert.True(source.Contains("AddSelectablePeopleTab(tabs, \"Player Dossier\")", StringComparison.Ordinal), "Player Dossier should use selectable rows.");
+        Assert.False(source.Contains("AddSelectablePeopleTab(tabs, \"Player Dossier\")", StringComparison.Ordinal), "Player Dossier should no longer be a main navigation tab.");
         Assert.True(source.Contains("View Dossier", StringComparison.Ordinal), "Selected player detail should expose View Dossier.");
-        Assert.True(source.Contains("OpenDossierFor(row.PersonId)", StringComparison.Ordinal), "View Dossier should route to the selected person's dossier tab.");
+        Assert.True(source.Contains("OpenDossierFor(row.PersonId)", StringComparison.Ordinal), "View Dossier should route to the selected person's dossier window.");
+        Assert.True(source.Contains("new Window", StringComparison.Ordinal), "View Dossier should open a dedicated dossier window.");
+        Assert.True(source.Contains("BuildDossierWindowContent", StringComparison.Ordinal), "The dossier window should render structured dossier content.");
         Assert.True(source.Contains("Add GM Note", StringComparison.Ordinal), "Selected player detail should expose GM notes.");
+    }
+
+    public void DossierWindowSupportsEditableGmNotes()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains("Save GM Note", StringComparison.Ordinal), "Dossier window should expose a save note action.");
+        Assert.True(source.Contains("State.SaveDossierNoteFor(dossier.PersonId, notes.Text)", StringComparison.Ordinal), "Dossier window should save notes for the selected person.");
+        Assert.True(source.Contains("GM Notes", StringComparison.Ordinal), "Dossier window should include the GM Notes section.");
+        Assert.True(source.Contains("WindowStartupLocation.CenterOwner", StringComparison.Ordinal), "Dossier window should behave like a focused modal/detail window.");
+    }
+
+    public void RosterFiltersAndReadableFieldsAreExposed()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains("BuildRosterFilters", StringComparison.Ordinal), "Roster should include filter controls.");
+        Assert.True(source.Contains("_rosterSearchInput", StringComparison.Ordinal), "Roster should support text search.");
+        Assert.True(source.Contains("_rosterPositionFilter", StringComparison.Ordinal), "Roster should support position filtering.");
+        Assert.True(source.Contains("_rosterStatusFilter", StringComparison.Ordinal), "Roster should support status filtering.");
+        Assert.True(source.Contains("_rosterPlayerTypeFilter", StringComparison.Ordinal), "Roster should support player type filtering.");
+        Assert.True(source.Contains("_rosterRoleFilter", StringComparison.Ordinal), "Roster should support role filtering.");
+        Assert.True(source.Contains("_rosterAgeFilter", StringComparison.Ordinal), "Roster should support age filtering.");
+        Assert.True(source.Contains("State.ContractRightsStatus(player.PersonId)", StringComparison.Ordinal), "Roster rows should show contract or rights status.");
+        Assert.True(source.Contains("State.DevelopmentTrend(player.PersonId)", StringComparison.Ordinal), "Roster rows should show development trend.");
+        Assert.True(source.Contains("State.InjuryStatus(player.PersonId)", StringComparison.Ordinal), "Roster rows should show injury status.");
+    }
+
+    public void BudgetOverviewIsShownOnDashboardAndOwnerScreen()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains("BudgetOverview", StringComparison.Ordinal), "AlphaDesktop should read the budget overview service.");
+        Assert.True(source.Contains("Budget Overview", StringComparison.Ordinal), "Owner or organization screens should show a budget overview.");
+        Assert.True(source.Contains("Player contracts", StringComparison.Ordinal), "Budget overview should include player contract totals.");
+        Assert.True(source.Contains("Staff contracts", StringComparison.Ordinal), "Budget overview should include staff contract totals.");
+        Assert.True(source.Contains("Scouting budget", StringComparison.Ordinal), "Budget overview should include scouting budget.");
+        Assert.True(source.Contains("Owner status", StringComparison.Ordinal), "Budget overview should show owner budget status.");
+    }
+
+    public void ScoutingCleanupAndDurationUiIsExposed()
+    {
+        var source = ReadAlphaDesktopSource();
+
+        Assert.True(source.Contains(".GroupBy(entry => entry.ProspectPersonId", StringComparison.Ordinal), "Scouting list should dedupe prospects by person.");
+        Assert.True(source.Contains("ScoutingDisplayName", StringComparison.Ordinal), "Scouting rows should clarify same-name prospects.");
+        Assert.True(source.Contains("ShowScoutAssignmentDialog", StringComparison.Ordinal), "Scouting assignment should use a popup/dialog.");
+        Assert.True(source.Contains("1 week", StringComparison.Ordinal), "Scouting assignment dialog should support 1 week.");
+        Assert.True(source.Contains("2 weeks", StringComparison.Ordinal), "Scouting assignment dialog should support 2 weeks.");
+        Assert.True(source.Contains("3 weeks", StringComparison.Ordinal), "Scouting assignment dialog should support 3 weeks.");
+        Assert.True(source.Contains("1 month", StringComparison.Ordinal), "Scouting assignment dialog should support 1 month.");
+        Assert.True(source.Contains("AvailableScoutProfiles", StringComparison.Ordinal), "Only available scouts should be selectable.");
+        Assert.True(source.Contains("ReturnDate", StringComparison.Ordinal), "Scouting operations should show or store scout return dates.");
     }
 
     public void StaffProfileAndFocusActionsAreWired()

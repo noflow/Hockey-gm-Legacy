@@ -16,6 +16,8 @@ public sealed record ScoutingOperationAssignment(
     int WorkloadAtAssignment,
     int RelationshipQualityAtAssignment,
     int CommunicationQuality,
+    int DurationDays = 0,
+    DateOnly? ReturnDate = null,
     int ProgressDays = 0,
     DateOnly? CompletedOn = null,
     string? ReportId = null)
@@ -54,7 +56,12 @@ public sealed record ScoutingOperationAssignment(
             throw new ArgumentOutOfRangeException(nameof(ExpectedReportDate), "Expected report date cannot be before start date.");
         }
 
-        if (WorkloadAtAssignment < 0 || ProgressDays < 0)
+        if (ReturnDate is not null && ReturnDate < StartDate)
+        {
+            throw new ArgumentOutOfRangeException(nameof(ReturnDate), "Return date cannot be before start date.");
+        }
+
+        if (WorkloadAtAssignment < 0 || ProgressDays < 0 || DurationDays < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(WorkloadAtAssignment), "Scouting operation workload and progress cannot be negative.");
         }
