@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: {state.Snapshot.WorldState.WorldName} {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.6.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -54,6 +54,7 @@ internal sealed class MainWindow : Window
     private readonly ComboBox _genderInput = new() { ItemsSource = Enum.GetValues<Gender>(), SelectedItem = Gender.NonBinary };
     private readonly ComboBox _backgroundInput = new() { ItemsSource = Enum.GetValues<GmBackground>(), SelectedItem = GmBackground.Operations };
     private readonly ComboBox _styleInput = new() { ItemsSource = Enum.GetValues<GmStyle>(), SelectedItem = GmStyle.Balanced };
+    private Border? _draftModalOverlay;
 
     public MainWindow()
     {
@@ -83,7 +84,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 1.6 starts with your created GM preparing for the draft, then unlocks training camp.",
+            Text = "Alpha 1.6.1 starts with your created GM preparing for a live draft, then unlocks training camp.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -178,11 +179,12 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildLayout()
     {
-        var root = new DockPanel();
+        var root = new Grid();
+        var app = new DockPanel();
 
         var header = BuildHeader();
         DockPanel.SetDock(header, Dock.Top);
-        root.Children.Add(header);
+        app.Children.Add(header);
 
         var tabs = new TabControl
         {
@@ -205,7 +207,9 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Training Camp");
         AddTab(tabs, "Relationships");
 
-        root.Children.Add(tabs);
+        app.Children.Add(tabs);
+        root.Children.Add(app);
+        root.Children.Add(BuildDraftModalOverlay());
         return root;
     }
 
@@ -221,7 +225,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 1.6 - Training Camp",
+            Text = "Hockey GM Legacy - Alpha 1.6.1 - Live Draft",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -261,12 +265,6 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
         buttonPanel.Children.Add(CreateButton("Approve Pending", ApprovePendingAction));
         buttonPanel.Children.Add(CreateButton("Decline Pending", DeclinePendingAction));
-        if (State.IsDraftUiEnabled)
-        {
-            buttonPanel.Children.Add(CreateButton("Start Draft", StartDraft));
-            buttonPanel.Children.Add(CreateButton("AI Picks", RunAiDrafting));
-            buttonPanel.Children.Add(CreateButton("Draft Top", DraftTopProspect));
-        }
         buttonPanel.Children.Add(CreateButton("Keep", KeepTrainingCampPlayer));
         buttonPanel.Children.Add(CreateButton("Cut", CutTrainingCampPlayer));
         buttonPanel.Children.Add(CreateButton("Release", ReleaseTrainingCampPlayer));
@@ -280,6 +278,19 @@ internal sealed class MainWindow : Window
 
         header.Child = panel;
         return header;
+    }
+
+    private UIElement BuildDraftModalOverlay()
+    {
+        _draftModalOverlay = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(225, 10, 24, 38)),
+            Padding = new Thickness(28),
+            Visibility = Visibility.Collapsed,
+            Child = new Grid()
+        };
+        Panel.SetZIndex(_draftModalOverlay, 20);
+        return _draftModalOverlay;
     }
 
     private Button CreateButton(string text, Action action)
@@ -510,6 +521,223 @@ internal sealed class MainWindow : Window
         }
         _tabs["Training Camp"].Text = BuildTrainingCamp();
         _tabs["Relationships"].Text = BuildRelationships();
+        RefreshDraftModal();
+    }
+
+    private void RefreshDraftModal()
+    {
+        if (_draftModalOverlay is null || _state is null)
+        {
+            return;
+        }
+
+        if (!State.IsDraftModalVisible)
+        {
+            _draftModalOverlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        _draftModalOverlay.Visibility = Visibility.Visible;
+        _draftModalOverlay.Child = BuildDraftModalContent();
+    }
+
+    private UIElement BuildDraftModalContent()
+    {
+        var shell = new Grid();
+        shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        var panel = new Border
+        {
+            Background = Brushes.White,
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(22),
+            MaxWidth = 1060,
+            MaxHeight = 660,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var content = new Grid();
+        content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var title = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        title.Children.Add(new TextBlock
+        {
+            Text = "Draft Day",
+            FontSize = 30,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64))
+        });
+        title.Children.Add(new TextBlock
+        {
+            Text = State.LatestSummary,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = new SolidColorBrush(Color.FromRgb(75, 88, 104)),
+            Margin = new Thickness(0, 6, 0, 0)
+        });
+        Grid.SetRow(title, 0);
+        content.Children.Add(title);
+
+        if (State.ScenarioSnapshot.DraftExperience is null)
+        {
+            var startPanel = new StackPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            startPanel.Children.Add(new TextBlock
+            {
+                Text = $"The {State.ScenarioSnapshot.Season.Year} league draft is ready.",
+                FontSize = 18,
+                Margin = new Thickness(0, 0, 0, 18),
+                TextAlignment = TextAlignment.Center
+            });
+            startPanel.Children.Add(CreateButton("Start Draft", State.StartLiveDraft));
+            Grid.SetRow(startPanel, 1);
+            content.Children.Add(startPanel);
+        }
+        else
+        {
+            var body = BuildLiveDraftBody();
+            Grid.SetRow(body, 1);
+            content.Children.Add(body);
+        }
+
+        var footer = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 14, 0, 0)
+        };
+
+        if (State.ScenarioSnapshot.DraftExperience?.Status == DraftExperienceStatus.Completed)
+        {
+            footer.Children.Add(CreateButton("End Draft", State.EndLiveDraftModal));
+        }
+
+        Grid.SetRow(footer, 2);
+        content.Children.Add(footer);
+
+        panel.Child = content;
+        shell.Children.Add(panel);
+        return shell;
+    }
+
+    private UIElement BuildLiveDraftBody()
+    {
+        var state = State.ScenarioSnapshot.DraftExperience!;
+        var root = new Grid();
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var prospectList = new ListBox
+        {
+            MinHeight = 360,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(218, 226, 235)),
+            BorderThickness = new Thickness(1)
+        };
+
+        foreach (var entry in State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank))
+        {
+            prospectList.Items.Add(new ListBoxItem
+            {
+                Tag = entry.ProspectPersonId,
+                Content = $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | {entry.ProjectionText}"
+            });
+        }
+
+        if (prospectList.Items.Count > 0)
+        {
+            prospectList.SelectedIndex = 0;
+        }
+
+        var left = new DockPanel { Margin = new Thickness(0, 0, 16, 0) };
+        DockPanel.SetDock(prospectList, Dock.Top);
+        left.Children.Add(prospectList);
+
+        var draftButton = CreateButton("Draft Player", () =>
+        {
+            var selected = prospectList.SelectedItem as ListBoxItem;
+            var prospectId = selected?.Tag as string
+                ?? State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault()?.ProspectPersonId;
+            if (!string.IsNullOrWhiteSpace(prospectId))
+            {
+                State.DraftSelectedProspect(prospectId);
+            }
+        });
+        draftButton.IsEnabled = state.IsPlayerTurn && state.Status == DraftExperienceStatus.AwaitingPlayerPick && prospectList.Items.Count > 0;
+        draftButton.Margin = new Thickness(0, 10, 8, 0);
+        DockPanel.SetDock(draftButton, Dock.Bottom);
+        left.Children.Add(draftButton);
+
+        Grid.SetColumn(left, 0);
+        root.Children.Add(left);
+
+        var right = new TextBox
+        {
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(218, 226, 235)),
+            BorderThickness = new Thickness(1),
+            Background = new SolidColorBrush(Color.FromRgb(250, 252, 254)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 13,
+            Padding = new Thickness(12),
+            Text = BuildLiveDraftText()
+        };
+        Grid.SetColumn(right, 1);
+        root.Children.Add(right);
+
+        return root;
+    }
+
+    private string BuildLiveDraftText()
+    {
+        var draft = State.ScenarioSnapshot.DraftExperience!;
+        var builder = new StringBuilder();
+        builder.AppendLine($"Status: {draft.Status}");
+        builder.AppendLine($"Current round: {draft.CurrentRound}/{draft.TotalRounds}");
+        builder.AppendLine($"Current pick: {draft.CurrentPick?.PickNumber.ToString() ?? "complete"}");
+        builder.AppendLine($"Overall pick: {draft.OverallPick}");
+        builder.AppendLine($"Team selecting: {draft.TeamSelecting}");
+        builder.AppendLine($"Your next pick: {draft.PlayerNextPick?.PickNumber.ToString() ?? "none"}");
+        builder.AppendLine($"Available players: {State.Snapshot.DraftBoard.Entries.Count}");
+        builder.AppendLine();
+
+        builder.AppendLine("Recent Picks");
+        foreach (var selection in draft.Selections.OrderByDescending(item => item.PickNumber).Take(8).OrderBy(item => item.PickNumber))
+        {
+            builder.AppendLine($"  #{selection.PickNumber} {selection.OrganizationName}: {selection.ProspectName}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Your Selections / Draft Rights");
+        var rights = State.ScenarioSnapshot.DraftRights.Count > 0
+            ? State.ScenarioSnapshot.DraftRights
+            : draft.Selections.Where(item => item.IsPlayerSelection).ToArray();
+        if (rights.Count == 0)
+        {
+            builder.AppendLine("  None yet.");
+        }
+
+        foreach (var selection in rights)
+        {
+            builder.AppendLine($"  R{selection.RoundNumber} #{selection.PickNumber}: {selection.ProspectName}");
+        }
+
+        if (draft.Recap is not null)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Draft Recap");
+            builder.AppendLine($"  Players drafted: {draft.Recap.PlayersDrafted}");
+            builder.AppendLine($"  Owner: {draft.Recap.OwnerReaction}");
+            builder.AppendLine($"  Scout: {draft.Recap.HeadScoutReaction}");
+        }
+
+        return builder.ToString();
     }
 
     private string BuildDashboard()
@@ -543,6 +771,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Roster players: {snapshot.Roster.Players.Count}");
         builder.AppendLine($"Recruits: {snapshot.Recruits.Count}");
         builder.AppendLine($"Draft board entries: {snapshot.DraftBoard.Entries.Count}");
+        builder.AppendLine($"Draft rights / prospects: {State.ScenarioSnapshot.DraftRights.Count}");
         builder.AppendLine($"Relationships: {snapshot.Relationships.Count}");
         builder.AppendLine($"Development profiles: {snapshot.DevelopmentProfiles.Count}");
         builder.AppendLine($"Active injuries: {snapshot.Injuries.Count(injury => injury.IsActive)}");
@@ -1059,8 +1288,26 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"Status: {draftState.Status}");
             builder.AppendLine($"Round: {draftState.CurrentRound}/{draftState.TotalRounds}");
             builder.AppendLine($"Current pick: {draftState.CurrentPick?.PickNumber.ToString() ?? "complete"}");
+            builder.AppendLine($"Overall pick: {draftState.OverallPick}");
             builder.AppendLine($"Team selecting: {draftState.TeamSelecting}");
+            builder.AppendLine($"Your next pick: {draftState.PlayerNextPick?.PickNumber.ToString() ?? "none"}");
             builder.AppendLine($"Countdown: {draftState.CountdownPlaceholder}");
+            builder.AppendLine();
+            builder.AppendLine("Recent picks:");
+            foreach (var selection in draftState.Selections.OrderByDescending(item => item.PickNumber).Take(8).OrderBy(item => item.PickNumber))
+            {
+                builder.AppendLine($"  #{selection.PickNumber} {selection.OrganizationName}: {selection.ProspectName}");
+            }
+            builder.AppendLine();
+            builder.AppendLine("Draft Rights / Prospect List:");
+            foreach (var selection in State.ScenarioSnapshot.DraftRights)
+            {
+                builder.AppendLine($"  R{selection.RoundNumber} #{selection.PickNumber}: {selection.ProspectName}");
+            }
+            if (State.ScenarioSnapshot.DraftRights.Count == 0)
+            {
+                builder.AppendLine("  None yet.");
+            }
             builder.AppendLine();
             if (draftState.Recap is not null)
             {
@@ -1203,6 +1450,7 @@ internal sealed class AlphaDesktopState
     private readonly TrainingCampService _trainingCamp = new();
     private readonly PendingGmActionService _pendingActions = new();
     private readonly EngineRegistry _registry;
+    private bool _draftModalDismissed;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot)
@@ -1228,6 +1476,12 @@ internal sealed class AlphaDesktopState
             .ToArray();
 
     public bool IsDraftUiEnabled => DraftUiPolicy.IsDraftUiEnabled(_registry.Rulebook);
+
+    public bool IsDraftModalVisible =>
+        IsDraftUiEnabled
+        && !_draftModalDismissed
+        && Snapshot.CurrentDate >= ScenarioSnapshot.DraftDate
+        && ScenarioSnapshot.DraftExperience?.Status != DraftExperienceStatus.Disabled;
 
     public TrainingCampCalendarInfo TrainingCampCalendar => _trainingCamp.GetCalendarInfo(_registry, ScenarioSnapshot);
 
@@ -1394,6 +1648,23 @@ internal sealed class AlphaDesktopState
         ApplyDraftResult(_draftExperience.StartDraftDay(_registry, ScenarioSnapshot));
     }
 
+    public void StartLiveDraft()
+    {
+        if (!IsDraftUiEnabled)
+        {
+            LatestSummary = "Draft features are disabled by the active league rulebook.";
+            return;
+        }
+
+        if (Snapshot.CurrentDate < ScenarioSnapshot.DraftDate)
+        {
+            LatestSummary = $"Draft day has not arrived. {ScenarioSnapshot.DaysUntilDraft} day(s) remain.";
+            return;
+        }
+
+        ApplyDraftResult(_draftExperience.StartLiveDraft(_registry, ScenarioSnapshot));
+    }
+
     public void RunAiDrafting()
     {
         if (!EnsureDraftStarted())
@@ -1425,6 +1696,29 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyDraftResult(_draftExperience.MakePlayerSelection(_registry, ScenarioSnapshot, prospect.ProspectPersonId));
+    }
+
+    public void DraftSelectedProspect(string prospectPersonId)
+    {
+        if (ScenarioSnapshot.DraftExperience?.IsPlayerTurn != true)
+        {
+            LatestSummary = "The draft is paused only when your team is on the clock.";
+            return;
+        }
+
+        ApplyDraftResult(_draftExperience.MakePlayerSelectionAndContinue(_registry, ScenarioSnapshot, prospectPersonId));
+    }
+
+    public void EndLiveDraftModal()
+    {
+        if (ScenarioSnapshot.DraftExperience?.Status != DraftExperienceStatus.Completed)
+        {
+            LatestSummary = "End Draft is only available after the draft is complete.";
+            return;
+        }
+
+        _draftModalDismissed = true;
+        LatestSummary = "Draft complete. Returning to the dashboard with recap and pending GM decisions available.";
     }
 
     public void KeepTrainingCampPlayer()

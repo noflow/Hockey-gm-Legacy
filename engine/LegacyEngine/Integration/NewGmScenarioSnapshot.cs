@@ -24,6 +24,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public DraftExperienceState? DraftExperience { get; init; }
 
+    public IReadOnlyList<DraftPickSummary> DraftRights { get; init; } = Array.Empty<DraftPickSummary>();
+
     public TrainingCamp? TrainingCamp { get; init; }
 
     public IReadOnlyList<PendingGmAction> PendingActions { get; init; } = Array.Empty<PendingGmAction>();

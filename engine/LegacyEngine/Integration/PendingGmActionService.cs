@@ -230,7 +230,7 @@ public sealed class PendingGmActionService
         new(
             InboxItemId: $"inbox:pending-gm:{Guid.NewGuid():N}",
             Date: new DateTimeOffset(action.CreatedOn.Year, action.CreatedOn.Month, action.CreatedOn.Day, 14, 0, 0, TimeSpan.Zero),
-            EventType: LegacyEventType.Generic,
+            EventType: LegacyEventType.PendingGmActionCreated,
             Severity: action.Status == PendingGmActionStatus.Pending ? LegacyEventSeverity.Warning : LegacyEventSeverity.Notice,
             Title: $"{title}: {action.PersonName}",
             Summary: summary,
@@ -245,7 +245,7 @@ public sealed class PendingGmActionService
     {
         var legacyEvent = registry.EventEngine.CreateEvent(
             new DateTimeOffset(date.Year, date.Month, date.Day, 14, 0, 0, TimeSpan.Zero),
-            LegacyEventType.Generic,
+            LegacyEventType.PendingGmActionCreated,
             action.Status == PendingGmActionStatus.Pending ? LegacyEventSeverity.Warning : LegacyEventSeverity.Notice,
             LegacyEventVisibility.Organization,
             title,

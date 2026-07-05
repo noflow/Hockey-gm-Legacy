@@ -70,6 +70,25 @@ internal sealed class AlphaDraftExperienceTests
         Assert.Equal(3, result.DraftState.Selections.Count);
     }
 
+    public void StartDraftBeginsDraft()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        var result = new AlphaDraftExperienceService().StartDraftDay(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.Equal(DraftExperienceStatus.InProgress, result.DraftState.Status);
+        Assert.True(result.DraftState.Draft is not null, "Starting draft day should create the active draft.");
+    }
+
+    public void LiveDraftStartAdvancesAiPicksAutomatically()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        var result = new AlphaDraftExperienceService().StartLiveDraft(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.Equal(DraftExperienceStatus.AwaitingPlayerPick, result.DraftState.Status);
+        Assert.True(result.DraftState.IsPlayerTurn, "Live draft should pause on the player's pick.");
+        Assert.True(result.DraftState.Selections.Count > 0, "AI picks should be made automatically before the player's pick.");
+    }
+
     public void PlayerDraftingRecordsSelection()
     {
         var ready = ReadyForPlayerPick();
@@ -78,6 +97,30 @@ internal sealed class AlphaDraftExperienceTests
 
         Assert.True(result.DraftState.Selections.Any(selection => selection.IsPlayerSelection), "Player selection should be recorded.");
         Assert.False(result.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.Any(entry => entry.ProspectPersonId == prospect.ProspectPersonId), "Drafted player should leave the board.");
+    }
+
+    public void LiveDraftPlayerSelectionContinuesToNextPlayerPick()
+    {
+        var ready = ReadyForPlayerPick();
+        var prospect = ready.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).First();
+        var result = new AlphaDraftExperienceService().MakePlayerSelectionAndContinue(ready.Registry, ready.ScenarioSnapshot, prospect.ProspectPersonId);
+
+        Assert.Equal(DraftExperienceStatus.AwaitingPlayerPick, result.DraftState.Status);
+        Assert.True(result.DraftState.IsPlayerTurn, "Live draft should pause again at the player's next pick.");
+        Assert.False(result.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.Any(entry => entry.ProspectPersonId == prospect.ProspectPersonId), "Drafted player should leave available list.");
+    }
+
+    public void PlayerDraftPickAddsDraftRightsNotActiveRoster()
+    {
+        var ready = ReadyForPlayerPick();
+        var originalRosterCount = ready.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Count;
+        var prospect = ready.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).First();
+        var result = new AlphaDraftExperienceService().MakePlayerSelection(ready.Registry, ready.ScenarioSnapshot, prospect.ProspectPersonId);
+
+        Assert.True(result.ScenarioSnapshot.DraftRights.Any(selection => selection.ProspectPersonId == prospect.ProspectPersonId), "Player selection should be added to draft rights/prospect list.");
+        Assert.Equal(originalRosterCount, result.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Count);
+        Assert.False(result.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Any(player => player.PersonId == prospect.ProspectPersonId), "Drafted prospect should not be auto-added to active roster.");
+        Assert.True(result.ScenarioSnapshot.PendingActions.Any(action => action.ActionType == PendingGmActionType.SignDraftPick && action.PersonId == prospect.ProspectPersonId), "Drafted prospect should create a pending signing decision.");
     }
 
     public void DuplicateDraftSelectionIsPrevented()
@@ -109,6 +152,14 @@ internal sealed class AlphaDraftExperienceTests
         Assert.Equal(15, result.DraftState.Recap.YourSelections.Count);
     }
 
+    public void DraftRecapInboxMessageCreated()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        var result = new AlphaDraftExperienceService().SimulateToCompletion(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.True(result.InboxItems.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftRecapCreated), "Draft completion should create a recap inbox message.");
+    }
+
     public void DraftEventsAreGenerated()
     {
         var ready = ReadyForPlayerPick();
@@ -119,6 +170,16 @@ internal sealed class AlphaDraftExperienceTests
         Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftStarted), "Draft start event should exist.");
         Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.PlayerDrafted), "Player drafted event should exist.");
         Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.OwnerDraftReaction), "Owner draft reaction event should exist.");
+        Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.PendingGmActionCreated), "Pending GM action event should exist.");
+    }
+
+    public void DraftCompletionCreatesRecapEvent()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        new AlphaDraftExperienceService().SimulateToCompletion(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.True(scenario.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftCompleted), "Draft completed event should exist.");
+        Assert.True(scenario.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftRecapCreated), "Draft recap event should exist.");
     }
 
     public void DesktopIntegrationExposesDraftActions()
@@ -127,8 +188,19 @@ internal sealed class AlphaDraftExperienceTests
         var text = File.ReadAllText(programPath);
 
         Assert.True(text.Contains("Start Draft", StringComparison.Ordinal), "AlphaDesktop should expose Start Draft.");
-        Assert.True(text.Contains("AI Picks", StringComparison.Ordinal), "AlphaDesktop should expose AI picks.");
-        Assert.True(text.Contains("Draft Top", StringComparison.Ordinal), "AlphaDesktop should expose player drafting.");
+        Assert.True(text.Contains("Draft Player", StringComparison.Ordinal), "AlphaDesktop should expose player drafting.");
+        Assert.True(text.Contains("End Draft", StringComparison.Ordinal), "AlphaDesktop should expose End Draft.");
+    }
+
+    public void DesktopIntegrationExposesLiveDraftModal()
+    {
+        var programPath = Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs");
+        var text = File.ReadAllText(programPath);
+
+        Assert.True(text.Contains("Draft Day", StringComparison.Ordinal), "AlphaDesktop should show a Draft Day modal.");
+        Assert.True(text.Contains("BuildDraftModalOverlay", StringComparison.Ordinal), "AlphaDesktop should build a modal overlay.");
+        Assert.True(text.Contains("IsDraftModalVisible", StringComparison.Ordinal), "AlphaDesktop should show the draft modal on draft day.");
+        Assert.True(text.Contains("_draftModalDismissed = true", StringComparison.Ordinal), "End Draft should return to the dashboard by dismissing the modal.");
     }
 
     private static (EngineRegistry Registry, NewGmScenarioSnapshot ScenarioSnapshot) ReadyForPlayerPick()

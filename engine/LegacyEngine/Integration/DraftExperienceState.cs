@@ -28,6 +28,11 @@ public sealed record DraftExperienceState(
 
     public bool IsPlayerTurn => CurrentPick?.OwningOrganizationId == PlayerOrganizationId;
 
+    public DraftPick? PlayerNextPick => Draft?.Picks
+        .OrderBy(item => item.RoundNumber)
+        .ThenBy(item => item.PickNumber)
+        .FirstOrDefault(item => !item.IsSelected && item.OwningOrganizationId == PlayerOrganizationId);
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(PlayerOrganizationId))

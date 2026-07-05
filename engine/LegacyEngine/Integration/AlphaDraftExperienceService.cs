@@ -148,6 +148,23 @@ public sealed class AlphaDraftExperienceService
             inboxItems);
     }
 
+    public DraftExperienceResult StartLiveDraft(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario)
+    {
+        var started = scenario.DraftExperience is null
+            ? StartDraftDay(registry, scenario)
+            : BuildResult(
+                scenario,
+                RequireActiveState(scenario),
+                "Draft day is already active.",
+                Array.Empty<AlphaInboxItem>());
+
+        return started.DraftState.Status == DraftExperienceStatus.InProgress
+            ? Combine(started, RunAiPicksUntilPlayerTurn(registry, started.ScenarioSnapshot))
+            : started;
+    }
+
     public DraftExperienceResult MakePlayerSelection(
         EngineRegistry registry,
         NewGmScenarioSnapshot scenario,
@@ -177,8 +194,9 @@ public sealed class AlphaDraftExperienceService
             ruleValidator: new DraftRuleValidator(ResolveRulebook(registry)));
 
         var board = scenario.AlphaSnapshot.DraftBoard.RemoveProspect(prospectPersonId);
+        var pickSummary = SummaryFor(scenario, state, result.Pick, prospectPersonId, isPlayerSelection: true);
         var selections = state.Selections
-            .Append(SummaryFor(scenario, state, result.Pick, prospectPersonId, isPlayerSelection: true))
+            .Append(pickSummary)
             .ToArray();
 
         var updatedState = state with
@@ -191,7 +209,8 @@ public sealed class AlphaDraftExperienceService
         var updatedScenario = scenario with
         {
             AlphaSnapshot = scenario.AlphaSnapshot with { DraftBoard = board },
-            DraftExperience = updatedState
+            DraftExperience = updatedState,
+            DraftRights = scenario.DraftRights.Append(pickSummary).ToArray()
         };
 
         var prospectName = FindPersonName(scenario, prospectPersonId);
@@ -232,6 +251,17 @@ public sealed class AlphaDraftExperienceService
                     "Head scout reaction",
                     $"{scenario.AlphaSnapshot.Scout.Name}: We had enough confidence to make that pick.")
             }.Concat(pendingSigning.InboxItems).ToArray());
+    }
+
+    public DraftExperienceResult MakePlayerSelectionAndContinue(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        string prospectPersonId)
+    {
+        var selected = MakePlayerSelection(registry, scenario, prospectPersonId);
+        return selected.DraftState.Status == DraftExperienceStatus.InProgress
+            ? Combine(selected, RunAiPicksUntilPlayerTurn(registry, selected.ScenarioSnapshot))
+            : selected;
     }
 
     public DraftExperienceResult SimulateToCompletion(
@@ -322,10 +352,17 @@ public sealed class AlphaDraftExperienceService
         {
             Inbox(
                 scenario,
-                LegacyEventType.DraftCompleted,
+                LegacyEventType.DraftRecapCreated,
                 "Draft recap",
                 $"{completedState.Recap!.PlayersDrafted} players were drafted. Owner reaction: {completedState.Recap.OwnerReaction}")
         };
+
+        QueueScenarioEvent(
+            registry,
+            scenario,
+            LegacyEventType.DraftRecapCreated,
+            "Draft recap created",
+            $"{completedState.Recap!.PlayersDrafted} players were drafted and the recap was created.");
 
         return BuildResult(
             updatedScenario,
@@ -385,6 +422,17 @@ public sealed class AlphaDraftExperienceService
         IReadOnlyList<AlphaInboxItem> inboxItems)
     {
         var result = new DraftExperienceResult(scenario, state, inboxItems, summary);
+        result.Validate();
+        return result;
+    }
+
+    private static DraftExperienceResult Combine(DraftExperienceResult first, DraftExperienceResult second)
+    {
+        var result = new DraftExperienceResult(
+            second.ScenarioSnapshot,
+            second.DraftState,
+            first.InboxItems.Concat(second.InboxItems).ToArray(),
+            $"{first.Summary} {second.Summary}");
         result.Validate();
         return result;
     }

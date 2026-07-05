@@ -284,11 +284,18 @@ runner.Run("alpha draft AHL preset disables draft", alphaDraftExperienceTests.Ah
 runner.Run("alpha draft board reordering works", alphaDraftExperienceTests.DraftBoardReorderingWorks);
 runner.Run("alpha draft notes and stars work", alphaDraftExperienceTests.DraftNotesAndStarsWork);
 runner.Run("alpha draft AI drafting runs until player pick", alphaDraftExperienceTests.AiDraftingRunsUntilPlayerPick);
+runner.Run("alpha live draft starts active draft", alphaDraftExperienceTests.StartDraftBeginsDraft);
+runner.Run("alpha live draft automatically advances AI picks", alphaDraftExperienceTests.LiveDraftStartAdvancesAiPicksAutomatically);
 runner.Run("alpha draft player drafting records selection", alphaDraftExperienceTests.PlayerDraftingRecordsSelection);
+runner.Run("alpha live draft player selection continues to next pick", alphaDraftExperienceTests.LiveDraftPlayerSelectionContinuesToNextPlayerPick);
+runner.Run("alpha draft pick adds draft rights not active roster", alphaDraftExperienceTests.PlayerDraftPickAddsDraftRightsNotActiveRoster);
 runner.Run("alpha draft duplicate selection is prevented", alphaDraftExperienceTests.DuplicateDraftSelectionIsPrevented);
 runner.Run("alpha draft recap is generated", alphaDraftExperienceTests.DraftRecapIsGenerated);
+runner.Run("alpha draft recap inbox message is created", alphaDraftExperienceTests.DraftRecapInboxMessageCreated);
 runner.Run("alpha draft events are generated", alphaDraftExperienceTests.DraftEventsAreGenerated);
+runner.Run("alpha draft completion creates recap event", alphaDraftExperienceTests.DraftCompletionCreatesRecapEvent);
 runner.Run("alpha desktop exposes draft actions", alphaDraftExperienceTests.DesktopIntegrationExposesDraftActions);
+runner.Run("alpha desktop exposes live draft modal", alphaDraftExperienceTests.DesktopIntegrationExposesLiveDraftModal);
 runner.Run("development inbox no offseason spam", developmentInboxPolicyTests.NoOffseasonDevelopmentInboxSpam);
 runner.Run("development inbox messages are capped", developmentInboxPolicyTests.DevelopmentInboxMessagesAreCapped);
 runner.Run("development inbox names player", developmentInboxPolicyTests.PlayerNameAppearsInDevelopmentMessage);
