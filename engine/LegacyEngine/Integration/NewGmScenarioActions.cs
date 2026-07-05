@@ -23,13 +23,13 @@ public sealed class NewGmScenarioActions
 
         var entry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(item => item.ProspectPersonId == prospectPersonId)
             ?? throw new ArgumentException("Prospect is not on the draft board.", nameof(prospectPersonId));
-        var newRank = Math.Clamp(entry.Rank + (direction < 0 ? -1 : 1), 1, scenario.AlphaSnapshot.DraftBoard.Entries.Count);
-        var draftBoard = scenario.AlphaSnapshot.DraftBoard.UpdateRank(prospectPersonId, newRank);
+        var draftBoard = scenario.AlphaSnapshot.DraftBoard.MoveProspect(prospectPersonId, direction);
+        var newRank = draftBoard.Entries.Single(item => item.ProspectPersonId == prospectPersonId).Rank;
         var name = FindPersonName(scenario, prospectPersonId);
         QueueActionEvent(
             registry,
             scenario,
-            LegacyEventType.Generic,
+            LegacyEventType.DraftBoardChanged,
             "Draft board updated",
             $"{name} was moved to rank {newRank} on the draft board.",
             prospectPersonId);
@@ -81,6 +81,35 @@ public sealed class NewGmScenarioActions
             $"Scout focus assigned: {focus}.",
             "Scout focus assigned",
             $"{scenario.AlphaSnapshot.Scout.Name} will focus on {focus} through draft day.");
+    }
+
+    public GmActionResult AssignDraftPreparationFocus(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        DraftPreparationFocus focus)
+    {
+        var specialty = focus switch
+        {
+            DraftPreparationFocus.Goalies => ScoutSpecialty.Goalie,
+            DraftPreparationFocus.Defensemen => ScoutSpecialty.Defense,
+            DraftPreparationFocus.Forwards => ScoutSpecialty.Forward,
+            DraftPreparationFocus.Character => ScoutSpecialty.Character,
+            DraftPreparationFocus.Medical => ScoutSpecialty.Medical,
+            _ => ScoutSpecialty.Regional
+        };
+
+        var result = AssignScoutFocus(registry, scenario, specialty);
+        return result with
+        {
+            Summary = $"Scout focus assigned: {DisplayFocus(focus)}.",
+            InboxItems = result.InboxItems
+                .Select(item => item with
+                {
+                    Title = "Draft scouting focus assigned",
+                    Summary = $"{scenario.AlphaSnapshot.Scout.Name} will focus on {DisplayFocus(focus)} through draft day."
+                })
+                .ToArray()
+        };
     }
 
     public GmActionResult MakeRecruitingOffer(
@@ -165,4 +194,15 @@ public sealed class NewGmScenarioActions
 
     private static string FindPersonName(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.People.SingleOrDefault(person => person.PersonId == personId)?.Identity.DisplayName ?? personId;
+
+    private static string DisplayFocus(DraftPreparationFocus focus) =>
+        focus switch
+        {
+            DraftPreparationFocus.WesternCanada => "Western Canada",
+            DraftPreparationFocus.EasternCanada => "Eastern Canada",
+            DraftPreparationFocus.USA => "USA",
+            DraftPreparationFocus.Europe => "Europe",
+            DraftPreparationFocus.Defensemen => "Defensemen",
+            _ => focus.ToString()
+        };
 }

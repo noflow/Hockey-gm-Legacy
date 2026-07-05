@@ -45,14 +45,16 @@ The five foundation pillars remain:
 - Alpha 1.1 - GM Character Creation + First GM Actions
 - Inbox v2 - Organized GM Inbox
 - Alpha 1.2 - Inbox UX Refinement
+- Alpha 1.3 - GM Character Creation + First GM Actions
+- Alpha 1.4 - Complete Draft Experience
 
 ## Current Milestone
 
-Alpha 1.3 - Next Playable GM Loop
+Alpha 1.5 - Next Playable GM Loop
 
 ## Current Goal
 
-Expand first-week GM decisions and message handling without adding full game simulation.
+Expand the post-draft/offseason GM loop without adding full game simulation.
 
 ## Why Relationship Engine Was Next
 

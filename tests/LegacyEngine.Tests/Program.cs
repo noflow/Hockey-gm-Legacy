@@ -22,6 +22,7 @@ var communicationTests = new CommunicationEngineTests();
 var staffTests = new StaffEngineTests();
 var organizationTests = new OrganizationEngineTests();
 var seasonTests = new SeasonEngineTests();
+var alphaDraftExperienceTests = new AlphaDraftExperienceTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -272,6 +273,18 @@ runner.Run("season dates come from the rulebook", seasonTests.RuleDrivenDates);
 runner.Run("season result describes what changed", seasonTests.SeasonResultContents);
 runner.Run("world engine can ask the current season phase", seasonTests.WorldEngineCanAskSeasonPhase);
 runner.Run("season module has no UI or Godot dependency", seasonTests.NoUiOrGodotDependencyExists);
+runner.Run("alpha draft rulebook length comes from junior rulebook", alphaDraftExperienceTests.RulebookDraftLengthComesFromJuniorRulebook);
+runner.Run("alpha draft junior preset has fifteen rounds", alphaDraftExperienceTests.JuniorPresetHasFifteenRounds);
+runner.Run("alpha draft NHL preset has seven rounds", alphaDraftExperienceTests.NhlPresetHasSevenRounds);
+runner.Run("alpha draft AHL preset disables draft", alphaDraftExperienceTests.AhlPresetDisablesDraft);
+runner.Run("alpha draft board reordering works", alphaDraftExperienceTests.DraftBoardReorderingWorks);
+runner.Run("alpha draft notes and stars work", alphaDraftExperienceTests.DraftNotesAndStarsWork);
+runner.Run("alpha draft AI drafting runs until player pick", alphaDraftExperienceTests.AiDraftingRunsUntilPlayerPick);
+runner.Run("alpha draft player drafting records selection", alphaDraftExperienceTests.PlayerDraftingRecordsSelection);
+runner.Run("alpha draft duplicate selection is prevented", alphaDraftExperienceTests.DuplicateDraftSelectionIsPrevented);
+runner.Run("alpha draft recap is generated", alphaDraftExperienceTests.DraftRecapIsGenerated);
+runner.Run("alpha draft events are generated", alphaDraftExperienceTests.DraftEventsAreGenerated);
+runner.Run("alpha desktop exposes draft actions", alphaDraftExperienceTests.DesktopIntegrationExposesDraftActions);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
@@ -350,7 +363,7 @@ internal sealed class RuleEngineTests
         var validator = new DraftRuleValidator(_rulebook);
 
         Assert.Valid(validator.Validate(new DraftValidationRequest(1)));
-        Assert.Code(RuleErrorCodes.InvalidDraftRound, validator.Validate(new DraftValidationRequest(9)));
+        Assert.Code(RuleErrorCodes.InvalidDraftRound, validator.Validate(new DraftValidationRequest(16)));
         Assert.Code(RuleErrorCodes.PlayerNotDraftEligible, validator.Validate(new DraftValidationRequest(1, IsPlayerDraftEligible: false)));
 
         var noDraftRulebook = WithDraftRules(_rulebook, new DraftRules { DraftEnabled = false, Rounds = 0, DraftOrder = "none" });

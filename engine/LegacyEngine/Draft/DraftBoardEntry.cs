@@ -7,7 +7,10 @@ public sealed record DraftBoardEntry(
     int Rank,
     string? ScoutingReportId,
     ScoutingConfidenceLevel? ScoutingConfidence,
-    string ProjectionText)
+    string ProjectionText,
+    bool IsStarred = false,
+    string PersonalNotes = "",
+    string AnalyticsSummary = "")
 {
     public void Validate()
     {

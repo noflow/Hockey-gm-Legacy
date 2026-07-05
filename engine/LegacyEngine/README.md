@@ -180,6 +180,24 @@ The first build target includes:
 
 Draft v1 does not implement pick trading, draft lottery, live draft clock, roster changes, or War Room UI.
 
+## Alpha Draft Experience
+
+Alpha 1.4 adds a scenario-level draft experience under `LegacyEngine.Integration`.
+
+The first playable draft loop includes:
+
+- rulebook-driven draft length through the Rule Engine
+- Junior Major, NHL-style, AHL-style, and Custom draft presets
+- draft board movement, starred prospects, GM notes, confidence, projection, and analytics summaries
+- scout focus assignment for draft preparation
+- draft-day state with current round, total rounds, current pick, selecting team, and countdown placeholder
+- AI drafting through the existing DraftEngine
+- player selections through the existing DraftEngine
+- draft recap with player selections, notable AI picks, owner reaction, and head scout reaction
+- EventEngine events for draft start, drafted players, draft completion, draft board changes, scout recommendation updates, and owner draft reactions
+
+Alpha 1.4 does not implement games, standings, playoffs, save/load, trades, draft lottery, conditional picks, multiplayer, or Godot integration.
+
 ## Rosters
 
 Milestone 012 adds the standalone Roster Engine v1 system under `LegacyEngine.Rosters`.

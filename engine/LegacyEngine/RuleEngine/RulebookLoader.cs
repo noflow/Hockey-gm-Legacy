@@ -145,6 +145,13 @@ public sealed class RulebookLoader
             return InvalidField("draft_rules.rounds", "Enabled drafts require at least one round.");
         }
 
+        if (draft.DraftEnabled
+            && rulebook.LeagueType.Equals("junior", StringComparison.OrdinalIgnoreCase)
+            && draft.Rounds is < 8 or > 15)
+        {
+            return InvalidField("draft_rules.rounds", "Junior Major drafts must be between 8 and 15 rounds.");
+        }
+
         var playoff = rulebook.PlayoffRules!;
         if (playoff.TeamsQualify <= 0 || playoff.SeriesFormat.Count == 0 || playoff.SeriesFormat.Any(games => games <= 0))
         {

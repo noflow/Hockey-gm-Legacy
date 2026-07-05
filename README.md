@@ -35,7 +35,9 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha Daily Simulation Pipeline
 - Alpha Desktop
 
-Alpha 1.1 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
+Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
+
+Alpha 1.4 - Complete Draft Experience adds a playable draft loop. The player can prepare the draft board, star prospects, add GM notes, assign scouting focuses, reach draft day, let AI teams draft, make selections, receive reactions, complete the draft, and review a draft recap. Draft length comes from the active RuleEngine rulebook.
 
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 
@@ -55,7 +57,7 @@ Run the basic desktop UI:
 dotnet run --project client/AlphaDesktop
 ```
 
-The desktop playtest harness starts with Alpha 1.1 GM creation. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
+The desktop playtest harness starts with Alpha 1.4 GM creation and draft preparation. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

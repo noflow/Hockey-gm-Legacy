@@ -22,17 +22,14 @@ public sealed record NewGmScenarioSnapshot(
 
     public int DaysUntilDraft => DraftDate.DayNumber - CurrentDate.DayNumber;
 
+    public DraftExperienceState? DraftExperience { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
         Organization.Validate();
         Season.Validate();
         GeneralManagerProfile.Validate();
-
-        if (DraftDate < CurrentDate)
-        {
-            throw new ArgumentOutOfRangeException(nameof(DraftDate), "Draft date cannot be before the scenario date.");
-        }
 
         if (FirstDayInbox.Count == 0)
         {
@@ -58,5 +55,7 @@ public sealed record NewGmScenarioSnapshot(
         {
             assignment.Validate();
         }
+
+        DraftExperience?.Validate();
     }
 }

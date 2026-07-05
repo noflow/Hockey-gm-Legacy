@@ -35,7 +35,7 @@
   },
   "draft_rules": {
     "draft_enabled": true,
-    "rounds": 8,
+    "rounds": 15,
     "draft_order": "reverse_standings"
   },
   "playoff_rules": {

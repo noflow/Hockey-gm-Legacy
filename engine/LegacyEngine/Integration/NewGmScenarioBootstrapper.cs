@@ -23,6 +23,7 @@ public sealed class NewGmScenarioBootstrapper
     {
         var scenarioSettings = settings ?? new NewGmScenarioSettings();
         scenarioSettings.Validate();
+        var activeRulebook = rulebook ?? RulebookPresets.CreateJuniorMajor();
 
         var seasonCalendar = SeasonCalendar.Build(scenarioSettings.SeasonYear, scenarioSettings.SeasonSettings);
         var draftDate = seasonCalendar.Milestones.Single(item => item.Type == SeasonMilestoneType.Draft).Date.Value;
@@ -33,13 +34,13 @@ public sealed class NewGmScenarioBootstrapper
             startDate,
             WorldPhase.Offseason,
             eventEngine: new EventEngine());
-        var registry = EngineRegistry.Create(worldEngine, rulebook);
+        var registry = EngineRegistry.Create(worldEngine, activeRulebook);
         var season = registry.SeasonEngine.CreateSeason(
             scenarioSettings.SeasonId,
             scenarioSettings.LeagueId,
             scenarioSettings.SeasonYear,
             scenarioSettings.SeasonSettings,
-            rulebook,
+            activeRulebook,
             startDate);
         registry.WorldEngine.SetPhase(WorldPhase.Offseason);
 
@@ -342,7 +343,10 @@ public sealed class NewGmScenarioBootstrapper
                 Rank: index + 1,
                 ScoutingReportId: $"scenario-report-{index + 1:000}",
                 ScoutingConfidence: index < 3 ? ScoutingConfidenceLevel.High : ScoutingConfidenceLevel.Medium,
-                ProjectionText: ProjectionFor(index)));
+                ProjectionText: ProjectionFor(index),
+                IsStarred: index < 2,
+                PersonalNotes: index < 3 ? "GM note: review again before draft day." : "",
+                AnalyticsSummary: AnalyticsFor(index)));
         }
 
         return board;
@@ -455,7 +459,7 @@ public sealed class NewGmScenarioBootstrapper
 
     private static IReadOnlyList<Person> CreateRecruitPeople(DateOnly startDate)
     {
-        var names = new[]
+        var seeds = new[]
         {
             ("Tate", "Marlow", "Canada", "Dauphin, MB"),
             ("Julian", "Chen", "Canada", "Victoria, BC"),
@@ -467,16 +471,20 @@ public sealed class NewGmScenarioBootstrapper
             ("Nolan", "Savoie", "Canada", "St. Albert, AB")
         };
 
-        return names
-            .Select((name, index) => CreatePlayer(
+        return Enumerable.Range(0, 60)
+            .Select(index =>
+            {
+                var seed = seeds[index % seeds.Length];
+                return CreatePlayer(
                 $"person-recruit-{index + 1:000}",
-                name.Item1,
-                name.Item2,
+                index < seeds.Length ? seed.Item1 : $"{seed.Item1}{(index / seeds.Length) + 1}",
+                seed.Item2,
                 new DateOnly(2009, (index % 12) + 1, Math.Min(24, (index % 25) + 1)),
-                name.Item3,
-                name.Item4,
+                seed.Item3,
+                seed.Item4,
                 "unassigned",
-                startDate))
+                startDate);
+            })
             .ToArray();
     }
 
@@ -549,6 +557,16 @@ public sealed class NewGmScenarioBootstrapper
             3 => "Competitive center whose family comfort and school fit may decide recruitment.",
             4 => "Import winger with skill, confidence, and adjustment risk.",
             _ => "Useful draft option with incomplete information and enough traits to keep tracking."
+        };
+
+    private static string AnalyticsFor(int index) =>
+        index switch
+        {
+            0 => "Analytics: top pace and chance-creation indicators in this class.",
+            1 => "Analytics: low-risk transition profile, limited offensive ceiling.",
+            2 => "Analytics: volatile goalie sample, strong recovery trend.",
+            _ when index % 5 == 0 => "Analytics: high-event profile with some risk in repeat viewings.",
+            _ => "Analytics: neutral profile; more scouting confidence needed."
         };
 
     private static void QueueScenarioEvent(

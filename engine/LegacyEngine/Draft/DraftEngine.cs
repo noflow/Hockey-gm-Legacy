@@ -14,6 +14,22 @@ public sealed class DraftEngine
 
     public EventEngine EventEngine => _eventEngine;
 
+    public Draft CreateDraftFromRulebook(
+        string draftId,
+        int seasonYear,
+        IReadOnlyList<OrganizationStanding> standings,
+        DateTimeOffset createdAt,
+        Rulebook rulebook)
+    {
+        ArgumentNullException.ThrowIfNull(rulebook);
+        var rules = rulebook.DraftRules
+            ?? throw new ArgumentException("Rulebook is missing draft rules.", nameof(rulebook));
+
+        var validator = new DraftRuleValidator(rulebook);
+        ValidateRound(validator, 1, isPlayerEligible: true);
+        return CreateDraft(draftId, seasonYear, rules.Rounds, standings, createdAt, validator);
+    }
+
     public Draft CreateDraft(
         string draftId,
         int seasonYear,

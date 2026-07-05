@@ -82,7 +82,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 1.1 starts with your created GM taking over the Prairie Falcons two weeks before the draft.",
+            Text = "Alpha 1.4 starts with your created GM preparing for a complete playable draft experience.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -218,7 +218,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 1.0 - New GM Scenario",
+            Text = "Hockey GM Legacy - Alpha 1.4 - Complete Draft Experience",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -251,8 +251,13 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Advance 7 Days", () => Advance(7)));
         buttonPanel.Children.Add(CreateButton("Board Up", MoveDraftBoardPlayerUp));
         buttonPanel.Children.Add(CreateButton("Board Down", MoveDraftBoardPlayerDown));
+        buttonPanel.Children.Add(CreateButton("Star", StarTopProspect));
+        buttonPanel.Children.Add(CreateButton("GM Note", AddDraftNote));
         buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
+        buttonPanel.Children.Add(CreateButton("Start Draft", StartDraft));
+        buttonPanel.Children.Add(CreateButton("AI Picks", RunAiDrafting));
+        buttonPanel.Children.Add(CreateButton("Draft Top", DraftTopProspect));
 
         Grid.SetColumn(buttonPanel, 1);
         panel.Children.Add(buttonPanel);
@@ -428,6 +433,16 @@ internal sealed class MainWindow : Window
 
     private void MakeRecruitingOffer() => State.MakeRecruitingOffer();
 
+    private void StarTopProspect() => State.StarTopProspect();
+
+    private void AddDraftNote() => State.AddDraftNote();
+
+    private void StartDraft() => State.StartDraft();
+
+    private void RunAiDrafting() => State.RunAiDrafting();
+
+    private void DraftTopProspect() => State.DraftTopProspect();
+
     private void MarkLatestInboxRead() => State.ManageLatestInboxMessage(InboxMessageAction.MarkRead);
 
     private void PinLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Pin);
@@ -465,6 +480,13 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Date: {snapshot.CurrentDate:yyyy-MM-dd}");
         builder.AppendLine($"Season phase: {snapshot.Season?.CurrentPhase.ToString() ?? snapshot.WorldState.CurrentPhase.ToString()}");
         builder.AppendLine($"Draft date: {State.ScenarioSnapshot.DraftDate:yyyy-MM-dd} ({State.ScenarioSnapshot.DaysUntilDraft} days away)");
+        builder.AppendLine($"Draft status: {State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft"}");
+        if (State.ScenarioSnapshot.DraftExperience is { } draftState)
+        {
+            builder.AppendLine($"Draft round: {draftState.CurrentRound}/{draftState.TotalRounds}");
+            builder.AppendLine($"Overall pick: {draftState.OverallPick}");
+            builder.AppendLine($"Team selecting: {draftState.TeamSelecting}");
+        }
         builder.AppendLine($"Owner: {snapshot.Owner.Name}");
         builder.AppendLine($"GM: {snapshot.GeneralManager.Identity.DisplayName}");
         builder.AppendLine($"Scout: {snapshot.Scout.Name}");
@@ -942,10 +964,37 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Draft Board");
         builder.AppendLine("===========");
+        if (State.ScenarioSnapshot.DraftExperience is { } draftState)
+        {
+            builder.AppendLine($"Status: {draftState.Status}");
+            builder.AppendLine($"Round: {draftState.CurrentRound}/{draftState.TotalRounds}");
+            builder.AppendLine($"Current pick: {draftState.CurrentPick?.PickNumber.ToString() ?? "complete"}");
+            builder.AppendLine($"Team selecting: {draftState.TeamSelecting}");
+            builder.AppendLine($"Countdown: {draftState.CountdownPlaceholder}");
+            builder.AppendLine();
+            if (draftState.Recap is not null)
+            {
+                builder.AppendLine("Draft Recap");
+                builder.AppendLine($"Rounds completed: {draftState.Recap.RoundsCompleted}");
+                builder.AppendLine($"Players drafted: {draftState.Recap.PlayersDrafted}");
+                builder.AppendLine($"Owner reaction: {draftState.Recap.OwnerReaction}");
+                builder.AppendLine($"Head scout reaction: {draftState.Recap.HeadScoutReaction}");
+                builder.AppendLine("Your selections:");
+                foreach (var selection in draftState.Recap.YourSelections)
+                {
+                    builder.AppendLine($"  R{selection.RoundNumber} P{selection.PickNumber}: {selection.ProspectName}");
+                }
+                builder.AppendLine();
+            }
+        }
+
         foreach (var entry in State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank))
         {
-            builder.AppendLine($"#{entry.Rank} {FindPersonName(entry.ProspectPersonId)} - confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
-            builder.AppendLine($"  {entry.ProjectionText}");
+            builder.AppendLine($"#{entry.Rank} {(entry.IsStarred ? "[STAR] " : string.Empty)}{FindPersonName(entry.ProspectPersonId)} - confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+            builder.AppendLine($"  Report: {entry.ScoutingReportId ?? "none"}");
+            builder.AppendLine($"  Projection: {entry.ProjectionText}");
+            builder.AppendLine($"  Analytics: {(string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary)}");
+            builder.AppendLine($"  GM Notes: {(string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes)}");
             builder.AppendLine();
         }
 
@@ -984,6 +1033,7 @@ internal sealed class AlphaDesktopState
 {
     private readonly DailySimulationCoordinator _coordinator = new();
     private readonly NewGmScenarioActions _actions = new();
+    private readonly AlphaDraftExperienceService _draftExperience = new();
     private readonly EngineRegistry _registry;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
@@ -1069,9 +1119,9 @@ internal sealed class AlphaDesktopState
 
     public void AssignScoutFocus()
     {
-        var focusCycle = new[] { ScoutSpecialty.Character, ScoutSpecialty.Goalie, ScoutSpecialty.Amateur };
+        var focusCycle = Enum.GetValues<DraftPreparationFocus>();
         var focus = focusCycle[ScenarioSnapshot.ScoutingAssignments.Count % focusCycle.Length];
-        ApplyAction(_actions.AssignScoutFocus(_registry, ScenarioSnapshot, focus));
+        ApplyAction(_actions.AssignDraftPreparationFocus(_registry, ScenarioSnapshot, focus));
     }
 
     public void MakeRecruitingOffer()
@@ -1086,6 +1136,81 @@ internal sealed class AlphaDesktopState
         ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruit.RecruitPersonId));
     }
 
+    public void StarTopProspect()
+    {
+        var prospect = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        if (prospect is null)
+        {
+            LatestSummary = "No draft board prospect is available to star.";
+            return;
+        }
+
+        ApplyAction(_draftExperience.StarProspect(_registry, ScenarioSnapshot, prospect.ProspectPersonId, !prospect.IsStarred));
+    }
+
+    public void AddDraftNote()
+    {
+        var prospect = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        if (prospect is null)
+        {
+            LatestSummary = "No draft board prospect is available for notes.";
+            return;
+        }
+
+        var note = $"GM note added on {Snapshot.CurrentDate:yyyy-MM-dd}: priority review before draft day.";
+        ApplyAction(_draftExperience.UpdatePersonalNotes(_registry, ScenarioSnapshot, prospect.ProspectPersonId, note));
+    }
+
+    public void StartDraft()
+    {
+        if (Snapshot.CurrentDate < ScenarioSnapshot.DraftDate)
+        {
+            LatestSummary = $"Draft day has not arrived. {ScenarioSnapshot.DaysUntilDraft} day(s) remain.";
+            return;
+        }
+
+        if (ScenarioSnapshot.DraftExperience is { Status: not DraftExperienceStatus.NotStarted })
+        {
+            LatestSummary = $"Draft is already {ScenarioSnapshot.DraftExperience.Status}.";
+            return;
+        }
+
+        ApplyDraftResult(_draftExperience.StartDraftDay(_registry, ScenarioSnapshot));
+    }
+
+    public void RunAiDrafting()
+    {
+        if (!EnsureDraftStarted())
+        {
+            return;
+        }
+
+        ApplyDraftResult(_draftExperience.RunAiPicksUntilPlayerTurn(_registry, ScenarioSnapshot));
+    }
+
+    public void DraftTopProspect()
+    {
+        if (!EnsureDraftStarted())
+        {
+            return;
+        }
+
+        if (ScenarioSnapshot.DraftExperience?.IsPlayerTurn != true)
+        {
+            LatestSummary = "AI teams are still on the clock. Run AI picks until your turn.";
+            return;
+        }
+
+        var prospect = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        if (prospect is null)
+        {
+            LatestSummary = "No available prospect remains on the draft board.";
+            return;
+        }
+
+        ApplyDraftResult(_draftExperience.MakePlayerSelection(_registry, ScenarioSnapshot, prospect.ProspectPersonId));
+    }
+
     private void ApplyAction(GmActionResult result)
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
@@ -1093,6 +1218,26 @@ internal sealed class AlphaDesktopState
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
+    }
+
+    private void ApplyDraftResult(DraftExperienceResult result)
+    {
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        InboxManager.AddRange(result.InboxItems);
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Summary;
+    }
+
+    private bool EnsureDraftStarted()
+    {
+        if (ScenarioSnapshot.DraftExperience is not null)
+        {
+            return true;
+        }
+
+        StartDraft();
+        return ScenarioSnapshot.DraftExperience is not null;
     }
 
     public void ManageLatestInboxMessage(InboxMessageAction action)

@@ -113,12 +113,12 @@ public sealed class InboxManager
         {
             LegacyEventType.OwnerGoalSet or LegacyEventType.BudgetApproved => InboxCategory.Owner,
             LegacyEventType.StaffHired or LegacyEventType.StaffAssigned or LegacyEventType.StaffReassigned or LegacyEventType.StaffReleased or LegacyEventType.StaffEvaluated => InboxCategory.Staff,
-            LegacyEventType.ScoutAssigned or LegacyEventType.ScoutingReportCreated => InboxCategory.Scouting,
+            LegacyEventType.ScoutAssigned or LegacyEventType.ScoutingReportCreated or LegacyEventType.ScoutRecommendationUpdated => InboxCategory.Scouting,
             LegacyEventType.RecruitingOfferSubmitted or LegacyEventType.RecruitCommitted or LegacyEventType.RecruitRejected or LegacyEventType.RecruitingOpened or LegacyEventType.RecruitingClosed => InboxCategory.Recruiting,
             LegacyEventType.PlayerDevelopmentUpdated or LegacyEventType.PlayerBreakout or LegacyEventType.PlayerRegression => InboxCategory.PlayerDevelopment,
             LegacyEventType.PlayerInjured or LegacyEventType.PlayerRecovered or LegacyEventType.InjuryReAggravated or LegacyEventType.InjuryCareerThreatening or LegacyEventType.PlayerMovedToInjuredReserve => InboxCategory.Medical,
             LegacyEventType.ContractOffered or LegacyEventType.ContractSigned or LegacyEventType.ContractRejected or LegacyEventType.ContractTerminated => InboxCategory.Contracts,
-            LegacyEventType.DraftStarted or LegacyEventType.PlayerDrafted or LegacyEventType.DraftCompleted or LegacyEventType.DraftOpened or LegacyEventType.DraftClosed => InboxCategory.Draft,
+            LegacyEventType.DraftStarted or LegacyEventType.PlayerDrafted or LegacyEventType.DraftCompleted or LegacyEventType.DraftBoardChanged or LegacyEventType.OwnerDraftReaction or LegacyEventType.DraftOpened or LegacyEventType.DraftClosed => InboxCategory.Draft,
             LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded => InboxCategory.League,
             _ => CategorizeByText(item)
         };
