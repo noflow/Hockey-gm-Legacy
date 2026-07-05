@@ -32,6 +32,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<PendingGmAction> PendingActions { get; init; } = Array.Empty<PendingGmAction>();
 
+    public SeasonReadinessState SeasonReadiness { get; init; } = new();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -75,5 +77,7 @@ public sealed record NewGmScenarioSnapshot(
         {
             pendingAction.Validate();
         }
+
+        SeasonReadiness.Validate();
     }
 }

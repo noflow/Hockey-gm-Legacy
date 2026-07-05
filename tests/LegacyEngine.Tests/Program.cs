@@ -28,6 +28,7 @@ var ahlAffiliateRulebookTests = new AhlAffiliateRulebookTests();
 var trainingCampTests = new TrainingCampTests();
 var pendingGmActionTests = new PendingGmActionTests();
 var prospectDecisionTests = new ProspectDecisionTests();
+var seasonReadinessTests = new SeasonReadinessTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -357,6 +358,17 @@ runner.Run("prospect decision AHL-style teams do not draft directly", prospectDe
 runner.Run("prospect decision creates events and inbox", prospectDecisionTests.ProspectDecisionsCreateEventsAndInboxMessages);
 runner.Run("AlphaDesktop exposes prospect actions", prospectDecisionTests.AlphaDesktopExposesProspectActions);
 runner.Run("prospect decisions have no Godot save or game simulation dependency", prospectDecisionTests.ProspectDecisionsHaveNoGodotSaveOrGameSimulationDependency);
+runner.Run("season readiness validates opening roster", seasonReadinessTests.OpeningRosterValidationPassesWhenCompliant);
+runner.Run("season readiness rejects over-limit roster", seasonReadinessTests.RosterOverLimitIsRejected);
+runner.Run("season readiness rejects under-limit roster", seasonReadinessTests.RosterUnderLimitIsRejected);
+runner.Run("season readiness validates goalie requirement", seasonReadinessTests.GoalieRequirementIsRejected);
+runner.Run("season readiness pending actions prevent season", seasonReadinessTests.PendingActionsPreventSeasonStart);
+runner.Run("season readiness owner coach scout reviews generated", seasonReadinessTests.OwnerCoachAndScoutReviewsAreGenerated);
+runner.Run("season readiness can become ready", seasonReadinessTests.SeasonReadinessCanBeReady);
+runner.Run("season readiness begin is blocked when not ready", seasonReadinessTests.BeginSeasonIsBlockedWhenNotReady);
+runner.Run("season readiness begin is enabled when ready", seasonReadinessTests.BeginSeasonIsEnabledWhenReady);
+runner.Run("AlphaDesktop exposes season readiness", seasonReadinessTests.AlphaDesktopExposesSeasonReadinessSurface);
+runner.Run("season readiness has no Godot save game simulation standings or playoffs", seasonReadinessTests.SeasonReadinessHasNoGodotSaveOrGameSimulationDependency);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

@@ -49,14 +49,16 @@ The five foundation pillars remain:
 - Alpha 1.4 - Complete Draft Experience
 - Alpha 1.5 - AHL Affiliate Rulebook Support
 - Alpha 1.6 - Training Camp + Roster Cutdown v1
+- Alpha 1.7 - Post-Draft Prospect Decisions
+- Alpha 1.8 - Opening Roster & Season Readiness
 
 ## Current Milestone
 
-Alpha 1.7 - Next Playable GM Loop
+Alpha 1.8 - Opening Roster & Season Readiness
 
 ## Current Goal
 
-Expand the post-camp GM loop without adding full game simulation.
+Let the GM resolve final roster, camp, prospect, owner, staff, and league-readiness tasks before Opening Night without adding full game simulation.
 
 ## Why Relationship Engine Was Next
 
@@ -66,11 +68,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-TBD
+Alpha 1.9 - Opening Week Setup
 
 ## Next Milestones
 
-1. TBD
+1. Alpha 1.9 - Opening Week Setup
 
 ## Build Rule
 

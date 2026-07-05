@@ -111,15 +111,15 @@ public sealed class InboxManager
     public static InboxCategory Categorize(AlphaInboxItem item) =>
         item.EventType switch
         {
-            LegacyEventType.OwnerGoalSet or LegacyEventType.BudgetApproved => InboxCategory.Owner,
-            LegacyEventType.StaffHired or LegacyEventType.StaffAssigned or LegacyEventType.StaffReassigned or LegacyEventType.StaffReleased or LegacyEventType.StaffEvaluated or LegacyEventType.TrainingCampOpened or LegacyEventType.TrainingCampEvaluationCreated or LegacyEventType.TrainingCampPlayerKept or LegacyEventType.TrainingCampPlayerCut or LegacyEventType.TrainingCampPlayerAssigned or LegacyEventType.TrainingCampCompleted => InboxCategory.Staff,
-            LegacyEventType.ScoutAssigned or LegacyEventType.ScoutingReportCreated or LegacyEventType.ScoutRecommendationUpdated => InboxCategory.Scouting,
+            LegacyEventType.OwnerGoalSet or LegacyEventType.BudgetApproved or LegacyEventType.OwnerOffseasonReview => InboxCategory.Owner,
+            LegacyEventType.StaffHired or LegacyEventType.StaffAssigned or LegacyEventType.StaffReassigned or LegacyEventType.StaffReleased or LegacyEventType.StaffEvaluated or LegacyEventType.TrainingCampOpened or LegacyEventType.TrainingCampEvaluationCreated or LegacyEventType.TrainingCampPlayerKept or LegacyEventType.TrainingCampPlayerCut or LegacyEventType.TrainingCampPlayerAssigned or LegacyEventType.TrainingCampCompleted or LegacyEventType.CoachRosterReview => InboxCategory.Staff,
+            LegacyEventType.ScoutAssigned or LegacyEventType.ScoutingReportCreated or LegacyEventType.ScoutRecommendationUpdated or LegacyEventType.ScoutOffseasonReview => InboxCategory.Scouting,
             LegacyEventType.RecruitingOfferSubmitted or LegacyEventType.RecruitCommitted or LegacyEventType.RecruitRejected or LegacyEventType.RecruitingOpened or LegacyEventType.RecruitingClosed => InboxCategory.Recruiting,
             LegacyEventType.PlayerDevelopmentUpdated or LegacyEventType.PlayerBreakout or LegacyEventType.PlayerRegression => InboxCategory.PlayerDevelopment,
             LegacyEventType.PlayerInjured or LegacyEventType.PlayerRecovered or LegacyEventType.InjuryReAggravated or LegacyEventType.InjuryCareerThreatening or LegacyEventType.PlayerMovedToInjuredReserve => InboxCategory.Medical,
             LegacyEventType.ContractOffered or LegacyEventType.ContractSigned or LegacyEventType.ContractRejected or LegacyEventType.ContractTerminated => InboxCategory.Contracts,
             LegacyEventType.DraftStarted or LegacyEventType.PlayerDrafted or LegacyEventType.DraftCompleted or LegacyEventType.DraftRecapCreated or LegacyEventType.DraftBoardChanged or LegacyEventType.OwnerDraftReaction or LegacyEventType.DraftOpened or LegacyEventType.DraftClosed or LegacyEventType.ProspectDecisionMade or LegacyEventType.ProspectContractOffered or LegacyEventType.ProspectSigned or LegacyEventType.ProspectInvitedToCamp or LegacyEventType.ProspectReturned or LegacyEventType.ProspectAssignedToAffiliate or LegacyEventType.ProspectRightsReleased => InboxCategory.Draft,
-            LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded => InboxCategory.League,
+            LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.OpeningRosterValidated or LegacyEventType.OpeningRosterRejected or LegacyEventType.SeasonReady or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded => InboxCategory.League,
             _ => CategorizeByText(item)
         };
 
