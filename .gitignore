@@ -9,6 +9,7 @@ obj/
 .nuget/
 .appdata/
 .buildcheck/
+.tmp-alpha-desktop-build/
 .alpha-bin/
 .alpha-desktop-bin/
 .alpha-desktop-bin-alpha10/

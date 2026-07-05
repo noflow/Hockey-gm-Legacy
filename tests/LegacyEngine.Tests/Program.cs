@@ -25,6 +25,7 @@ var seasonTests = new SeasonEngineTests();
 var alphaDraftExperienceTests = new AlphaDraftExperienceTests();
 var developmentInboxPolicyTests = new DevelopmentInboxPolicyTests();
 var ahlAffiliateRulebookTests = new AhlAffiliateRulebookTests();
+var trainingCampTests = new TrainingCampTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -299,6 +300,23 @@ runner.Run("NHL organization references AHL affiliate", ahlAffiliateRulebookTest
 runner.Run("AHL roster player can be assigned from parent club", ahlAffiliateRulebookTests.PlayerCanBeAddedAsAssignedFromParentClub);
 runner.Run("AHL draft UI is disabled by rulebook", ahlAffiliateRulebookTests.AhlDraftUiIsDisabledByRulebook);
 runner.Run("Junior and NHL draft behavior remains enabled", ahlAffiliateRulebookTests.JuniorAndNhlDraftBehaviorRemainEnabled);
+runner.Run("training camp can be created", trainingCampTests.TrainingCampCanBeCreated);
+runner.Run("training camp invites returning roster players", trainingCampTests.ReturningRosterPlayersCanBeInvited);
+runner.Run("training camp invites drafted prospects recruits and tryouts", trainingCampTests.DraftedProspectsRecruitsAndTryoutsCanBeInvited);
+runner.Run("training camp invites AHL assigned parent player", trainingCampTests.AhlAssignedFromParentPlayerCanBeInvited);
+runner.Run("training camp evaluation is generated", trainingCampTests.CampEvaluationIsGenerated);
+runner.Run("training camp evaluation includes player name", trainingCampTests.EvaluationIncludesPlayerName);
+runner.Run("training camp keep decision changes status", trainingCampTests.KeepDecisionChangesStatus);
+runner.Run("training camp cut decision changes status", trainingCampTests.CutDecisionChangesStatus);
+runner.Run("training camp assign to affiliate works when supported", trainingCampTests.AssignToAffiliateWorksWhenSupported);
+runner.Run("training camp junior affiliate decisions unavailable", trainingCampTests.JuniorAffiliateDecisionsAreUnavailableByDefault);
+runner.Run("training camp return to parent works for AHL source", trainingCampTests.ReturnToParentWorksForAhlStyleSource);
+runner.Run("training camp opening roster validation uses rule engine", trainingCampTests.OpeningRosterValidationUsesRuleEngine);
+runner.Run("training camp summary is generated", trainingCampTests.CampSummaryIsGenerated);
+runner.Run("training camp events are created", trainingCampTests.CampEventsAreCreated);
+runner.Run("training camp inbox items can be generated", trainingCampTests.InboxItemsCanBeGeneratedForCampEvents);
+runner.Run("AlphaDesktop exposes training camp surface and actions", trainingCampTests.AlphaDesktopExposesTrainingCampSurfaceAndActions);
+runner.Run("training camp has no Godot save or game simulation dependency", trainingCampTests.TrainingCampHasNoGodotSaveOrGameSimulationDependency);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

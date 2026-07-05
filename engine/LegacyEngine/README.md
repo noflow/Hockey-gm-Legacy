@@ -178,6 +178,21 @@ The first build target includes:
 - light RuleEngine validation for draft enabled, round validity, and eligibility
 - light EventEngine event creation for draft start, selection, and completion
 
+## Training Camp
+
+Alpha 1.6 adds the first Integration-layer training camp loop.
+
+The build target includes:
+
+- training camp creation for an organization
+- returning roster, drafted prospect, recruit, tryout, and AHL-style invite sources
+- staff/scouting/development flavored camp evaluations
+- keep, cut, release, assign to affiliate, return to parent, and mark injured decisions
+- RuleEngine roster validation for the opening roster
+- light EventEngine and inbox integration for important camp events
+
+Training Camp v1 does not simulate games, lines, practices, waivers, salary cap, save/load, or full NHL/AHL transactions.
+
 Draft v1 does not implement pick trading, draft lottery, live draft clock, roster changes, or War Room UI.
 
 ## Alpha Draft Experience

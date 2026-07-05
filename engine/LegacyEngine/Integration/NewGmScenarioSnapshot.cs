@@ -24,6 +24,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public DraftExperienceState? DraftExperience { get; init; }
 
+    public TrainingCamp? TrainingCamp { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -57,5 +59,6 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         DraftExperience?.Validate();
+        TrainingCamp?.Validate();
     }
 }

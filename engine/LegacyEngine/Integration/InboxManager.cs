@@ -112,7 +112,7 @@ public sealed class InboxManager
         item.EventType switch
         {
             LegacyEventType.OwnerGoalSet or LegacyEventType.BudgetApproved => InboxCategory.Owner,
-            LegacyEventType.StaffHired or LegacyEventType.StaffAssigned or LegacyEventType.StaffReassigned or LegacyEventType.StaffReleased or LegacyEventType.StaffEvaluated => InboxCategory.Staff,
+            LegacyEventType.StaffHired or LegacyEventType.StaffAssigned or LegacyEventType.StaffReassigned or LegacyEventType.StaffReleased or LegacyEventType.StaffEvaluated or LegacyEventType.TrainingCampOpened or LegacyEventType.TrainingCampEvaluationCreated or LegacyEventType.TrainingCampPlayerKept or LegacyEventType.TrainingCampPlayerCut or LegacyEventType.TrainingCampPlayerAssigned or LegacyEventType.TrainingCampCompleted => InboxCategory.Staff,
             LegacyEventType.ScoutAssigned or LegacyEventType.ScoutingReportCreated or LegacyEventType.ScoutRecommendationUpdated => InboxCategory.Scouting,
             LegacyEventType.RecruitingOfferSubmitted or LegacyEventType.RecruitCommitted or LegacyEventType.RecruitRejected or LegacyEventType.RecruitingOpened or LegacyEventType.RecruitingClosed => InboxCategory.Recruiting,
             LegacyEventType.PlayerDevelopmentUpdated or LegacyEventType.PlayerBreakout or LegacyEventType.PlayerRegression => InboxCategory.PlayerDevelopment,

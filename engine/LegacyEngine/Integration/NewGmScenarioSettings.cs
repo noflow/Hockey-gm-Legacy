@@ -3,7 +3,7 @@ using LegacyEngine.Seasons;
 namespace LegacyEngine.Integration;
 
 public sealed record NewGmScenarioSettings(
-    string WorldName = "Hockey GM Legacy Alpha 1.4",
+    string WorldName = "Hockey GM Legacy Alpha 1.6",
     string LeagueId = "junior-league-alpha",
     string SeasonId = "season-junior-2025",
     int SeasonYear = 2025,
