@@ -23,6 +23,7 @@ var staffTests = new StaffEngineTests();
 var organizationTests = new OrganizationEngineTests();
 var seasonTests = new SeasonEngineTests();
 var alphaDraftExperienceTests = new AlphaDraftExperienceTests();
+var developmentInboxPolicyTests = new DevelopmentInboxPolicyTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -285,6 +286,11 @@ runner.Run("alpha draft duplicate selection is prevented", alphaDraftExperienceT
 runner.Run("alpha draft recap is generated", alphaDraftExperienceTests.DraftRecapIsGenerated);
 runner.Run("alpha draft events are generated", alphaDraftExperienceTests.DraftEventsAreGenerated);
 runner.Run("alpha desktop exposes draft actions", alphaDraftExperienceTests.DesktopIntegrationExposesDraftActions);
+runner.Run("development inbox no offseason spam", developmentInboxPolicyTests.NoOffseasonDevelopmentInboxSpam);
+runner.Run("development inbox messages are capped", developmentInboxPolicyTests.DevelopmentInboxMessagesAreCapped);
+runner.Run("development inbox names player", developmentInboxPolicyTests.PlayerNameAppearsInDevelopmentMessage);
+runner.Run("routine development update stays out of inbox", developmentInboxPolicyTests.RoutineDevelopmentUpdateDoesNotCreateInboxItem);
+runner.Run("meaningful development update creates inbox item", developmentInboxPolicyTests.MeaningfulDevelopmentUpdateCreatesInboxItem);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

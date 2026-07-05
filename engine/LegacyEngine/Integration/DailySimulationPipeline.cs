@@ -1,6 +1,7 @@
 using LegacyEngine.Development;
 using LegacyEngine.Events;
 using LegacyEngine.Injuries;
+using LegacyEngine.People;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Relationships;
 using LegacyEngine.Seasons;
@@ -30,9 +31,6 @@ public sealed class DailySimulationPipeline
         LegacyEventType.OwnerDraftReaction,
         LegacyEventType.PlayerAddedToRoster,
         LegacyEventType.PlayerReleased,
-        LegacyEventType.PlayerDevelopmentUpdated,
-        LegacyEventType.PlayerBreakout,
-        LegacyEventType.PlayerRegression,
         LegacyEventType.OwnerGoalSet,
         LegacyEventType.BudgetApproved,
         LegacyEventType.ScoutAssigned
@@ -86,11 +84,17 @@ public sealed class DailySimulationPipeline
                 ["history_entries_added"] = relationshipChanges
             }));
 
-        var developmentProfiles = ApplyDevelopmentUpdates(registry, snapshot, currentDate);
+        var development = ApplyDevelopmentUpdates(registry, snapshot, currentDate, season?.CurrentPhase);
         log.Add(Log(
             DailySimulationStep.ApplyPlayerDevelopmentUpdates,
-            $"Updated {developmentProfiles.Count} development profile(s).",
-            new Dictionary<string, object?> { ["development_profile_count"] = developmentProfiles.Count }));
+            development.Summary,
+            new Dictionary<string, object?>
+            {
+                ["development_profile_count"] = development.Profiles.Count,
+                ["profiles_evaluated"] = development.ProfilesEvaluated,
+                ["development_inbox_count"] = development.InboxItems.Count,
+                ["skipped"] = development.WasSkipped
+            }));
 
         var injuries = ApplyInjuryRecoveryUpdates(registry, snapshot.Injuries, currentDate);
         log.Add(Log(
@@ -115,7 +119,7 @@ public sealed class DailySimulationPipeline
             $"Generated {messages.Count} communication message(s).",
             new Dictionary<string, object?> { ["message_count"] = messages.Count }));
 
-        var inboxItems = messages.Select(ToInboxItem).ToArray();
+        var inboxItems = messages.Select(ToInboxItem).Concat(development.InboxItems).ToArray();
         log.Add(Log(
             DailySimulationStep.ConvertInboxItems,
             $"Converted {inboxItems.Length} message(s) into inbox item(s).",
@@ -126,7 +130,7 @@ public sealed class DailySimulationPipeline
             WorldState = registry.WorldEngine.State,
             Season = season,
             Relationships = relationships,
-            DevelopmentProfiles = developmentProfiles,
+            DevelopmentProfiles = development.Profiles,
             Injuries = injuries,
             Recruits = recruits
         };
@@ -176,11 +180,22 @@ public sealed class DailySimulationPipeline
             .Select(relationship => relationship.ApplyDecay(currentDate, daysBeforeDecay: 1, amountPerPeriod: 1))
             .ToArray();
 
-    private static IReadOnlyList<PlayerDevelopmentProfile> ApplyDevelopmentUpdates(
+    private static DevelopmentPipelineResult ApplyDevelopmentUpdates(
         EngineRegistry registry,
         AlphaWorldSnapshot snapshot,
-        DateOnly currentDate)
+        DateOnly currentDate,
+        SeasonPhase? seasonPhase)
     {
+        if (!IsDevelopmentActive(snapshot, seasonPhase))
+        {
+            return new DevelopmentPipelineResult(
+                snapshot.DevelopmentProfiles,
+                Array.Empty<AlphaInboxItem>(),
+                ProfilesEvaluated: 0,
+                WasSkipped: true,
+                Summary: "Player development skipped; offseason/draft/free-agency periods do not run daily development.");
+        }
+
         var injuryPenaltyByPerson = snapshot.Injuries
             .Where(injury => injury.IsActive)
             .GroupBy(injury => injury.PersonId)
@@ -189,27 +204,150 @@ public sealed class DailySimulationPipeline
                 group => Math.Clamp(group.Max(injury => injury.DevelopmentPenalty), 0, 100),
                 StringComparer.Ordinal);
 
-        return snapshot.DevelopmentProfiles
+        var meaningfulUpdates = new List<(DevelopmentResult Result, DevelopmentFactor Factor, Person? Person, string Reason)>();
+        var profiles = snapshot.DevelopmentProfiles
             .Select(profile =>
             {
                 var person = snapshot.People.SingleOrDefault(item => item.PersonId == profile.PersonId);
                 var age = person?.CalculateAge(currentDate) ?? 18;
                 var injuryPenalty = injuryPenaltyByPerson.GetValueOrDefault(profile.PersonId, 0);
-                var result = registry.DevelopmentEngine.ApplyMonthlyUpdate(
-                    profile,
-                    new DevelopmentFactor(
-                        Age: age,
-                        UpdateDate: currentDate,
-                        IceTimeScore: snapshot.Roster.HasActivePlayer(profile.PersonId) ? 65 : 35,
-                        FacilityBonus: 20,
-                        CoachingBonus: 20,
-                        InjuryPenalty: injuryPenalty,
-                        RandomModifier: 0));
+                var factor = new DevelopmentFactor(
+                    Age: age,
+                    UpdateDate: currentDate,
+                    IceTimeScore: snapshot.Roster.HasActivePlayer(profile.PersonId) ? 65 : 35,
+                    FacilityBonus: 20,
+                    CoachingBonus: 20,
+                    InjuryPenalty: injuryPenalty,
+                    RandomModifier: 0);
+                var result = registry.DevelopmentEngine.ApplyMonthlyUpdate(profile, factor);
+
+                var reason = MeaningfulDevelopmentReason(result, factor, profile);
+                if (reason is not null)
+                {
+                    meaningfulUpdates.Add((result, factor, person, reason));
+                }
 
                 return result.UpdatedProfile;
             })
             .ToArray();
+
+        var inboxItems = meaningfulUpdates
+            .OrderByDescending(item => item.Result.IsBreakout || item.Result.IsRegression)
+            .ThenByDescending(item => Math.Abs(item.Result.CurrentAbilityChange))
+            .ThenBy(item => item.Person?.Identity.DisplayName ?? item.Result.PersonId, StringComparer.Ordinal)
+            .Take(3)
+            .Select(item => ToDevelopmentInboxItem(snapshot, item.Result, item.Factor, item.Person, item.Reason))
+            .ToArray();
+
+        return new DevelopmentPipelineResult(
+            profiles,
+            inboxItems,
+            ProfilesEvaluated: profiles.Length,
+            WasSkipped: false,
+            Summary: inboxItems.Length == 0
+                ? $"Updated {profiles.Length} development profile(s); routine changes stayed in the internal simulation log."
+                : $"Updated {profiles.Length} development profile(s); created {inboxItems.Length} meaningful development inbox item(s).");
     }
+
+    private static bool IsDevelopmentActive(AlphaWorldSnapshot snapshot, SeasonPhase? seasonPhase)
+    {
+        if (seasonPhase is not null)
+        {
+            return seasonPhase is SeasonPhase.Preseason or SeasonPhase.RegularSeason or SeasonPhase.TradeDeadline;
+        }
+
+        return snapshot.WorldState.CurrentPhase is WorldPhase.Preseason or WorldPhase.RegularSeason;
+    }
+
+    private static string? MeaningfulDevelopmentReason(
+        DevelopmentResult result,
+        DevelopmentFactor factor,
+        PlayerDevelopmentProfile originalProfile)
+    {
+        if (result.IsBreakout)
+        {
+            return "breakout";
+        }
+
+        if (result.IsRegression)
+        {
+            return "regression";
+        }
+
+        if (factor.InjuryPenalty.GetValueOrDefault() >= 10 && result.CurrentAbilityChange <= 0)
+        {
+            return "injury-related slowdown";
+        }
+
+        var confidenceChange = result.Updates
+            .FirstOrDefault(update => update.Attribute == DevelopmentAttribute.Confidence);
+        if (confidenceChange is not null && Math.Abs(confidenceChange.NewValue - confidenceChange.PreviousValue) >= 2)
+        {
+            return "major confidence change";
+        }
+
+        if (originalProfile.Potential >= 70 && result.CurrentAbilityChange >= 2)
+        {
+            return "top prospect development update";
+        }
+
+        return null;
+    }
+
+    private static AlphaInboxItem ToDevelopmentInboxItem(
+        AlphaWorldSnapshot snapshot,
+        DevelopmentResult result,
+        DevelopmentFactor factor,
+        Person? person,
+        string reason)
+    {
+        var playerName = person?.Identity.DisplayName ?? result.PersonId;
+        var strongestUpdate = result.Updates
+            .OrderByDescending(update => Math.Abs(update.NewValue - update.PreviousValue))
+            .FirstOrDefault();
+        var theme = strongestUpdate?.Attribute.ToString() ?? "overall development";
+        var direction = result.CurrentAbilityChange switch
+        {
+            >= 4 => "breakout",
+            > 0 => "improvement",
+            0 => "holding steady",
+            <= -3 => "regression",
+            _ => "minor slowdown"
+        };
+        var coachNote = CoachNoteFor(reason, factor);
+        var whyItMatters = reason switch
+        {
+            "breakout" => "This matters because a real jump can change how aggressively the staff plans the player's role.",
+            "regression" => "This matters because the staff may need to adjust workload, confidence support, or development expectations.",
+            "injury-related slowdown" => "This matters because health is now affecting the player's development path.",
+            "major confidence change" => "This matters because confidence can alter practice habits and game readiness.",
+            _ => "This matters because the player is part of the club's priority development group."
+        };
+
+        return new AlphaInboxItem(
+            InboxItemId: $"inbox:development:{Guid.NewGuid():N}",
+            Date: new DateTimeOffset(result.UpdateDate.Year, result.UpdateDate.Month, result.UpdateDate.Day, 13, 30, 0, TimeSpan.Zero),
+            EventType: result.IsBreakout
+                ? LegacyEventType.PlayerBreakout
+                : result.IsRegression
+                    ? LegacyEventType.PlayerRegression
+                    : LegacyEventType.PlayerDevelopmentUpdated,
+            Severity: result.IsBreakout || result.IsRegression ? LegacyEventSeverity.Warning : LegacyEventSeverity.Notice,
+            Title: $"Player Development Update: {playerName}",
+            Summary: $"{playerName}, age {factor.Age}, is showing {direction} around {theme}. {coachNote} {whyItMatters}",
+            PrimaryPersonId: result.PersonId);
+    }
+
+    private static string CoachNoteFor(string reason, DevelopmentFactor factor) =>
+        reason switch
+        {
+            "injury-related slowdown" => "Staff believe the injury load is limiting practice quality.",
+            "major confidence change" => "Coaches flagged confidence as the most important trend to monitor.",
+            "breakout" => "Staff believe ice time, habits, and coaching support are starting to connect.",
+            "regression" => "Coaches want to review workload and confidence before this becomes a pattern.",
+            _ when factor.IceTimeScore.GetValueOrDefault() >= 60 => "Coaches point to useful ice time and steady practice habits.",
+            _ => "Coaches want a little more evidence before changing the player's plan."
+        };
 
     private static IReadOnlyList<Injury> ApplyInjuryRecoveryUpdates(
         EngineRegistry registry,
