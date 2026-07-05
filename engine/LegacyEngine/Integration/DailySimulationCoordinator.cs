@@ -22,12 +22,20 @@ public sealed class DailySimulationCoordinator
         };
 
         var camp = new TrainingCampService().AdvanceCalendar(registry, updatedScenario);
-        var inbox = simulation.InboxItems.Concat(camp.InboxItems).ToArray();
-        var summary = camp.InboxItems.Count == 0
+        var report = camp.ScenarioSnapshot.Season.Status == LegacyEngine.Seasons.SeasonStatus.Completed
+            && camp.ScenarioSnapshot.ExecutiveReports.Find($"executive-report:{camp.ScenarioSnapshot.Season.SeasonId}:{ExecutiveReportKind.EndOfSeasonExecutiveReview}") is null
+            ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, camp.ScenarioSnapshot)
+            : null;
+        var finalScenario = report?.Success == true ? report.ScenarioSnapshot : camp.ScenarioSnapshot;
+        var inbox = simulation.InboxItems
+            .Concat(camp.InboxItems)
+            .Concat(report?.InboxItems ?? Array.Empty<AlphaInboxItem>())
+            .ToArray();
+        var summary = camp.InboxItems.Count == 0 && report?.Success != true
             ? simulation.Summary
-            : $"{simulation.Summary} {camp.Summary}";
+            : $"{simulation.Summary} {camp.Summary}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
 
-        return new NewGmDailySimulationResult(camp.ScenarioSnapshot, simulation, inbox, summary);
+        return new NewGmDailySimulationResult(finalScenario, simulation, inbox, summary);
     }
 
     public IReadOnlyList<AlphaSimulationResult> AdvanceDays(

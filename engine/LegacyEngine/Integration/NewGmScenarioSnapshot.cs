@@ -34,6 +34,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public SeasonReadinessState SeasonReadiness { get; init; } = new();
 
+    public ExecutiveReportArchive ExecutiveReports { get; init; } = ExecutiveReportArchive.Empty;
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -79,5 +81,6 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         SeasonReadiness.Validate();
+        ExecutiveReports.Validate();
     }
 }

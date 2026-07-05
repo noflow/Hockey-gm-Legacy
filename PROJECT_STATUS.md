@@ -51,14 +51,15 @@ The five foundation pillars remain:
 - Alpha 1.6 - Training Camp + Roster Cutdown v1
 - Alpha 1.7 - Post-Draft Prospect Decisions
 - Alpha 1.8 - Opening Roster & Season Readiness
+- Alpha 1.8.1 - Executive Reports
 
 ## Current Milestone
 
-Alpha 1.8 - Opening Roster & Season Readiness
+Alpha 1.8.1 - Executive Reports
 
 ## Current Goal
 
-Let the GM resolve final roster, camp, prospect, owner, staff, and league-readiness tasks before Opening Night without adding full game simulation.
+Archive permanent front office and end-of-season executive reports without adding save/load, standings, playoffs, or game simulation.
 
 ## Why Relationship Engine Was Next
 

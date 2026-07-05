@@ -29,6 +29,7 @@ var trainingCampTests = new TrainingCampTests();
 var pendingGmActionTests = new PendingGmActionTests();
 var prospectDecisionTests = new ProspectDecisionTests();
 var seasonReadinessTests = new SeasonReadinessTests();
+var executiveReportTests = new ExecutiveReportTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -369,6 +370,20 @@ runner.Run("season readiness begin is blocked when not ready", seasonReadinessTe
 runner.Run("season readiness begin is enabled when ready", seasonReadinessTests.BeginSeasonIsEnabledWhenReady);
 runner.Run("AlphaDesktop exposes season readiness", seasonReadinessTests.AlphaDesktopExposesSeasonReadinessSurface);
 runner.Run("season readiness has no Godot save game simulation standings or playoffs", seasonReadinessTests.SeasonReadinessHasNoGodotSaveOrGameSimulationDependency);
+runner.Run("executive reports readiness report generated", executiveReportTests.ReadinessReportGenerated);
+runner.Run("executive reports season review generated", executiveReportTests.SeasonReviewGenerated);
+runner.Run("executive reports owner review generated", executiveReportTests.OwnerReviewGenerated);
+runner.Run("executive reports coach review generated", executiveReportTests.CoachReviewGenerated);
+runner.Run("executive reports scout review generated", executiveReportTests.ScoutReviewGenerated);
+runner.Run("executive reports medical summary generated", executiveReportTests.MedicalSummaryGenerated);
+runner.Run("executive reports development summary generated", executiveReportTests.DevelopmentSummaryGenerated);
+runner.Run("executive reports roster compliance included", executiveReportTests.RosterComplianceIncluded);
+runner.Run("executive reports organization health calculated", executiveReportTests.OrganizationHealthCalculated);
+runner.Run("executive reports previous season comparison works", executiveReportTests.PreviousSeasonComparisonWorks);
+runner.Run("executive reports stored permanently", executiveReportTests.ReportsStoredPermanently);
+runner.Run("executive reports archive retrieval works", executiveReportTests.ArchiveRetrievalWorks);
+runner.Run("executive reports begin season stores readiness report", executiveReportTests.BeginSeasonStoresReadinessReport);
+runner.Run("AlphaDesktop exposes executive reports", executiveReportTests.AlphaDesktopExposesExecutiveReports);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

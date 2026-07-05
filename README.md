@@ -36,6 +36,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha Desktop
 - Training Camp
 - Season Readiness
+- Executive Reports
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -44,6 +45,8 @@ Alpha 1.4 - Complete Draft Experience adds a playable draft loop. The player can
 Alpha 1.6 - Training Camp + Roster Cutdown v1 adds the first post-draft camp loop. After draft/offseason setup, the player can open camp, review returning players, drafted prospects, recruits, and AHL-style invite sources, generate staff evaluations, make keep/cut/assign/return decisions, and complete camp with RuleEngine roster validation.
 
 Alpha 1.8 - Opening Roster & Season Readiness adds the Opening Night gate. The desktop now shows roster compliance, unresolved GM decisions, owner/coach/scout reviews, staff recommendations, and a checklist. Begin Season stays blocked until the roster, camp, prospect, and pending-action requirements are resolved by the player.
+
+Alpha 1.8.1 - Executive Reports adds permanent in-memory career reports for each season. Front Office Readiness is archived when Opening Night requirements are complete, and End of Season Executive Review is archived after the SeasonEngine marks a season completed. Reports include owner, coach, scout, development, medical, roster compliance, organization health, progress, and executive summary sections without adding game simulation, standings, playoffs, or save/load.
 
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 
@@ -63,7 +66,7 @@ Run the basic desktop UI:
 dotnet run --project client/AlphaDesktop
 ```
 
-The desktop playtest harness starts with GM creation and draft preparation, then unlocks training camp after draft/offseason setup and Season Readiness before Opening Night. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
+The desktop playtest harness starts with GM creation and draft preparation, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, and Executive Reports for the career archive. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

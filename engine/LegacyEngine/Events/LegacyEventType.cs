@@ -43,6 +43,8 @@ public enum LegacyEventType
     OwnerOffseasonReview,
     CoachRosterReview,
     ScoutOffseasonReview,
+    FrontOfficeReadinessReportCreated,
+    EndOfSeasonExecutiveReviewCreated,
     TrainingCampOpened,
     TrainingCampEvaluationCreated,
     TrainingCampPlayerKept,

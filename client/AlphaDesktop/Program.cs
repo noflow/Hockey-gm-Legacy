@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.8.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -207,6 +207,7 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Prospect List");
         AddTab(tabs, "Training Camp");
         AddTab(tabs, "Season Readiness");
+        AddTab(tabs, "Executive Reports");
         AddTab(tabs, "Relationships");
 
         app.Children.Add(tabs);
@@ -227,7 +228,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 1.8 - Opening Roster & Season Readiness",
+            Text = "Hockey GM Legacy - Alpha 1.8.1 - Executive Reports",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -282,6 +283,8 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Complete Camp", CompleteTrainingCamp));
         buttonPanel.Children.Add(CreateButton("Reviews", GenerateSeasonReadinessReviews));
         buttonPanel.Children.Add(CreateButton("Begin Season", BeginSeason));
+        buttonPanel.Children.Add(CreateButton("Front Report", GenerateFrontOfficeReadinessReport));
+        buttonPanel.Children.Add(CreateButton("Season Review", GenerateEndOfSeasonExecutiveReview));
 
         panel.Children.Add(buttonPanel);
 
@@ -515,6 +518,10 @@ internal sealed class MainWindow : Window
 
     private void BeginSeason() => State.BeginSeason();
 
+    private void GenerateFrontOfficeReadinessReport() => State.GenerateFrontOfficeReadinessReport();
+
+    private void GenerateEndOfSeasonExecutiveReview() => State.GenerateEndOfSeasonExecutiveReview();
+
     private void MarkLatestInboxRead() => State.ManageLatestInboxMessage(InboxMessageAction.MarkRead);
 
     private void PinLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Pin);
@@ -545,6 +552,7 @@ internal sealed class MainWindow : Window
         _tabs["Prospect List"].Text = BuildProspectList();
         _tabs["Training Camp"].Text = BuildTrainingCamp();
         _tabs["Season Readiness"].Text = BuildSeasonReadiness();
+        _tabs["Executive Reports"].Text = BuildExecutiveReports();
         _tabs["Relationships"].Text = BuildRelationships();
         RefreshDraftModal();
     }
@@ -805,6 +813,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Draft status: {State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft"}");
         builder.AppendLine($"Training camp: {State.TrainingCampStatusText}");
         builder.AppendLine($"Season readiness: {State.SeasonReadinessReport.RosterStatus}");
+        builder.AppendLine($"Executive reports archived: {State.ScenarioSnapshot.ExecutiveReports.Reports.Count}");
         builder.AppendLine($"Pending GM actions: {State.OpenPendingActions.Count}");
         if (State.ScenarioSnapshot.DraftExperience is { } draftState)
         {
@@ -1568,6 +1577,61 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildExecutiveReports()
+    {
+        var archive = State.ScenarioSnapshot.ExecutiveReports;
+        var current = archive.CurrentSeason(State.ScenarioSnapshot.Season.Year);
+        var previous = archive.PreviousSeasons(State.ScenarioSnapshot.Season.Year);
+        var builder = new StringBuilder();
+        builder.AppendLine("Executive Reports");
+        builder.AppendLine("=================");
+        builder.AppendLine($"Current Season: {State.ScenarioSnapshot.Season.Year}");
+        builder.AppendLine($"Current Season Reports: {current.Count}");
+        builder.AppendLine($"Previous Season Reports: {previous.Count}");
+        builder.AppendLine();
+        builder.AppendLine("Views");
+        builder.AppendLine("- Current Season");
+        builder.AppendLine("- Previous Seasons");
+        builder.AppendLine("- Front Office Readiness");
+        builder.AppendLine("- End of Season Review");
+        builder.AppendLine();
+
+        if (archive.Reports.Count == 0)
+        {
+            builder.AppendLine("No executive reports have been archived yet.");
+            builder.AppendLine("Front Office Readiness is created when Opening Night requirements are complete. End of Season Review is created after the season is completed.");
+            return builder.ToString();
+        }
+
+        foreach (var report in archive.Reports.OrderByDescending(report => report.SeasonYear).ThenBy(report => report.Kind))
+        {
+            builder.AppendLine($"{report.SeasonYear} - {report.Title}");
+            builder.AppendLine($"  Type: {report.Kind}");
+            builder.AppendLine($"  Generated: {report.GeneratedAt:yyyy-MM-dd}");
+            builder.AppendLine($"  Organization: {report.OrganizationName}");
+            builder.AppendLine($"  League: {report.LeagueId}");
+            builder.AppendLine($"  Season: {report.SeasonId}");
+            builder.AppendLine($"  GM: {report.GeneralManagerName}");
+            builder.AppendLine($"  Owner: {report.OwnerName}");
+            builder.AppendLine($"  Organization Health: {report.OrganizationHealthPercent}%");
+            builder.AppendLine($"  Recommendation: {report.Recommendation}");
+            builder.AppendLine($"  Summary: {report.ExecutiveSummary}");
+            builder.AppendLine("  Sections:");
+            foreach (var section in report.Sections)
+            {
+                builder.AppendLine($"    {section.Title}");
+                foreach (var item in section.Items)
+                {
+                    builder.AppendLine($"      {item.Key}: {item.Value}");
+                }
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
     private string FindPersonName(string personId)
     {
         if (string.Equals(personId, State.Snapshot.Owner.OwnerId, StringComparison.Ordinal))
@@ -1589,6 +1653,7 @@ internal sealed class AlphaDesktopState
     private readonly PendingGmActionService _pendingActions = new();
     private readonly ProspectDecisionService _prospectDecisions = new();
     private readonly SeasonReadinessService _seasonReadiness = new();
+    private readonly ExecutiveReportService _executiveReports = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
@@ -1988,6 +2053,12 @@ internal sealed class AlphaDesktopState
     public void BeginSeason() =>
         ApplySeasonReadinessResult(_seasonReadiness.BeginSeason(_registry, ScenarioSnapshot));
 
+    public void GenerateFrontOfficeReadinessReport() =>
+        ApplyExecutiveReportResult(_executiveReports.GenerateFrontOfficeReadinessReport(_registry, ScenarioSnapshot));
+
+    public void GenerateEndOfSeasonExecutiveReview() =>
+        ApplyExecutiveReportResult(_executiveReports.GenerateEndOfSeasonExecutiveReview(_registry, ScenarioSnapshot));
+
     private void ApplyCampDecisionToNext(TrainingCampDecisionType decisionType, string emptyMessage)
     {
         var player = NextActionableCampPlayer();
@@ -2095,6 +2166,19 @@ internal sealed class AlphaDesktopState
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         InboxManager.AddRange(result.InboxItems);
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyExecutiveReportResult(ExecutiveReportGenerationResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            InboxManager.AddRange(result.InboxItems);
+        }
+
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
     }

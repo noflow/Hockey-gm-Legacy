@@ -95,16 +95,20 @@ public sealed class SeasonReadinessService
             SeasonReadiness = scenario.SeasonReadiness with { SeasonBegun = true }
         };
 
-        QueueEvent(registry, updated, LegacyEventType.OpeningRosterValidated, "Opening roster validated", "Opening roster passed readiness validation.");
-        QueueEvent(registry, updated, LegacyEventType.SeasonReady, "Season ready", "Organization is ready for opening night.");
-        QueueEvent(registry, updated, LegacyEventType.SeasonStarted, "Season started", "The regular season has begun.");
-        var inbox = new[]
-        {
-            Inbox(updated, LegacyEventType.OpeningRosterValidated, "Opening roster validated", "League office accepted the opening roster."),
-            Inbox(updated, LegacyEventType.SeasonReady, "Opening Night ready", "Organization Ready. The regular season may begin.")
-        };
+        var reportResult = new ExecutiveReportService().GenerateFrontOfficeReadinessReport(registry, updated);
+        var finalScenario = reportResult.Success ? reportResult.ScenarioSnapshot : updated;
 
-        return Result(true, updated, Evaluate(registry, updated), inbox, "Season begun. Organization is ready for opening night.");
+        QueueEvent(registry, finalScenario, LegacyEventType.OpeningRosterValidated, "Opening roster validated", "Opening roster passed readiness validation.");
+        QueueEvent(registry, finalScenario, LegacyEventType.SeasonReady, "Season ready", "Organization is ready for opening night.");
+        QueueEvent(registry, finalScenario, LegacyEventType.SeasonStarted, "Season started", "The regular season has begun.");
+        var inbox = new List<AlphaInboxItem>
+        {
+            Inbox(finalScenario, LegacyEventType.OpeningRosterValidated, "Opening roster validated", "League office accepted the opening roster."),
+            Inbox(finalScenario, LegacyEventType.SeasonReady, "Opening Night ready", "Organization Ready. The regular season may begin.")
+        };
+        inbox.AddRange(reportResult.InboxItems);
+
+        return Result(true, finalScenario, Evaluate(registry, finalScenario), inbox, "Season begun. Organization is ready for opening night.");
     }
 
     private static OpeningRosterReport BuildRosterReport(

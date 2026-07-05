@@ -44,6 +44,8 @@ public sealed class DailySimulationPipeline
         LegacyEventType.OwnerOffseasonReview,
         LegacyEventType.CoachRosterReview,
         LegacyEventType.ScoutOffseasonReview,
+        LegacyEventType.FrontOfficeReadinessReportCreated,
+        LegacyEventType.EndOfSeasonExecutiveReviewCreated,
         LegacyEventType.TrainingCampOpened,
         LegacyEventType.TrainingCampEvaluationCreated,
         LegacyEventType.TrainingCampPlayerKept,
