@@ -10,7 +10,7 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <BaseOutputPath>$(MSBuildProjectDirectory)\.alpha-desktop-bin\</BaseOutputPath>
+    <BaseOutputPath>$(MSBuildProjectDirectory)\.alpha-desktop-bin-alpha12\</BaseOutputPath>
   </PropertyGroup>
 
 </Project>

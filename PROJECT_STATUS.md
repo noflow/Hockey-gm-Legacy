@@ -41,14 +41,18 @@ The five foundation pillars remain:
 - Alpha 0.3 - Daily Simulation Pipeline
 - Alpha 0.4 - Console Playable Demo
 - Alpha 0.5 - Basic Desktop UI
+- Alpha 1.0 - New GM Scenario
+- Alpha 1.1 - GM Character Creation + First GM Actions
+- Inbox v2 - Organized GM Inbox
+- Alpha 1.2 - Inbox UX Refinement
 
 ## Current Milestone
 
-Alpha 0.6 - Next Engine Loop
+Alpha 1.3 - Next Playable GM Loop
 
 ## Current Goal
 
-Plan the next engine-only alpha loop.
+Expand first-week GM decisions and message handling without adding full game simulation.
 
 ## Why Relationship Engine Was Next
 
@@ -66,6 +70,6 @@ TBD
 
 ## Build Rule
 
-Do not build UI, Godot scenes, Trades, gameplay, schedule generation, save systems, or database persistence yet.
+Do not build Godot scenes, Trades, gameplay, schedule generation, save systems, or database persistence yet.
 
-Keep all work inside the standalone LegacyEngine and unit tests.
+Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

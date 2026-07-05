@@ -3,12 +3,15 @@ using LegacyEngine.Development;
 using LegacyEngine.Draft;
 using LegacyEngine.Events;
 using LegacyEngine.Injuries;
+using LegacyEngine.Organizations;
 using LegacyEngine.Owners;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
+using LegacyEngine.Seasons;
+using LegacyEngine.Staff;
 using LegacyEngine.World;
 
 namespace LegacyEngine.Integration;
@@ -25,6 +28,9 @@ public sealed record EngineRegistry(
     RelationshipEngine RelationshipEngine,
     OwnerEvaluator OwnerEvaluator,
     ScoutingReportGenerator ScoutingReportGenerator,
+    OrganizationEngine OrganizationEngine,
+    StaffEngine StaffEngine,
+    SeasonEngine SeasonEngine,
     Rulebook? Rulebook)
 {
     public static EngineRegistry Create(WorldEngine worldEngine, Rulebook? rulebook = null)
@@ -42,6 +48,9 @@ public sealed record EngineRegistry(
             RelationshipEngine: new RelationshipEngine(),
             OwnerEvaluator: new OwnerEvaluator(),
             ScoutingReportGenerator: new ScoutingReportGenerator(),
+            OrganizationEngine: new OrganizationEngine(eventEngine),
+            StaffEngine: new StaffEngine(eventEngine),
+            SeasonEngine: new SeasonEngine(eventEngine),
             Rulebook: rulebook);
     }
 }

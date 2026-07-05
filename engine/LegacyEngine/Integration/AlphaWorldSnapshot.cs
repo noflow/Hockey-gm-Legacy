@@ -1,12 +1,16 @@
 using LegacyEngine.Draft;
 using LegacyEngine.Development;
 using LegacyEngine.Injuries;
+using LegacyEngine.Contracts;
+using LegacyEngine.Organizations;
 using LegacyEngine.Owners;
 using LegacyEngine.People;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
 using LegacyEngine.Scouting;
+using LegacyEngine.Seasons;
+using LegacyEngine.Staff;
 using LegacyEngine.World;
 
 namespace LegacyEngine.Integration;
@@ -28,11 +32,21 @@ public sealed record AlphaWorldSnapshot(
     IReadOnlyList<PlayerDevelopmentProfile> DevelopmentProfiles,
     IReadOnlyList<Injury> Injuries)
 {
+    public Organization? Organization { get; init; }
+
+    public Season? Season { get; init; }
+
+    public IReadOnlyList<StaffMember> StaffMembers { get; init; } = Array.Empty<StaffMember>();
+
+    public IReadOnlyList<Contract> Contracts { get; init; } = Array.Empty<Contract>();
+
     public DateOnly CurrentDate => WorldState.CurrentDate.Value;
 
     public void Validate()
     {
         WorldState.Validate();
+        Organization?.Validate();
+        Season?.Validate();
         Owner.Validate();
         GeneralManager.Validate();
         Scout.Validate();
@@ -74,6 +88,16 @@ public sealed record AlphaWorldSnapshot(
         foreach (var injury in Injuries)
         {
             injury.Validate();
+        }
+
+        foreach (var staffMember in StaffMembers)
+        {
+            staffMember.Validate();
+        }
+
+        foreach (var contract in Contracts)
+        {
+            contract.Validate();
         }
     }
 }

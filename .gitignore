@@ -11,6 +11,9 @@ obj/
 .buildcheck/
 .alpha-bin/
 .alpha-desktop-bin/
+.alpha-desktop-bin-alpha10/
+.alpha-desktop-bin-alpha11/
+.alpha-desktop-bin-alpha12/
 
 # Python
 __pycache__/

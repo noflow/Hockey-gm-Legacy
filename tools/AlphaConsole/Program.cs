@@ -9,13 +9,16 @@ internal sealed class AlphaConsoleApp
     private readonly DailySimulationCoordinator _coordinator = new();
     private readonly EngineRegistry _registry;
     private AlphaWorldSnapshot _snapshot;
+    private NewGmScenarioSnapshot _scenarioSnapshot;
     private readonly List<AlphaInboxItem> _inbox = [];
 
     public AlphaConsoleApp()
     {
-        var alphaWorld = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
-        _registry = alphaWorld.Registry;
-        _snapshot = alphaWorld.Snapshot;
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        _registry = scenario.Registry;
+        _scenarioSnapshot = scenario.ScenarioSnapshot;
+        _snapshot = scenario.AlphaSnapshot;
+        _inbox.AddRange(scenario.FirstDayInbox);
     }
 
     public void Run()
@@ -103,11 +106,14 @@ internal sealed class AlphaConsoleApp
         if (!compact)
         {
             Console.WriteLine("Hockey GM Legacy - AlphaConsole");
+            Console.WriteLine("Alpha 1.0 - New GM Scenario");
             Console.WriteLine("Engine-only playtest harness. No UI, no Godot, no game simulation.");
         }
 
         Console.WriteLine($"World: {_snapshot.WorldState.WorldName}");
+        Console.WriteLine($"Club:  {_scenarioSnapshot.Organization.Name}");
         Console.WriteLine($"Date:  {_snapshot.CurrentDate:yyyy-MM-dd}");
+        Console.WriteLine($"Draft: {_scenarioSnapshot.DraftDate:yyyy-MM-dd} ({_scenarioSnapshot.DaysUntilDraft} days away)");
         Console.WriteLine("Type 'help' for commands.");
         Console.WriteLine();
     }
@@ -135,7 +141,10 @@ internal sealed class AlphaConsoleApp
     {
         WriteSection("Club Status");
         Console.WriteLine($"World: {_snapshot.WorldState.WorldName}");
+        Console.WriteLine($"Club: {_scenarioSnapshot.Organization.Name}");
         Console.WriteLine($"Date: {_snapshot.CurrentDate:yyyy-MM-dd}");
+        Console.WriteLine($"Season phase: {_scenarioSnapshot.Season.CurrentPhase}");
+        Console.WriteLine($"Draft date: {_scenarioSnapshot.DraftDate:yyyy-MM-dd} ({_scenarioSnapshot.DaysUntilDraft} days away)");
         Console.WriteLine($"People: {_snapshot.People.Count}");
         Console.WriteLine($"Recruits: {_snapshot.Recruits.Count}");
         Console.WriteLine($"Roster players: {_snapshot.Roster.Players.Count}");
@@ -143,6 +152,8 @@ internal sealed class AlphaConsoleApp
         Console.WriteLine($"Relationships: {_snapshot.Relationships.Count}");
         Console.WriteLine($"Development profiles: {_snapshot.DevelopmentProfiles.Count}");
         Console.WriteLine($"Active injuries: {_snapshot.Injuries.Count(injury => injury.IsActive)}");
+        Console.WriteLine($"Staff members: {_snapshot.StaffMembers.Count}");
+        Console.WriteLine($"Contract references: {_snapshot.Contracts.Count}");
         Console.WriteLine($"Inbox items: {_inbox.Count}");
         Console.WriteLine();
     }
@@ -211,6 +222,16 @@ internal sealed class AlphaConsoleApp
             Console.WriteLine($"  Role: {coachRole?.Title ?? "Coach"}");
         }
 
+        if (_snapshot.StaffMembers.Count > 0)
+        {
+            Console.WriteLine("Staff room:");
+            foreach (var member in _snapshot.StaffMembers.OrderBy(member => member.Department).ThenBy(member => member.CurrentRole))
+            {
+                Console.WriteLine($"  {FindPersonName(member.PersonId)} - {member.CurrentRole} - {member.EmploymentStatus}");
+                Console.WriteLine($"     Department: {member.Department}, experience {member.Profile.YearsExperience} years, contract {member.ContractId ?? "none"}");
+            }
+        }
+
         Console.WriteLine();
     }
 
@@ -232,6 +253,11 @@ internal sealed class AlphaConsoleApp
         {
             latestResult = _coordinator.AdvanceOneDay(_registry, _snapshot);
             _snapshot = latestResult.WorldSnapshot;
+            _scenarioSnapshot = _scenarioSnapshot with
+            {
+                AlphaSnapshot = _snapshot,
+                Season = _snapshot.Season ?? _scenarioSnapshot.Season
+            };
             totalProcessed += latestResult.ProcessedEventCount;
             newInboxItems.AddRange(latestResult.InboxItems);
             _inbox.AddRange(latestResult.InboxItems);

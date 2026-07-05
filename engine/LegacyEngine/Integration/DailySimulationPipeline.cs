@@ -3,6 +3,7 @@ using LegacyEngine.Events;
 using LegacyEngine.Injuries;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Relationships;
+using LegacyEngine.Seasons;
 using LegacyEngine.World;
 
 namespace LegacyEngine.Integration;
@@ -30,7 +31,8 @@ public sealed class DailySimulationPipeline
         LegacyEventType.PlayerBreakout,
         LegacyEventType.PlayerRegression,
         LegacyEventType.OwnerGoalSet,
-        LegacyEventType.BudgetApproved
+        LegacyEventType.BudgetApproved,
+        LegacyEventType.ScoutAssigned
     ];
 
     public AlphaSimulationResult RunOneDay(EngineRegistry registry, AlphaWorldSnapshot snapshot)
@@ -44,13 +46,22 @@ public sealed class DailySimulationPipeline
         var previousDate = snapshot.CurrentDate;
         var dailyResult = registry.WorldEngine.AdvanceOneDay();
         var currentDate = registry.WorldEngine.State.CurrentDate.Value;
+        var season = snapshot.Season is null
+            ? null
+            : registry.SeasonEngine.AdvanceTo(snapshot.Season, currentDate).Season;
+        if (season is not null)
+        {
+            registry.WorldEngine.SetPhase(ToWorldPhase(season.CurrentPhase));
+        }
+
         log.Add(Log(
             DailySimulationStep.AdvanceWorldClock,
             $"Advanced world clock from {previousDate:yyyy-MM-dd} to {currentDate:yyyy-MM-dd}.",
             new Dictionary<string, object?>
             {
                 ["previous_date"] = previousDate,
-                ["current_date"] = currentDate
+                ["current_date"] = currentDate,
+                ["season_phase"] = season?.CurrentPhase.ToString()
             }));
 
         var processedEvents = ResolveProcessedEvents(registry, dailyResult);
@@ -110,6 +121,7 @@ public sealed class DailySimulationPipeline
         var updatedSnapshot = snapshot with
         {
             WorldState = registry.WorldEngine.State,
+            Season = season,
             Relationships = relationships,
             DevelopmentProfiles = developmentProfiles,
             Injuries = injuries,
@@ -282,4 +294,15 @@ public sealed class DailySimulationPipeline
         IReadOnlyList<AlphaInboxItem> inboxItems,
         IReadOnlyList<DailySimulationLogEntry> logEntries) =>
         $"Advanced {snapshot.WorldState.WorldName} to {snapshot.CurrentDate:yyyy-MM-dd}; processed {dailyResult.ProcessedEventCount} event(s), created {inboxItems.Count} inbox item(s), and ran {logEntries.Count} pipeline step(s).";
+
+    private static WorldPhase ToWorldPhase(SeasonPhase seasonPhase) =>
+        seasonPhase switch
+        {
+            SeasonPhase.Preseason => WorldPhase.Preseason,
+            SeasonPhase.RegularSeason or SeasonPhase.TradeDeadline => WorldPhase.RegularSeason,
+            SeasonPhase.Playoffs or SeasonPhase.Championship => WorldPhase.Playoffs,
+            SeasonPhase.Draft => WorldPhase.Draft,
+            SeasonPhase.FreeAgency => WorldPhase.FreeAgency,
+            _ => WorldPhase.Offseason
+        };
 }

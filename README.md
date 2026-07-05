@@ -35,7 +35,11 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha Daily Simulation Pipeline
 - Alpha Desktop
 
-Alpha 0.5 - Basic Desktop UI adds a simple desktop wrapper around the alpha integration loop with dashboard, inbox, owner, staff, roster, recruits, scouting, draft board, and relationship tabs.
+Alpha 1.1 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
+
+Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
+
+Alpha 1.2 refines the desktop inbox into an email-style GM workspace with a category sidebar, message list, reading pane, row-level actions, and local filters.
 
 ## Alpha Console
 
@@ -50,6 +54,8 @@ Run the basic desktop UI:
 ```bash
 dotnet run --project client/AlphaDesktop
 ```
+
+The desktop playtest harness starts with Alpha 1.1 GM creation. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

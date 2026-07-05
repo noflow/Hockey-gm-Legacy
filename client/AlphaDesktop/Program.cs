@@ -1,8 +1,11 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using LegacyEngine.Integration;
+using LegacyEngine.People;
+using LegacyEngine.Scouting;
 
 namespace AlphaDesktop;
 
@@ -14,7 +17,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: {state.Snapshot.WorldState.WorldName} {state.Snapshot.CurrentDate:yyyy-MM-dd}");
+            Console.WriteLine($"AlphaDesktop smoke test: {state.Snapshot.WorldState.WorldName} {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -25,11 +28,31 @@ public static class Program
 
 internal sealed class MainWindow : Window
 {
-    private readonly AlphaDesktopState _state = AlphaDesktopState.Create();
+    private AlphaDesktopState? _state;
     private readonly TextBlock _dateText = new();
     private readonly TextBlock _summaryText = new();
     private readonly TextBlock _processedText = new();
     private readonly Dictionary<string, TextBox> _tabs = [];
+    private StackPanel? _inboxCategoryPanel;
+    private StackPanel? _inboxListPanel;
+    private Border? _inboxReader;
+    private CheckBox? _unreadOnlyFilter;
+    private CheckBox? _pinnedOnlyFilter;
+    private CheckBox? _importantOnlyFilter;
+    private ComboBox? _sortOrderFilter;
+    private InboxCategory _selectedInboxCategory = InboxCategory.All;
+    private string? _selectedInboxItemId;
+    private readonly TextBox _firstNameInput = new() { Text = "Jordan" };
+    private readonly TextBox _lastNameInput = new() { Text = "Hayes" };
+    private readonly TextBox _preferredNameInput = new() { Text = "Jordan" };
+    private readonly TextBox _ageInput = new() { Text = "39" };
+    private readonly TextBox _nationalityInput = new() { Text = "Canada" };
+    private readonly TextBox _birthplaceInput = new() { Text = "Swift Current, SK" };
+    private readonly TextBox _strengthsInput = new() { Text = "development planning, communication" };
+    private readonly TextBox _weaknessesInput = new() { Text = "limited draft history" };
+    private readonly ComboBox _genderInput = new() { ItemsSource = Enum.GetValues<Gender>(), SelectedItem = Gender.NonBinary };
+    private readonly ComboBox _backgroundInput = new() { ItemsSource = Enum.GetValues<GmBackground>(), SelectedItem = GmBackground.Operations };
+    private readonly ComboBox _styleInput = new() { ItemsSource = Enum.GetValues<GmStyle>(), SelectedItem = GmStyle.Balanced };
 
     public MainWindow()
     {
@@ -40,9 +63,117 @@ internal sealed class MainWindow : Window
         MinHeight = 620;
         Background = new SolidColorBrush(Color.FromRgb(245, 247, 250));
 
+        Content = BuildCreationLayout();
+    }
+
+    private UIElement BuildCreationLayout()
+    {
+        var root = new Grid { Margin = new Thickness(28) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        var title = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
+        title.Children.Add(new TextBlock
+        {
+            Text = "Create Your GM",
+            FontSize = 28,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64))
+        });
+        title.Children.Add(new TextBlock
+        {
+            Text = "Alpha 1.1 starts with your created GM taking over the Prairie Falcons two weeks before the draft.",
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
+            Margin = new Thickness(0, 6, 0, 0)
+        });
+        Grid.SetRow(title, 0);
+        root.Children.Add(title);
+
+        var form = new Grid();
+        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        for (var index = 0; index < 7; index++)
+        {
+            form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+
+        AddField(form, "First name", _firstNameInput, 0, 0);
+        AddField(form, "Last name", _lastNameInput, 0, 1);
+        AddField(form, "Preferred name", _preferredNameInput, 0, 2);
+        AddField(form, "Gender", _genderInput, 1, 0);
+        AddField(form, "Age", _ageInput, 1, 1);
+        AddField(form, "Nationality", _nationalityInput, 1, 2);
+        AddField(form, "Birthplace", _birthplaceInput, 2, 0);
+        AddField(form, "Background", _backgroundInput, 2, 1);
+        AddField(form, "GM style", _styleInput, 2, 2);
+        AddField(form, "Strengths", _strengthsInput, 3, 0, 2);
+        AddField(form, "Weaknesses", _weaknessesInput, 3, 2);
+
+        var button = CreateButton("Start Career", StartCareer);
+        button.HorizontalAlignment = HorizontalAlignment.Left;
+        button.Margin = new Thickness(0, 24, 0, 0);
+        Grid.SetRow(button, 5);
+        Grid.SetColumn(button, 0);
+        form.Children.Add(button);
+
+        Grid.SetRow(form, 1);
+        root.Children.Add(form);
+        return root;
+    }
+
+    private static void AddField(Grid grid, string label, Control input, int row, int column, int columnSpan = 1)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 14) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = label,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+
+        input.MinHeight = 32;
+        input.Margin = new Thickness(0);
+        panel.Children.Add(input);
+
+        Grid.SetRow(panel, row);
+        Grid.SetColumn(panel, column);
+        Grid.SetColumnSpan(panel, columnSpan);
+        grid.Children.Add(panel);
+    }
+
+    private void StartCareer()
+    {
+        if (!int.TryParse(_ageInput.Text.Trim(), out var age))
+        {
+            MessageBox.Show("Please enter a valid age.", "GM Creation", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var settings = new GmProfileCreationSettings(
+            FirstName: _firstNameInput.Text.Trim(),
+            LastName: _lastNameInput.Text.Trim(),
+            PreferredName: _preferredNameInput.Text.Trim(),
+            Gender: (Gender)(_genderInput.SelectedItem ?? Gender.Unknown),
+            BirthDate: null,
+            Age: age,
+            Nationality: _nationalityInput.Text.Trim(),
+            Birthplace: _birthplaceInput.Text.Trim(),
+            Background: (GmBackground)(_backgroundInput.SelectedItem ?? GmBackground.Operations),
+            Style: (GmStyle)(_styleInput.SelectedItem ?? GmStyle.Balanced),
+            Strengths: SplitList(_strengthsInput.Text),
+            Weaknesses: SplitList(_weaknessesInput.Text));
+
+        _state = AlphaDesktopState.Create(settings);
         Content = BuildLayout();
         RefreshAll();
     }
+
+    private static IReadOnlyList<string> SplitList(string text) =>
+        text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(item => item.Length > 0)
+            .ToArray();
 
     private UIElement BuildLayout()
     {
@@ -59,7 +190,7 @@ internal sealed class MainWindow : Window
         };
 
         AddTab(tabs, "Dashboard");
-        AddTab(tabs, "Inbox");
+        AddInboxTab(tabs);
         AddTab(tabs, "Owner");
         AddTab(tabs, "Staff");
         AddTab(tabs, "Roster");
@@ -87,7 +218,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 0.5",
+            Text = "Hockey GM Legacy - Alpha 1.0 - New GM Scenario",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -118,6 +249,10 @@ internal sealed class MainWindow : Window
 
         buttonPanel.Children.Add(CreateButton("Advance Day", () => Advance(1)));
         buttonPanel.Children.Add(CreateButton("Advance 7 Days", () => Advance(7)));
+        buttonPanel.Children.Add(CreateButton("Board Up", MoveDraftBoardPlayerUp));
+        buttonPanel.Children.Add(CreateButton("Board Down", MoveDraftBoardPlayerDown));
+        buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
+        buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
 
         Grid.SetColumn(buttonPanel, 1);
         panel.Children.Add(buttonPanel);
@@ -168,17 +303,148 @@ internal sealed class MainWindow : Window
         });
     }
 
-    private void Advance(int days) => _state.Advance(days);
+    private void AddInboxTab(TabControl tabs)
+    {
+        tabs.Items.Add(new TabItem
+        {
+            Header = "Inbox",
+            Content = BuildInboxLayout()
+        });
+    }
+
+    private UIElement BuildInboxLayout()
+    {
+        var root = new Grid { Background = Brushes.White };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        _inboxCategoryPanel = new StackPanel
+        {
+            Background = new SolidColorBrush(Color.FromRgb(239, 243, 248)),
+            Margin = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        Grid.SetColumn(_inboxCategoryPanel, 0);
+        root.Children.Add(_inboxCategoryPanel);
+
+        var right = new Grid();
+        right.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        right.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+        var filters = BuildInboxFilters();
+        Grid.SetRow(filters, 0);
+        right.Children.Add(filters);
+
+        var content = new Grid();
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.15, GridUnitType.Star) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var listScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            BorderThickness = new Thickness(0)
+        };
+        _inboxListPanel = new StackPanel();
+        listScroll.Content = _inboxListPanel;
+        Grid.SetColumn(listScroll, 0);
+        content.Children.Add(listScroll);
+
+        _inboxReader = new Border
+        {
+            BorderBrush = new SolidColorBrush(Color.FromRgb(218, 226, 235)),
+            BorderThickness = new Thickness(1, 0, 0, 0),
+            Background = new SolidColorBrush(Color.FromRgb(250, 252, 254))
+        };
+        Grid.SetColumn(_inboxReader, 1);
+        content.Children.Add(_inboxReader);
+
+        Grid.SetRow(content, 1);
+        right.Children.Add(content);
+
+        Grid.SetColumn(right, 1);
+        root.Children.Add(right);
+        return root;
+    }
+
+    private UIElement BuildInboxFilters()
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(14, 10, 14, 10),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        _unreadOnlyFilter = CreateFilterBox("Unread only");
+        _pinnedOnlyFilter = CreateFilterBox("Pinned only");
+        _importantOnlyFilter = CreateFilterBox("Important only");
+
+        panel.Children.Add(_unreadOnlyFilter);
+        panel.Children.Add(_pinnedOnlyFilter);
+        panel.Children.Add(_importantOnlyFilter);
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Sort",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(16, 5, 6, 0)
+        });
+
+        _sortOrderFilter = new ComboBox
+        {
+            Width = 120,
+            ItemsSource = new[] { "Newest first", "Oldest first" },
+            SelectedIndex = 0
+        };
+        _sortOrderFilter.SelectionChanged += (_, _) => RefreshInboxPanels();
+        panel.Children.Add(_sortOrderFilter);
+
+        return panel;
+    }
+
+    private CheckBox CreateFilterBox(string text)
+    {
+        var box = new CheckBox
+        {
+            Content = text,
+            Margin = new Thickness(0, 0, 14, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        box.Checked += (_, _) => RefreshInboxPanels();
+        box.Unchecked += (_, _) => RefreshInboxPanels();
+        return box;
+    }
+
+    private AlphaDesktopState State => _state ?? throw new InvalidOperationException("Career has not started.");
+
+    private void Advance(int days) => State.Advance(days);
+
+    private void MoveDraftBoardPlayerUp() => State.MoveDraftBoardPlayer(direction: -1);
+
+    private void MoveDraftBoardPlayerDown() => State.MoveDraftBoardPlayer(direction: 1);
+
+    private void AssignScoutFocus() => State.AssignScoutFocus();
+
+    private void MakeRecruitingOffer() => State.MakeRecruitingOffer();
+
+    private void MarkLatestInboxRead() => State.ManageLatestInboxMessage(InboxMessageAction.MarkRead);
+
+    private void PinLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Pin);
+
+    private void ArchiveLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Archive);
+
+    private void DeleteLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Delete);
 
     private void RefreshAll()
     {
-        var snapshot = _state.Snapshot;
+        var snapshot = State.Snapshot;
         _dateText.Text = $"Current date: {snapshot.CurrentDate:yyyy-MM-dd}";
-        _summaryText.Text = _state.LatestSummary;
-        _processedText.Text = $"Last processed events: {_state.LastProcessedEventCount} | Inbox items: {_state.Inbox.Count}";
+        _summaryText.Text = State.LatestSummary;
+        _processedText.Text = $"Last processed events: {State.LastProcessedEventCount} | Inbox items: {State.Inbox.Count}";
 
         _tabs["Dashboard"].Text = BuildDashboard();
-        _tabs["Inbox"].Text = BuildInbox();
+        RefreshInboxPanels();
         _tabs["Owner"].Text = BuildOwner();
         _tabs["Staff"].Text = BuildStaff();
         _tabs["Roster"].Text = BuildRoster();
@@ -190,12 +456,15 @@ internal sealed class MainWindow : Window
 
     private string BuildDashboard()
     {
-        var snapshot = _state.Snapshot;
+        var snapshot = State.Snapshot;
         var builder = new StringBuilder();
         builder.AppendLine("Dashboard");
         builder.AppendLine("=========");
         builder.AppendLine($"World: {snapshot.WorldState.WorldName}");
+        builder.AppendLine($"Organization: {snapshot.Organization?.Name ?? snapshot.OrganizationId}");
         builder.AppendLine($"Date: {snapshot.CurrentDate:yyyy-MM-dd}");
+        builder.AppendLine($"Season phase: {snapshot.Season?.CurrentPhase.ToString() ?? snapshot.WorldState.CurrentPhase.ToString()}");
+        builder.AppendLine($"Draft date: {State.ScenarioSnapshot.DraftDate:yyyy-MM-dd} ({State.ScenarioSnapshot.DaysUntilDraft} days away)");
         builder.AppendLine($"Owner: {snapshot.Owner.Name}");
         builder.AppendLine($"GM: {snapshot.GeneralManager.Identity.DisplayName}");
         builder.AppendLine($"Scout: {snapshot.Scout.Name}");
@@ -209,44 +478,365 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Relationships: {snapshot.Relationships.Count}");
         builder.AppendLine($"Development profiles: {snapshot.DevelopmentProfiles.Count}");
         builder.AppendLine($"Active injuries: {snapshot.Injuries.Count(injury => injury.IsActive)}");
+        builder.AppendLine($"Staff members: {snapshot.StaffMembers.Count}");
+        builder.AppendLine($"Contract references: {snapshot.Contracts.Count}");
         builder.AppendLine();
         builder.AppendLine("Latest Summary");
-        builder.AppendLine(_state.LatestSummary);
+        builder.AppendLine(State.LatestSummary);
         return builder.ToString();
     }
 
-    private string BuildInbox()
+    private void RefreshInboxPanels()
     {
-        if (_state.Inbox.Count == 0)
+        if (_inboxCategoryPanel is null || _inboxListPanel is null || _inboxReader is null || _state is null)
         {
-            return "Inbox\n=====\nNo inbox items yet. Advance a day to process alpha events.";
+            return;
         }
 
-        var builder = new StringBuilder();
-        builder.AppendLine("Inbox");
-        builder.AppendLine("=====");
-        foreach (var item in _state.Inbox.OrderByDescending(item => item.Date))
+        RefreshInboxCategorySidebar();
+        var messages = FilterInboxMessages();
+        _inboxListPanel.Children.Clear();
+
+        if (messages.Count == 0)
         {
-            builder.AppendLine($"[{item.Date:yyyy-MM-dd}] {item.Title} ({item.EventType}, {item.Severity})");
-            builder.AppendLine($"  {item.Summary}");
-            if (!string.IsNullOrWhiteSpace(item.PrimaryPersonId))
+            _inboxListPanel.Children.Add(new TextBlock
             {
-                builder.AppendLine($"  Person: {FindPersonName(item.PrimaryPersonId)}");
-            }
-
-            builder.AppendLine();
+                Text = "No visible messages in this category.",
+                Margin = new Thickness(18),
+                Foreground = new SolidColorBrush(Color.FromRgb(92, 106, 122))
+            });
+            _selectedInboxItemId = null;
+            RenderInboxReader(null);
+            return;
         }
 
-        return builder.ToString();
+        if (_selectedInboxItemId is null || messages.All(message => message.InboxItemId != _selectedInboxItemId))
+        {
+            _selectedInboxItemId = messages[0].InboxItemId;
+        }
+
+        foreach (var message in messages)
+        {
+            _inboxListPanel.Children.Add(BuildInboxRow(message));
+        }
+
+        RenderInboxReader(messages.SingleOrDefault(message => message.InboxItemId == _selectedInboxItemId));
     }
+
+    private void RefreshInboxCategorySidebar()
+    {
+        if (_inboxCategoryPanel is null)
+        {
+            return;
+        }
+
+        _inboxCategoryPanel.Children.Clear();
+        _inboxCategoryPanel.Children.Add(new TextBlock
+        {
+            Text = "Inbox",
+            FontSize = 18,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(14, 14, 14, 10),
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64))
+        });
+
+        var counts = State.InboxManager.CountsByCategory();
+        foreach (var category in Enum.GetValues<InboxCategory>())
+        {
+            var count = counts.TryGetValue(category, out var value) ? value : 0;
+            var button = new Button
+            {
+                Content = $"{DisplayCategory(category)}  {count}",
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(8, 2, 8, 2),
+                Padding = new Thickness(10, 8, 10, 8),
+                FontWeight = category == _selectedInboxCategory ? FontWeights.SemiBold : FontWeights.Normal,
+                Background = category == _selectedInboxCategory
+                    ? new SolidColorBrush(Color.FromRgb(215, 228, 243))
+                    : Brushes.Transparent,
+                BorderThickness = new Thickness(0)
+            };
+            button.Click += (_, _) =>
+            {
+                _selectedInboxCategory = category;
+                _selectedInboxItemId = null;
+                RefreshInboxPanels();
+            };
+            _inboxCategoryPanel.Children.Add(button);
+        }
+    }
+
+    private IReadOnlyList<InboxMessage> FilterInboxMessages()
+    {
+        var messages = State.InboxManager.Query(new InboxFilter(
+            _selectedInboxCategory,
+            UnreadOnly: _unreadOnlyFilter?.IsChecked == true,
+            ImportantOnly: _importantOnlyFilter?.IsChecked == true));
+
+        if (_pinnedOnlyFilter?.IsChecked == true)
+        {
+            messages = messages.Where(message => message.IsPinned).ToArray();
+        }
+
+        messages = _sortOrderFilter?.SelectedIndex == 1
+            ? messages.OrderBy(message => message.Item.Date).ThenBy(message => message.InboxItemId, StringComparer.Ordinal).ToArray()
+            : messages.OrderByDescending(message => message.Item.Date).ThenBy(message => message.InboxItemId, StringComparer.Ordinal).ToArray();
+
+        return messages;
+    }
+
+    private UIElement BuildInboxRow(InboxMessage message)
+    {
+        var isSelected = message.InboxItemId == _selectedInboxItemId;
+        var row = new Border
+        {
+            BorderBrush = new SolidColorBrush(Color.FromRgb(228, 234, 241)),
+            BorderThickness = new Thickness(0, 0, 0, 1),
+            Background = isSelected
+                ? new SolidColorBrush(Color.FromRgb(232, 240, 249))
+                : Brushes.White,
+            Padding = new Thickness(12, 10, 8, 10),
+            Cursor = Cursors.Hand
+        };
+        row.MouseEnter += (_, _) =>
+        {
+            if (message.InboxItemId != _selectedInboxItemId)
+            {
+                row.Background = new SolidColorBrush(Color.FromRgb(246, 249, 253));
+            }
+        };
+        row.MouseLeave += (_, _) =>
+        {
+            row.Background = message.InboxItemId == _selectedInboxItemId
+                ? new SolidColorBrush(Color.FromRgb(232, 240, 249))
+                : Brushes.White;
+        };
+        row.MouseLeftButtonUp += (_, _) =>
+        {
+            _selectedInboxItemId = message.InboxItemId;
+            RefreshInboxPanels();
+        };
+
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(7) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var priority = new Border
+        {
+            Width = 5,
+            CornerRadius = new CornerRadius(3),
+            Background = PriorityBrush(message),
+            Margin = new Thickness(0, 2, 8, 2)
+        };
+        Grid.SetColumn(priority, 0);
+        grid.Children.Add(priority);
+
+        var textPanel = new StackPanel();
+        var topLine = new StackPanel { Orientation = Orientation.Horizontal };
+        topLine.Children.Add(new TextBlock
+        {
+            Text = SenderFor(message),
+            FontWeight = message.IsUnread ? FontWeights.Bold : FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 8, 0)
+        });
+        topLine.Children.Add(new TextBlock
+        {
+            Text = DisplayCategory(message.Category),
+            Foreground = new SolidColorBrush(Color.FromRgb(84, 99, 116)),
+            Margin = new Thickness(0, 0, 8, 0)
+        });
+        topLine.Children.Add(new TextBlock
+        {
+            Text = message.Item.Date.ToString("MMM d"),
+            Foreground = new SolidColorBrush(Color.FromRgb(84, 99, 116))
+        });
+        textPanel.Children.Add(topLine);
+
+        textPanel.Children.Add(new TextBlock
+        {
+            Text = $"{(message.IsPinned ? "PIN  " : string.Empty)}{(message.IsUnread ? "Unread  " : string.Empty)}{message.Item.Title}",
+            FontWeight = message.IsUnread ? FontWeights.Bold : FontWeights.Normal,
+            Margin = new Thickness(0, 3, 0, 2)
+        });
+        textPanel.Children.Add(new TextBlock
+        {
+            Text = Preview(message.Item.Summary),
+            Foreground = new SolidColorBrush(Color.FromRgb(72, 86, 101)),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+
+        Grid.SetColumn(textPanel, 1);
+        grid.Children.Add(textPanel);
+
+        var actions = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(10, 0, 0, 0)
+        };
+        actions.Children.Add(CreateSmallInboxButton(message.IsUnread ? "Read" : "Unread", () => ApplyInboxAction(message, message.IsUnread ? InboxMessageAction.MarkRead : InboxMessageAction.MarkUnread)));
+        actions.Children.Add(CreateSmallInboxButton(message.IsPinned ? "Unpin" : "Pin", () => ApplyInboxAction(message, message.IsPinned ? InboxMessageAction.Unpin : InboxMessageAction.Pin)));
+        actions.Children.Add(CreateSmallInboxButton("Archive", () => ApplyInboxAction(message, InboxMessageAction.Archive)));
+        actions.Children.Add(CreateSmallInboxButton("Delete", () => ApplyInboxAction(message, InboxMessageAction.Delete)));
+        Grid.SetColumn(actions, 2);
+        grid.Children.Add(actions);
+
+        row.Child = grid;
+        return row;
+    }
+
+    private void RenderInboxReader(InboxMessage? message)
+    {
+        if (_inboxReader is null)
+        {
+            return;
+        }
+
+        if (message is null)
+        {
+            _inboxReader.Child = new TextBlock
+            {
+                Text = "Select a message to read.",
+                Margin = new Thickness(18),
+                Foreground = new SolidColorBrush(Color.FromRgb(92, 106, 122))
+            };
+            return;
+        }
+
+        var panel = new StackPanel { Margin = new Thickness(18) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = message.Item.Title,
+            FontSize = 20,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"From: {SenderFor(message)}",
+            Margin = new Thickness(0, 12, 0, 0)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Date: {message.Item.Date:yyyy-MM-dd HH:mm}",
+            Margin = new Thickness(0, 4, 0, 0)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Category: {DisplayCategory(message.Category)}",
+            Margin = new Thickness(0, 4, 0, 14)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = message.Item.Summary,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 14,
+            Margin = new Thickness(0, 0, 0, 18)
+        });
+
+        var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 16) };
+        actions.Children.Add(CreateSmallInboxButton(message.IsUnread ? "Mark Read" : "Mark Unread", () => ApplyInboxAction(message, message.IsUnread ? InboxMessageAction.MarkRead : InboxMessageAction.MarkUnread)));
+        actions.Children.Add(CreateSmallInboxButton(message.IsPinned ? "Unpin" : "Pin", () => ApplyInboxAction(message, message.IsPinned ? InboxMessageAction.Unpin : InboxMessageAction.Pin)));
+        actions.Children.Add(CreateSmallInboxButton("Archive", () => ApplyInboxAction(message, InboxMessageAction.Archive)));
+        actions.Children.Add(CreateSmallInboxButton("Delete", () => ApplyInboxAction(message, InboxMessageAction.Delete)));
+        panel.Children.Add(actions);
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Future Actions",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 8, 0, 8)
+        });
+        var future = new WrapPanel();
+        future.Children.Add(CreateDisabledActionButton("Reply"));
+        future.Children.Add(CreateDisabledActionButton("Forward"));
+        future.Children.Add(CreateDisabledActionButton("Schedule Meeting"));
+        future.Children.Add(CreateDisabledActionButton("Assign"));
+        panel.Children.Add(future);
+
+        _inboxReader.Child = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = panel
+        };
+    }
+
+    private Button CreateSmallInboxButton(string text, Action action)
+    {
+        var button = new Button
+        {
+            Content = text,
+            Padding = new Thickness(7, 4, 7, 4),
+            Margin = new Thickness(4, 0, 0, 0),
+            FontSize = 11,
+            MinWidth = 42
+        };
+        button.Click += (_, _) =>
+        {
+            action();
+            RefreshAll();
+        };
+        return button;
+    }
+
+    private static Button CreateDisabledActionButton(string text) =>
+        new()
+        {
+            Content = text,
+            IsEnabled = false,
+            Padding = new Thickness(8, 5, 8, 5),
+            Margin = new Thickness(0, 0, 6, 6)
+        };
+
+    private void ApplyInboxAction(InboxMessage message, InboxMessageAction action)
+    {
+        State.ManageInboxMessage(message.InboxItemId, action);
+        if (action is InboxMessageAction.Archive or InboxMessageAction.Delete)
+        {
+            _selectedInboxItemId = null;
+        }
+    }
+
+    private static string DisplayCategory(InboxCategory category) =>
+        category == InboxCategory.PlayerDevelopment ? "Player Development" : category.ToString();
+
+    private string SenderFor(InboxMessage message) =>
+        message.Category switch
+        {
+            InboxCategory.Owner => State.Snapshot.Owner.Name,
+            InboxCategory.Staff => "Staff Office",
+            InboxCategory.Scouting => State.Snapshot.Scout.Name,
+            InboxCategory.Recruiting => "Recruiting Desk",
+            InboxCategory.PlayerDevelopment => "Development Staff",
+            InboxCategory.Medical => "Medical Staff",
+            InboxCategory.Contracts => "Contracts Desk",
+            InboxCategory.Draft => "Draft Desk",
+            InboxCategory.League => "League Office",
+            _ => message.Item.PrimaryPersonId is null ? "System" : FindPersonName(message.Item.PrimaryPersonId)
+        };
+
+    private static Brush PriorityBrush(InboxMessage message) =>
+        message.Item.Severity switch
+        {
+            LegacyEngine.Events.LegacyEventSeverity.Critical => new SolidColorBrush(Color.FromRgb(190, 42, 42)),
+            LegacyEngine.Events.LegacyEventSeverity.Warning => new SolidColorBrush(Color.FromRgb(219, 132, 31)),
+            _ when message.IsPinned => new SolidColorBrush(Color.FromRgb(51, 108, 172)),
+            _ => Brushes.Transparent
+        };
+
+    private static string Preview(string text) =>
+        text.Length <= 110 ? text : text[..107] + "...";
 
     private string BuildOwner()
     {
-        var owner = _state.Snapshot.Owner;
+        var owner = State.Snapshot.Owner;
         var builder = new StringBuilder();
         builder.AppendLine("Owner");
         builder.AppendLine("=====");
         builder.AppendLine($"{owner.Name} - {owner.Archetype}");
+        builder.AppendLine($"Organization: {State.ScenarioSnapshot.Organization.Name}");
         builder.AppendLine($"Autonomy: {owner.AutonomyLevel}");
         builder.AppendLine($"Trust: {owner.Trust}  Confidence: {owner.Confidence}  Patience: {owner.Patience}");
         builder.AppendLine($"Budget total: {owner.Budget.Total:C0}");
@@ -267,7 +857,7 @@ internal sealed class MainWindow : Window
 
     private string BuildStaff()
     {
-        var snapshot = _state.Snapshot;
+        var snapshot = State.Snapshot;
         var builder = new StringBuilder();
         builder.AppendLine("Staff");
         builder.AppendLine("=====");
@@ -277,12 +867,21 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"  Accuracy: {snapshot.Scout.Accuracy}  Diligence: {snapshot.Scout.Diligence}  Bias: {snapshot.Scout.ReportBias}");
         builder.AppendLine($"  Specialties: {string.Join(", ", snapshot.Scout.Specialties)}");
         builder.AppendLine($"Coach: {snapshot.CoachPerson?.Identity.DisplayName ?? "Not assigned"}");
+        builder.AppendLine();
+        builder.AppendLine("Staff Room");
+        foreach (var member in snapshot.StaffMembers.OrderBy(member => member.Department).ThenBy(member => member.CurrentRole))
+        {
+            builder.AppendLine($"{FindPersonName(member.PersonId)} - {member.CurrentRole} - {member.EmploymentStatus}");
+            builder.AppendLine($"  Department: {member.Department}  Experience: {member.Profile.YearsExperience} years  Reputation: {member.Profile.Reputation}");
+            builder.AppendLine($"  Contract: {member.ContractId ?? "reference not assigned"}");
+        }
+
         return builder.ToString();
     }
 
     private string BuildRoster()
     {
-        var snapshot = _state.Snapshot;
+        var snapshot = State.Snapshot;
         var builder = new StringBuilder();
         builder.AppendLine("Roster");
         builder.AppendLine("======");
@@ -301,7 +900,7 @@ internal sealed class MainWindow : Window
 
     private string BuildRecruits()
     {
-        var snapshot = _state.Snapshot;
+        var snapshot = State.Snapshot;
         var builder = new StringBuilder();
         builder.AppendLine("Recruits");
         builder.AppendLine("========");
@@ -321,7 +920,7 @@ internal sealed class MainWindow : Window
 
     private string BuildScouting()
     {
-        var snapshot = _state.Snapshot;
+        var snapshot = State.Snapshot;
         var builder = new StringBuilder();
         builder.AppendLine("Scouting");
         builder.AppendLine("========");
@@ -343,7 +942,7 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Draft Board");
         builder.AppendLine("===========");
-        foreach (var entry in _state.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank))
+        foreach (var entry in State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank))
         {
             builder.AppendLine($"#{entry.Rank} {FindPersonName(entry.ProspectPersonId)} - confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
             builder.AppendLine($"  {entry.ProjectionText}");
@@ -358,7 +957,7 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Relationships");
         builder.AppendLine("=============");
-        foreach (var relationship in _state.Snapshot.Relationships.OrderBy(item => item.RelationshipType.ToString(), StringComparer.Ordinal))
+        foreach (var relationship in State.Snapshot.Relationships.OrderBy(item => item.RelationshipType.ToString(), StringComparer.Ordinal))
         {
             builder.AppendLine($"{relationship.RelationshipType}: {FindPersonName(relationship.FromPersonId)} -> {FindPersonName(relationship.ToPersonId)}");
             builder.AppendLine($"  Trust {relationship.Trust}, Respect {relationship.Respect}, Confidence {relationship.Confidence}, Loyalty {relationship.Loyalty}");
@@ -371,12 +970,12 @@ internal sealed class MainWindow : Window
 
     private string FindPersonName(string personId)
     {
-        if (string.Equals(personId, _state.Snapshot.Owner.OwnerId, StringComparison.Ordinal))
+        if (string.Equals(personId, State.Snapshot.Owner.OwnerId, StringComparison.Ordinal))
         {
-            return _state.Snapshot.Owner.Name;
+            return State.Snapshot.Owner.Name;
         }
 
-        var person = _state.Snapshot.People.SingleOrDefault(person => person.PersonId == personId);
+        var person = State.Snapshot.People.SingleOrDefault(person => person.PersonId == personId);
         return person is null ? personId : person.Identity.DisplayName;
     }
 }
@@ -384,18 +983,24 @@ internal sealed class MainWindow : Window
 internal sealed class AlphaDesktopState
 {
     private readonly DailySimulationCoordinator _coordinator = new();
+    private readonly NewGmScenarioActions _actions = new();
     private readonly EngineRegistry _registry;
+    public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
-    private AlphaDesktopState(EngineRegistry registry, AlphaWorldSnapshot snapshot)
+    private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot)
     {
         _registry = registry;
-        Snapshot = snapshot;
-        LatestSummary = "Alpha world bootstrapped. Use Advance Day to begin.";
+        ScenarioSnapshot = scenarioSnapshot;
+        Snapshot = scenarioSnapshot.AlphaSnapshot;
+        InboxManager.AddRange(scenarioSnapshot.FirstDayInbox);
+        LatestSummary = scenarioSnapshot.ScenarioSummary;
     }
 
     public AlphaWorldSnapshot Snapshot { get; private set; }
 
-    public List<AlphaInboxItem> Inbox { get; } = [];
+    public InboxManager InboxManager { get; } = new();
+
+    public IReadOnlyList<InboxMessage> Inbox => InboxManager.Query(new InboxFilter());
 
     public string LatestSummary { get; private set; }
 
@@ -403,8 +1008,17 @@ internal sealed class AlphaDesktopState
 
     public static AlphaDesktopState Create()
     {
-        var alphaWorld = AlphaWorldBootstrapper.CreateAlphaWorld(new DateOnly(2026, 9, 1));
-        return new AlphaDesktopState(alphaWorld.Registry, alphaWorld.Snapshot);
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
+    }
+
+    public static AlphaDesktopState Create(GmProfileCreationSettings gmSettings)
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario(new NewGmScenarioSettings
+        {
+            GmCreationSettings = gmSettings
+        });
+        return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
     }
 
     public void Advance(int days)
@@ -422,16 +1036,81 @@ internal sealed class AlphaDesktopState
         {
             latest = _coordinator.AdvanceOneDay(_registry, Snapshot);
             Snapshot = latest.WorldSnapshot;
+            ScenarioSnapshot = ScenarioSnapshot with
+            {
+                AlphaSnapshot = Snapshot,
+                Season = Snapshot.Season ?? ScenarioSnapshot.Season
+            };
             totalProcessed += latest.ProcessedEventCount;
             newInboxItems.AddRange(latest.InboxItems);
         }
 
-        Inbox.AddRange(newInboxItems);
+        InboxManager.AddRange(newInboxItems);
         LastProcessedEventCount = totalProcessed;
         LatestSummary = latest is null
             ? "No simulation result was produced."
             : days == 1
                 ? latest.Summary
                 : $"Advanced {Snapshot.WorldState.WorldName} over {days} days; processed {totalProcessed} event(s), created {newInboxItems.Count} inbox item(s), and ended on {Snapshot.CurrentDate:yyyy-MM-dd}.";
+    }
+
+    public void MoveDraftBoardPlayer(int direction)
+    {
+        var ordered = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).ToArray();
+        var target = direction < 0 ? ordered.Skip(1).FirstOrDefault() : ordered.FirstOrDefault();
+        if (target is null)
+        {
+            LatestSummary = "No draft board entry is available to move.";
+            return;
+        }
+
+        ApplyAction(_actions.MoveDraftBoardPlayer(_registry, ScenarioSnapshot, target.ProspectPersonId, direction));
+    }
+
+    public void AssignScoutFocus()
+    {
+        var focusCycle = new[] { ScoutSpecialty.Character, ScoutSpecialty.Goalie, ScoutSpecialty.Amateur };
+        var focus = focusCycle[ScenarioSnapshot.ScoutingAssignments.Count % focusCycle.Length];
+        ApplyAction(_actions.AssignScoutFocus(_registry, ScenarioSnapshot, focus));
+    }
+
+    public void MakeRecruitingOffer()
+    {
+        var recruit = Snapshot.Recruits.FirstOrDefault(recruit => recruit.Status is not LegacyEngine.Recruiting.RecruitStatus.Offered and not LegacyEngine.Recruiting.RecruitStatus.Committed);
+        if (recruit is null)
+        {
+            LatestSummary = "No available recruit remains for a new offer.";
+            return;
+        }
+
+        ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruit.RecruitPersonId));
+    }
+
+    private void ApplyAction(GmActionResult result)
+    {
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = result.AlphaSnapshot;
+        InboxManager.AddRange(result.InboxItems);
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Summary;
+    }
+
+    public void ManageLatestInboxMessage(InboxMessageAction action)
+    {
+        var latest = Inbox.FirstOrDefault();
+        if (latest is null)
+        {
+            LatestSummary = "No visible inbox message is available for that action.";
+            return;
+        }
+
+        InboxManager.ApplyAction(latest.InboxItemId, action);
+        LatestSummary = $"{action} applied to: {latest.Item.Title}.";
+    }
+
+    public void ManageInboxMessage(string inboxItemId, InboxMessageAction action)
+    {
+        var updated = InboxManager.ApplyAction(inboxItemId, action);
+        LatestSummary = $"{action} applied to: {updated.Item.Title}.";
     }
 }
