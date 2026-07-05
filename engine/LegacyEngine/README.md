@@ -195,3 +195,76 @@ The first build target includes:
 - light EventEngine event creation for add, remove, injured reserve, and release moves
 
 Roster v1 tracks who is on an organization. It does not build lines, depth charts, contracts, injuries, trades, waivers, salary cap, or gameplay simulation.
+
+## Communication
+
+Milestone 015 adds the standalone Communication Engine v1 under `LegacyEngine.Communication`.
+
+The first build target includes:
+
+- communication messages with source, recipients, channel, and severity
+- communication channels (direct message, email, phone call, meeting, announcement, press release, rumor mill)
+- communication visibility (private, organization, league, public)
+- sending a message from one source to one or more recipients
+- creating messages from Event Engine events
+- rumors with reliability scores and derived confidence levels
+- organization knowledge items
+- conversion of important messages into inbox items (reusing the Integration `AlphaInboxItem`)
+- queries by recipient, organization, visibility, and date range
+
+Communication v1 turns events into messages, delivers them, tracks rumors and their confidence, and stores what an organization knows. It does not directly mutate People, Relationships, Owners, Rosters, or Rule Engine state, and it does not build UI, Godot scenes, or a save system.
+
+## Staff
+
+Milestone 017 adds the standalone Coaches & Staff Engine v1 under `LegacyEngine.Staff`.
+
+The first build target includes:
+
+- staff members composed of a profile, attributes, assignment history, and performance reviews
+- fourteen v1 staff roles across coaching, scouting, medical, equipment, and management departments
+- staff profile tracking person id, organization id, current role, department, years of experience, reputation, contract reference, and employment status
+- coaching, scouting, and medical attribute scores (0–100)
+- hire, assign role, reassign role, remove, evaluate, and record performance review behaviors
+- staff evaluations returning an overall score, strengths, weaknesses, recommendation, and development suggestions
+- light EventEngine event creation for StaffHired, StaffAssigned, StaffReassigned, StaffReleased, and StaffEvaluated
+- contract references by id only, and Person id references only
+
+Staff v1 is the organization staff system that future systems will build on. It does not implement firing logic, contract negotiation, roster interaction, relationship changes, practices, tactics, bench management, morale, development simulation, game simulation, UI, or Godot integration.
+
+## Organizations
+
+Milestone 018 adds the standalone Organization Engine v1 under `LegacyEngine.Organizations`.
+
+The first build target includes:
+
+- organizations with identity (name, city, region, country), type, and status
+- organization types: Team, League, GoverningBody, Agency, School, and MediaCompany
+- organization statuses: Active, Inactive, Folded, and Relocated
+- optional owner person id, league id, and roster id references
+- staff memberships (Person id references, optionally with a Staff role and department)
+- organization departments, optionally mapped to a Staff department category
+- budget references and facility references by id only
+- culture values (development focus, winning pressure, financial discipline, community focus, innovation, loyalty)
+- reputation values (local, league, national)
+- add/remove staff membership, add/remove department, and change status behaviors
+- light EventEngine event creation for OrganizationCreated, OrganizationStatusChanged, OrganizationStaffAdded, OrganizationStaffRemoved, OrganizationDepartmentAdded, and OrganizationDepartmentRemoved
+
+Organization v1 is the shared organization foundation that future systems will build on. It references owners, leagues, rosters, budgets, and facilities by id only, and does not implement a Facilities engine, Finance engine, schedule generation, standings, game simulation, save/load, UI, or Godot integration.
+
+## Seasons
+
+Milestone 019 adds the standalone Season Engine v1 under `LegacyEngine.Seasons`.
+
+The first build target includes:
+
+- seasons with a year, status (Upcoming, Active, Completed), current phase, and current date
+- season phases: Preseason, RegularSeason, TradeDeadline, Playoffs, Championship, Offseason, Recruiting, Draft, and FreeAgency
+- a season calendar of twelve milestones (training camp, season begins, trade deadline, playoffs, championship, awards, recruiting open/close, draft lottery, draft, and free agency open/close)
+- rulebook-driven timing: an optional `season_rules` section supplies the season start and each milestone's day offset, so league dates live in data (a neutral default is used only when no rules are supplied)
+- creating a season, advancing its date, detecting milestone dates, and changing phase automatically
+- a SeasonResult describing the previous/current date and phase, milestones reached, phase transitions, and created events
+- independent calendars per league, so multiple leagues advance on their own schedules
+- a WorldEngine query extension that answers "what season phase are we currently in?"
+- light EventEngine event creation for SeasonCreated, PhaseChanged, MilestoneReached, RecruitingOpened, RecruitingClosed, DraftOpened, DraftClosed, FreeAgencyOpened, and FreeAgencyClosed
+
+Season v1 controls time, league phases, and scheduled hockey events. It does not simulate games and does not implement schedule generation, standings, playoff brackets, awards voting, statistics, save/load, UI, or Godot integration.

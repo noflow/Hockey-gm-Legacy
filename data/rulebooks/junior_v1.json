@@ -50,5 +50,21 @@
   "budget_rules": {
     "owner_budget_enabled": true,
     "hard_salary_cap_enabled": false
+  },
+  "season_rules": {
+    "season_start_month": 9,
+    "season_start_day": 1,
+    "training_camp_offset_days": 0,
+    "season_begin_offset_days": 21,
+    "trade_deadline_offset_days": 140,
+    "playoffs_begin_offset_days": 210,
+    "championship_offset_days": 250,
+    "awards_offset_days": 258,
+    "recruiting_open_offset_days": 265,
+    "recruiting_close_offset_days": 290,
+    "draft_lottery_offset_days": 292,
+    "draft_offset_days": 300,
+    "free_agency_open_offset_days": 310,
+    "free_agency_close_offset_days": 330
   }
 }

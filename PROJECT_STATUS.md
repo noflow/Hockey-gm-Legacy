@@ -32,11 +32,15 @@ The five foundation pillars remain:
 - Milestone 013 - Player Development v1
 - Milestone 014 - Injury Engine v1
 - Alpha 0.1 - Integration Layer
+- Milestone 015 - Communication Engine v1
+- Milestone 016 - Human Intelligence System v1
+- Milestone 017 - Coaches & Staff Engine v1
+- Milestone 018 - Organization Engine v1
+- Milestone 019 - Season Engine v1
 - Alpha 0.2 - Command-Line Playtest Harness
 - Alpha 0.3 - Daily Simulation Pipeline
 - Alpha 0.4 - Console Playable Demo
 - Alpha 0.5 - Basic Desktop UI
-- Milestone 016 - Human Intelligence System v1
 
 ## Current Milestone
 

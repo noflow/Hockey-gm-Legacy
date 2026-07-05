@@ -30,6 +30,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("budget_rules")]
     public BudgetRules? BudgetRules { get; init; }
+
+    [JsonPropertyName("season_rules")]
+    public SeasonRules? SeasonRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -135,4 +138,52 @@ public sealed class BudgetRules
 
     [JsonPropertyName("hard_salary_cap_amount")]
     public decimal? HardSalaryCapAmount { get; init; }
+}
+
+// Optional season timing. When present, the Season engine derives its calendar from
+// these values instead of its neutral defaults, so league dates live in rulebook
+// data rather than in engine code. Offsets are whole days from the season start.
+public sealed class SeasonRules
+{
+    [JsonPropertyName("season_start_month")]
+    public int SeasonStartMonth { get; init; }
+
+    [JsonPropertyName("season_start_day")]
+    public int SeasonStartDay { get; init; }
+
+    [JsonPropertyName("training_camp_offset_days")]
+    public int TrainingCampOffsetDays { get; init; }
+
+    [JsonPropertyName("season_begin_offset_days")]
+    public int SeasonBeginOffsetDays { get; init; }
+
+    [JsonPropertyName("trade_deadline_offset_days")]
+    public int TradeDeadlineOffsetDays { get; init; }
+
+    [JsonPropertyName("playoffs_begin_offset_days")]
+    public int PlayoffsBeginOffsetDays { get; init; }
+
+    [JsonPropertyName("championship_offset_days")]
+    public int ChampionshipOffsetDays { get; init; }
+
+    [JsonPropertyName("awards_offset_days")]
+    public int AwardsOffsetDays { get; init; }
+
+    [JsonPropertyName("recruiting_open_offset_days")]
+    public int RecruitingOpenOffsetDays { get; init; }
+
+    [JsonPropertyName("recruiting_close_offset_days")]
+    public int RecruitingCloseOffsetDays { get; init; }
+
+    [JsonPropertyName("draft_lottery_offset_days")]
+    public int DraftLotteryOffsetDays { get; init; }
+
+    [JsonPropertyName("draft_offset_days")]
+    public int DraftOffsetDays { get; init; }
+
+    [JsonPropertyName("free_agency_open_offset_days")]
+    public int FreeAgencyOpenOffsetDays { get; init; }
+
+    [JsonPropertyName("free_agency_close_offset_days")]
+    public int FreeAgencyCloseOffsetDays { get; init; }
 }
