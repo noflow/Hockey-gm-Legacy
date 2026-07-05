@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -84,7 +84,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 1.6.1 starts with your created GM preparing for a live draft, then unlocks training camp.",
+            Text = "Alpha 2.0 starts with your created GM preparing for a live draft, then unlocks training camp and player dossiers.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -201,6 +201,7 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Scouting");
         AddTab(tabs, "Scouting Operations");
         AddTab(tabs, "Pending Actions");
+        AddTab(tabs, "Player Dossier");
         if (State.IsDraftUiEnabled)
         {
             AddTab(tabs, "Draft Board");
@@ -229,7 +230,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 1.9 - Staff & Scouting Operations",
+            Text = "Hockey GM Legacy - Alpha 2.0 - Player Dossier",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -277,6 +278,8 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Reassign Staff", ReassignStaffRole));
         buttonPanel.Children.Add(CreateButton("Release Staff", ReleaseStaff));
         buttonPanel.Children.Add(CreateButton("Hire Staff", HirePlaceholderStaff));
+        buttonPanel.Children.Add(CreateButton("View Dossier", ViewDossier));
+        buttonPanel.Children.Add(CreateButton("Dossier Note", AddDossierNote));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
         buttonPanel.Children.Add(CreateButton("Approve Pending", ApprovePendingAction));
         buttonPanel.Children.Add(CreateButton("Decline Pending", DeclinePendingAction));
@@ -491,6 +494,10 @@ internal sealed class MainWindow : Window
 
     private void HirePlaceholderStaff() => State.HirePlaceholderStaff();
 
+    private void ViewDossier() => State.ViewNextDossier();
+
+    private void AddDossierNote() => State.AddDossierNote();
+
     private void MakeRecruitingOffer() => State.MakeRecruitingOffer();
 
     private void StarTopProspect() => State.StarTopProspect();
@@ -565,6 +572,7 @@ internal sealed class MainWindow : Window
         _tabs["Scouting"].Text = BuildScouting();
         _tabs["Scouting Operations"].Text = BuildScoutingOperations();
         _tabs["Pending Actions"].Text = BuildPendingActions();
+        _tabs["Player Dossier"].Text = BuildPlayerDossier();
         if (_tabs.ContainsKey("Draft Board"))
         {
             _tabs["Draft Board"].Text = BuildDraftBoard();
@@ -1276,6 +1284,7 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"{FindPersonName(player.PersonId)} - {player.Position} - {player.Status}");
             builder.AppendLine($"  Health: {(injury is null ? "available" : $"{injury.Severity} {injury.InjuryType}, {injury.Status}")}");
             builder.AppendLine($"  Development: {(development is null ? "not tracked" : $"{development.Stage}, last updated {development.LastUpdated:yyyy-MM-dd}")}");
+            builder.AppendLine("  View Dossier button: opens overview, scouting, development, medical, contracts, relationships, and GM notes.");
             builder.AppendLine();
         }
 
@@ -1296,6 +1305,7 @@ internal sealed class MainWindow : Window
                 .Select(priority => $"{priority.Key} {priority.Value}");
             builder.AppendLine($"{FindPersonName(recruit.RecruitPersonId)} - {recruit.Status} - interest {recruit.GetInterest(snapshot.OrganizationId)}");
             builder.AppendLine($"  Priorities: {string.Join(", ", priorities)}");
+            builder.AppendLine("  View Dossier button: opens recruiting, scouting, facts, and GM notes.");
             builder.AppendLine();
         }
 
@@ -1316,6 +1326,7 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"#{entry.Rank} {FindPersonName(entry.ProspectPersonId)} - {entry.ScoutingConfidence?.ToString() ?? "Unknown"} confidence");
             builder.AppendLine($"  {entry.ProjectionText}");
+            builder.AppendLine("  View Dossier button: opens draft profile, scouting evidence, and GM notes.");
         }
 
         return builder.ToString();
@@ -1482,6 +1493,44 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  Projection: {entry.ProjectionText}");
             builder.AppendLine($"  Analytics: {(string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary)}");
             builder.AppendLine($"  GM Notes: {(string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes)}");
+            builder.AppendLine("  View Dossier button: opens player dossier without exposing true ratings.");
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildPlayerDossier()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Player Dossier");
+        builder.AppendLine("==============");
+        builder.AppendLine("Open dossiers from Roster, Recruits, Scouting, Draft Board, Prospect List, and Training Camp.");
+        builder.AppendLine("Use View Dossier to cycle to another player and Dossier Note to add a GM note.");
+        builder.AppendLine();
+
+        var dossier = State.CurrentDossier;
+        if (dossier is null)
+        {
+            builder.AppendLine("No player dossier is selected yet.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine($"{dossier.PlayerName} - age {dossier.Age} - {dossier.Position}");
+        builder.AppendLine($"Status: {dossier.Status}");
+        builder.AppendLine($"Team/Rights: {dossier.TeamOrRights}");
+        builder.AppendLine($"Source: {dossier.Source}");
+        builder.AppendLine();
+
+        foreach (var section in dossier.Sections)
+        {
+            builder.AppendLine(section.Title);
+            builder.AppendLine(new string('-', section.Title.Length));
+            foreach (var line in section.Lines)
+            {
+                builder.AppendLine($"  {line}");
+            }
+
             builder.AppendLine();
         }
 
@@ -1519,6 +1568,7 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  Confidence: {prospect.ScoutingConfidence?.ToString() ?? "Unknown"}");
             builder.AppendLine($"  GM notes: {(string.IsNullOrWhiteSpace(prospect.GmNotes) ? "none" : prospect.GmNotes)}");
             builder.AppendLine($"  Available actions: {string.Join(", ", State.AvailableProspectActions(prospect.ProspectPersonId))}");
+            builder.AppendLine("  View Dossier button: opens contract/rights, scouting, staff opinions, and GM notes.");
             builder.AppendLine();
         }
 
@@ -1580,6 +1630,7 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"{player.PlayerName} - {player.Position} - {player.Status}");
             builder.AppendLine($"  Invite: {player.InviteType}  Source: {player.AcquisitionSource}");
+            builder.AppendLine("  View Dossier button: opens camp evaluation, medical, development, and rights context.");
 
             var evaluation = camp.FindEvaluation(player.PersonId);
             if (evaluation is not null)
@@ -1745,8 +1796,10 @@ internal sealed class AlphaDesktopState
     private readonly SeasonReadinessService _seasonReadiness = new();
     private readonly ExecutiveReportService _executiveReports = new();
     private readonly ScoutingOperationsService _scoutingOperations = new();
+    private readonly PlayerDossierService _playerDossiers = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
+    private string? _selectedDossierPersonId;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot)
@@ -1754,6 +1807,7 @@ internal sealed class AlphaDesktopState
         _registry = registry;
         ScenarioSnapshot = scenarioSnapshot;
         Snapshot = scenarioSnapshot.AlphaSnapshot;
+        _selectedDossierPersonId = FirstDossierPersonId();
         InboxManager.AddRange(scenarioSnapshot.FirstDayInbox);
         LatestSummary = scenarioSnapshot.ScenarioSummary;
     }
@@ -1786,6 +1840,11 @@ internal sealed class AlphaDesktopState
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
 
     public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles => _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
+
+    public PlayerDossierView? CurrentDossier =>
+        _selectedDossierPersonId is null
+            ? null
+            : _playerDossiers.CreateDossier(ScenarioSnapshot, _selectedDossierPersonId);
 
     public string TrainingCampStatusText =>
         ScenarioSnapshot.TrainingCamp switch
@@ -1833,6 +1892,7 @@ internal sealed class AlphaDesktopState
             latest = scenarioResult.SimulationResult;
             ScenarioSnapshot = scenarioResult.ScenarioSnapshot;
             Snapshot = ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
             totalProcessed += latest.ProcessedEventCount;
             newInboxItems.AddRange(scenarioResult.InboxItems);
         }
@@ -1950,6 +2010,42 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyAction(_actions.MakeRecruitingOffer(_registry, ScenarioSnapshot, recruit.RecruitPersonId));
+    }
+
+    public void ViewNextDossier()
+    {
+        var ids = DossierPersonIds().ToArray();
+        if (ids.Length == 0)
+        {
+            LatestSummary = "No player or prospect is available for a dossier.";
+            _selectedDossierPersonId = null;
+            return;
+        }
+
+        var currentIndex = _selectedDossierPersonId is null
+            ? -1
+            : Array.FindIndex(ids, id => string.Equals(id, _selectedDossierPersonId, StringComparison.Ordinal));
+        _selectedDossierPersonId = ids[(currentIndex + 1 + ids.Length) % ids.Length];
+        var dossier = _playerDossiers.CreateDossier(ScenarioSnapshot, _selectedDossierPersonId);
+        LatestSummary = $"Opened dossier for {dossier.PlayerName}.";
+    }
+
+    public void AddDossierNote()
+    {
+        _selectedDossierPersonId ??= FirstDossierPersonId();
+        if (_selectedDossierPersonId is null)
+        {
+            LatestSummary = "No player or prospect is available for a dossier note.";
+            return;
+        }
+
+        var current = _playerDossiers.CreateDossier(ScenarioSnapshot, _selectedDossierPersonId);
+        var note = $"GM note added on {Snapshot.CurrentDate:yyyy-MM-dd}: review development path, rights status, and staff confidence before next decision.";
+        var result = _playerDossiers.AddOrUpdateGmNote(ScenarioSnapshot, current.PersonId, note);
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
     }
 
     public void ApprovePendingAction()
@@ -2279,6 +2375,7 @@ internal sealed class AlphaDesktopState
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.AlphaSnapshot;
+        EnsureSelectedDossierStillExists();
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
@@ -2288,6 +2385,7 @@ internal sealed class AlphaDesktopState
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        EnsureSelectedDossierStillExists();
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
@@ -2320,6 +2418,7 @@ internal sealed class AlphaDesktopState
         {
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
             InboxManager.AddRange(result.InboxItems);
         }
 
@@ -2331,6 +2430,7 @@ internal sealed class AlphaDesktopState
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        EnsureSelectedDossierStillExists();
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
@@ -2342,6 +2442,7 @@ internal sealed class AlphaDesktopState
         {
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
             InboxManager.AddRange(result.InboxItems);
         }
 
@@ -2355,6 +2456,7 @@ internal sealed class AlphaDesktopState
         {
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
             InboxManager.AddRange(result.InboxItems);
         }
 
@@ -2366,6 +2468,7 @@ internal sealed class AlphaDesktopState
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        EnsureSelectedDossierStillExists();
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
@@ -2377,6 +2480,7 @@ internal sealed class AlphaDesktopState
         {
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
             InboxManager.AddRange(result.InboxItems);
         }
 
@@ -2390,6 +2494,7 @@ internal sealed class AlphaDesktopState
         {
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
             InboxManager.AddRange(result.InboxItems);
         }
 
@@ -2419,6 +2524,26 @@ internal sealed class AlphaDesktopState
 
         StartDraft();
         return ScenarioSnapshot.DraftExperience is not null;
+    }
+
+    private string? FirstDossierPersonId() => DossierPersonIds().FirstOrDefault();
+
+    private IReadOnlyList<string> DossierPersonIds() =>
+        Snapshot.Roster.Players.Select(player => player.PersonId)
+            .Concat(Snapshot.Recruits.Select(recruit => recruit.RecruitPersonId))
+            .Concat(Snapshot.DraftBoard.Entries.Select(entry => entry.ProspectPersonId))
+            .Concat(ScenarioSnapshot.ProspectRights.Select(prospect => prospect.ProspectPersonId))
+            .Concat(ScenarioSnapshot.TrainingCamp?.Players.Select(player => player.PersonId) ?? Array.Empty<string>())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+    private void EnsureSelectedDossierStillExists()
+    {
+        var ids = DossierPersonIds();
+        if (_selectedDossierPersonId is null || !ids.Contains(_selectedDossierPersonId, StringComparer.Ordinal))
+        {
+            _selectedDossierPersonId = ids.FirstOrDefault();
+        }
     }
 
     public void ManageLatestInboxMessage(InboxMessageAction action)

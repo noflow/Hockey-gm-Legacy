@@ -477,7 +477,7 @@ public sealed class NewGmScenarioBootstrapper
                 var seed = seeds[index % seeds.Length];
                 return CreatePlayer(
                 $"person-recruit-{index + 1:000}",
-                index < seeds.Length ? seed.Item1 : $"{seed.Item1}{(index / seeds.Length) + 1}",
+                seed.Item1,
                 seed.Item2,
                 new DateOnly(2009, (index % 12) + 1, Math.Min(24, (index % 25) + 1)),
                 seed.Item3,

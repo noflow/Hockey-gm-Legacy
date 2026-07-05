@@ -53,14 +53,15 @@ The five foundation pillars remain:
 - Alpha 1.8 - Opening Roster & Season Readiness
 - Alpha 1.8.1 - Executive Reports
 - Alpha 1.9 - Staff & Scouting Operations v1
+- Alpha 2.0 - Player Dossier v1 + Name Cleanup
 
 ## Current Milestone
 
-Alpha 1.9 - Staff & Scouting Operations v1
+Alpha 2.0 - Player Dossier v1 + Name Cleanup
 
 ## Current Goal
 
-Give the GM day-to-day control over scouting assignments and basic staff operations without adding save/load, standings, playoffs, or game simulation.
+Give the GM a player-facing dossier that connects roster, recruiting, scouting, draft board, prospect, training camp, development, medical, contract/rights, relationships, staff opinions, and GM notes without exposing true hidden ratings.
 
 ## Why Relationship Engine Was Next
 
@@ -70,11 +71,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.0 - Opening Week Setup
+Alpha 2.1 - Opening Week Setup
 
 ## Next Milestones
 
-1. Alpha 2.0 - Opening Week Setup
+1. Alpha 2.1 - Opening Week Setup
 
 ## Build Rule
 

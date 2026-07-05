@@ -36,6 +36,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<ScoutingReport> CompletedScoutingReports { get; init; } = Array.Empty<ScoutingReport>();
 
+    public IReadOnlyDictionary<string, string> PlayerDossierNotes { get; init; } = new Dictionary<string, string>();
+
     public SeasonReadinessState SeasonReadiness { get; init; } = new();
 
     public ExecutiveReportArchive ExecutiveReports { get; init; } = ExecutiveReportArchive.Empty;
@@ -80,6 +82,19 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var report in CompletedScoutingReports)
         {
             report.Validate();
+        }
+
+        foreach (var note in PlayerDossierNotes)
+        {
+            if (string.IsNullOrWhiteSpace(note.Key))
+            {
+                throw new ArgumentException("Player dossier note person id is required.", nameof(PlayerDossierNotes));
+            }
+
+            if (note.Value is null)
+            {
+                throw new ArgumentException("Player dossier note cannot be null.", nameof(PlayerDossierNotes));
+            }
         }
 
         DraftExperience?.Validate();

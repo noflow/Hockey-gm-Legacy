@@ -31,6 +31,7 @@ var prospectDecisionTests = new ProspectDecisionTests();
 var seasonReadinessTests = new SeasonReadinessTests();
 var executiveReportTests = new ExecutiveReportTests();
 var scoutingOperationsTests = new ScoutingOperationsTests();
+var playerDossierIntegrationTests = new PlayerDossierIntegrationTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -399,6 +400,13 @@ runner.Run("scouting operations staff can be released", scoutingOperationsTests.
 runner.Run("scouting operations placeholder staff candidate can be hired", scoutingOperationsTests.PlaceholderStaffCandidateCanBeHired);
 runner.Run("AlphaDesktop exposes scout assignment UI", scoutingOperationsTests.AlphaDesktopExposesScoutAssignmentUi);
 runner.Run("scouting operations have no Godot save or game simulation dependency", scoutingOperationsTests.ScoutingOperationsHaveNoGodotSaveOrGameSimulationDependency);
+runner.Run("generated display names have no numeric suffixes", playerDossierIntegrationTests.GeneratedDisplayNamesHaveNoNumericSuffixes);
+runner.Run("dossier can be created for roster player", playerDossierIntegrationTests.DossierCanBeCreatedForRosterPlayer);
+runner.Run("dossier can be created for recruit", playerDossierIntegrationTests.DossierCanBeCreatedForRecruit);
+runner.Run("dossier can be created for draft prospect", playerDossierIntegrationTests.DossierCanBeCreatedForDraftProspect);
+runner.Run("dossier hides true ratings", playerDossierIntegrationTests.DossierHidesTrueRatings);
+runner.Run("GM note can be added to dossier", playerDossierIntegrationTests.GmNoteCanBeAdded);
+runner.Run("dossier sections populate when data exists", playerDossierIntegrationTests.ScoutingDevelopmentInjuryAndContractSectionsPopulateWhenDataExists);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
