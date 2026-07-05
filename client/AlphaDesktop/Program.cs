@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -84,7 +84,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.0 starts with your created GM preparing for a live draft, then unlocks training camp and player dossiers.",
+            Text = "Alpha 2.1 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, and player dossiers.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -230,7 +230,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.0 - Player Dossier",
+            Text = "Hockey GM Legacy - Alpha 2.1 - Staff Control",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -278,6 +278,11 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Reassign Staff", ReassignStaffRole));
         buttonPanel.Children.Add(CreateButton("Release Staff", ReleaseStaff));
         buttonPanel.Children.Add(CreateButton("Hire Staff", HirePlaceholderStaff));
+        buttonPanel.Children.Add(CreateButton("Candidates", GenerateStaffCandidates));
+        buttonPanel.Children.Add(CreateButton("Development Focus", SetDevelopmentCoachFocus));
+        buttonPanel.Children.Add(CreateButton("Medical Focus", SetMedicalStaffFocus));
+        buttonPanel.Children.Add(CreateButton("Scouting Focus", SetScoutingDepartmentFocus));
+        buttonPanel.Children.Add(CreateButton("Staff Evaluation", GenerateStaffEvaluation));
         buttonPanel.Children.Add(CreateButton("View Dossier", ViewDossier));
         buttonPanel.Children.Add(CreateButton("Dossier Note", AddDossierNote));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
@@ -493,6 +498,16 @@ internal sealed class MainWindow : Window
     private void ReleaseStaff() => State.ReleaseStaff();
 
     private void HirePlaceholderStaff() => State.HirePlaceholderStaff();
+
+    private void GenerateStaffCandidates() => State.GenerateStaffCandidates();
+
+    private void SetDevelopmentCoachFocus() => State.SetDevelopmentCoachFocus();
+
+    private void SetMedicalStaffFocus() => State.SetMedicalStaffFocus();
+
+    private void SetScoutingDepartmentFocus() => State.SetScoutingDepartmentFocus();
+
+    private void GenerateStaffEvaluation() => State.GenerateStaffEvaluation();
 
     private void ViewDossier() => State.ViewNextDossier();
 
@@ -1256,16 +1271,65 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"  Specialties: {string.Join(", ", snapshot.Scout.Specialties)}");
         builder.AppendLine($"Coach: {snapshot.CoachPerson?.Identity.DisplayName ?? "Not assigned"}");
         builder.AppendLine();
-        builder.AppendLine("Staff Room");
-        foreach (var member in snapshot.StaffMembers.OrderBy(member => member.Department).ThenBy(member => member.CurrentRole))
+        builder.AppendLine("Staff Actions");
+        builder.AppendLine("Reassign Staff, Release Staff, Hire Staff, Candidates, Development Focus, Medical Focus, Scouting Focus, Staff Evaluation.");
+        builder.AppendLine();
+        builder.AppendLine("Selected Staff Details");
+        var selected = State.StaffProfiles.FirstOrDefault();
+        if (selected is not null)
         {
-            builder.AppendLine($"{FindPersonName(member.PersonId)} - {member.CurrentRole} - {member.EmploymentStatus}");
-            builder.AppendLine($"  Department: {member.Department}  Experience: {member.Profile.YearsExperience} years  Reputation: {member.Profile.Reputation}");
-            builder.AppendLine($"  GM relationship: {State.RelationshipWithGm(member.PersonId)}");
-            builder.AppendLine($"  Fit: {State.StaffFitSummary(member.PersonId)}");
-            builder.AppendLine($"  Communication/Loyalty/Professionalism: {State.StaffQualitySummary(member.PersonId)}");
-            builder.AppendLine($"  Contract: {member.ContractId ?? "reference not assigned"}");
-            builder.AppendLine($"  Controls: reassign role, release staff, hire placeholder candidate where allowed.");
+            builder.AppendLine($"{selected.Name} - {selected.CurrentRole}");
+            builder.AppendLine($"  Department: {selected.Department}");
+            builder.AppendLine($"  Contract: {selected.ContractStatus}");
+            builder.AppendLine($"  Strengths: {string.Join(", ", selected.Strengths)}");
+            builder.AppendLine($"  Weaknesses: {string.Join(", ", selected.Weaknesses)}");
+            builder.AppendLine($"  Relationship with GM: {selected.RelationshipWithGm}");
+            builder.AppendLine($"  Chemistry: {selected.Chemistry.Summary}");
+            builder.AppendLine($"  Current assignment/focus: {selected.CurrentAssignment}; {selected.CurrentFocus}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Full Staff List");
+        foreach (var member in State.StaffProfiles)
+        {
+            builder.AppendLine($"{member.Name} - {member.CurrentRole} - {member.Department}");
+            builder.AppendLine($"  Contract/status: {member.ContractStatus}");
+            builder.AppendLine($"  Strengths: {string.Join(", ", member.Strengths)}");
+            builder.AppendLine($"  Weaknesses: {string.Join(", ", member.Weaknesses)}");
+            builder.AppendLine($"  GM relationship: {member.RelationshipWithGm}");
+            builder.AppendLine($"  Chemistry/conflict: {member.Chemistry.Summary}");
+            builder.AppendLine($"  Assignment/focus: {member.CurrentAssignment}; {member.CurrentFocus}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Candidate Pool");
+        if (State.ScenarioSnapshot.StaffCandidates.Count == 0)
+        {
+            builder.AppendLine("  No candidates generated yet. Use Candidates to create the first pool.");
+        }
+
+        foreach (var candidate in State.ScenarioSnapshot.StaffCandidates)
+        {
+            builder.AppendLine($"{candidate.Person.Identity.DisplayName} - {candidate.StaffMember.CurrentRole}");
+            builder.AppendLine($"  Role fit: {candidate.RoleFit}  Department fit: {candidate.DepartmentFit}  Reputation: {candidate.Reputation}");
+            builder.AppendLine($"  Strengths: {string.Join(", ", candidate.Strengths)}");
+            builder.AppendLine($"  Weaknesses: {string.Join(", ", candidate.Weaknesses)}");
+            builder.AppendLine($"  Personality/fit: {candidate.PersonalityFitSummary}");
+            builder.AppendLine($"  Chemistry risk: {candidate.ChemistryRisk}");
+            builder.AppendLine($"  Recommendation: {candidate.HiringRecommendation}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Recent Staff Evaluations");
+        if (State.ScenarioSnapshot.StaffEvaluations.Count == 0)
+        {
+            builder.AppendLine("  No staff evaluations generated yet.");
+        }
+
+        foreach (var evaluation in State.ScenarioSnapshot.StaffEvaluations.OrderByDescending(item => item.EvaluatedOn).Take(5))
+        {
+            builder.AppendLine($"{FindPersonName(evaluation.PersonId)} - {evaluation.Role} - {evaluation.Recommendation}");
+            builder.AppendLine($"  {evaluation.Summary}");
         }
 
         return builder.ToString();
@@ -1797,6 +1861,7 @@ internal sealed class AlphaDesktopState
     private readonly ExecutiveReportService _executiveReports = new();
     private readonly ScoutingOperationsService _scoutingOperations = new();
     private readonly PlayerDossierService _playerDossiers = new();
+    private readonly StaffOfficeService _staffOffice = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
@@ -1840,6 +1905,8 @@ internal sealed class AlphaDesktopState
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
 
     public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles => _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
+
+    public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot);
 
     public PlayerDossierView? CurrentDossier =>
         _selectedDossierPersonId is null
@@ -1968,7 +2035,7 @@ internal sealed class AlphaDesktopState
     }
 
     public void GenerateStaffConflictWarning() =>
-        ApplyScoutingOperationResult(_scoutingOperations.GenerateStaffConflictWarning(_registry, ScenarioSnapshot));
+        ApplyStaffOfficeResult(_staffOffice.GenerateChemistryWarning(_registry, ScenarioSnapshot));
 
     public void ReassignStaffRole()
     {
@@ -1979,7 +2046,7 @@ internal sealed class AlphaDesktopState
             return;
         }
 
-        ApplyScoutingOperationResult(_scoutingOperations.ReassignStaffRole(_registry, ScenarioSnapshot, staff.PersonId, LegacyEngine.Staff.StaffRole.DevelopmentCoach));
+        ApplyStaffOfficeResult(_staffOffice.ReassignStaffRole(_registry, ScenarioSnapshot, staff.PersonId, LegacyEngine.Staff.StaffRole.DevelopmentCoach));
     }
 
     public void ReleaseStaff()
@@ -1994,11 +2061,81 @@ internal sealed class AlphaDesktopState
             return;
         }
 
-        ApplyScoutingOperationResult(_scoutingOperations.ReleaseStaff(_registry, ScenarioSnapshot, staff.PersonId, "GM staff control test action."));
+        ApplyStaffOfficeResult(_staffOffice.ReleaseStaff(_registry, ScenarioSnapshot, staff.PersonId, "GM staff control test action."));
     }
 
-    public void HirePlaceholderStaff() =>
-        ApplyScoutingOperationResult(_scoutingOperations.HirePlaceholderStaffCandidate(_registry, ScenarioSnapshot, LegacyEngine.Staff.StaffRole.Scout));
+    public void HirePlaceholderStaff()
+    {
+        var current = ScenarioSnapshot;
+        if (current.StaffCandidates.Count == 0)
+        {
+            var generated = _staffOffice.GenerateCandidatePool(_registry, current);
+            current = generated.ScenarioSnapshot;
+            InboxManager.AddRange(generated.InboxItems);
+        }
+
+        var candidate = current.StaffCandidates
+            .OrderByDescending(candidate => candidate.RoleFit + candidate.DepartmentFit + candidate.Reputation)
+            .FirstOrDefault();
+        if (candidate is null)
+        {
+            LatestSummary = "No staff candidate is available to hire.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.HireCandidate(_registry, current, candidate.CandidateId));
+    }
+
+    public void GenerateStaffCandidates() =>
+        ApplyStaffOfficeResult(_staffOffice.GenerateCandidatePool(_registry, ScenarioSnapshot));
+
+    public void SetDevelopmentCoachFocus()
+    {
+        var coach = Snapshot.StaffMembers.FirstOrDefault(member => member.Department == LegacyEngine.Staff.StaffDepartment.Coaching && member.EmploymentStatus == LegacyEngine.Staff.StaffEmploymentStatus.Employed);
+        if (coach is null)
+        {
+            LatestSummary = "No coaching staff member is available for development focus.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.SetDevelopmentCoachFocus(_registry, ScenarioSnapshot, coach.PersonId, DevelopmentCoachFocus.Confidence));
+    }
+
+    public void SetMedicalStaffFocus()
+    {
+        var medical = Snapshot.StaffMembers.FirstOrDefault(member => member.Department == LegacyEngine.Staff.StaffDepartment.Medical && member.EmploymentStatus == LegacyEngine.Staff.StaffEmploymentStatus.Employed);
+        if (medical is null)
+        {
+            LatestSummary = "No medical staff member is employed yet. Generate candidates and hire a medical candidate first.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.SetMedicalStaffFocus(_registry, ScenarioSnapshot, medical.PersonId, MedicalStaffFocus.InjuryPrevention));
+    }
+
+    public void SetScoutingDepartmentFocus()
+    {
+        var scout = Snapshot.StaffMembers.FirstOrDefault(member => member.Department == LegacyEngine.Staff.StaffDepartment.Scouting && member.EmploymentStatus == LegacyEngine.Staff.StaffEmploymentStatus.Employed);
+        if (scout is null)
+        {
+            LatestSummary = "No scouting staff member is available for scouting focus.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.SetScoutingDepartmentFocus(_registry, ScenarioSnapshot, scout.PersonId, ScoutingDepartmentFocus.WesternCanada));
+    }
+
+    public void GenerateStaffEvaluation()
+    {
+        var staff = Snapshot.StaffMembers.FirstOrDefault(member => member.EmploymentStatus == LegacyEngine.Staff.StaffEmploymentStatus.Employed);
+        if (staff is null)
+        {
+            LatestSummary = "No employed staff member is available for evaluation.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.GenerateStaffEvaluation(_registry, ScenarioSnapshot, staff.PersonId));
+    }
 
     public void MakeRecruitingOffer()
     {
@@ -2489,6 +2626,20 @@ internal sealed class AlphaDesktopState
     }
 
     private void ApplyScoutingOperationResult(ScoutingOperationResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+            InboxManager.AddRange(result.InboxItems);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyStaffOfficeResult(StaffOfficeResult result)
     {
         if (result.Success)
         {

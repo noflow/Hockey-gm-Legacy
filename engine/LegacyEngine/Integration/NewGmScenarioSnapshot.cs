@@ -38,6 +38,12 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyDictionary<string, string> PlayerDossierNotes { get; init; } = new Dictionary<string, string>();
 
+    public IReadOnlyList<StaffCandidate> StaffCandidates { get; init; } = Array.Empty<StaffCandidate>();
+
+    public IReadOnlyList<StaffFocusAssignment> StaffFocusAssignments { get; init; } = Array.Empty<StaffFocusAssignment>();
+
+    public IReadOnlyList<StaffEvaluation> StaffEvaluations { get; init; } = Array.Empty<StaffEvaluation>();
+
     public SeasonReadinessState SeasonReadiness { get; init; } = new();
 
     public ExecutiveReportArchive ExecutiveReports { get; init; } = ExecutiveReportArchive.Empty;
@@ -95,6 +101,21 @@ public sealed record NewGmScenarioSnapshot(
             {
                 throw new ArgumentException("Player dossier note cannot be null.", nameof(PlayerDossierNotes));
             }
+        }
+
+        foreach (var candidate in StaffCandidates)
+        {
+            candidate.Validate();
+        }
+
+        foreach (var focus in StaffFocusAssignments)
+        {
+            focus.Validate();
+        }
+
+        foreach (var evaluation in StaffEvaluations)
+        {
+            evaluation.Validate();
         }
 
         DraftExperience?.Validate();

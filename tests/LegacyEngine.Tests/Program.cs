@@ -32,6 +32,7 @@ var seasonReadinessTests = new SeasonReadinessTests();
 var executiveReportTests = new ExecutiveReportTests();
 var scoutingOperationsTests = new ScoutingOperationsTests();
 var playerDossierIntegrationTests = new PlayerDossierIntegrationTests();
+var staffControlTests = new StaffControlTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -407,6 +408,22 @@ runner.Run("dossier can be created for draft prospect", playerDossierIntegration
 runner.Run("dossier hides true ratings", playerDossierIntegrationTests.DossierHidesTrueRatings);
 runner.Run("GM note can be added to dossier", playerDossierIntegrationTests.GmNoteCanBeAdded);
 runner.Run("dossier sections populate when data exists", playerDossierIntegrationTests.ScoutingDevelopmentInjuryAndContractSectionsPopulateWhenDataExists);
+runner.Run("staff control candidate generated", staffControlTests.StaffCandidateGenerated);
+runner.Run("staff control candidate has role and department fit", staffControlTests.CandidateHasRoleAndDepartmentFit);
+runner.Run("staff control candidate has strengths and weaknesses", staffControlTests.CandidateHasStrengthsAndWeaknesses);
+runner.Run("staff control staff can be hired", staffControlTests.StaffCanBeHired);
+runner.Run("staff control staff can be released", staffControlTests.StaffCanBeReleased);
+runner.Run("staff control staff role can be changed", staffControlTests.StaffRoleCanBeChanged);
+runner.Run("staff control development coach focus can be set", staffControlTests.DevelopmentCoachFocusCanBeSet);
+runner.Run("staff control medical staff focus can be set", staffControlTests.MedicalStaffFocusCanBeSet);
+runner.Run("staff control scouting department focus can be set", staffControlTests.ScoutingDepartmentFocusCanBeSet);
+runner.Run("staff control evaluation generated", staffControlTests.StaffEvaluationGenerated);
+runner.Run("staff control chemistry warning generated", staffControlTests.ChemistryWarningGenerated);
+runner.Run("staff control relationship affects chemistry", staffControlTests.RelationshipAffectsChemistry);
+runner.Run("staff control events created", staffControlTests.EventsCreated);
+runner.Run("staff control inbox messages created", staffControlTests.InboxMessagesCreated);
+runner.Run("AlphaDesktop exposes staff controls v2", staffControlTests.AlphaDesktopExposesStaffControls);
+runner.Run("staff control has no Godot save or game simulation dependency", staffControlTests.NoGodotSaveOrGameSimulation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
