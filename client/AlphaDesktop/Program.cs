@@ -19,7 +19,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.3.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -248,7 +248,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.3 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.3.1 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1130,7 +1130,7 @@ internal sealed class MainWindow : Window
                 profile.PersonId,
                 profile.Name,
                 "Staff",
-                profile.CurrentRole.ToString(),
+                $"Current Staff - {profile.CurrentRole}",
                 $"{profile.Department} | GM relationship {profile.RelationshipWithGm}",
                 profile.Chemistry.Summary))
             .ToList();
@@ -1139,9 +1139,9 @@ internal sealed class MainWindow : Window
             candidate.Person.PersonId,
             candidate.Person.Identity.DisplayName,
             "Candidate",
-            $"Candidate - {candidate.StaffMember.CurrentRole}",
-            $"Role fit {candidate.RoleFit} | department fit {candidate.DepartmentFit}",
-            candidate.HiringRecommendation)));
+            $"Staff Candidate - {candidate.StaffMember.CurrentRole}",
+            $"{candidate.StaffMember.Department} | reputation {candidate.Reputation} | role fit {candidate.RoleFit}",
+            $"{candidate.HiringRecommendation} Strengths: {string.Join(", ", candidate.Strengths)}. Risk: {candidate.ChemistryRisk}")));
 
         return rows;
     }
@@ -1262,14 +1262,16 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildDraftBoardRows() =>
         State.Snapshot.DraftBoard.Entries
+            .GroupBy(entry => entry.ProspectPersonId, StringComparer.Ordinal)
+            .Select(group => group.OrderBy(entry => entry.Rank).First())
             .OrderBy(entry => entry.Rank)
             .Select(entry => new SelectablePersonRow(
                 entry.ProspectPersonId,
-                FindPersonName(entry.ProspectPersonId),
+                ScoutingDisplayName(entry.ProspectPersonId),
                 "DraftBoard",
                 $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank}",
                 $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}",
-                entry.ProjectionText))
+                $"{State.RegionTeamText(entry.ProspectPersonId)} | {entry.ProjectionText}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildProspectRows() =>
@@ -1314,8 +1316,14 @@ internal sealed class MainWindow : Window
     {
         if (row is null)
         {
-            var empty = EmptyDetail("Staff", "Select a staff member or generate a candidate pool.");
-            AddActions(empty, CreateDetailButton("Generate Candidates", GenerateStaffCandidates), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
+            var empty = EmptyDetail("Staff", "Current Staff are listed with active roles. Staff Candidates appear below once generated. Use Hire Staff to open the candidate pool.");
+            AddSubHeader(empty, "Current Staff");
+            AddParagraph(empty, "Select an employed staff member to view profile, focus, chemistry, and staff actions.");
+            AddSubHeader(empty, "Staff Candidates");
+            AddParagraph(empty, "Candidate rows show role fit, department, reputation, strengths, weaknesses, chemistry risk, and recommendation.");
+            AddSubHeader(empty, "Hire Staff");
+            AddParagraph(empty, "Generate candidates, select a candidate row, then use Hire Candidate in the detail panel.");
+            AddActions(empty, CreateDetailButton("Hire Staff", GenerateStaffCandidates), CreateDetailButton("Generate Candidates", GenerateStaffCandidates), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
             return empty;
         }
 
@@ -1336,9 +1344,10 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Strengths", string.Join(", ", candidate.Strengths));
             AddLine(panel, "Weaknesses", string.Join(", ", candidate.Weaknesses));
             AddLine(panel, "Chemistry risk", candidate.ChemistryRisk);
+            AddLine(panel, "Recommendation", candidate.HiringRecommendation);
             AddParagraph(panel, candidate.HiringRecommendation);
             AddActions(panel,
-                CreateDetailButton("Hire Staff", () => State.HireCandidateFor(row.PersonId)),
+                CreateDetailButton("Hire Candidate", () => State.HireCandidateFor(row.PersonId)),
                 CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
             return panel;
         }
@@ -2988,7 +2997,7 @@ internal sealed class MainWindow : Window
             return name;
         }
 
-        return $"{name} ({State.PersonPosition(personId)}, age {State.PersonAge(personId)?.ToString() ?? "unknown"})";
+        return $"{name} ({State.PersonPosition(personId)}, age {State.PersonAge(personId)?.ToString() ?? "unknown"}, {State.RegionTeamText(personId)})";
     }
 
     private string ScoutingDisplayName(string personId)

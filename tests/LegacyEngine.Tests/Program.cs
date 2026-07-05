@@ -36,6 +36,7 @@ var playerDossierIntegrationTests = new PlayerDossierIntegrationTests();
 var staffControlTests = new StaffControlTests();
 var alphaDesktopInteractionTests = new AlphaDesktopInteractionTests();
 var budgetOverviewTests = new BudgetOverviewTests();
+var alpha231DedupHiringTests = new Alpha231DedupHiringTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -458,6 +459,22 @@ runner.Run("AlphaDesktop scouting cleanup and duration UI is exposed", alphaDesk
 runner.Run("AlphaDesktop staff profile and focus actions are wired", alphaDesktopInteractionTests.StaffProfileAndFocusActionsAreWired);
 runner.Run("AlphaDesktop recruit rows and details show position age and priorities", alphaDesktopInteractionTests.RecruitRowsAndDetailsShowPositionAgeAndPriorities);
 runner.Run("AlphaDesktop dashboard summary displays counts", alphaDesktopInteractionTests.DashboardSummaryDisplaysCounts);
+runner.Run("alpha 2.3.1 name generator creates five hundred names with low duplicate rate", alpha231DedupHiringTests.NameGeneratorCreatesFiveHundredNamesWithVeryLowDuplicateRate);
+runner.Run("alpha 2.3.1 name generator creates forty draft classes without numeric suffixes", alpha231DedupHiringTests.NameGeneratorCreatesFortyDraftClassesWithoutNumericSuffixes);
+runner.Run("alpha 2.3.1 new GM scenario has no duplicate recruit person ids", alpha231DedupHiringTests.NewGmScenarioHasNoDuplicateRecruitPersonIds);
+runner.Run("alpha 2.3.1 draft board has no duplicate prospect person ids", alpha231DedupHiringTests.DraftBoardHasNoDuplicateProspectPersonIds);
+runner.Run("alpha 2.3.1 recruit draft and scouting targets have no duplicate person ids", alpha231DedupHiringTests.NewGmScenarioHasNoDuplicatePersonIdsAcrossRecruitDraftAndScoutingTargets);
+runner.Run("alpha 2.3.1 recruit display names contain no numeric suffixes", alpha231DedupHiringTests.RecruitDisplayNamesContainNoNumericSuffixes);
+runner.Run("alpha 2.3.1 scenario generated staff and owners have clean names", alpha231DedupHiringTests.ScenarioGeneratedStaffAndOwnersHaveCleanNames);
+runner.Run("alpha 2.3.1 staff candidate names come from name generator", alpha231DedupHiringTests.StaffCandidateNamesComeFromNameGenerator);
+runner.Run("alpha 2.3.1 recruit UI dedupes by person id", alpha231DedupHiringTests.RecruitUiDedupesByPersonId);
+runner.Run("alpha 2.3.1 draft board UI dedupes by person id", alpha231DedupHiringTests.DraftBoardUiDedupesByPersonId);
+runner.Run("alpha 2.3.1 same-name players are clarified with context", alpha231DedupHiringTests.SameNameDifferentPlayersAreClarifiedWithContext);
+runner.Run("alpha 2.3.1 staff candidates appear in desktop", alpha231DedupHiringTests.StaffCandidatesAppearInAlphaDesktop);
+runner.Run("alpha 2.3.1 candidate can be selected", alpha231DedupHiringTests.CandidateCanBeSelected);
+runner.Run("alpha 2.3.1 hire candidate creates staff member", alpha231DedupHiringTests.HireCandidateCreatesStaffMember);
+runner.Run("alpha 2.3.1 hire candidate creates event and inbox", alpha231DedupHiringTests.HireCandidateCreatesEventAndInbox);
+runner.Run("alpha 2.3.1 candidate cannot be hired twice", alpha231DedupHiringTests.CandidateCannotBeHiredTwice);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

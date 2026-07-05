@@ -1,4 +1,5 @@
 using LegacyEngine.Events;
+using LegacyEngine.Names;
 using LegacyEngine.People;
 using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
@@ -261,9 +262,26 @@ public sealed class ScoutingOperationsService
     {
         var sequence = scenario.StaffMembers.Count + 1;
         var personId = $"person-placeholder-staff-{sequence:000}";
+        var nameRegistry = new NameUniquenessRegistry();
+        foreach (var existing in scenario.AlphaSnapshot.People)
+        {
+            nameRegistry.RegisterExisting($"scouting-placeholder-staff:{scenario.Season.Year}", existing.Identity.DisplayName);
+        }
+
+        var generatedName = new NameGenerator(NameGenerationSettings.CreateDefault(scenario.Season.Year + sequence + 91))
+            .Generate(
+                nameRegistry,
+                $"scouting-placeholder-staff:{scenario.Season.Year}",
+                NameOrigin.CanadaEnglish,
+                NameOrigin.CanadaFrench,
+                NameOrigin.Usa,
+                NameOrigin.Sweden,
+                NameOrigin.Finland,
+                NameOrigin.Czechia,
+                NameOrigin.GenericEuropean);
         var person = new Person(
             PersonId: personId,
-            Identity: new PersonIdentity("Riley", $"Staff{sequence}", Gender.NonBinary, new DateOnly(1986, 4, 12), "Canada", "Saskatoon, SK"),
+            Identity: new PersonIdentity(generatedName.FirstName, generatedName.LastName, Gender.NonBinary, new DateOnly(1986, 4, 12), generatedName.Nationality, generatedName.Birthplace),
             Status: PersonStatus.Active,
             Roles: new[] { new PersonRole($"role-placeholder-staff-{sequence:000}", ToPersonRoleType(role), scenario.Organization.OrganizationId, scenario.CurrentDate, null, role.ToString()) },
             Reputation: new PersonReputation(32, 28, 10),

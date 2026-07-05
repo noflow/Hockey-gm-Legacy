@@ -59,14 +59,15 @@ The five foundation pillars remain:
 - Alpha 2.2 - UI/UX Structural Pass v1
 - Alpha 2.2.1 - Dossier Window, Roster Filters, Budget Overview, and Scouting Cleanup
 - Alpha 2.3 - Recruiting v2
+- Alpha 2.3.1 - Name Generation System + Deduping
 
 ## Current Milestone
 
-Alpha 2.3 - Recruiting v2
+Alpha 2.3.1 - Name Generation System + Deduping
 
 ## Current Goal
 
-Make recruiting a richer GM workflow with recruit priorities, family concerns, competitor pressure, careful promises, and explainable decisions.
+Generate clean regional names at scale, keep identity unique through PersonId, dedupe recruit/draft/scouting displays, and clarify true same-name players with hockey context.
 
 ## Why Relationship Engine Was Next
 

@@ -1,5 +1,6 @@
 using LegacyEngine.Contracts;
 using LegacyEngine.Events;
+using LegacyEngine.Names;
 using LegacyEngine.People;
 using LegacyEngine.Staff;
 
@@ -26,11 +27,18 @@ public sealed class StaffOfficeService
             return Result(true, scenario, scenario.StaffCandidates.First(), null, null, null, Array.Empty<AlphaInboxItem>(), "Staff candidate pool already exists.");
         }
 
+        var nameRegistry = new NameUniquenessRegistry();
+        foreach (var person in scenario.AlphaSnapshot.People)
+        {
+            nameRegistry.RegisterExisting(CandidateScope(scenario), person.Identity.DisplayName);
+        }
+
+        var nameGenerator = new NameGenerator(NameGenerationSettings.CreateDefault(scenario.Season.Year + scenario.StaffMembers.Count + 41));
         var candidates = new[]
         {
-            BuildCandidate(registry, scenario, "candidate-staff-001", "Mara", "Voss", StaffRole.DevelopmentCoach, 73, 76, 61, new[] { "player development", "communication" }, new[] { "limited head-coach experience" }, "Collaborative teacher with strong patience.", "Low chemistry risk; likely aligns with a development-first GM."),
-            BuildCandidate(registry, scenario, "candidate-staff-002", "Owen", "Leclerc", StaffRole.AthleticTherapist, 68, 71, 56, new[] { "injury prevention", "recovery planning" }, new[] { "modest hockey operations background" }, "Calm medical communicator with practical habits.", "Low to moderate risk; needs clear role boundaries."),
-            BuildCandidate(registry, scenario, "candidate-staff-003", "Priya", "Nandakumar", StaffRole.Scout, 78, 74, 58, new[] { "character reads", "regional coverage" }, new[] { "smaller network in Europe" }, "Detail-heavy scout who values evidence.", "Moderate risk; may push back if assignments are vague.")
+            BuildCandidate(registry, scenario, "candidate-staff-001", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.DevelopmentCoach, 73, 76, 61, new[] { "player development", "communication" }, new[] { "limited head-coach experience" }, "Collaborative teacher with strong patience.", "Low chemistry risk; likely aligns with a development-first GM."),
+            BuildCandidate(registry, scenario, "candidate-staff-002", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.AthleticTherapist, 68, 71, 56, new[] { "injury prevention", "recovery planning" }, new[] { "modest hockey operations background" }, "Calm medical communicator with practical habits.", "Low to moderate risk; needs clear role boundaries."),
+            BuildCandidate(registry, scenario, "candidate-staff-003", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.Scout, 78, 74, 58, new[] { "character reads", "regional coverage" }, new[] { "smaller network in Europe" }, "Detail-heavy scout who values evidence.", "Moderate risk; may push back if assignments are vague.")
         };
 
         var updatedPeople = scenario.AlphaSnapshot.People
@@ -60,8 +68,12 @@ public sealed class StaffOfficeService
 
     public StaffOfficeResult HireCandidate(EngineRegistry registry, NewGmScenarioSnapshot scenario, string candidateId)
     {
-        var candidate = scenario.StaffCandidates.SingleOrDefault(candidate => candidate.CandidateId == candidateId)
-            ?? throw new ArgumentException("Staff candidate was not found.", nameof(candidateId));
+        var candidate = scenario.StaffCandidates.SingleOrDefault(candidate => candidate.CandidateId == candidateId);
+        if (candidate is null)
+        {
+            return Result(false, scenario, null, null, null, null, Array.Empty<AlphaInboxItem>(), "Staff candidate is no longer available for hiring.");
+        }
+
         var role = candidate.StaffMember.CurrentRole;
         var hired = registry.StaffEngine.AssignRole(registry.StaffEngine.Hire(candidate.StaffMember, scenario.CurrentDate), role, scenario.CurrentDate);
         var people = scenario.AlphaSnapshot.People
@@ -284,8 +296,7 @@ public sealed class StaffOfficeService
         EngineRegistry registry,
         NewGmScenarioSnapshot scenario,
         string candidateId,
-        string firstName,
-        string lastName,
+        GeneratedName generatedName,
         StaffRole role,
         int roleFit,
         int departmentFit,
@@ -297,7 +308,7 @@ public sealed class StaffOfficeService
     {
         var person = new Person(
             PersonId: $"person-{candidateId}",
-            Identity: new PersonIdentity(firstName, lastName, Gender.NonBinary, new DateOnly(1984 + (reputation % 9), 5, 10), "Canada", "Winnipeg, MB"),
+            Identity: new PersonIdentity(generatedName.FirstName, generatedName.LastName, Gender.NonBinary, new DateOnly(1984 + (reputation % 9), 5, 10), generatedName.Nationality, generatedName.Birthplace),
             Status: PersonStatus.Active,
             Roles: Array.Empty<PersonRole>(),
             Reputation: new PersonReputation(reputation, Math.Max(20, reputation - 8), Math.Max(10, reputation - 20)),
@@ -319,6 +330,23 @@ public sealed class StaffOfficeService
         candidate.Validate();
         return candidate;
     }
+
+    private static GeneratedName GenerateCandidateName(NameGenerator generator, NameUniquenessRegistry registry, NewGmScenarioSnapshot scenario) =>
+        generator.Generate(
+            registry,
+            CandidateScope(scenario),
+            NameOrigin.CanadaEnglish,
+            NameOrigin.CanadaFrench,
+            NameOrigin.Usa,
+            NameOrigin.Finland,
+            NameOrigin.Sweden,
+            NameOrigin.Czechia,
+            NameOrigin.Germany,
+            NameOrigin.Switzerland,
+            NameOrigin.GenericEuropean);
+
+    private static string CandidateScope(NewGmScenarioSnapshot scenario) =>
+        $"staff-candidates:{scenario.Season.Year}:{scenario.Organization.OrganizationId}";
 
     private static StaffAttributes AttributesFor(StaffRole role, int roleFit, int departmentFit) =>
         StaffRoles.DepartmentFor(role) switch

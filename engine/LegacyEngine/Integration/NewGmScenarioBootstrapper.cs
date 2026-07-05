@@ -3,6 +3,7 @@ using LegacyEngine.Development;
 using LegacyEngine.Draft;
 using LegacyEngine.Events;
 using LegacyEngine.Injuries;
+using LegacyEngine.Names;
 using LegacyEngine.Organizations;
 using LegacyEngine.Owners;
 using LegacyEngine.People;
@@ -35,6 +36,8 @@ public sealed class NewGmScenarioBootstrapper
             WorldPhase.Offseason,
             eventEngine: new EventEngine());
         var registry = EngineRegistry.Create(worldEngine, activeRulebook);
+        var nameRegistry = new NameUniquenessRegistry();
+        var nameGenerator = new NameGenerator(NameGenerationSettings.CreateDefault(scenarioSettings.SeasonYear + 231));
         var season = registry.SeasonEngine.CreateSeason(
             scenarioSettings.SeasonId,
             scenarioSettings.LeagueId,
@@ -49,19 +52,24 @@ public sealed class NewGmScenarioBootstrapper
             startDate);
         var gm = gmProfile.Person
             .AddRole(new PersonRole("role-new-gm", PersonRoleType.GeneralManager, scenarioSettings.OrganizationId, startDate, null, "General Manager"));
-        var ownerPerson = CreatePerson("person-owner-evelyn-hart", "Evelyn", "Hart", Gender.Female, new DateOnly(1965, 6, 4), "Canada", "Regina, SK", 70, 62, 28)
+        var ownerName = nameGenerator.Generate(nameRegistry, ClassScope(scenarioSettings.SeasonYear, "owners"), NameOrigin.CanadaEnglish, NameOrigin.CanadaFrench);
+        var headCoachName = nameGenerator.Generate(nameRegistry, ClassScope(scenarioSettings.SeasonYear, "staff"), StaffOrigins());
+        var assistantCoachName = nameGenerator.Generate(nameRegistry, ClassScope(scenarioSettings.SeasonYear, "staff"), StaffOrigins());
+        var headScoutName = nameGenerator.Generate(nameRegistry, ClassScope(scenarioSettings.SeasonYear, "scouts"), StaffOrigins());
+        var regionalScoutName = nameGenerator.Generate(nameRegistry, ClassScope(scenarioSettings.SeasonYear, "scouts"), StaffOrigins());
+        var ownerPerson = CreatePerson("person-owner-evelyn-hart", ownerName.FirstName, ownerName.LastName, Gender.Female, new DateOnly(1965, 6, 4), ownerName.Nationality, ownerName.Birthplace, 70, 62, 28)
             .AddRole(new PersonRole("role-owner", PersonRoleType.Owner, scenarioSettings.OrganizationId, new DateOnly(2018, 5, 10), null, "Owner"));
-        var headCoach = CreatePerson("person-coach-head", "Theo", "Larsen", Gender.Male, new DateOnly(1975, 11, 6), "Canada", "Red Deer, AB", 58, 52, 18)
+        var headCoach = CreatePerson("person-coach-head", headCoachName.FirstName, headCoachName.LastName, Gender.Male, new DateOnly(1975, 11, 6), headCoachName.Nationality, headCoachName.Birthplace, 58, 52, 18)
             .AddRole(new PersonRole("role-head-coach", PersonRoleType.Coach, scenarioSettings.OrganizationId, new DateOnly(2024, 6, 1), null, "Head Coach"));
-        var assistantCoach = CreatePerson("person-coach-assistant", "Priya", "Nandakumar", Gender.Female, new DateOnly(1984, 1, 27), "Canada", "Mississauga, ON", 50, 44, 12)
+        var assistantCoach = CreatePerson("person-coach-assistant", assistantCoachName.FirstName, assistantCoachName.LastName, Gender.Female, new DateOnly(1984, 1, 27), assistantCoachName.Nationality, assistantCoachName.Birthplace, 50, 44, 12)
             .AddRole(new PersonRole("role-assistant-coach", PersonRoleType.Coach, scenarioSettings.OrganizationId, new DateOnly(2025, 7, 1), null, "Assistant Coach"));
-        var headScoutPerson = CreatePerson("person-scout-head", "Mara", "Keane", Gender.Female, new DateOnly(1979, 7, 19), "Canada", "Halifax, NS", 55, 50, 14)
+        var headScoutPerson = CreatePerson("person-scout-head", headScoutName.FirstName, headScoutName.LastName, Gender.Female, new DateOnly(1979, 7, 19), headScoutName.Nationality, headScoutName.Birthplace, 55, 50, 14)
             .AddRole(new PersonRole("role-head-scout", PersonRoleType.Scout, scenarioSettings.OrganizationId, new DateOnly(2023, 8, 1), null, "Head Scout"));
-        var regionalScoutPerson = CreatePerson("person-scout-west", "Cal", "Morrison", Gender.Male, new DateOnly(1982, 9, 8), "Canada", "Kelowna, BC", 44, 39, 8)
+        var regionalScoutPerson = CreatePerson("person-scout-west", regionalScoutName.FirstName, regionalScoutName.LastName, Gender.Male, new DateOnly(1982, 9, 8), regionalScoutName.Nationality, regionalScoutName.Birthplace, 44, 39, 8)
             .AddRole(new PersonRole("role-regional-scout", PersonRoleType.Scout, scenarioSettings.OrganizationId, new DateOnly(2025, 8, 1), null, "Regional Scout"));
 
-        var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId);
-        var recruits = CreateRecruitPeople(startDate);
+        var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
+        var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
             .Concat(rosterPlayers)
             .Concat(recruits)
@@ -416,77 +424,84 @@ public sealed class NewGmScenarioBootstrapper
             new DevelopmentTrait(DevelopmentAttribute.Confidence, 54 + (index % 12))
         };
 
-    private static IReadOnlyList<Person> CreateRosterPlayers(DateOnly startDate, string organizationId)
+    private static IReadOnlyList<Person> CreateRosterPlayers(
+        DateOnly startDate,
+        string organizationId,
+        NameGenerator nameGenerator,
+        NameUniquenessRegistry nameRegistry,
+        int seasonYear)
     {
-        var names = new[]
-        {
-            ("Noah", "Vale", "Moose Jaw, SK", "Canada"),
-            ("Eli", "Brooks", "Brandon, MB", "Canada"),
-            ("Mateo", "Singh", "Surrey, BC", "Canada"),
-            ("Owen", "Price", "Saskatoon, SK", "Canada"),
-            ("Caleb", "Stone", "Winnipeg, MB", "Canada"),
-            ("Jonas", "Meyer", "Zurich", "Switzerland"),
-            ("Finn", "Lacroix", "Quebec City, QC", "Canada"),
-            ("Rylan", "Kerr", "Medicine Hat, AB", "Canada"),
-            ("Sam", "Okafor", "Calgary, AB", "Canada"),
-            ("Luca", "Bianchi", "Burnaby, BC", "Canada"),
-            ("Wyatt", "Reed", "Yorkton, SK", "Canada"),
-            ("Emil", "Soderberg", "Stockholm", "Sweden"),
-            ("Carter", "Moon", "Lethbridge, AB", "Canada"),
-            ("Asher", "Bell", "Prince Albert, SK", "Canada"),
-            ("Dante", "Rossi", "Vancouver, BC", "Canada"),
-            ("Mason", "Li", "Richmond, BC", "Canada"),
-            ("Kieran", "Fox", "Regina, SK", "Canada"),
-            ("Isaac", "Gould", "Portage la Prairie, MB", "Canada"),
-            ("Tomas", "Novak", "Brno", "Czechia"),
-            ("Ben", "Hartley", "Estevan, SK", "Canada"),
-            ("Nico", "Fraser", "Kamloops, BC", "Canada"),
-            ("Arjun", "Rao", "Edmonton, AB", "Canada")
-        };
-
-        return names
-            .Select((name, index) => CreatePlayer(
-                $"person-roster-{index + 1:000}",
-                name.Item1,
-                name.Item2,
-                new DateOnly(2007 + (index % 3), (index % 12) + 1, Math.Min(24, (index % 27) + 1)),
-                name.Item4,
-                name.Item3,
-                organizationId,
-                startDate))
-            .ToArray();
-    }
-
-    private static IReadOnlyList<Person> CreateRecruitPeople(DateOnly startDate)
-    {
-        var seeds = new[]
-        {
-            ("Tate", "Marlow", "Canada", "Dauphin, MB"),
-            ("Julian", "Chen", "Canada", "Victoria, BC"),
-            ("Pavel", "Kral", "Czechia", "Prague"),
-            ("Cole", "Bishop", "Canada", "Swift Current, SK"),
-            ("Henrik", "Aasen", "Norway", "Oslo"),
-            ("Miles", "Tanner", "Canada", "Weyburn, SK"),
-            ("Leo", "Park", "Canada", "Calgary, AB"),
-            ("Nolan", "Savoie", "Canada", "St. Albert, AB")
-        };
-
-        return Enumerable.Range(0, 60)
+        return Enumerable.Range(0, 22)
             .Select(index =>
             {
-                var seed = seeds[index % seeds.Length];
+                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "roster"), PlayerOrigins());
                 return CreatePlayer(
-                $"person-recruit-{index + 1:000}",
-                seed.Item1,
-                seed.Item2,
-                new DateOnly(2009, (index % 12) + 1, Math.Min(24, (index % 25) + 1)),
-                seed.Item3,
-                seed.Item4,
-                "unassigned",
+                $"person-roster-{index + 1:000}",
+                name.FirstName,
+                name.LastName,
+                new DateOnly(2007 + (index % 3), (index % 12) + 1, Math.Min(24, (index % 27) + 1)),
+                name.Nationality,
+                name.Birthplace,
+                organizationId,
                 startDate);
             })
             .ToArray();
     }
+
+    private static IReadOnlyList<Person> CreateRecruitPeople(
+        DateOnly startDate,
+        NameGenerator nameGenerator,
+        NameUniquenessRegistry nameRegistry,
+        int seasonYear)
+    {
+        return Enumerable.Range(0, 60)
+            .Select(index =>
+            {
+                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "draft-class"), PlayerOrigins());
+                return CreatePlayer(
+                    $"person-recruit-{index + 1:000}",
+                    name.FirstName,
+                    name.LastName,
+                    new DateOnly(2009, (index % 12) + 1, Math.Min(24, (index % 25) + 1)),
+                    name.Nationality,
+                    name.Birthplace,
+                    "unassigned",
+                    startDate);
+            })
+            .ToArray();
+    }
+
+    private static string ClassScope(int seasonYear, string group) => $"new-gm-scenario:{seasonYear}:{group}";
+
+    private static NameOrigin[] PlayerOrigins() =>
+    [
+        NameOrigin.CanadaEnglish,
+        NameOrigin.CanadaEnglish,
+        NameOrigin.CanadaEnglish,
+        NameOrigin.CanadaFrench,
+        NameOrigin.Usa,
+        NameOrigin.Finland,
+        NameOrigin.Sweden,
+        NameOrigin.Czechia,
+        NameOrigin.Slovakia,
+        NameOrigin.Germany,
+        NameOrigin.Switzerland,
+        NameOrigin.Latvia,
+        NameOrigin.GenericEuropean
+    ];
+
+    private static NameOrigin[] StaffOrigins() =>
+    [
+        NameOrigin.CanadaEnglish,
+        NameOrigin.CanadaFrench,
+        NameOrigin.Usa,
+        NameOrigin.Sweden,
+        NameOrigin.Finland,
+        NameOrigin.Czechia,
+        NameOrigin.Germany,
+        NameOrigin.Switzerland,
+        NameOrigin.GenericEuropean
+    ];
 
     private static Person CreatePlayer(
         string personId,
