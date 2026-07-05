@@ -153,14 +153,14 @@ public sealed class TrainingCampService
                 rosterPlayer.AcquisitionSource));
         }
 
-        if (scenario.DraftExperience is { Status: DraftExperienceStatus.Completed } draftState)
+        if (scenario.DraftExperience is { Status: DraftExperienceStatus.Completed })
         {
-            foreach (var selection in draftState.Selections.Where(selection => selection.IsPlayerSelection))
+            foreach (var prospect in scenario.ProspectRights.Where(prospect => prospect.Status == ProspectStatus.InvitedToCamp))
             {
                 AddIfMissing(players, CreatePlayer(
                     scenario,
-                    selection.ProspectPersonId,
-                    GuessPosition(scenario, selection.ProspectPersonId),
+                    prospect.ProspectPersonId,
+                    prospect.Position,
                     TrainingCampInviteType.DraftedProspect,
                     date,
                     PlayerAcquisitionSource.Unknown));

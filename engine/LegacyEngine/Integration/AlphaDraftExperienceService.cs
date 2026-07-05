@@ -1,5 +1,6 @@
 using LegacyEngine.Draft;
 using LegacyEngine.Events;
+using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
 
 namespace LegacyEngine.Integration;
@@ -210,7 +211,8 @@ public sealed class AlphaDraftExperienceService
         {
             AlphaSnapshot = scenario.AlphaSnapshot with { DraftBoard = board },
             DraftExperience = updatedState,
-            DraftRights = scenario.DraftRights.Append(pickSummary).ToArray()
+            DraftRights = scenario.DraftRights.Append(pickSummary).ToArray(),
+            ProspectRights = AddDraftRightsRecord(scenario, pickSummary).ToArray()
         };
 
         var prospectName = FindPersonName(scenario, prospectPersonId);
@@ -503,6 +505,41 @@ public sealed class AlphaDraftExperienceService
             prospectPersonId,
             FindPersonName(scenario, prospectPersonId),
             isPlayerSelection);
+
+    private static IReadOnlyList<DraftRightsRecord> AddDraftRightsRecord(
+        NewGmScenarioSnapshot scenario,
+        DraftPickSummary pickSummary)
+    {
+        if (scenario.ProspectRights.Any(record => record.ProspectPersonId == pickSummary.ProspectPersonId))
+        {
+            return scenario.ProspectRights;
+        }
+
+        var person = scenario.AlphaSnapshot.People.SingleOrDefault(item => item.PersonId == pickSummary.ProspectPersonId)
+            ?? scenario.AlphaSnapshot.Players.SingleOrDefault(item => item.PersonId == pickSummary.ProspectPersonId);
+        var boardEntry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(item => item.ProspectPersonId == pickSummary.ProspectPersonId);
+        var record = new DraftRightsRecord(
+            ProspectPersonId: pickSummary.ProspectPersonId,
+            ProspectName: pickSummary.ProspectName,
+            Age: person?.CalculateAge(scenario.CurrentDate) ?? 0,
+            Position: GuessPosition(scenario, pickSummary.ProspectPersonId),
+            RoundNumber: pickSummary.RoundNumber,
+            PickNumber: pickSummary.PickNumber,
+            Status: ProspectStatus.DraftRightsHeld,
+            ProjectionText: boardEntry?.ProjectionText ?? "Drafted prospect with incomplete projection.",
+            ScoutingConfidence: boardEntry?.ScoutingConfidence,
+            GmNotes: boardEntry?.PersonalNotes ?? string.Empty);
+        record.Validate();
+
+        return scenario.ProspectRights.Append(record).ToArray();
+    }
+
+    private static RosterPosition GuessPosition(NewGmScenarioSnapshot scenario, string personId) =>
+        scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Position
+        ?? scenario.AlphaSnapshot.Roster.Players
+            .OrderBy(player => player.PersonId, StringComparer.Ordinal)
+            .FirstOrDefault()?.Position
+        ?? RosterPosition.Unknown;
 
     private static void QueueScenarioEvent(
         EngineRegistry registry,

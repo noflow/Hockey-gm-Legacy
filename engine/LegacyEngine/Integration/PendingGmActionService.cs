@@ -109,7 +109,7 @@ public sealed class PendingGmActionService
         ArgumentNullException.ThrowIfNull(scenario);
         var action = FindOpenAction(scenario, actionId);
         var declined = action with { Status = PendingGmActionStatus.Declined };
-        var updatedScenario = ReplaceAction(scenario, declined);
+        var updatedScenario = UpdateProspectStatus(ReplaceAction(scenario, declined), action, ProspectStatus.Declined);
 
         QueuePendingEvent(registry, declined, scenario.CurrentDate, "Pending GM action declined", $"{declined.Title} was declined by the GM.");
         var inbox = new[] { ToInboxItem(declined, "Pending action declined", $"{declined.Title} was declined. No contract or roster change was made.") };
@@ -128,7 +128,7 @@ public sealed class PendingGmActionService
         var completed = action with { Status = PendingGmActionStatus.Completed };
         var contracts = scenario.Contracts.Append(signed).ToArray();
         var alphaSnapshot = scenario.AlphaSnapshot with { Contracts = contracts };
-        var updatedScenario = ReplaceAction(scenario, completed) with
+        var updatedScenario = UpdateProspectStatus(ReplaceAction(scenario, completed), action, ProspectStatus.Signed) with
         {
             Contracts = contracts,
             AlphaSnapshot = alphaSnapshot
@@ -213,6 +213,25 @@ public sealed class PendingGmActionService
                 .Select(item => item.ActionId == action.ActionId ? action : item)
                 .ToArray()
         };
+
+    private static NewGmScenarioSnapshot UpdateProspectStatus(
+        NewGmScenarioSnapshot scenario,
+        PendingGmAction action,
+        ProspectStatus status)
+    {
+        if (action.ActionType != PendingGmActionType.SignDraftPick
+            || scenario.ProspectRights.All(record => record.ProspectPersonId != action.PersonId))
+        {
+            return scenario;
+        }
+
+        return scenario with
+        {
+            ProspectRights = scenario.ProspectRights
+                .Select(record => record.ProspectPersonId == action.PersonId ? record with { Status = status } : record)
+                .ToArray()
+        };
+    }
 
     private static PendingGmActionResult BuildResult(
         bool success,

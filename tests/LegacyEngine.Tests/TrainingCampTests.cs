@@ -26,9 +26,14 @@ internal sealed class TrainingCampTests
     public void DraftedProspectsRecruitsAndTryoutsCanBeInvited()
     {
         var ready = ReadyForCamp();
+        var prospect = ready.ScenarioSnapshot.ProspectRights.First();
+        var prospectDecision = new ProspectDecisionService().ApplyDecision(
+            ready.Registry,
+            ready.ScenarioSnapshot,
+            new ProspectDecision(prospect.ProspectPersonId, ProspectDecisionType.InviteToCamp, ready.ScenarioSnapshot.CurrentDate));
         var service = new TrainingCampService();
-        var opened = service.OpenCamp(ready.Registry, ready.ScenarioSnapshot);
-        var tryoutPerson = ready.ScenarioSnapshot.AlphaSnapshot.People.First(person => opened.Camp.FindPlayer(person.PersonId) is null);
+        var opened = service.OpenCamp(ready.Registry, prospectDecision.ScenarioSnapshot);
+        var tryoutPerson = prospectDecision.ScenarioSnapshot.AlphaSnapshot.People.First(person => opened.Camp.FindPlayer(person.PersonId) is null);
         var invitedTryout = service.InvitePlayer(
             ready.Registry,
             opened.ScenarioSnapshot,

@@ -27,6 +27,7 @@ var developmentInboxPolicyTests = new DevelopmentInboxPolicyTests();
 var ahlAffiliateRulebookTests = new AhlAffiliateRulebookTests();
 var trainingCampTests = new TrainingCampTests();
 var pendingGmActionTests = new PendingGmActionTests();
+var prospectDecisionTests = new ProspectDecisionTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -344,6 +345,18 @@ runner.Run("pending GM action declining add to roster does not add player", pend
 runner.Run("pending GM action creates inbox message", pendingGmActionTests.InboxMessageIsGeneratedForPendingAction);
 runner.Run("AlphaDesktop exposes pending GM actions", pendingGmActionTests.AlphaDesktopExposesPendingActions);
 runner.Run("pending GM actions have no Godot save or full game simulation dependency", pendingGmActionTests.PendingActionsHaveNoGodotSaveOrFullGameSimulationDependency);
+runner.Run("prospect decision drafted player starts as rights held", prospectDecisionTests.DraftedPlayerStartsAsDraftRightsHeld);
+runner.Run("prospect decision drafted player is not rostered by default", prospectDecisionTests.DraftedPlayerIsNotActiveRosterByDefault);
+runner.Run("prospect decision offer contract creates pending action", prospectDecisionTests.OfferContractCreatesPendingAction);
+runner.Run("prospect decision approving signing creates contract", prospectDecisionTests.ApprovingSigningCreatesContract);
+runner.Run("prospect decision invite to camp adds camp invite", prospectDecisionTests.InviteToCampAddsTrainingCampInvite);
+runner.Run("prospect decision return to junior changes status", prospectDecisionTests.ReturnToJuniorChangesProspectStatus);
+runner.Run("prospect decision return to youth changes status", prospectDecisionTests.ReturnToYouthTeamChangesProspectStatus);
+runner.Run("prospect decision affiliate assignment respects rulebook", prospectDecisionTests.AssignToAffiliateOnlyAvailableWhenRulebookSupportsIt);
+runner.Run("prospect decision AHL-style teams do not draft directly", prospectDecisionTests.AhlStyleTeamsDoNotUseAmateurDraftFlow);
+runner.Run("prospect decision creates events and inbox", prospectDecisionTests.ProspectDecisionsCreateEventsAndInboxMessages);
+runner.Run("AlphaDesktop exposes prospect actions", prospectDecisionTests.AlphaDesktopExposesProspectActions);
+runner.Run("prospect decisions have no Godot save or game simulation dependency", prospectDecisionTests.ProspectDecisionsHaveNoGodotSaveOrGameSimulationDependency);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

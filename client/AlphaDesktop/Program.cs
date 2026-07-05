@@ -18,7 +18,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.6.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 1.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -204,6 +204,7 @@ internal sealed class MainWindow : Window
         {
             AddTab(tabs, "Draft Board");
         }
+        AddTab(tabs, "Prospect List");
         AddTab(tabs, "Training Camp");
         AddTab(tabs, "Relationships");
 
@@ -225,7 +226,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 1.6.1 - Live Draft",
+            Text = "Hockey GM Legacy - Alpha 1.7 - Post-Draft Prospect Decisions",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -260,6 +261,11 @@ internal sealed class MainWindow : Window
             buttonPanel.Children.Add(CreateButton("Board Down", MoveDraftBoardPlayerDown));
             buttonPanel.Children.Add(CreateButton("Star", StarTopProspect));
             buttonPanel.Children.Add(CreateButton("GM Note", AddDraftNote));
+            buttonPanel.Children.Add(CreateButton("Offer Contract", OfferProspectContract));
+            buttonPanel.Children.Add(CreateButton("Invite Prospect", InviteProspectToCamp));
+            buttonPanel.Children.Add(CreateButton("Return Prospect", ReturnProspectToJuniorOrYouth));
+            buttonPanel.Children.Add(CreateButton("Assign Prospect", AssignProspectToAffiliate));
+            buttonPanel.Children.Add(CreateButton("Release Rights", ReleaseProspectRights));
         }
         buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
@@ -466,6 +472,16 @@ internal sealed class MainWindow : Window
 
     private void AddDraftNote() => State.AddDraftNote();
 
+    private void OfferProspectContract() => State.OfferProspectContract();
+
+    private void InviteProspectToCamp() => State.InviteProspectToCamp();
+
+    private void ReturnProspectToJuniorOrYouth() => State.ReturnProspectToJuniorOrYouth();
+
+    private void AssignProspectToAffiliate() => State.AssignProspectToAffiliate();
+
+    private void ReleaseProspectRights() => State.ReleaseProspectRights();
+
     private void StartDraft() => State.StartDraft();
 
     private void RunAiDrafting() => State.RunAiDrafting();
@@ -519,6 +535,7 @@ internal sealed class MainWindow : Window
         {
             _tabs["Draft Board"].Text = BuildDraftBoard();
         }
+        _tabs["Prospect List"].Text = BuildProspectList();
         _tabs["Training Camp"].Text = BuildTrainingCamp();
         _tabs["Relationships"].Text = BuildRelationships();
         RefreshDraftModal();
@@ -1363,6 +1380,44 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildProspectList()
+    {
+        var builder = new StringBuilder();
+        var summary = State.ProspectSummary;
+        builder.AppendLine("Prospect List / Draft Rights");
+        builder.AppendLine("============================");
+        builder.AppendLine($"Total prospects: {summary.TotalProspects}");
+        builder.AppendLine($"Rights held: {summary.RightsHeld}");
+        builder.AppendLine($"Contract offered: {summary.ContractOffered}");
+        builder.AppendLine($"Signed: {summary.Signed}");
+        builder.AppendLine($"Invited to camp: {summary.InvitedToCamp}");
+        builder.AppendLine($"Returned: {summary.Returned}");
+        builder.AppendLine($"Assigned to affiliate: {summary.AssignedToAffiliate}");
+        builder.AppendLine($"Released/declined: {summary.ReleasedOrDeclined}");
+        builder.AppendLine();
+
+        if (State.ScenarioSnapshot.ProspectRights.Count == 0)
+        {
+            builder.AppendLine("No drafted players yet. Complete the draft to populate this list.");
+            return builder.ToString();
+        }
+
+        foreach (var prospect in State.ScenarioSnapshot.ProspectRights.OrderBy(item => item.PickNumber))
+        {
+            builder.AppendLine($"{prospect.ProspectName} - {prospect.Position} - age {prospect.Age}");
+            builder.AppendLine($"  Draft: round {prospect.RoundNumber}, pick {prospect.PickNumber}");
+            builder.AppendLine($"  Rights status: {prospect.Status}");
+            builder.AppendLine($"  Projection: {prospect.ProjectionText}");
+            builder.AppendLine($"  Confidence: {prospect.ScoutingConfidence?.ToString() ?? "Unknown"}");
+            builder.AppendLine($"  GM notes: {(string.IsNullOrWhiteSpace(prospect.GmNotes) ? "none" : prospect.GmNotes)}");
+            builder.AppendLine($"  Available actions: {string.Join(", ", State.AvailableProspectActions(prospect.ProspectPersonId))}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Active roster remains separate. Prospect decisions do not add players to the active roster automatically.");
+        return builder.ToString();
+    }
+
     private string BuildTrainingCamp()
     {
         var builder = new StringBuilder();
@@ -1474,6 +1529,7 @@ internal sealed class AlphaDesktopState
     private readonly AlphaDraftExperienceService _draftExperience = new();
     private readonly TrainingCampService _trainingCamp = new();
     private readonly PendingGmActionService _pendingActions = new();
+    private readonly ProspectDecisionService _prospectDecisions = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
@@ -1509,6 +1565,8 @@ internal sealed class AlphaDesktopState
         && ScenarioSnapshot.DraftExperience?.Status != DraftExperienceStatus.Disabled;
 
     public TrainingCampCalendarInfo TrainingCampCalendar => _trainingCamp.GetCalendarInfo(_registry, ScenarioSnapshot);
+
+    public ProspectListSummary ProspectSummary => _prospectDecisions.BuildSummary(ScenarioSnapshot);
 
     public string TrainingCampStatusText =>
         ScenarioSnapshot.TrainingCamp switch
@@ -1649,6 +1707,37 @@ internal sealed class AlphaDesktopState
         var note = $"GM note added on {Snapshot.CurrentDate:yyyy-MM-dd}: priority review before draft day.";
         ApplyAction(_draftExperience.UpdatePersonalNotes(_registry, ScenarioSnapshot, prospect.ProspectPersonId, note));
     }
+
+    public IReadOnlyList<ProspectDecisionType> AvailableProspectActions(string prospectPersonId) =>
+        _prospectDecisions.AvailableDecisions(_registry, ScenarioSnapshot, prospectPersonId);
+
+    public void OfferProspectContract() =>
+        ApplyProspectDecisionToNext(ProspectDecisionType.OfferContract, "No prospect is available for a contract offer.");
+
+    public void InviteProspectToCamp() =>
+        ApplyProspectDecisionToNext(ProspectDecisionType.InviteToCamp, "No prospect is available for a camp invite.");
+
+    public void ReturnProspectToJuniorOrYouth()
+    {
+        var prospect = NextActionableProspect(ProspectDecisionType.ReturnToJunior)
+            ?? NextActionableProspect(ProspectDecisionType.ReturnToYouthTeam);
+        if (prospect is null)
+        {
+            LatestSummary = "No prospect is available for a junior/youth return.";
+            return;
+        }
+
+        var decisionType = AvailableProspectActions(prospect.ProspectPersonId).Contains(ProspectDecisionType.ReturnToJunior)
+            ? ProspectDecisionType.ReturnToJunior
+            : ProspectDecisionType.ReturnToYouthTeam;
+        ApplyProspectDecision(prospect, decisionType);
+    }
+
+    public void AssignProspectToAffiliate() =>
+        ApplyProspectDecisionToNext(ProspectDecisionType.AssignToAffiliate, "No prospect is available for affiliate assignment.");
+
+    public void ReleaseProspectRights() =>
+        ApplyProspectDecisionToNext(ProspectDecisionType.ReleaseRights, "No prospect rights are available for release.");
 
     public void StartDraft()
     {
@@ -1865,6 +1954,40 @@ internal sealed class AlphaDesktopState
         LatestSummary = result.Summary;
     }
 
+    private void ApplyProspectDecisionToNext(ProspectDecisionType decisionType, string emptyMessage)
+    {
+        var prospect = NextActionableProspect(decisionType);
+        if (prospect is null)
+        {
+            LatestSummary = emptyMessage;
+            return;
+        }
+
+        ApplyProspectDecision(prospect, decisionType);
+    }
+
+    private void ApplyProspectDecision(DraftRightsRecord prospect, ProspectDecisionType decisionType)
+    {
+        var result = _prospectDecisions.ApplyDecision(
+            _registry,
+            ScenarioSnapshot,
+            new ProspectDecision(prospect.ProspectPersonId, decisionType, Snapshot.CurrentDate));
+        ApplyProspectResult(result);
+    }
+
+    private void ApplyProspectResult(ProspectDecisionResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            InboxManager.AddRange(result.InboxItems);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
     private void ApplyCampResult(TrainingCampResult result)
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
@@ -1905,6 +2028,12 @@ internal sealed class AlphaDesktopState
             .Where(player => player.Status is TrainingCampStatus.Invited or TrainingCampStatus.InCamp)
             .OrderByDescending(player => ScenarioSnapshot.TrainingCamp!.FindEvaluation(player.PersonId)?.CampScore ?? 0)
             .ThenBy(player => player.PlayerName, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+    private DraftRightsRecord? NextActionableProspect(ProspectDecisionType decisionType) =>
+        ScenarioSnapshot.ProspectRights
+            .Where(prospect => AvailableProspectActions(prospect.ProspectPersonId).Contains(decisionType))
+            .OrderBy(prospect => prospect.PickNumber)
             .FirstOrDefault();
 
     private bool EnsureDraftStarted()
