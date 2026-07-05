@@ -24,6 +24,7 @@ var organizationTests = new OrganizationEngineTests();
 var seasonTests = new SeasonEngineTests();
 var alphaDraftExperienceTests = new AlphaDraftExperienceTests();
 var developmentInboxPolicyTests = new DevelopmentInboxPolicyTests();
+var ahlAffiliateRulebookTests = new AhlAffiliateRulebookTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -291,6 +292,13 @@ runner.Run("development inbox messages are capped", developmentInboxPolicyTests.
 runner.Run("development inbox names player", developmentInboxPolicyTests.PlayerNameAppearsInDevelopmentMessage);
 runner.Run("routine development update stays out of inbox", developmentInboxPolicyTests.RoutineDevelopmentUpdateDoesNotCreateInboxItem);
 runner.Run("meaningful development update creates inbox item", developmentInboxPolicyTests.MeaningfulDevelopmentUpdateCreatesInboxItem);
+runner.Run("AHL rulebook has draft disabled", ahlAffiliateRulebookTests.AhlRulebookHasDraftDisabled);
+runner.Run("AHL preset has draft disabled", ahlAffiliateRulebookTests.AhlPresetHasDraftDisabled);
+runner.Run("AHL organization references NHL parent", ahlAffiliateRulebookTests.AhlOrganizationCanReferenceParentNhlOrganization);
+runner.Run("NHL organization references AHL affiliate", ahlAffiliateRulebookTests.NhlOrganizationCanReferenceAhlAffiliateOrganization);
+runner.Run("AHL roster player can be assigned from parent club", ahlAffiliateRulebookTests.PlayerCanBeAddedAsAssignedFromParentClub);
+runner.Run("AHL draft UI is disabled by rulebook", ahlAffiliateRulebookTests.AhlDraftUiIsDisabledByRulebook);
+runner.Run("Junior and NHL draft behavior remains enabled", ahlAffiliateRulebookTests.JuniorAndNhlDraftBehaviorRemainEnabled);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

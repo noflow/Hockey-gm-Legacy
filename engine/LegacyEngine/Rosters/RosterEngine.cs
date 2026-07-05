@@ -42,7 +42,8 @@ public sealed class RosterEngine
             Status: move.TargetStatus ?? RosterStatus.Active,
             JoinedDate: move.Date,
             Age: move.Age,
-            IsImport: move.IsImport);
+            IsImport: move.IsImport,
+            AcquisitionSource: move.AcquisitionSource);
 
         var updated = roster with { Players = roster.Players.Append(player).ToArray() };
         var validation = ValidateRoster(updated, validator);

@@ -27,7 +27,7 @@ public static class RulebookPresets
         BaseRulebook("nhl_style_default", "nhl_style", true, 7);
 
     public static Rulebook CreateAhlStyle() =>
-        BaseRulebook("ahl_style_default", "ahl_style", false, 0);
+        BaseRulebook("ahl_style_default", "ahl_style", false, 0, CreateAhlAffiliateRules());
 
     private static Rulebook CreateCustom(int rounds)
     {
@@ -35,7 +35,12 @@ public static class RulebookPresets
         return BaseRulebook($"custom_draft_{rounds}", "custom", true, rulebook.DraftRules!.Rounds);
     }
 
-    private static Rulebook BaseRulebook(string rulebookId, string leagueType, bool draftEnabled, int rounds) =>
+    private static Rulebook BaseRulebook(
+        string rulebookId,
+        string leagueType,
+        bool draftEnabled,
+        int rounds,
+        AffiliateRules? affiliateRules = null) =>
         new()
         {
             RulebookId = rulebookId,
@@ -105,6 +110,32 @@ public static class RulebookPresets
                 DraftOffsetDays = 300,
                 FreeAgencyOpenOffsetDays = 310,
                 FreeAgencyCloseOffsetDays = 330
+            },
+            AffiliateRules = affiliateRules
+        };
+
+    private static AffiliateRules CreateAhlAffiliateRules() =>
+        new()
+        {
+            AffiliateEnabled = true,
+            ReceivesNonNhlReadyDraftedProspects = true,
+            AllowedAcquisitionSources = new[]
+            {
+                "AssignedFromParentClub",
+                "LoanedFromParentClub",
+                "TwoWayContract",
+                "AhlContract",
+                "Tryout",
+                "FreeAgentSigning"
+            },
+            GmResponsibilities = new[]
+            {
+                "Development",
+                "IceTime",
+                "RosterBalance",
+                "CallUpsSendDowns",
+                "Morale",
+                "VeteranLeadership"
             }
         };
 }

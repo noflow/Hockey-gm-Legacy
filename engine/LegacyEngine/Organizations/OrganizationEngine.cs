@@ -35,7 +35,9 @@ public sealed class OrganizationEngine
         IEnumerable<OrganizationMembership>? staffMemberships = null,
         IEnumerable<OrganizationDepartment>? departments = null,
         IEnumerable<OrganizationBudgetReference>? budgetReferences = null,
-        IEnumerable<OrganizationFacilityReference>? facilityReferences = null)
+        IEnumerable<OrganizationFacilityReference>? facilityReferences = null,
+        string? parentOrganizationId = null,
+        string? affiliateOrganizationId = null)
     {
         var organization = new Organization(
             OrganizationId: organizationId,
@@ -50,7 +52,9 @@ public sealed class OrganizationEngine
             StaffMemberships: staffMemberships?.ToArray() ?? Array.Empty<OrganizationMembership>(),
             Departments: departments?.ToArray() ?? Array.Empty<OrganizationDepartment>(),
             BudgetReferences: budgetReferences?.ToArray() ?? Array.Empty<OrganizationBudgetReference>(),
-            FacilityReferences: facilityReferences?.ToArray() ?? Array.Empty<OrganizationFacilityReference>());
+            FacilityReferences: facilityReferences?.ToArray() ?? Array.Empty<OrganizationFacilityReference>(),
+            ParentOrganizationId: parentOrganizationId,
+            AffiliateOrganizationId: affiliateOrganizationId);
 
         organization.Validate();
 

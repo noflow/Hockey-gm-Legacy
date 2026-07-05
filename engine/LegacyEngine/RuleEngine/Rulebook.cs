@@ -33,6 +33,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("season_rules")]
     public SeasonRules? SeasonRules { get; init; }
+
+    [JsonPropertyName("affiliate_rules")]
+    public AffiliateRules? AffiliateRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -138,6 +141,27 @@ public sealed class BudgetRules
 
     [JsonPropertyName("hard_salary_cap_amount")]
     public decimal? HardSalaryCapAmount { get; init; }
+}
+
+public sealed class AffiliateRules
+{
+    [JsonPropertyName("affiliate_enabled")]
+    public bool AffiliateEnabled { get; init; }
+
+    [JsonPropertyName("parent_organization_id")]
+    public string? ParentOrganizationId { get; init; }
+
+    [JsonPropertyName("affiliate_organization_id")]
+    public string? AffiliateOrganizationId { get; init; }
+
+    [JsonPropertyName("receives_non_nhl_ready_drafted_prospects")]
+    public bool ReceivesNonNhlReadyDraftedProspects { get; init; }
+
+    [JsonPropertyName("allowed_acquisition_sources")]
+    public IReadOnlyList<string> AllowedAcquisitionSources { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("gm_responsibilities")]
+    public IReadOnlyList<string> GmResponsibilities { get; init; } = Array.Empty<string>();
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

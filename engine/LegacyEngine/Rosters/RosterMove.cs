@@ -8,7 +8,8 @@ public sealed record RosterMove(
     RosterStatus? TargetStatus = null,
     int? Age = null,
     bool IsImport = false,
-    string Reason = "")
+    string Reason = "",
+    PlayerAcquisitionSource AcquisitionSource = PlayerAcquisitionSource.Unknown)
 {
     public void Validate()
     {

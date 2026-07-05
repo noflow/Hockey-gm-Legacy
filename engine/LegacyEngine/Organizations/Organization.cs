@@ -20,7 +20,9 @@ public sealed record Organization(
     IReadOnlyList<OrganizationMembership> StaffMemberships,
     IReadOnlyList<OrganizationDepartment> Departments,
     IReadOnlyList<OrganizationBudgetReference> BudgetReferences,
-    IReadOnlyList<OrganizationFacilityReference> FacilityReferences)
+    IReadOnlyList<OrganizationFacilityReference> FacilityReferences,
+    string? ParentOrganizationId = null,
+    string? AffiliateOrganizationId = null)
 {
     public string Name => Identity.Name;
 
@@ -91,6 +93,16 @@ public sealed record Organization(
         if (string.IsNullOrWhiteSpace(OrganizationId))
         {
             throw new ArgumentException("Organization id is required.", nameof(OrganizationId));
+        }
+
+        if (ParentOrganizationId == OrganizationId)
+        {
+            throw new ArgumentException("Organization cannot be its own parent organization.", nameof(ParentOrganizationId));
+        }
+
+        if (AffiliateOrganizationId == OrganizationId)
+        {
+            throw new ArgumentException("Organization cannot be its own affiliate organization.", nameof(AffiliateOrganizationId));
         }
 
         Identity.Validate();

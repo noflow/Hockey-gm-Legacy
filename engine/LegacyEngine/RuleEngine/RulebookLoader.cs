@@ -164,6 +164,12 @@ public sealed class RulebookLoader
             return InvalidField("budget_rules.hard_salary_cap_amount", "Enabled hard salary caps require a non-negative amount.");
         }
 
+        if (rulebook.AffiliateRules is { AffiliateEnabled: true } affiliate
+            && affiliate.AllowedAcquisitionSources.Count == 0)
+        {
+            return InvalidField("affiliate_rules.allowed_acquisition_sources", "Enabled affiliate rules require at least one acquisition source.");
+        }
+
         return RuleValidationResult.Valid("Rulebook is valid.");
     }
 

@@ -7,7 +7,8 @@ public sealed record RosterPlayer(
     DateOnly JoinedDate,
     DateOnly? ReleasedDate = null,
     int? Age = null,
-    bool IsImport = false)
+    bool IsImport = false,
+    PlayerAcquisitionSource AcquisitionSource = PlayerAcquisitionSource.Unknown)
 {
     public bool CountsTowardRoster => Status is RosterStatus.Active or RosterStatus.Reserve or RosterStatus.InjuredReserve;
 

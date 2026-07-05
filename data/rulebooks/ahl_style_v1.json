@@ -1,0 +1,92 @@
+{
+  "rulebook_id": "ahl_style_v1",
+  "league_type": "ahl_style",
+  "version": "1.0",
+  "roster_rules": {
+    "min_roster": 18,
+    "max_roster": 25,
+    "active_roster": 20,
+    "goalies_required": 2,
+    "overage_slots": 0,
+    "import_slots": 0,
+    "injured_reserve_enabled": true,
+    "reserve_list_enabled": true
+  },
+  "eligibility_rules": {
+    "min_age": 18,
+    "max_age": 99
+  },
+  "contract_rules": {
+    "allowed_contract_types": [
+      "staff_contract",
+      "gm_contract",
+      "scout_contract",
+      "coach_contract"
+    ],
+    "salary_cap_enabled": false,
+    "junior_stipends_enabled": false,
+    "education_packages_enabled": false,
+    "housing_support_enabled": false,
+    "no_trade_clauses_enabled": false,
+    "no_move_clauses_enabled": false,
+    "arbitration_enabled": false,
+    "offer_sheets_enabled": false
+  },
+  "draft_rules": {
+    "draft_enabled": false,
+    "rounds": 0,
+    "draft_order": "disabled"
+  },
+  "playoff_rules": {
+    "teams_qualify": 8,
+    "series_format": [
+      5,
+      5,
+      7,
+      7
+    ],
+    "reseed_each_round": true
+  },
+  "budget_rules": {
+    "owner_budget_enabled": true,
+    "hard_salary_cap_enabled": false
+  },
+  "season_rules": {
+    "season_start_month": 9,
+    "season_start_day": 15,
+    "training_camp_offset_days": 0,
+    "season_begin_offset_days": 21,
+    "trade_deadline_offset_days": 155,
+    "playoffs_begin_offset_days": 215,
+    "championship_offset_days": 260,
+    "awards_offset_days": 268,
+    "recruiting_open_offset_days": 0,
+    "recruiting_close_offset_days": 0,
+    "draft_lottery_offset_days": 0,
+    "draft_offset_days": 0,
+    "free_agency_open_offset_days": 275,
+    "free_agency_close_offset_days": 320
+  },
+  "affiliate_rules": {
+    "affiliate_enabled": true,
+    "parent_organization_id": null,
+    "affiliate_organization_id": null,
+    "receives_non_nhl_ready_drafted_prospects": true,
+    "allowed_acquisition_sources": [
+      "AssignedFromParentClub",
+      "LoanedFromParentClub",
+      "TwoWayContract",
+      "AhlContract",
+      "Tryout",
+      "FreeAgentSigning"
+    ],
+    "gm_responsibilities": [
+      "Development",
+      "IceTime",
+      "RosterBalance",
+      "CallUpsSendDowns",
+      "Morale",
+      "VeteranLeadership"
+    ]
+  }
+}

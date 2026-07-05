@@ -196,7 +196,10 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Roster");
         AddTab(tabs, "Recruits");
         AddTab(tabs, "Scouting");
-        AddTab(tabs, "Draft Board");
+        if (State.IsDraftUiEnabled)
+        {
+            AddTab(tabs, "Draft Board");
+        }
         AddTab(tabs, "Relationships");
 
         root.Children.Add(tabs);
@@ -249,15 +252,21 @@ internal sealed class MainWindow : Window
 
         buttonPanel.Children.Add(CreateButton("Advance Day", () => Advance(1)));
         buttonPanel.Children.Add(CreateButton("Advance 7 Days", () => Advance(7)));
-        buttonPanel.Children.Add(CreateButton("Board Up", MoveDraftBoardPlayerUp));
-        buttonPanel.Children.Add(CreateButton("Board Down", MoveDraftBoardPlayerDown));
-        buttonPanel.Children.Add(CreateButton("Star", StarTopProspect));
-        buttonPanel.Children.Add(CreateButton("GM Note", AddDraftNote));
+        if (State.IsDraftUiEnabled)
+        {
+            buttonPanel.Children.Add(CreateButton("Board Up", MoveDraftBoardPlayerUp));
+            buttonPanel.Children.Add(CreateButton("Board Down", MoveDraftBoardPlayerDown));
+            buttonPanel.Children.Add(CreateButton("Star", StarTopProspect));
+            buttonPanel.Children.Add(CreateButton("GM Note", AddDraftNote));
+        }
         buttonPanel.Children.Add(CreateButton("Scout Focus", AssignScoutFocus));
         buttonPanel.Children.Add(CreateButton("Offer Recruit", MakeRecruitingOffer));
-        buttonPanel.Children.Add(CreateButton("Start Draft", StartDraft));
-        buttonPanel.Children.Add(CreateButton("AI Picks", RunAiDrafting));
-        buttonPanel.Children.Add(CreateButton("Draft Top", DraftTopProspect));
+        if (State.IsDraftUiEnabled)
+        {
+            buttonPanel.Children.Add(CreateButton("Start Draft", StartDraft));
+            buttonPanel.Children.Add(CreateButton("AI Picks", RunAiDrafting));
+            buttonPanel.Children.Add(CreateButton("Draft Top", DraftTopProspect));
+        }
 
         Grid.SetColumn(buttonPanel, 1);
         panel.Children.Add(buttonPanel);
@@ -465,7 +474,10 @@ internal sealed class MainWindow : Window
         _tabs["Roster"].Text = BuildRoster();
         _tabs["Recruits"].Text = BuildRecruits();
         _tabs["Scouting"].Text = BuildScouting();
-        _tabs["Draft Board"].Text = BuildDraftBoard();
+        if (_tabs.ContainsKey("Draft Board"))
+        {
+            _tabs["Draft Board"].Text = BuildDraftBoard();
+        }
         _tabs["Relationships"].Text = BuildRelationships();
     }
 
@@ -480,6 +492,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Date: {snapshot.CurrentDate:yyyy-MM-dd}");
         builder.AppendLine($"Season phase: {snapshot.Season?.CurrentPhase.ToString() ?? snapshot.WorldState.CurrentPhase.ToString()}");
         builder.AppendLine($"Draft date: {State.ScenarioSnapshot.DraftDate:yyyy-MM-dd} ({State.ScenarioSnapshot.DaysUntilDraft} days away)");
+        builder.AppendLine($"Draft UI: {(State.IsDraftUiEnabled ? "enabled by rulebook" : "disabled by rulebook")}");
         builder.AppendLine($"Draft status: {State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft"}");
         if (State.ScenarioSnapshot.DraftExperience is { } draftState)
         {
@@ -1052,6 +1065,8 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<InboxMessage> Inbox => InboxManager.Query(new InboxFilter());
 
+    public bool IsDraftUiEnabled => DraftUiPolicy.IsDraftUiEnabled(_registry.Rulebook);
+
     public string LatestSummary { get; private set; }
 
     public int LastProcessedEventCount { get; private set; }
@@ -1163,6 +1178,12 @@ internal sealed class AlphaDesktopState
 
     public void StartDraft()
     {
+        if (!IsDraftUiEnabled)
+        {
+            LatestSummary = "Draft features are disabled by the active league rulebook.";
+            return;
+        }
+
         if (Snapshot.CurrentDate < ScenarioSnapshot.DraftDate)
         {
             LatestSummary = $"Draft day has not arrived. {ScenarioSnapshot.DaysUntilDraft} day(s) remain.";
