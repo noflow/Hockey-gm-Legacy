@@ -33,8 +33,9 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha Console
 - Human Intelligence
 - Alpha Daily Simulation Pipeline
+- Alpha Desktop
 
-Alpha 0.4 - Console Playable Demo makes AlphaConsole usable as a basic terminal GM demo with readable owner, staff, roster, recruit, scouting, draft board, relationship, inbox, and daily advance screens.
+Alpha 0.5 - Basic Desktop UI adds a simple desktop wrapper around the alpha integration loop with dashboard, inbox, owner, staff, roster, recruits, scouting, draft board, and relationship tabs.
 
 ## Alpha Console
 
@@ -42,6 +43,12 @@ Run the engine-only playtest harness:
 
 ```bash
 dotnet run --project tools/AlphaConsole
+```
+
+Run the basic desktop UI:
+
+```bash
+dotnet run --project client/AlphaDesktop
 ```
 
 Available commands:

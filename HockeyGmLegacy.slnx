@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/client/">
+    <Project Path="client/AlphaDesktop/AlphaDesktop.csproj" />
+  </Folder>
   <Folder Name="/engine/">
     <Project Path="engine/LegacyEngine/LegacyEngine.csproj" />
   </Folder>
