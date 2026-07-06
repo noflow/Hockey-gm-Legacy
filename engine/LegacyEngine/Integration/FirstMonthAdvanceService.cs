@@ -34,10 +34,11 @@ public sealed class FirstMonthAdvanceService
         var urgent = UrgentPendingActions(scenario);
         if (urgent.Count > 0)
         {
-            return Result(scenario, 0, 0, Array.Empty<AlphaInboxItem>(), $"Stopped because urgent pending action needs review: {urgent[0].Title}.", true);
+            return Result(scenario, 0, 0, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), $"Stopped because urgent pending action needs review: {urgent[0].Title}.", true);
         }
 
         var inbox = new List<AlphaInboxItem>();
+        var leagueTransactions = new List<LeagueTransaction>();
         var processed = 0;
         var current = scenario;
         MonthlyGmSummary? monthlySummary = null;
@@ -50,6 +51,7 @@ public sealed class FirstMonthAdvanceService
             var daily = _coordinator.AdvanceScenarioOneDay(registry, current);
             current = daily.ScenarioSnapshot;
             inbox.AddRange(daily.InboxItems);
+            leagueTransactions.AddRange(daily.LeagueTransactions);
             processed += daily.SimulationResult.ProcessedEventCount;
 
             var newRecaps = current.GameRecaps.Skip(previousRecapCount).ToArray();
@@ -61,13 +63,13 @@ public sealed class FirstMonthAdvanceService
                 var opponent = playerRecap.BoxScore.Home.OrganizationId == current.Organization.OrganizationId
                     ? playerRecap.BoxScore.Away.TeamName
                     : playerRecap.BoxScore.Home.TeamName;
-                return Result(current, day + 1, processed, inbox, $"Stopped because {current.Organization.Name} played {opponent}.", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, $"Stopped because {current.Organization.Name} played {opponent}.", true);
             }
 
             if (current.GameRecaps.SelectMany(recap => recap.InjuryNotes).Count() > previousInjuryNotes)
             {
                 var note = current.GameRecaps.SelectMany(recap => recap.InjuryNotes).Last();
-                return Result(current, day + 1, processed, inbox, $"Stopped because {note}", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, $"Stopped because {note}", true);
             }
 
             if (playerRecap is not null)
@@ -75,30 +77,30 @@ public sealed class FirstMonthAdvanceService
                 var opponent = playerRecap.BoxScore.Home.OrganizationId == current.Organization.OrganizationId
                     ? playerRecap.BoxScore.Away.TeamName
                     : playerRecap.BoxScore.Home.TeamName;
-                return Result(current, day + 1, processed, inbox, $"Stopped because {current.Organization.Name} played {opponent}.", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, $"Stopped because {current.Organization.Name} played {opponent}.", true);
             }
 
             if (current.CompletedScoutingReports.Count > previousScoutingReports)
             {
-                return Result(current, day + 1, processed, inbox, "Stopped because a major scouting report was completed.", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, "Stopped because a major scouting report was completed.", true);
             }
 
             if (daily.InboxItems.Any(item => item.EventType == LegacyEventType.PlayerInjured || item.Severity == LegacyEventSeverity.Critical))
             {
                 var item = daily.InboxItems.First(item => item.EventType == LegacyEventType.PlayerInjured || item.Severity == LegacyEventSeverity.Critical);
-                return Result(current, day + 1, processed, inbox, $"Stopped because {item.Title}.", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, $"Stopped because {item.Title}.", true);
             }
 
             urgent = UrgentPendingActions(current);
             if (urgent.Count > 0)
             {
-                return Result(current, day + 1, processed, inbox, $"Stopped because urgent pending action needs review: {urgent[0].Title}.", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, $"Stopped because urgent pending action needs review: {urgent[0].Title}.", true);
             }
 
             var rosterReport = new SeasonReadinessService().Evaluate(registry, current).RosterReport;
             if (!rosterReport.ValidationResult.IsValid)
             {
-                return Result(current, day + 1, processed, inbox, $"Stopped because roster is invalid: {rosterReport.ValidationResult.Message}", true);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, $"Stopped because roster is invalid: {rosterReport.ValidationResult.Message}", true);
             }
 
             if (ShouldGenerateMonthEnd(current, mode))
@@ -107,7 +109,7 @@ public sealed class FirstMonthAdvanceService
                 current = monthly.ScenarioSnapshot;
                 inbox.AddRange(monthly.InboxItems);
                 monthlySummary = monthly.Summary;
-                return Result(current, day + 1, processed, inbox, "Stopped because monthly report is ready.", true, monthlySummary);
+                return Result(current, day + 1, processed, inbox, leagueTransactions, "Stopped because monthly report is ready.", true, monthlySummary);
             }
         }
 
@@ -117,7 +119,7 @@ public sealed class FirstMonthAdvanceService
             FirstMonthAdvanceMode.MonthEnd => "Advance stopped before month end because the requested window ended.",
             _ => $"Advanced {maxDays} day(s)."
         };
-        return Result(current, maxDays, processed, inbox, reason, false, monthlySummary);
+        return Result(current, maxDays, processed, inbox, leagueTransactions, reason, false, monthlySummary);
     }
 
     public static IReadOnlyList<PendingGmAction> UrgentPendingActions(NewGmScenarioSnapshot scenario) =>
@@ -152,11 +154,12 @@ public sealed class FirstMonthAdvanceService
         int days,
         int processed,
         IReadOnlyList<AlphaInboxItem> inbox,
+        IReadOnlyList<LeagueTransaction> leagueTransactions,
         string stopReason,
         bool stopped,
         MonthlyGmSummary? monthlySummary = null)
     {
-        var result = new FirstMonthAdvanceResult(scenario, days, processed, inbox, stopReason, stopped, monthlySummary);
+        var result = new FirstMonthAdvanceResult(scenario, days, processed, inbox, leagueTransactions, stopReason, stopped, monthlySummary);
         result.Validate();
         return result;
     }

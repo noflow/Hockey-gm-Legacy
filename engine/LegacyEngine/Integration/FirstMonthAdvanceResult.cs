@@ -5,6 +5,7 @@ public sealed record FirstMonthAdvanceResult(
     int DaysAdvanced,
     int ProcessedEventCount,
     IReadOnlyList<AlphaInboxItem> InboxItems,
+    IReadOnlyList<LeagueTransaction> LeagueTransactions,
     string StopReason,
     bool StoppedForAttention,
     MonthlyGmSummary? MonthlySummary = null)
@@ -23,5 +24,9 @@ public sealed record FirstMonthAdvanceResult(
         }
 
         MonthlySummary?.Validate();
+        foreach (var transaction in LeagueTransactions)
+        {
+            transaction.Validate();
+        }
     }
 }

@@ -143,11 +143,20 @@ public sealed class DailySimulationPipeline
             $"Progressed {recruits.Count} recruit profile(s).",
             new Dictionary<string, object?> { ["recruit_count"] = recruits.Count }));
 
-        var messages = GenerateCommunicationMessages(processedEvents);
+        var wireService = new LeagueTransactionWireService();
+        var leagueTransactions = wireService.BuildTransactions(
+            processedEvents.Where(item => wireService.ShouldRouteToLeagueNews(item, snapshot.OrganizationId)),
+            organizationId => OrganizationName(snapshot, organizationId),
+            personId => PersonName(snapshot, personId));
+        var messages = GenerateCommunicationMessages(processedEvents, snapshot.OrganizationId);
         log.Add(Log(
             DailySimulationStep.GenerateCommunicationMessages,
             $"Generated {messages.Count} communication message(s).",
-            new Dictionary<string, object?> { ["message_count"] = messages.Count }));
+            new Dictionary<string, object?>
+            {
+                ["message_count"] = messages.Count,
+                ["league_transaction_count"] = leagueTransactions.Count
+            }));
 
         var inboxItems = messages.Select(ToInboxItem).Concat(development.InboxItems).ToArray();
         log.Add(Log(
@@ -175,6 +184,7 @@ public sealed class DailySimulationPipeline
             CurrentDate: updatedSnapshot.CurrentDate,
             ProcessedEventCount: dailyResult.ProcessedEventCount,
             InboxItems: inboxItems,
+            LeagueTransactions: leagueTransactions,
             CommunicationMessages: messages,
             LogEntries: log,
             Summary: BuildSummary(updatedSnapshot, dailyResult, inboxItems, log),
@@ -423,11 +433,15 @@ public sealed class DailySimulationPipeline
             .ToArray();
 
     private static IReadOnlyList<AlphaCommunicationMessage> GenerateCommunicationMessages(
-        IReadOnlyList<LegacyEvent> processedEvents) =>
-        processedEvents
-            .Where(IsImportantEvent)
+        IReadOnlyList<LegacyEvent> processedEvents,
+        string playerOrganizationId)
+    {
+        var wireService = new LeagueTransactionWireService();
+        return processedEvents
+            .Where(item => IsImportantEvent(item) && wireService.ShouldRouteToInbox(item, playerOrganizationId))
             .Select(ToCommunicationMessage)
             .ToArray();
+    }
 
     private static bool IsImportantEvent(LegacyEvent legacyEvent) =>
         ImportantCommunicationEvents.Contains(legacyEvent.EventType)
@@ -452,6 +466,17 @@ public sealed class DailySimulationPipeline
             Title: message.Subject,
             Summary: message.Body,
             PrimaryPersonId: message.PrimaryPersonId);
+
+    private static string OrganizationName(AlphaWorldSnapshot snapshot, string organizationId) =>
+        string.Equals(snapshot.OrganizationId, organizationId, StringComparison.Ordinal)
+            ? snapshot.Organization?.Name ?? organizationId
+            : organizationId;
+
+    private static string PersonName(AlphaWorldSnapshot snapshot, string personId) =>
+        snapshot.People.FirstOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
+        ?? snapshot.Players.FirstOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
+        ?? snapshot.StaffMembers.FirstOrDefault(member => member.PersonId == personId)?.CurrentRole.ToString()
+        ?? personId;
 
     private static DailySimulationLogEntry Log(
         DailySimulationStep step,

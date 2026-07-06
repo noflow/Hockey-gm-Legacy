@@ -42,6 +42,7 @@ var alpha25SeasonFrameworkTests = new Alpha25SeasonFrameworkTests();
 var alpha26GameRecapStatsPolishTests = new Alpha26GameRecapStatsPolishTests();
 var alpha27FirstMonthPlayabilityTests = new Alpha27FirstMonthPlayabilityTests();
 var alpha271RosterFrontOfficeRealismTests = new Alpha271RosterFrontOfficeRealismTests();
+var alpha272InboxCleanupTransactionWireTests = new Alpha272InboxCleanupTransactionWireTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -536,6 +537,13 @@ runner.Run("alpha 2.7.1 candidate hiring works", alpha271RosterFrontOfficeRealis
 runner.Run("alpha 2.7.1 staff limits enforced", alpha271RosterFrontOfficeRealismTests.StaffLimitsEnforced);
 runner.Run("alpha 2.7.1 dashboard warnings generated", alpha271RosterFrontOfficeRealismTests.DashboardWarningsGenerated);
 runner.Run("alpha 2.7.1 AlphaDesktop exposes vacancies candidates and hiring", alpha271RosterFrontOfficeRealismTests.AlphaDesktopExposesVacanciesCandidatesAndHiring);
+runner.Run("alpha 2.7.2 other-team contract signed goes to League News not inbox", alpha272InboxCleanupTransactionWireTests.OtherTeamContractSignedGoesToLeagueNewsNotInbox);
+runner.Run("alpha 2.7.2 other-team roster add goes to League News not inbox", alpha272InboxCleanupTransactionWireTests.OtherTeamRosterAddGoesToLeagueNewsNotInbox);
+runner.Run("alpha 2.7.2 player-team contract decision goes to inbox", alpha272InboxCleanupTransactionWireTests.PlayerTeamContractDecisionGoesToInbox);
+runner.Run("alpha 2.7.2 vague system messages are filtered", alpha272InboxCleanupTransactionWireTests.VagueSystemMessagesAreFiltered);
+runner.Run("alpha 2.7.2 League News feed displays transactions", alpha272InboxCleanupTransactionWireTests.LeagueNewsFeedDisplaysTransactions);
+runner.Run("alpha 2.7.2 inbox remains team decision focused", alpha272InboxCleanupTransactionWireTests.InboxRemainsTeamDecisionFocused);
+runner.Run("alpha 2.7.2 AlphaDesktop exposes League News tab", alpha272InboxCleanupTransactionWireTests.AlphaDesktopExposesLeagueNewsTab);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

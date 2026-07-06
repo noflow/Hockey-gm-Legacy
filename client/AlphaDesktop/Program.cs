@@ -22,7 +22,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -100,7 +100,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.7.1 starts with your created GM preparing for a live draft, then unlocks staff vacancies, draft prospect bios, training camp, player dossiers, a basic season loop, readable game recaps, and first-month pacing.",
+            Text = "Alpha 2.7.2 starts with your created GM preparing for a live draft, then keeps the GM inbox focused while other-team transactions move to League News.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -223,6 +223,7 @@ internal sealed class MainWindow : Window
         AddSelectablePeopleTab(tabs, "Scouting");
         AddSelectablePeopleTab(tabs, "Scouting Operations");
         AddTab(tabs, "Pending Actions");
+        AddTab(tabs, "League News");
         if (State.IsDraftUiEnabled)
         {
             AddSelectablePeopleTab(tabs, "Draft Board");
@@ -255,7 +256,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.7.1 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.7.2 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -913,6 +914,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         _tabs["Pending Actions"].Text = BuildPendingActions();
+        _tabs["League News"].Text = BuildLeagueNews();
         RefreshSelectableTab("Player Dossier", BuildDossierRows());
         if (_selectableLists.ContainsKey("Draft Board"))
         {
@@ -2763,6 +2765,39 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildLeagueNews()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("League News / Transaction Wire");
+        builder.AppendLine();
+        builder.AppendLine("Filters: All | Signings | Roster Moves | Injuries | Draft | Staff");
+        builder.AppendLine("Other-team transactions appear here instead of crowding the GM inbox.");
+        builder.AppendLine();
+
+        if (State.LeagueTransactions.Count == 0)
+        {
+            builder.AppendLine("No league transactions have been reported yet.");
+            return builder.ToString();
+        }
+
+        foreach (var group in State.LeagueTransactions.GroupBy(transaction => transaction.Category).OrderBy(group => group.Key))
+        {
+            builder.AppendLine(group.Key.ToString());
+            foreach (var transaction in group
+                .OrderByDescending(transaction => transaction.Date)
+                .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
+                .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal))
+            {
+                builder.AppendLine($"  {transaction.Date:yyyy-MM-dd} | {transaction.TeamName} | {transaction.PersonName} | {transaction.TransactionType}");
+                builder.AppendLine($"    {transaction.Description}");
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
     private static string PendingActionConsequence(PendingGmAction action) =>
         action.ActionType switch
         {
@@ -3460,6 +3495,7 @@ internal sealed class AlphaDesktopState
     private readonly SeasonStatsPolishService _statsPolish = new();
     private readonly FirstMonthAdvanceService _firstMonthAdvance = new();
     private readonly EngineRegistry _registry;
+    private readonly List<LeagueTransaction> _leagueTransactions = [];
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
@@ -3479,6 +3515,13 @@ internal sealed class AlphaDesktopState
     public InboxManager InboxManager { get; } = new();
 
     public IReadOnlyList<InboxMessage> Inbox => InboxManager.Query(new InboxFilter());
+
+    public IReadOnlyList<LeagueTransaction> LeagueTransactions =>
+        _leagueTransactions
+            .OrderByDescending(transaction => transaction.Date)
+            .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
+            .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
+            .ToArray();
 
     public int UnreadInboxCount => Inbox.Count(message => message.IsUnread);
 
@@ -4936,6 +4979,7 @@ internal sealed class AlphaDesktopState
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
         InboxManager.AddRange(result.InboxItems);
+        AddLeagueTransactions(result.LeagueTransactions);
         LastProcessedEventCount = result.ProcessedEventCount;
         LastStopReason = result.StopReason;
         LatestSummary = result.MonthlySummary is not null
@@ -5178,5 +5222,22 @@ internal sealed class AlphaDesktopState
     {
         var updated = InboxManager.ApplyAction(inboxItemId, action);
         LatestSummary = $"{action} applied to: {updated.Item.Title}.";
+    }
+
+    private void AddLeagueTransactions(IEnumerable<LeagueTransaction> transactions)
+    {
+        foreach (var transaction in transactions)
+        {
+            transaction.Validate();
+            var existingIndex = _leagueTransactions.FindIndex(existing => existing.TransactionId == transaction.TransactionId);
+            if (existingIndex >= 0)
+            {
+                _leagueTransactions[existingIndex] = transaction;
+            }
+            else
+            {
+                _leagueTransactions.Add(transaction);
+            }
+        }
     }
 }

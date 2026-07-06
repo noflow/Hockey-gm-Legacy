@@ -65,14 +65,15 @@ The five foundation pillars remain:
 - Alpha 2.6 - Game Recap + Stats Polish
 - Alpha 2.7 - First Month Playability Pass
 - Alpha 2.7.1 - Roster & Front Office Realism Pass
+- Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire
 
 ## Current Milestone
 
-Alpha 2.7.1 - Roster & Front Office Realism Pass
+Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire
 
 ## Current Goal
 
-Make the junior front office feel more realistic by using a 26-player roster target, richer draft prospect bios, complete hockey operations staff roles, staff vacancies, rulebook staff limits, and candidate hiring context.
+Keep the GM inbox focused on player-organization decisions and route other-team transactions into a separate League News / Transaction Wire feed.
 
 ## Why Relationship Engine Was Next
 
