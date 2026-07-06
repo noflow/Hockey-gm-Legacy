@@ -20,7 +20,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -98,7 +98,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.5 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, player dossiers, and a basic season loop.",
+            Text = "Alpha 2.6 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, player dossiers, a basic season loop, and readable game recaps.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -252,7 +252,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.5 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.6 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -960,11 +960,19 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
         var nextGame = State.NextGame;
+        var lastGame = State.LastGameRecap;
+        var record = State.TeamRecordText;
         metrics.Children.Add(CreateDashboardMetric(
             "Next Game",
             nextGame is null ? "None" : nextGame.Date.ToString("yyyy-MM-dd"),
             nextGame is null ? "Season schedule pending" : DescribeGame(nextGame),
             false));
+        metrics.Children.Add(CreateDashboardMetric(
+            "Last Game",
+            lastGame is null ? "None" : lastGame.BoxScore.FinalScore,
+            lastGame is null ? "No completed game yet" : lastGame.NarrativeSummary,
+            lastGame is not null && lastGame.WinnerOrganizationId != State.ScenarioSnapshot.Organization.OrganizationId));
+        metrics.Children.Add(CreateDashboardMetric("Team Record", record, "regular season", false));
         _dashboardPanel.Children.Add(metrics);
 
         var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
@@ -987,7 +995,9 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Head scout", snapshot.Scout.Name);
         AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
         AddLine(summary, "Season readiness", readiness.RosterStatus);
+        AddLine(summary, "Last game", lastGame is null ? "No completed game" : lastGame.BoxScore.FinalScore);
         AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
+        AddLine(summary, "Team record", record);
         AddLine(summary, "Budget", $"{budget.UsedBudget:C0} used of {budget.TotalBudget:C0}");
         AddParagraph(summary, State.LatestSummary);
         Grid.SetColumn(summaryCard, 1);
@@ -2912,21 +2922,42 @@ internal sealed class MainWindow : Window
         var next = State.NextGame;
         builder.AppendLine(next is null ? "Next game: none remaining" : $"Next game: {next.Date:yyyy-MM-dd} - {DescribeGame(next)}");
         builder.AppendLine();
-        builder.AppendLine("Upcoming / Recent Games");
-        builder.AppendLine("-----------------------");
 
-        foreach (var game in schedule.Games
-            .OrderBy(game => Math.Abs(game.Date.DayNumber - State.Snapshot.CurrentDate.DayNumber))
-            .ThenBy(game => game.Date)
-            .ThenBy(game => game.GameId, StringComparer.Ordinal)
-            .Take(40)
-            .OrderBy(game => game.Date)
-            .ThenBy(game => game.GameId, StringComparer.Ordinal))
+        builder.AppendLine("Today's Games");
+        builder.AppendLine("-------------");
+        AppendScheduleGames(builder, State.TodaysGames, includeResult: true);
+
+        builder.AppendLine();
+        builder.AppendLine("Upcoming Games");
+        builder.AppendLine("--------------");
+        AppendScheduleGames(builder, State.UpcomingGames, includeResult: false);
+
+        builder.AppendLine();
+        builder.AppendLine("Recent Results");
+        builder.AppendLine("--------------");
+        AppendScheduleGames(builder, State.RecentResults, includeResult: true);
+
+        builder.AppendLine();
+        builder.AppendLine("Recent Game Recaps");
+        builder.AppendLine("------------------");
+        foreach (var recap in State.ScenarioSnapshot.GameRecaps
+            .OrderByDescending(recap => recap.Date)
+            .ThenByDescending(recap => recap.GameId, StringComparer.Ordinal)
+            .Take(6))
         {
-            var result = game.Result is null
-                ? game.Status.ToString()
-                : $"{game.Result.HomeGoals}-{game.Result.AwayGoals}, winner {TeamName(game.Result.WinnerOrganizationId)}";
-            builder.AppendLine($"{game.Date:yyyy-MM-dd} | {TeamName(game.AwayOrganizationId)} at {TeamName(game.HomeOrganizationId)} | {result}");
+            builder.AppendLine($"{recap.Date:yyyy-MM-dd} | {recap.BoxScore.FinalScore}");
+            builder.AppendLine($"  Winner: {recap.WinnerTeam}");
+            builder.AppendLine($"  Three stars: {string.Join("; ", recap.ThreeStars)}");
+            builder.AppendLine($"  {recap.NarrativeSummary}");
+            if (recap.InjuryNotes.Count > 0)
+            {
+                builder.AppendLine($"  Medical: {string.Join(" ", recap.InjuryNotes)}");
+            }
+
+            if (recap.DevelopmentNotes.Count > 0)
+            {
+                builder.AppendLine($"  Development: {string.Join(" ", recap.DevelopmentNotes)}");
+            }
         }
 
         return builder.ToString();
@@ -2945,12 +2976,18 @@ internal sealed class MainWindow : Window
             return builder.ToString();
         }
 
-        builder.AppendLine("Team                         GP   W   L OTL  PTS   GF   GA");
-        builder.AppendLine("------------------------------------------------------------");
+        builder.AppendLine("RK Team                         GP   W   L OTL  PTS   GF   GA DIFF");
+        builder.AppendLine("-------------------------------------------------------------------");
+        var rank = 1;
         foreach (var team in standings.OrderedTeams())
         {
-            builder.AppendLine($"{team.TeamName,-28} {team.GamesPlayed,2} {team.Wins,3} {team.Losses,3} {team.OvertimeLosses,3} {team.Points,4} {team.GoalsFor,4} {team.GoalsAgainst,4}");
+            var marker = team.OrganizationId == State.ScenarioSnapshot.Organization.OrganizationId ? "*" : " ";
+            var diff = team.GoalsFor - team.GoalsAgainst;
+            builder.AppendLine($"{rank,2}{marker} {team.TeamName,-28} {team.GamesPlayed,2} {team.Wins,3} {team.Losses,3} {team.OvertimeLosses,3} {team.Points,4} {team.GoalsFor,4} {team.GoalsAgainst,4} {diff,4}");
+            rank++;
         }
+        builder.AppendLine();
+        builder.AppendLine("* Your team");
 
         return builder.ToString();
     }
@@ -2969,11 +3006,37 @@ internal sealed class MainWindow : Window
             return builder.ToString();
         }
 
+        var leaders = State.StatLeaders;
+
+        builder.AppendLine("Team Leaders");
+        builder.AppendLine("------------");
+        AppendLeaders(builder, leaders.TeamLeaders);
+
+        builder.AppendLine();
+        builder.AppendLine("League Leaders");
+        builder.AppendLine("--------------");
+        AppendLeaders(builder, leaders.LeagueLeaders);
+
+        builder.AppendLine();
+        builder.AppendLine("Skater Leaders");
+        builder.AppendLine("--------------");
+        AppendLeaders(builder, leaders.SkaterLeaders);
+
+        builder.AppendLine();
+        builder.AppendLine("Goalie Leaders");
+        builder.AppendLine("--------------");
+        AppendLeaders(builder, leaders.GoalieLeaders);
+
+        builder.AppendLine();
         builder.AppendLine("Team Stats");
         builder.AppendLine("----------");
         foreach (var line in State.ScenarioSnapshot.TeamStats.OrderBy(line => line.TeamName, StringComparer.Ordinal))
         {
-            builder.AppendLine($"{line.TeamName,-28} GP {line.GamesPlayed,2}  GF {line.GoalsFor,3}  GA {line.GoalsAgainst,3}");
+            var standing = State.ScenarioSnapshot.Standings?.Teams.FirstOrDefault(team => team.OrganizationId == line.OrganizationId);
+            var record = standing is null ? "0-0-0" : $"{standing.Wins}-{standing.Losses}-{standing.OvertimeLosses}";
+            var points = standing?.Points ?? 0;
+            var diff = line.GoalsFor - line.GoalsAgainst;
+            builder.AppendLine($"{line.TeamName,-28} GP {line.GamesPlayed,2}  {record,7}  PTS {points,3}  GF {line.GoalsFor,3}  GA {line.GoalsAgainst,3}  DIFF {diff,3}");
         }
 
         builder.AppendLine();
@@ -2993,14 +3056,54 @@ internal sealed class MainWindow : Window
         builder.AppendLine("------------");
         foreach (var line in State.ScenarioSnapshot.GoalieStats.OrderBy(line => line.PlayerName, StringComparer.Ordinal))
         {
-            builder.AppendLine($"{line.PlayerName,-24} GP {line.GamesPlayed,2}  W {line.Wins,2}  L {line.Losses,2}  GA {line.GoalsAgainst,3}  SV {line.Saves,3}  SV% {line.SavePercentage:0.000}");
+            builder.AppendLine($"{line.PlayerName,-24} GP {line.GamesPlayed,2}  W {line.Wins,2}  L {line.Losses,2}  GA {line.GoalsAgainst,3}  SV {line.Saves,3}  SV% {line.SavePercentage:0.000}  GAA {line.GoalsAgainstAverage:0.00}  SO {line.Shutouts,2}");
         }
 
         return builder.ToString();
     }
 
+    private void AppendScheduleGames(StringBuilder builder, IReadOnlyList<ScheduledGame> games, bool includeResult)
+    {
+        if (games.Count == 0)
+        {
+            builder.AppendLine("None.");
+            return;
+        }
+
+        foreach (var game in games)
+        {
+            var homeAway = game.HomeOrganizationId == State.ScenarioSnapshot.Organization.OrganizationId
+                ? "Home"
+                : game.AwayOrganizationId == State.ScenarioSnapshot.Organization.OrganizationId ? "Away" : "League";
+            var opponent = game.HomeOrganizationId == State.ScenarioSnapshot.Organization.OrganizationId || game.AwayOrganizationId == State.ScenarioSnapshot.Organization.OrganizationId
+                ? OpponentName(game, State.ScenarioSnapshot.Organization.OrganizationId)
+                : $"{TeamName(game.AwayOrganizationId)} at {TeamName(game.HomeOrganizationId)}";
+            var result = includeResult && game.Result is not null
+                ? $"{game.Result.HomeGoals}-{game.Result.AwayGoals}, winner {TeamName(game.Result.WinnerOrganizationId)}"
+                : game.Status.ToString();
+            builder.AppendLine($"{game.Date:yyyy-MM-dd} | {homeAway,-6} | {opponent,-28} | {result}");
+        }
+    }
+
+    private static void AppendLeaders(StringBuilder builder, IReadOnlyList<StatLeader> leaders)
+    {
+        if (leaders.Count == 0)
+        {
+            builder.AppendLine("No leaders yet.");
+            return;
+        }
+
+        foreach (var leader in leaders)
+        {
+            builder.AppendLine($"{leader.Category,-18} {leader.Name,-24} {leader.Value,6:0.###}  {leader.Detail}");
+        }
+    }
+
     private string DescribeGame(ScheduledGame game) =>
         $"{TeamName(game.AwayOrganizationId)} at {TeamName(game.HomeOrganizationId)}";
+
+    private string OpponentName(ScheduledGame game, string organizationId) =>
+        TeamName(game.HomeOrganizationId == organizationId ? game.AwayOrganizationId : game.HomeOrganizationId);
 
     private string TeamName(string organizationId)
     {
@@ -3195,6 +3298,8 @@ internal sealed class AlphaDesktopState
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
+    private readonly GameRecapService _gameRecaps = new();
+    private readonly SeasonStatsPolishService _statsPolish = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
@@ -3242,6 +3347,25 @@ internal sealed class AlphaDesktopState
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
+
+    public GameRecap? LastGameRecap => _seasonFramework.LastPlayerTeamRecap(ScenarioSnapshot);
+
+    public IReadOnlyList<ScheduledGame> RecentResults => _gameRecaps.RecentResults(ScenarioSnapshot);
+
+    public IReadOnlyList<ScheduledGame> UpcomingGames => _gameRecaps.UpcomingGames(ScenarioSnapshot);
+
+    public IReadOnlyList<ScheduledGame> TodaysGames => _gameRecaps.TodaysGames(ScenarioSnapshot);
+
+    public SeasonStatLeaders StatLeaders => _statsPolish.BuildLeaders(ScenarioSnapshot);
+
+    public string TeamRecordText
+    {
+        get
+        {
+            var standing = ScenarioSnapshot.Standings?.Teams.FirstOrDefault(team => team.OrganizationId == ScenarioSnapshot.Organization.OrganizationId);
+            return standing is null ? "0-0-0" : $"{standing.Wins}-{standing.Losses}-{standing.OvertimeLosses}, {standing.Points} pts";
+        }
+    }
 
     public int PendingDecisionCount => OpenPendingActions.Count;
 

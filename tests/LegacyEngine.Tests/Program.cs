@@ -39,6 +39,7 @@ var budgetOverviewTests = new BudgetOverviewTests();
 var alpha231DedupHiringTests = new Alpha231DedupHiringTests();
 var alpha24StaffBudgetTests = new Alpha24StaffBudgetTests();
 var alpha25SeasonFrameworkTests = new Alpha25SeasonFrameworkTests();
+var alpha26GameRecapStatsPolishTests = new Alpha26GameRecapStatsPolishTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -497,6 +498,19 @@ runner.Run("alpha 2.5 daily pipeline simulates scheduled games", alpha25SeasonFr
 runner.Run("alpha 2.5 inbox game recap generated", alpha25SeasonFrameworkTests.InboxGameRecapGenerated);
 runner.Run("alpha 2.5 AlphaDesktop exposes schedule standings and stats", alpha25SeasonFrameworkTests.AlphaDesktopExposesScheduleStandingsAndStats);
 runner.Run("alpha 2.5 no Godot save or full 3D simulation added", alpha25SeasonFrameworkTests.SeasonFrameworkHasNoGodotSaveOrFull3DSimulation);
+runner.Run("alpha 2.6 completed game creates recap", alpha26GameRecapStatsPolishTests.CompletedGameCreatesRecap);
+runner.Run("alpha 2.6 recap includes score winner teams and date", alpha26GameRecapStatsPolishTests.RecapIncludesScoreWinnerTeamsAndDate);
+runner.Run("alpha 2.6 three stars generated", alpha26GameRecapStatsPolishTests.ThreeStarsGenerated);
+runner.Run("alpha 2.6 game recap inbox created for player team", alpha26GameRecapStatsPolishTests.GameRecapInboxCreatedForPlayerTeam);
+runner.Run("alpha 2.6 league-wide games do not spam inbox", alpha26GameRecapStatsPolishTests.LeagueWideGamesDoNotSpamInbox);
+runner.Run("alpha 2.6 standings sorted by points", alpha26GameRecapStatsPolishTests.StandingsSortedByPoints);
+runner.Run("alpha 2.6 team leaders generated", alpha26GameRecapStatsPolishTests.TeamLeadersGenerated);
+runner.Run("alpha 2.6 league leaders generated", alpha26GameRecapStatsPolishTests.LeagueLeadersGenerated);
+runner.Run("alpha 2.6 recent results shown", alpha26GameRecapStatsPolishTests.RecentResultsShown);
+runner.Run("alpha 2.6 upcoming games shown", alpha26GameRecapStatsPolishTests.UpcomingGamesShown);
+runner.Run("alpha 2.6 dashboard shows last game next game and record", alpha26GameRecapStatsPolishTests.DashboardShowsLastGameNextGameAndRecord);
+runner.Run("alpha 2.6 recap does not expose hidden ratings", alpha26GameRecapStatsPolishTests.RecapDoesNotExposeHiddenRatings);
+runner.Run("alpha 2.6 no Godot save or full tactical simulation added", alpha26GameRecapStatsPolishTests.GameRecapPolishHasNoGodotSaveOrFullTacticalSimulation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

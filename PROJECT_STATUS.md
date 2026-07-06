@@ -62,14 +62,15 @@ The five foundation pillars remain:
 - Alpha 2.3.1 - Name Generation System + Deduping
 - Alpha 2.4 - Staff Control v2 + Hockey Operations Budget
 - Alpha 2.5 - Season Framework v1
+- Alpha 2.6 - Game Recap + Stats Polish
 
 ## Current Milestone
 
-Alpha 2.5 - Season Framework v1
+Alpha 2.6 - Game Recap + Stats Polish
 
 ## Current Goal
 
-Allow the player to begin a season, advance through a generated schedule, simulate basic game results, and review standings plus team/player/goalie stats.
+Make simulated games easier to understand with boxscore-style recaps, improved post-game inbox summaries, recent/upcoming schedule context, team record, and useful team/skater/goalie leaders.
 
 ## Why Relationship Engine Was Next
 
@@ -79,11 +80,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.6 - Opening Week Polish
+Alpha 2.7 - Opening Week Decisions
 
 ## Next Milestones
 
-1. Alpha 2.6 - Opening Week Polish
+1. Alpha 2.7 - Opening Week Decisions
 
 ## Build Rule
 

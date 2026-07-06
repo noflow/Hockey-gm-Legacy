@@ -50,11 +50,14 @@ public sealed class SeasonFrameworkService
         var standings = current.Standings!;
         var stats = new SeasonStatsService();
         var simulator = new BasicGameSimulator();
+        var recapService = new GameRecapService();
         var simulated = new List<ScheduledGame>();
+        var recaps = new List<GameRecap>();
         var inbox = new List<AlphaInboxItem>();
         var playerStats = current.PlayerStats;
         var goalieStats = current.GoalieStats;
         var teamStats = current.TeamStats;
+        var gameRecaps = current.GameRecaps.ToList();
 
         foreach (var game in schedule.GamesOn(current.CurrentDate).Where(game => game.Status == GameStatus.Scheduled))
         {
@@ -67,10 +70,24 @@ public sealed class SeasonFrameworkService
             goalieStats = stats.ApplyGoalieStats(current.AlphaSnapshot, goalieStats, completed, result);
             simulated.Add(completed);
 
-            QueueGameEvent(registry, current, completed);
+            var recapScenario = current with
+            {
+                Schedule = schedule,
+                Standings = standings,
+                TeamStats = teamStats,
+                PlayerStats = playerStats,
+                GoalieStats = goalieStats,
+                GameRecaps = gameRecaps
+            };
+            var recap = recapService.CreateRecap(recapScenario, completed);
+            recaps.Add(recap);
+            gameRecaps.Add(recap);
+
+            QueueGameEvent(registry, recapScenario, completed, recap);
             if (completed.HomeOrganizationId == current.Organization.OrganizationId || completed.AwayOrganizationId == current.Organization.OrganizationId)
             {
-                inbox.Add(GameRecapInbox(current, completed));
+                var inboxScenario = recapScenario with { GameRecaps = gameRecaps };
+                inbox.Add(recapService.CreatePlayerTeamInbox(inboxScenario, recap));
             }
         }
 
@@ -80,12 +97,13 @@ public sealed class SeasonFrameworkService
             Standings = standings,
             TeamStats = teamStats,
             PlayerStats = playerStats,
-            GoalieStats = goalieStats
+            GoalieStats = goalieStats,
+            GameRecaps = gameRecaps
         };
         var summary = simulated.Count == 0
             ? "No scheduled games today."
             : $"Simulated {simulated.Count} scheduled game(s).";
-        var simulation = new SeasonSimulationResult(updated, simulated, inbox, summary);
+        var simulation = new SeasonSimulationResult(updated, simulated, recaps, inbox, summary);
         simulation.Validate();
         return simulation;
     }
@@ -98,7 +116,15 @@ public sealed class SeasonFrameworkService
             .Concat(OpponentTeams)
             .ToArray();
 
-    private static void QueueGameEvent(EngineRegistry registry, NewGmScenarioSnapshot scenario, ScheduledGame game)
+    public GameRecap? LastPlayerTeamRecap(NewGmScenarioSnapshot scenario) =>
+        scenario.GameRecaps
+            .Where(recap => recap.BoxScore.Home.OrganizationId == scenario.Organization.OrganizationId
+                || recap.BoxScore.Away.OrganizationId == scenario.Organization.OrganizationId)
+            .OrderByDescending(recap => recap.Date)
+            .ThenByDescending(recap => recap.GameId, StringComparer.Ordinal)
+            .FirstOrDefault();
+
+    private static void QueueGameEvent(EngineRegistry registry, NewGmScenarioSnapshot scenario, ScheduledGame game, GameRecap recap)
     {
         var legacyEvent = registry.EventEngine.CreateEvent(
             new DateTimeOffset(scenario.CurrentDate.Year, scenario.CurrentDate.Month, scenario.CurrentDate.Day, 21, 30, 0, TimeSpan.Zero),
@@ -106,31 +132,16 @@ public sealed class SeasonFrameworkService
             LegacyEventSeverity.Notice,
             LegacyEventVisibility.Organization,
             "Game played",
-            RecapText(scenario, game),
+            recap.NarrativeSummary,
             new LegacyEventContext(OrganizationId: scenario.Organization.OrganizationId, SeasonId: scenario.Season.SeasonId, GameId: game.GameId),
             new Dictionary<string, object?>
             {
                 ["home_goals"] = game.Result!.HomeGoals,
                 ["away_goals"] = game.Result.AwayGoals,
-                ["winner"] = game.Result.WinnerOrganizationId
+                ["winner"] = game.Result.WinnerOrganizationId,
+                ["three_stars"] = string.Join("; ", recap.ThreeStars)
             });
         registry.EventEngine.QueueEvent(legacyEvent);
-    }
-
-    private static AlphaInboxItem GameRecapInbox(NewGmScenarioSnapshot scenario, ScheduledGame game) =>
-        new(
-            InboxItemId: $"inbox:game-recap:{game.GameId}",
-            Date: new DateTimeOffset(scenario.CurrentDate.Year, scenario.CurrentDate.Month, scenario.CurrentDate.Day, 22, 0, 0, TimeSpan.Zero),
-            EventType: LegacyEventType.GamePlayed,
-            Severity: LegacyEventSeverity.Notice,
-            Title: $"Game Recap: {TeamName(scenario, game.HomeOrganizationId)} {game.Result!.HomeGoals}, {TeamName(scenario, game.AwayOrganizationId)} {game.Result.AwayGoals}",
-            Summary: RecapText(scenario, game),
-            PrimaryPersonId: null);
-
-    private static string RecapText(NewGmScenarioSnapshot scenario, ScheduledGame game)
-    {
-        var result = game.Result!;
-        return $"{TeamName(scenario, game.HomeOrganizationId)} {result.HomeGoals}, {TeamName(scenario, game.AwayOrganizationId)} {result.AwayGoals}. Winner: {TeamName(scenario, result.WinnerOrganizationId)}{(result.OvertimeOrShootout ? " (OT/SO placeholder)" : string.Empty)}.";
     }
 
     private static string TeamName(NewGmScenarioSnapshot scenario, string organizationId)

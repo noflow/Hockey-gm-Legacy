@@ -58,6 +58,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<GoalieSeasonStatLine> GoalieStats { get; init; } = Array.Empty<GoalieSeasonStatLine>();
 
+    public IReadOnlyList<GameRecap> GameRecaps { get; init; } = Array.Empty<GameRecap>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -158,6 +160,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var stat in GoalieStats)
         {
             stat.Validate();
+        }
+
+        foreach (var recap in GameRecaps)
+        {
+            recap.Validate();
         }
     }
 }

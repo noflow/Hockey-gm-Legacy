@@ -47,6 +47,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 2.3.1 Name Generation System + Deduping
 - Alpha 2.4 Staff Control v2 + Hockey Operations Budget
 - Alpha 2.5 Season Framework v1
+- Alpha 2.6 Game Recap + Stats Polish
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -78,6 +79,8 @@ Alpha 2.4 - Staff Control v2 + Hockey Operations Budget adds league-driven staff
 
 Alpha 2.5 - Season Framework v1 adds the first basic regular-season loop. Beginning the season now generates a league schedule, Advance Day and Advance 7 simulate scheduled games, standings update, team/player/goalie stats accumulate, game recap inbox messages are created, and AlphaDesktop exposes Schedule, Standings, and Stats tabs plus a dashboard next-game card.
 
+Alpha 2.6 - Game Recap + Stats Polish turns simulated results into readable GM information. Completed games now create boxscore-style recaps with final score, shots/power-play placeholders, three stars, notable players, goalie summary, light medical/development notes, and narrative summaries. The desktop dashboard now shows last game, next game, and team record; Schedule separates today/upcoming/recent results and recaps; Standings show rank and goal differential; Stats now show team, league, skater, and goalie leaders without exposing hidden ratings.
+
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 
 Alpha 1.2 refines the desktop inbox into an email-style GM workspace with a category sidebar, message list, reading pane, row-level actions, and local filters.
@@ -96,7 +99,7 @@ Run the basic desktop UI:
 dotnet run --project client/AlphaDesktop
 ```
 
-The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, Hockey Operations Budget, Recruiting v2, Player Dossier windows, roster filters, selectable person-specific action panels, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop after Begin Season. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
+The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, Hockey Operations Budget, Recruiting v2, Player Dossier windows, roster filters, selectable person-specific action panels, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

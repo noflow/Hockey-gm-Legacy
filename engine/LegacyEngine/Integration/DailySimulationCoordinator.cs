@@ -25,7 +25,7 @@ public sealed class DailySimulationCoordinator
         var scouting = new ScoutingOperationsService().AdvanceAssignments(registry, camp.ScenarioSnapshot);
         var games = scouting.ScenarioSnapshot.SeasonReadiness.SeasonBegun
             ? new SeasonFrameworkService().SimulateScheduledGamesForCurrentDate(registry, scouting.ScenarioSnapshot)
-            : new SeasonSimulationResult(scouting.ScenarioSnapshot, Array.Empty<ScheduledGame>(), Array.Empty<AlphaInboxItem>(), "Season has not begun.");
+            : new SeasonSimulationResult(scouting.ScenarioSnapshot, Array.Empty<ScheduledGame>(), Array.Empty<GameRecap>(), Array.Empty<AlphaInboxItem>(), "Season has not begun.");
         var report = games.ScenarioSnapshot.Season.Status == LegacyEngine.Seasons.SeasonStatus.Completed
             && games.ScenarioSnapshot.ExecutiveReports.Find($"executive-report:{games.ScenarioSnapshot.Season.SeasonId}:{ExecutiveReportKind.EndOfSeasonExecutiveReview}") is null
             ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, games.ScenarioSnapshot)
