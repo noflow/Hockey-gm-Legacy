@@ -1,5 +1,6 @@
 using LegacyEngine.Contracts;
 using LegacyEngine.Development;
+using LegacyEngine.Draft;
 using LegacyEngine.Injuries;
 using LegacyEngine.People;
 using LegacyEngine.Relationships;
@@ -105,6 +106,7 @@ public sealed class PlayerDossierService
         var boardEntry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == person.PersonId);
         if (boardEntry?.Bio is not null)
         {
+            lines.Add($"Known position: {boardEntry.Bio.Position}");
             lines.Add($"Shoots/Catches: {boardEntry.Bio.ShootsCatches}");
             lines.Add($"Height/Weight: {boardEntry.Bio.HeightDisplay}, {boardEntry.Bio.WeightDisplay}");
             lines.Add($"Current team/league: {boardEntry.Bio.CurrentTeam} / {boardEntry.Bio.League}");
@@ -142,6 +144,12 @@ public sealed class PlayerDossierService
         if (boardEntry is not null)
         {
             lines.Add($"Draft board rank: {boardEntry.Rank}");
+            if (boardEntry.Bio is not null)
+            {
+                lines.Add($"Current picture: {CurrentScoutingPicture(boardEntry)}");
+                lines.Add($"Future picture: {FutureScoutingPicture(boardEntry)}");
+            }
+
             lines.Add($"Projection: {boardEntry.ProjectionText}");
             lines.Add($"Confidence: {boardEntry.ScoutingConfidence?.ToString() ?? "Unknown"}");
             if (!string.IsNullOrWhiteSpace(boardEntry.AnalyticsSummary))
@@ -326,7 +334,24 @@ public sealed class PlayerDossierService
         scenario.AlphaSnapshot.Roster.Players.SingleOrDefault(player => player.PersonId == personId)?.Position
         ?? scenario.ProspectRights.SingleOrDefault(prospect => prospect.ProspectPersonId == personId)?.Position
         ?? scenario.TrainingCamp?.FindPlayer(personId)?.Position
+        ?? scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position
         ?? RosterPosition.Unknown;
+
+    private static string CurrentScoutingPicture(DraftBoardEntry entry)
+    {
+        var position = entry.Bio?.Position.ToString() ?? "prospect";
+        var role = entry.Bio?.PotentialLineupProjection ?? "lineup role still being defined";
+        return entry.ScoutingConfidence switch
+        {
+            ScoutingConfidenceLevel.VeryHigh or ScoutingConfidenceLevel.High => $"Staff have a clear read: current {position} profile with enough evidence to project as {role}.",
+            ScoutingConfidenceLevel.Medium => $"Staff have a working read on this {position}; another viewing would sharpen the current-role estimate.",
+            ScoutingConfidenceLevel.Low or ScoutingConfidenceLevel.Unknown or null => $"Basic bio is known for this {position}, but current quality remains lightly scouted.",
+            _ => $"Current quality is still being gathered for this {position}."
+        };
+    }
+
+    private static string FutureScoutingPicture(DraftBoardEntry entry) =>
+        $"{entry.Bio?.PotentialLineupProjection ?? "Future role still forming"}; {entry.ProjectionText}";
 
     private static string ResolveStatus(NewGmScenarioSnapshot scenario, string personId)
     {

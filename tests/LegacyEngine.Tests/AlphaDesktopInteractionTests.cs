@@ -59,6 +59,9 @@ internal sealed class AlphaDesktopInteractionTests
         Assert.True(source.Contains("_rosterPlayerTypeFilter", StringComparison.Ordinal), "Roster should support player type filtering.");
         Assert.True(source.Contains("_rosterRoleFilter", StringComparison.Ordinal), "Roster should support role filtering.");
         Assert.True(source.Contains("_rosterAgeFilter", StringComparison.Ordinal), "Roster should support age filtering.");
+        Assert.True(source.Contains("Roster Breakdown", StringComparison.Ordinal), "Roster should show a roster breakdown summary row.");
+        Assert.True(source.Contains("RosterBreakdownTitle", StringComparison.Ordinal), "Roster should show current count versus target.");
+        Assert.True(source.Contains("RosterContractBreakdown", StringComparison.Ordinal), "Roster should summarize expiring/expired player agreements.");
         Assert.True(source.Contains("State.ContractRightsStatus(player.PersonId)", StringComparison.Ordinal), "Roster rows should show contract or rights status.");
         Assert.True(source.Contains("State.DevelopmentTrend(player.PersonId)", StringComparison.Ordinal), "Roster rows should show development trend.");
         Assert.True(source.Contains("State.InjuryStatus(player.PersonId)", StringComparison.Ordinal), "Roster rows should show injury status.");

@@ -7,7 +7,8 @@ internal sealed class Alpha273DraftStaffLayoutTests
         var source = AlphaDesktopSource();
 
         Assert.True(source.Contains("BuildLiveDraftMiddleRow", StringComparison.Ordinal), "Live draft should use quick-scan middle rows.");
-        Assert.True(source.Contains("State.PersonPosition(entry.ProspectPersonId)", StringComparison.Ordinal), "Middle rows should include position.");
+        Assert.True(source.Contains("State.DraftQuickScan(entry)", StringComparison.Ordinal), "Middle rows should include visible draft bio.");
+        Assert.True(source.Contains("entry.Bio?.Position", StringComparison.Ordinal) || source.Contains("entry.Bio.Position", StringComparison.Ordinal), "Middle rows should use public bio position.");
         Assert.True(source.Contains("entry.Bio.CurrentTeam", StringComparison.Ordinal), "Middle rows should include current team.");
         Assert.True(source.Contains("Confidence:", StringComparison.Ordinal), "Middle rows should include confidence.");
     }
@@ -29,6 +30,8 @@ internal sealed class Alpha273DraftStaffLayoutTests
         Assert.True(source.Contains("Height:", StringComparison.Ordinal), "Prospect card should include height.");
         Assert.True(source.Contains("Weight:", StringComparison.Ordinal), "Prospect card should include weight.");
         Assert.True(source.Contains("Current team:", StringComparison.Ordinal), "Prospect card should include current team.");
+        Assert.True(source.Contains("Current picture:", StringComparison.Ordinal), "Prospect card should include a current scouting picture.");
+        Assert.True(source.Contains("Future picture:", StringComparison.Ordinal), "Prospect card should include a future projection picture.");
         Assert.True(source.Contains("Scouting reports:", StringComparison.Ordinal), "Prospect card should include scouting reports.");
         Assert.True(source.Contains("Staff/scout recommendation", StringComparison.Ordinal), "Prospect card should include staff/scout recommendation.");
     }
@@ -64,7 +67,10 @@ internal sealed class Alpha273DraftStaffLayoutTests
 
         Assert.True(source.Contains("Height/Weight", StringComparison.Ordinal) || source.Contains("Height:", StringComparison.Ordinal), "Draft UI should expose height/weight.");
         Assert.True(source.Contains("Shoots/Catches", StringComparison.Ordinal), "Draft UI should expose handedness.");
+        Assert.True(source.Contains("Known position", StringComparison.Ordinal), "Draft UI should expose known public position.");
         Assert.True(source.Contains("Projection:", StringComparison.Ordinal), "Draft/prospect rows should include projection.");
+        Assert.True(prospect.Bio!.Position != LegacyEngine.Rosters.RosterPosition.Unknown, "Scenario draft prospect should have a known public position.");
+        Assert.False(dossierText.Contains("Position: Unknown", StringComparison.Ordinal), "Dossier should not show Unknown for draft prospect position.");
         Assert.False(dossierText.Contains("CurrentAbility", StringComparison.Ordinal), "Dossier should not expose hidden current ability ratings.");
         Assert.False(dossierText.Contains("Potential =", StringComparison.Ordinal), "Dossier should not expose hidden potential ratings.");
     }

@@ -21,7 +21,7 @@ public sealed class ActionCenterService
 
         var items = new List<ActionCenterItem>();
         AddPendingActions(scenario, items);
-        AddUrgentInbox(inboxMessages, items);
+        AddUrgentInbox(scenario, inboxMessages, items);
         AddRosterWarnings(scenario, readiness, items);
         AddStaffVacancies(staffVacancies, items);
         AddBudgetWarnings(budget, items);
@@ -173,10 +173,13 @@ public sealed class ActionCenterService
         }
     }
 
-    private static void AddUrgentInbox(IReadOnlyList<InboxMessage> inboxMessages, List<ActionCenterItem> items)
+    private static void AddUrgentInbox(NewGmScenarioSnapshot scenario, IReadOnlyList<InboxMessage> inboxMessages, List<ActionCenterItem> items)
     {
         foreach (var message in inboxMessages.Where(message => message.IsImportant && !message.IsArchived && !message.IsDeleted).Take(8))
         {
+            var personName = string.IsNullOrWhiteSpace(message.Item.PrimaryPersonId)
+                ? null
+                : PersonName(scenario, message.Item.PrimaryPersonId);
             items.Add(new ActionCenterItem(
                 $"action-center:inbox:{message.InboxItemId}",
                 message.Item.Title,
@@ -184,9 +187,9 @@ public sealed class ActionCenterService
                 PriorityFor(message),
                 DateOnly.FromDateTime(message.Item.Date.Date),
                 message.Item.PrimaryPersonId,
-                null,
-                null,
-                null,
+                personName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
                 message.Item.Summary,
                 "Important messages may represent owner, staff, league, or medical items that deserve review.",
                 "Open the related inbox message and decide whether a follow-up is needed.",

@@ -1,3 +1,4 @@
+using LegacyEngine.Contracts;
 using LegacyEngine.Integration;
 using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
@@ -36,6 +37,7 @@ internal sealed class Alpha271RosterFrontOfficeRealismTests
         {
             var bio = entry.Bio;
             Assert.True(bio is not null, "Draft prospect bio should exist.");
+            Assert.True(bio!.Position != RosterPosition.Unknown, "Draft prospect position should be visible in basic bio.");
             Assert.True(!string.IsNullOrWhiteSpace(bio!.ShootsCatches), "Handedness should be present.");
             Assert.True(!string.IsNullOrWhiteSpace(bio.HeightDisplay), "Height display should be present.");
             Assert.True(!string.IsNullOrWhiteSpace(bio.WeightDisplay), "Weight display should be present.");
@@ -52,7 +54,7 @@ internal sealed class Alpha271RosterFrontOfficeRealismTests
         foreach (var entry in scenario.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.Take(20))
         {
             var bio = entry.Bio!;
-            var position = PositionFor(scenario.ScenarioSnapshot, entry.ProspectPersonId);
+            var position = bio.Position;
             if (position == RosterPosition.Goalie)
             {
                 Assert.True(bio.HeightInches is >= 71 and <= 80, "Goalie height should be realistic.");
@@ -69,6 +71,29 @@ internal sealed class Alpha271RosterFrontOfficeRealismTests
                 Assert.True(bio.WeightPounds is >= 160 and <= 225, "Forward weight should be realistic.");
             }
         }
+    }
+
+    public void ScenarioStartsWithInheritedScoutingReports()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var boardCount = scenario.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.Count;
+        var reports = scenario.ScenarioSnapshot.CompletedScoutingReports;
+
+        Assert.True(reports.Count >= boardCount / 2, "Most of the draft board should have inherited scouting work from previous staff.");
+        Assert.True(reports.All(report => report.Details.ContainsKey("inherited_from_previous_staff")), "Inherited reports should be marked as previous-staff work.");
+    }
+
+    public void ScenarioRosterHasAgeMixAndContractDecisions()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var rosterPlayers = scenario.ScenarioSnapshot.AlphaSnapshot.Roster.ActivePlayers;
+        var ages = rosterPlayers.Select(player => player.Age ?? scenario.ScenarioSnapshot.AlphaSnapshot.Players.First(person => person.PersonId == player.PersonId).CalculateAge(scenario.ScenarioSnapshot.CurrentDate)).ToArray();
+        var playerContracts = scenario.ScenarioSnapshot.Contracts.Where(contract => contract.ContractType == ContractType.JuniorPlayerAgreement).ToArray();
+
+        Assert.True(ages.Any(age => age < 18), "Opening roster should include younger players.");
+        Assert.True(ages.Any(age => age >= 20), "Opening roster should include older/overage players.");
+        Assert.True(playerContracts.Any(contract => contract.Status == ContractStatus.Expired), "Some inherited player contracts should already be up for renewal/walk-away decisions.");
+        Assert.True(playerContracts.Any(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate <= scenario.ScenarioSnapshot.CurrentDate.AddDays(30)), "Some inherited player contracts should expire soon.");
     }
 
     public void CompleteStaffPositionsExist()

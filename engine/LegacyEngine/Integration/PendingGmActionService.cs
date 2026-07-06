@@ -304,9 +304,8 @@ public sealed class PendingGmActionService
 
     private static RosterPosition GuessPosition(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Position
-        ?? scenario.AlphaSnapshot.Roster.Players
-            .OrderBy(player => player.PersonId, StringComparer.Ordinal)
-            .FirstOrDefault()?.Position
+        ?? scenario.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId)?.Position
+        ?? scenario.AlphaSnapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position
         ?? RosterPosition.Unknown;
 
     private static string ResolvePersonName(NewGmScenarioSnapshot scenario, string personId) =>

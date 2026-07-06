@@ -1,6 +1,9 @@
+using LegacyEngine.Rosters;
+
 namespace LegacyEngine.Draft;
 
 public sealed record DraftProspectBio(
+    RosterPosition Position,
     string ShootsCatches,
     int HeightInches,
     int WeightPounds,
@@ -19,6 +22,11 @@ public sealed record DraftProspectBio(
 
     public void Validate()
     {
+        if (Position == RosterPosition.Unknown)
+        {
+            throw new ArgumentException("Draft prospect bio must include a known position.", nameof(Position));
+        }
+
         if (string.IsNullOrWhiteSpace(ShootsCatches)
             || string.IsNullOrWhiteSpace(Hometown)
             || string.IsNullOrWhiteSpace(ProvinceState)

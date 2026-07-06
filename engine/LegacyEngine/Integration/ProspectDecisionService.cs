@@ -158,7 +158,7 @@ public sealed class ProspectDecisionService
         ProspectStatus status)
     {
         var updatedProspect = prospect with { Status = status };
-        var updatedScenario = ReplaceProspect(scenario, updatedProspect);
+        var updatedScenario = CloseOpenSigningAction(ReplaceProspect(scenario, updatedProspect), prospect.ProspectPersonId, status);
         var eventType = EventTypeFor(status);
 
         QueueProspectEvent(registry, updatedScenario, eventType, decision, prospect, $"{prospect.ProspectName} status changed to {status}.");
@@ -315,6 +315,25 @@ public sealed class ProspectDecisionService
                 .Select(item => item.ProspectPersonId == prospect.ProspectPersonId ? prospect : item)
                 .ToArray()
         };
+
+    private static NewGmScenarioSnapshot CloseOpenSigningAction(NewGmScenarioSnapshot scenario, string prospectPersonId, ProspectStatus status)
+    {
+        if (status is not (ProspectStatus.ReturnedToJunior or ProspectStatus.ReturnedToYouthTeam or ProspectStatus.AssignedToAffiliate or ProspectStatus.Released or ProspectStatus.Declined))
+        {
+            return scenario;
+        }
+
+        return scenario with
+        {
+            PendingActions = scenario.PendingActions
+                .Select(action => action.IsOpen
+                    && action.PersonId == prospectPersonId
+                    && action.ActionType == PendingGmActionType.SignDraftPick
+                        ? action with { Status = PendingGmActionStatus.Declined }
+                        : action)
+                .ToArray()
+        };
+    }
 
     private static DraftRightsRecord FindProspect(NewGmScenarioSnapshot scenario, string prospectPersonId) =>
         scenario.ProspectRights.SingleOrDefault(item => item.ProspectPersonId == prospectPersonId)

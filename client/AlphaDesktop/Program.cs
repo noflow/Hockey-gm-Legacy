@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using LegacyEngine.Contracts;
 using LegacyEngine.Draft;
 using LegacyEngine.Integration;
 using LegacyEngine.People;
@@ -1587,8 +1588,20 @@ internal sealed class MainWindow : Window
         return rows;
     }
 
-    private IReadOnlyList<SelectablePersonRow> BuildRosterRows() =>
-        State.Snapshot.Roster.Players
+    private IReadOnlyList<SelectablePersonRow> BuildRosterRows()
+    {
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "roster-summary",
+                "Roster Breakdown",
+                "RosterSummary",
+                State.RosterBreakdownTitle,
+                State.RosterBreakdownSecondary,
+                State.RosterBreakdownSummary)
+        };
+
+        rows.AddRange(State.Snapshot.Roster.Players
             .Where(PassesRosterFilters)
             .OrderBy(player => player.Status)
             .ThenBy(player => FindPersonName(player.PersonId), StringComparer.Ordinal)
@@ -1602,7 +1615,10 @@ internal sealed class MainWindow : Window
                     $"{State.PlayerType(player.PersonId)} | {State.CurrentLineupRole(player.PersonId)} now | {State.PotentialLineupRole(player.PersonId)} potential",
                     $"Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
             })
-            .ToArray();
+            .ToArray());
+
+        return rows;
+    }
 
     private bool PassesRosterFilters(RosterPlayer player)
     {
@@ -1683,9 +1699,9 @@ internal sealed class MainWindow : Window
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "ScoutingProspect",
-                $"{State.PersonPosition(entry.ProspectPersonId)} - age {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"} - rank #{entry.Rank}",
+                $"Rank #{entry.Rank} | {State.DraftQuickScan(entry)}",
                 $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
-                $"{State.DraftBioSummary(entry)} | {State.ScoutingReportStatus(entry.ProspectPersonId)} | {entry.ProjectionText}"))
+                $"{State.DraftCurrentPicture(entry)} | {State.DraftFuturePicture(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingOperationRows() =>
@@ -1710,9 +1726,9 @@ internal sealed class MainWindow : Window
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "DraftBoard",
-                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank} | {State.PersonPosition(entry.ProspectPersonId)} | {entry.Bio?.CurrentTeam ?? "team n/a"} / {entry.Bio?.League ?? "league n/a"}",
+                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank} | {State.DraftQuickScan(entry)}",
                 $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Projection: {entry.ProjectionText}",
-                $"{entry.Bio?.ShootsCatches ?? "Hand unknown"} | {entry.Bio?.HeightDisplay ?? "height n/a"} | {entry.Bio?.WeightDisplay ?? "weight n/a"} | {State.DraftBioSummary(entry)}"))
+                $"{State.DraftCurrentPicture(entry)} | {State.DraftFuturePicture(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildProspectRows() =>
@@ -1924,6 +1940,16 @@ internal sealed class MainWindow : Window
         AddLine(panel, "GM relationship", $"{State.RelationshipWithGm(row.PersonId)}/100");
         AddParagraph(panel, row.Summary);
 
+        if (row.Kind == "RosterSummary")
+        {
+            AddLine(panel, "Roster count", State.RosterBreakdownTitle);
+            AddLine(panel, "Position breakdown", State.RosterBreakdownSecondary);
+            AddLine(panel, "Age mix", State.RosterAgeBreakdown);
+            AddLine(panel, "Contracts", State.RosterContractBreakdown);
+            AddParagraph(panel, "Drafted prospects stay on the prospect/draft-rights list until you explicitly offer a contract, invite them to camp, return them to junior/youth while retaining rights where allowed, assign them to an affiliate where valid, or release their rights.");
+            return panel;
+        }
+
         if (tab == "Roster")
         {
             AddLine(panel, "Name", row.Name);
@@ -1970,12 +1996,12 @@ internal sealed class MainWindow : Window
             }
         }
 
-        if (tab == "Draft Board")
+        if (tab is "Scouting" or "Draft Board")
         {
             var entry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == row.PersonId);
             if (entry is not null)
             {
-                AddLine(panel, "Report", entry.ScoutingReportId ?? "none");
+                AddLine(panel, "Known position", State.DraftPositionText(entry));
                 if (entry.Bio is not null)
                 {
                     AddLine(panel, "Shoots/Catches", entry.Bio.ShootsCatches);
@@ -1987,6 +2013,9 @@ internal sealed class MainWindow : Window
                     AddLine(panel, "Lineup projection", entry.Bio.PotentialLineupProjection);
                 }
 
+                AddLine(panel, "Current picture", State.DraftCurrentPicture(entry));
+                AddLine(panel, "Future projection", State.DraftFuturePicture(entry));
+                AddLine(panel, "Report", entry.ScoutingReportId ?? "none");
                 AddLine(panel, "Analytics", string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary);
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes);
             }
@@ -2528,8 +2557,7 @@ internal sealed class MainWindow : Window
 
     private string BuildLiveDraftMiddleRow(DraftBoardEntry entry)
     {
-        var teamLeague = entry.Bio is null ? State.RegionTeamText(entry.ProspectPersonId) : $"{entry.Bio.CurrentTeam} / {entry.Bio.League}";
-        return $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {State.PersonPosition(entry.ProspectPersonId)} | {teamLeague} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"}";
+        return $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {State.DraftQuickScan(entry)} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | {entry.ProjectionText}";
     }
 
     private string BuildLiveDraftProspectCard(string? prospectId)
@@ -2546,7 +2574,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine("Selected Prospect Card");
         builder.AppendLine("======================");
         builder.AppendLine($"Name: {FindPersonName(entry.ProspectPersonId)}");
-        builder.AppendLine($"Position: {State.PersonPosition(entry.ProspectPersonId)}");
+        builder.AppendLine($"Position: {State.DraftPositionText(entry)}");
         builder.AppendLine($"Age: {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"}");
         if (entry.Bio is not null)
         {
@@ -2570,6 +2598,8 @@ internal sealed class MainWindow : Window
         }
 
         builder.AppendLine($"Scouting confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+        builder.AppendLine($"Current picture: {State.DraftCurrentPicture(entry)}");
+        builder.AppendLine($"Future picture: {State.DraftFuturePicture(entry)}");
         builder.AppendLine($"Projection: {entry.ProjectionText}");
         builder.AppendLine($"Player type: {State.PlayerType(entry.ProspectPersonId)}");
         builder.AppendLine($"Risk summary: {DraftRiskSummary(entry)}");
@@ -4329,6 +4359,66 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public string RosterBreakdownTitle
+    {
+        get
+        {
+            var active = Snapshot.Roster.ActivePlayers.Count;
+            var required = _registry.Rulebook?.RosterRules?.ActiveRoster ?? active;
+            return $"{active}/{required} active players";
+        }
+    }
+
+    public string RosterBreakdownSecondary
+    {
+        get
+        {
+            var active = Snapshot.Roster.ActivePlayers;
+            var goalies = active.Count(player => player.Position == RosterPosition.Goalie);
+            var defense = active.Count(player => player.Position == RosterPosition.Defense);
+            var forwards = active.Count(player => player.Position is RosterPosition.Center or RosterPosition.LeftWing or RosterPosition.RightWing);
+            return $"{goalies} G | {defense} D | {forwards} F";
+        }
+    }
+
+    public string RosterAgeBreakdown
+    {
+        get
+        {
+            var active = Snapshot.Roster.ActivePlayers;
+            var under18 = active.Count(player => (PersonAge(player.PersonId) ?? player.Age ?? 0) < 18);
+            var middle = active.Count(player =>
+            {
+                var age = PersonAge(player.PersonId) ?? player.Age ?? 0;
+                return age is >= 18 and <= 19;
+            });
+            var overage = active.Count(player => (PersonAge(player.PersonId) ?? player.Age ?? 0) >= 20);
+            return $"{under18} under 18 | {middle} age 18-19 | {overage} age 20+";
+        }
+    }
+
+    public string RosterContractBreakdown
+    {
+        get
+        {
+            var activeIds = Snapshot.Roster.ActivePlayers.Select(player => player.PersonId).ToHashSet(StringComparer.Ordinal);
+            var contracts = ScenarioSnapshot.Contracts
+                .Concat(Snapshot.Contracts)
+                .DistinctBy(contract => contract.ContractId)
+                .Where(contract => activeIds.Contains(contract.PersonId) && contract.ContractType == ContractType.JuniorPlayerAgreement)
+                .ToArray();
+            var expired = contracts.Count(contract => contract.Status == ContractStatus.Expired || contract.Term.EndDate < Snapshot.CurrentDate);
+            var expiring = contracts.Count(contract => contract.Status == ContractStatus.Signed
+                && contract.Term.EndDate >= Snapshot.CurrentDate
+                && contract.Term.EndDate <= Snapshot.CurrentDate.AddDays(30));
+            var unsigned = activeIds.Count - contracts.Count(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate >= Snapshot.CurrentDate);
+            return $"{contracts.Length} inherited agreements | {expired} expired | {expiring} expiring soon | {unsigned} need renewal/walk-away review";
+        }
+    }
+
+    public string RosterBreakdownSummary =>
+        $"{RosterBreakdownTitle} | {RosterBreakdownSecondary} | {RosterAgeBreakdown} | {RosterContractBreakdown}";
+
     public string DraftCountdownText =>
         ScenarioSnapshot.DaysUntilDraft switch
         {
@@ -4866,6 +4956,13 @@ internal sealed class AlphaDesktopState
             return campPosition.Value;
         }
 
+        var draftBioPosition = ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries
+            .FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position;
+        if (draftBioPosition is not null)
+        {
+            return draftBioPosition.Value;
+        }
+
         try
         {
             return _playerDossiers.CreateDossier(ScenarioSnapshot, personId).Position;
@@ -4947,12 +5044,23 @@ internal sealed class AlphaDesktopState
     public string ContractRightsStatus(string personId)
     {
         var contract = ScenarioSnapshot.Contracts.Concat(Snapshot.Contracts)
+            .DistinctBy(contract => contract.ContractId)
             .Where(contract => contract.PersonId == personId)
             .OrderByDescending(contract => contract.SignedOn ?? contract.OfferedOn)
             .FirstOrDefault();
         if (contract is not null)
         {
-            return $"{contract.ContractType} {contract.Status}";
+            if (contract.Status == ContractStatus.Expired || contract.Term.EndDate < Snapshot.CurrentDate)
+            {
+                return $"{contract.ContractType} expired {contract.Term.EndDate:yyyy-MM-dd} - renew or walk away.";
+            }
+
+            if (contract.Status == ContractStatus.Signed && contract.Term.EndDate <= Snapshot.CurrentDate.AddDays(30))
+            {
+                return $"{contract.ContractType} expires {contract.Term.EndDate:yyyy-MM-dd} - renewal decision soon.";
+            }
+
+            return $"{contract.ContractType} {contract.Status} through {contract.Term.EndDate:yyyy-MM-dd}";
         }
 
         var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId);
@@ -4978,11 +5086,70 @@ internal sealed class AlphaDesktopState
 
     public string RegionTeamText(string personId)
     {
+        var draftBio = ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries
+            .FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio;
+        if (draftBio is not null)
+        {
+            return $"{draftBio.CurrentTeam} / {draftBio.League}";
+        }
+
         var role = Snapshot.People.FirstOrDefault(person => person.PersonId == personId)
             ?.ActiveRolesOn(Snapshot.CurrentDate)
             .FirstOrDefault();
         return role?.OrganizationId ?? Snapshot.Organization?.Name ?? Snapshot.OrganizationId;
     }
+
+    public string DraftPositionText(DraftBoardEntry entry) =>
+        PositionShort(entry.Bio?.Position ?? PersonPosition(entry.ProspectPersonId));
+
+    public string DraftQuickScan(DraftBoardEntry entry)
+    {
+        var position = DraftPositionText(entry);
+        var age = PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown";
+        if (entry.Bio is null)
+        {
+            return $"{position} | Age {age} | {RegionTeamText(entry.ProspectPersonId)}";
+        }
+
+        return $"{position} | {entry.Bio.ShootsCatches} | {entry.Bio.HeightDisplay} | {entry.Bio.WeightDisplay} | Age {age} | {entry.Bio.CurrentTeam} / {entry.Bio.League}";
+    }
+
+    public string DraftCurrentPicture(DraftBoardEntry entry)
+    {
+        var position = DraftPositionText(entry);
+        var rankBand = entry.Rank switch
+        {
+            <= 3 => "top-of-board",
+            <= 10 => "high-priority",
+            <= 25 => "draftable",
+            _ => "watch-list"
+        };
+
+        return entry.ScoutingConfidence switch
+        {
+            ScoutingConfidenceLevel.VeryHigh or ScoutingConfidenceLevel.High => $"Current picture: clear {rankBand} {position}; staff have enough viewings to describe his present role.",
+            ScoutingConfidenceLevel.Medium => $"Current picture: working read on a {rankBand} {position}; staff want another viewing to firm up present ability.",
+            ScoutingConfidenceLevel.Low or ScoutingConfidenceLevel.Unknown or null => $"Current picture: basic {position} bio is known, but present ability is still lightly scouted.",
+            _ => $"Current picture: staff are still building the read on this {position}."
+        };
+    }
+
+    public string DraftFuturePicture(DraftBoardEntry entry)
+    {
+        var role = entry.Bio?.PotentialLineupProjection ?? "future role still forming";
+        return $"Future projection: {role}; {entry.ProjectionText}";
+    }
+
+    private static string PositionShort(RosterPosition position) =>
+        position switch
+        {
+            RosterPosition.Center => "C",
+            RosterPosition.LeftWing => "LW",
+            RosterPosition.RightWing => "RW",
+            RosterPosition.Defense => "D",
+            RosterPosition.Goalie => "G",
+            _ => "Unknown"
+        };
 
     public string AssignedScoutText(string personId)
     {

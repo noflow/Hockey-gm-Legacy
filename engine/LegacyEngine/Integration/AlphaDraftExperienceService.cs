@@ -230,14 +230,8 @@ public sealed class AlphaDraftExperienceService
             $"{scenario.AlphaSnapshot.Scout.Name} updated the staff notes after the {prospectName} selection.",
             scenario.AlphaSnapshot.ScoutPerson.PersonId);
 
-        var pendingSigning = new PendingGmActionService().CreateForDraftPickReady(
-            registry,
-            updatedScenario,
-            prospectPersonId,
-            $"{prospectName} was drafted by {scenario.Organization.Name} and needs a GM decision before any agreement is signed.");
-
         return BuildResult(
-            pendingSigning.ScenarioSnapshot,
+            updatedScenario,
             updatedState,
             $"Selected {prospectName} at pick {pick.PickNumber}.",
             new[]
@@ -251,8 +245,13 @@ public sealed class AlphaDraftExperienceService
                     scenario,
                     LegacyEventType.ScoutRecommendationUpdated,
                     "Head scout reaction",
-                    $"{scenario.AlphaSnapshot.Scout.Name}: We had enough confidence to make that pick.")
-            }.Concat(pendingSigning.InboxItems).ToArray());
+                    $"{scenario.AlphaSnapshot.Scout.Name}: We had enough confidence to make that pick."),
+                Inbox(
+                    scenario,
+                    LegacyEventType.ProspectDecisionMade,
+                    "Prospect path decision needed",
+                    $"{prospectName} is now on your draft rights list. You can offer a contract, invite him to camp, return him to junior/youth while retaining rights where allowed, assign him to an affiliate where valid, or release his rights.")
+            });
     }
 
     public DraftExperienceResult MakePlayerSelectionAndContinue(
@@ -536,9 +535,8 @@ public sealed class AlphaDraftExperienceService
 
     private static RosterPosition GuessPosition(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Position
-        ?? scenario.AlphaSnapshot.Roster.Players
-            .OrderBy(player => player.PersonId, StringComparer.Ordinal)
-            .FirstOrDefault()?.Position
+        ?? scenario.AlphaSnapshot.DraftBoard.Entries
+            .FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position
         ?? RosterPosition.Unknown;
 
     private static void QueueScenarioEvent(

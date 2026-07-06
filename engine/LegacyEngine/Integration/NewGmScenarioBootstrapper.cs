@@ -94,8 +94,10 @@ public sealed class NewGmScenarioBootstrapper
         owner.Validate();
 
         var organization = CreateOrganization(registry, scenarioSettings, ownerPerson.PersonId, startDate);
-        var contracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, activeRulebook, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
-        var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, contracts);
+        var staffContracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, activeRulebook, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
+        var playerContracts = CreateRosterPlayerContracts(registry, scenarioSettings.OrganizationId, startDate, rosterPlayers);
+        var contracts = staffContracts.Concat(playerContracts).ToArray();
+        var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, staffContracts);
         var roster = CreateRoster(registry, scenarioSettings, rosterPlayers, startDate);
         var recruitProfiles = CreateRecruitProfiles(scenarioSettings.OrganizationId, recruits, startDate);
         var draftBoard = CreateDraftBoard(scenarioSettings, recruitProfiles);
@@ -107,6 +109,7 @@ public sealed class NewGmScenarioBootstrapper
             Diligence: 78,
             ReportBias: -2);
         scout.Validate();
+        var inheritedScoutingReports = CreateInheritedScoutingReports(draftBoard, recruits, scout, startDate);
 
         var relationships = CreateRelationships(owner, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, rosterPlayers, startDate);
         var developmentProfiles = CreateDevelopmentProfiles(registry, rosterPlayers, startDate);
@@ -158,6 +161,7 @@ public sealed class NewGmScenarioBootstrapper
             headCoach,
             scout,
             roster,
+            rosterPlayers,
             injuries,
             season,
             gmProfile.PreferredName);
@@ -172,7 +176,10 @@ public sealed class NewGmScenarioBootstrapper
             ScoutingAssignments: Array.Empty<ScoutingAssignment>(),
             DraftDate: draftDate,
             FirstDayInbox: firstDayInbox,
-            ScenarioSummary: $"{gmProfile.PreferredName} takes over as GM of {organization.Name} two weeks before the junior draft.");
+            ScenarioSummary: $"{gmProfile.PreferredName} takes over as GM of {organization.Name} two weeks before the junior draft.")
+        {
+            CompletedScoutingReports = inheritedScoutingReports
+        };
         scenarioSnapshot.Validate();
 
         return new NewGmScenarioResult(
@@ -265,6 +272,156 @@ public sealed class NewGmScenarioBootstrapper
         }
 
         return contracts;
+    }
+
+    private static IReadOnlyList<Contract> CreateRosterPlayerContracts(
+        EngineRegistry registry,
+        string organizationId,
+        DateOnly startDate,
+        IReadOnlyList<Person> rosterPlayers)
+    {
+        var contracts = new List<Contract>();
+        for (var index = 0; index < rosterPlayers.Count; index++)
+        {
+            var player = rosterPlayers[index];
+            var endDate = index switch
+            {
+                < 3 => startDate.AddDays(-1),
+                < 8 => startDate.AddDays(14),
+                < 14 => startDate.AddMonths(3),
+                _ => startDate.AddYears(1).AddDays(-1)
+            };
+            var offeredOn = startDate.AddMonths(-10).AddDays(index % 20);
+            var offered = registry.ContractEngine.CreateOffer(new ContractOffer(
+                OfferId: $"inherited-player-contract-{index + 1:00}",
+                PersonId: player.PersonId,
+                OrganizationId: organizationId,
+                ContractType: ContractType.JuniorPlayerAgreement,
+                Term: new ContractTerm(offeredOn, endDate),
+                Money: new ContractMoney(SalaryOrStipend: 1_200m + (index % 6 * 150m), Currency: "CAD"),
+                Clauses: index % 4 == 0
+                    ? new[] { new ContractClause("education-support", ContractClauseType.EducationPackage, "Existing education support from prior management.") }
+                    : Array.Empty<ContractClause>(),
+                OfferedOn: offeredOn,
+                Notes: "Inherited junior player agreement from previous management."));
+            var signed = registry.ContractEngine.SignContract(offered, offeredOn.AddDays(1)).Contract;
+            contracts.Add(endDate < startDate ? signed.Expire(startDate) : signed);
+        }
+
+        return contracts;
+    }
+
+    private static IReadOnlyList<ScoutingReport> CreateInheritedScoutingReports(
+        DraftBoard draftBoard,
+        IReadOnlyList<Person> recruits,
+        Scout scout,
+        DateOnly startDate)
+    {
+        var reports = new List<ScoutingReport>();
+        var recruitById = recruits.ToDictionary(person => person.PersonId, StringComparer.Ordinal);
+        foreach (var entry in draftBoard.Entries.OrderBy(entry => entry.Rank).Take(45))
+        {
+            if (!recruitById.TryGetValue(entry.ProspectPersonId, out var person) || entry.Bio is null)
+            {
+                continue;
+            }
+
+            var currentCenter = entry.Rank switch
+            {
+                <= 5 => 58,
+                <= 15 => 50,
+                <= 30 => 44,
+                _ => 38
+            };
+            var potentialCenter = entry.Rank switch
+            {
+                <= 5 => 78,
+                <= 15 => 70,
+                <= 30 => 63,
+                _ => 56
+            };
+            var confidence = entry.Rank <= 10
+                ? ScoutingConfidenceLevel.High
+                : entry.Rank <= 35
+                    ? ScoutingConfidenceLevel.Medium
+                    : ScoutingConfidenceLevel.Low;
+            var uncertainty = confidence switch
+            {
+                ScoutingConfidenceLevel.High => 7,
+                ScoutingConfidenceLevel.Medium => 12,
+                _ => 18
+            };
+            var current = RangeAround(currentCenter, uncertainty);
+            var potential = RangeAround(potentialCenter, uncertainty + 4);
+            var report = new ScoutingReport(
+                ReportId: entry.ScoutingReportId ?? $"scenario-report-{entry.Rank:000}",
+                PlayerId: entry.ProspectPersonId,
+                ScoutId: scout.ScoutId,
+                AssignmentId: $"previous-season-scouting-{entry.Rank:000}",
+                CreatedOn: startDate.AddDays(-60 + (entry.Rank % 35)),
+                Facts: new[]
+                {
+                    $"{person.Identity.DisplayName} is a {person.CalculateAge(startDate)}-year-old {entry.Bio.Position}.",
+                    $"Current team: {entry.Bio.CurrentTeam} ({entry.Bio.League})."
+                },
+                Observations: new[]
+                {
+                    $"Previous staff tracked {entry.Bio.ShootsCatches}, {entry.Bio.HeightDisplay}, {entry.Bio.WeightDisplay}.",
+                    entry.Bio.CharacterSummary,
+                    entry.AnalyticsSummary
+                },
+                Opinions: new[]
+                {
+                    $"Current picture: {CurrentPictureFor(entry, confidence)}",
+                    $"Future projection: {entry.Bio.PotentialLineupProjection}; {entry.ProjectionText}",
+                    confidence == ScoutingConfidenceLevel.High ? "Staff feel comfortable using this report for draft-day decisions." : "Staff recommend at least one more viewing before making a major commitment."
+                },
+                Unknowns: new[]
+                {
+                    "Long-term development curve remains uncertain.",
+                    "Translation against older junior competition still needs more evidence."
+                },
+                Confidence: confidence,
+                CurrentAbilityEstimate: current,
+                PotentialEstimate: potential,
+                Recommendation: RecommendationFor(potential, entry.Rank),
+                Details: new Dictionary<string, object?>
+                {
+                    ["inherited_from_previous_staff"] = true,
+                    ["visible_to_new_gm"] = true,
+                    ["scouting_year"] = startDate.Year - 1
+                });
+            report.Validate();
+            reports.Add(report);
+        }
+
+        return reports;
+
+        static ScoutedRatingRange RangeAround(int center, int uncertainty) =>
+            new(Math.Clamp(center - uncertainty, 0, 100), Math.Clamp(center + uncertainty, 0, 100));
+
+        static ScoutingRecommendation RecommendationFor(ScoutedRatingRange potential, int rank)
+        {
+            if (rank <= 5 || potential.High >= 78)
+            {
+                return ScoutingRecommendation.PriorityTarget;
+            }
+
+            if (rank <= 20 || potential.High >= 68)
+            {
+                return ScoutingRecommendation.Target;
+            }
+
+            return potential.High >= 58 ? ScoutingRecommendation.Consider : ScoutingRecommendation.Watch;
+        }
+
+        static string CurrentPictureFor(DraftBoardEntry entry, ScoutingConfidenceLevel confidence) =>
+            confidence switch
+            {
+                ScoutingConfidenceLevel.High => $"clear read on a {entry.Bio!.Position} who already shows draftable junior tools",
+                ScoutingConfidenceLevel.Medium => $"working read on a {entry.Bio!.Position}; present ability is useful but still being verified",
+                _ => $"basic read on a {entry.Bio!.Position}; staff mostly know the bio and role projection"
+            };
     }
 
     private static IReadOnlyList<StaffMember> CreateStaff(
@@ -362,8 +519,8 @@ public sealed class NewGmScenarioBootstrapper
             board = board.AddProspect(new DraftBoardEntry(
                 ProspectPersonId: recruits[index].RecruitPersonId,
                 Rank: index + 1,
-                ScoutingReportId: $"scenario-report-{index + 1:000}",
-                ScoutingConfidence: index < 3 ? ScoutingConfidenceLevel.High : ScoutingConfidenceLevel.Medium,
+                ScoutingReportId: index < 45 ? $"scenario-report-{index + 1:000}" : null,
+                ScoutingConfidence: index < 10 ? ScoutingConfidenceLevel.High : index < 45 ? ScoutingConfidenceLevel.Medium : ScoutingConfidenceLevel.Low,
                 ProjectionText: ProjectionFor(index),
                 IsStarred: index < 2,
                 PersonalNotes: index < 3 ? "GM note: review again before draft day." : "",
@@ -451,15 +608,37 @@ public sealed class NewGmScenarioBootstrapper
                 var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "roster"), RosterPlayerOrigins(index));
                 return CreatePlayer(
                 $"person-roster-{index + 1:000}",
-                name.FirstName,
-                name.LastName,
-                new DateOnly(2007 + (index % 3), (index % 12) + 1, Math.Min(24, (index % 27) + 1)),
-                name.Nationality,
-                name.Birthplace,
+                    name.FirstName,
+                    name.LastName,
+                    RosterBirthDateFor(index),
+                    name.Nationality,
+                    name.Birthplace,
                 organizationId,
                 startDate);
             })
             .ToArray();
+    }
+
+    private static DateOnly RosterBirthDateFor(int index)
+    {
+        if (index < 3)
+        {
+            return new DateOnly(2005, (index % 3) + 1, Math.Min(24, (index % 27) + 1));
+        }
+
+        if (index < 10)
+        {
+            return new DateOnly(2006, 9 + (index % 4), Math.Min(24, (index % 27) + 1));
+        }
+
+        var birthYear = index switch
+        {
+            < 18 => 2007,
+            < 23 => 2008,
+            _ => 2009
+        };
+
+        return new DateOnly(birthYear, (index % 12) + 1, Math.Min(24, (index % 27) + 1));
     }
 
     private static IReadOnlyList<Person> CreateRecruitPeople(
@@ -614,6 +793,7 @@ public sealed class NewGmScenarioBootstrapper
         };
 
         return new DraftProspectBio(
+            Position: position,
             ShootsCatches: position == RosterPosition.Goalie
                 ? (seed % 2 == 0 ? "Catches L" : "Catches R")
                 : (seed % 3 == 0 ? "Shoots R" : "Shoots L"),

@@ -12,6 +12,19 @@ internal sealed class ProspectDecisionTests
         Assert.Equal(ProspectStatus.DraftRightsHeld, drafted.ScenarioSnapshot.ProspectRights.Single(item => item.ProspectPersonId == prospect.ProspectPersonId).Status);
     }
 
+    public void DraftedPlayerHasNonContractProspectPaths()
+    {
+        var ready = ReadyForPlayerPick();
+        var prospect = ready.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).First();
+        var drafted = new AlphaDraftExperienceService().MakePlayerSelection(ready.Registry, ready.ScenarioSnapshot, prospect.ProspectPersonId);
+        var available = new ProspectDecisionService().AvailableDecisions(ready.Registry, drafted.ScenarioSnapshot, prospect.ProspectPersonId);
+
+        Assert.True(available.Contains(ProspectDecisionType.OfferContract), "Drafted player should allow an explicit contract offer.");
+        Assert.True(available.Contains(ProspectDecisionType.InviteToCamp), "Drafted player should allow a camp invite without signing first.");
+        Assert.True(available.Contains(ProspectDecisionType.ReturnToJunior), "Drafted player should allow return to junior/youth while retaining rights where allowed.");
+        Assert.False(drafted.ScenarioSnapshot.PendingActions.Any(action => action.ActionType == PendingGmActionType.SignDraftPick && action.PersonId == prospect.ProspectPersonId), "Drafted player should not require signing before other prospect decisions.");
+    }
+
     public void DraftedPlayerIsNotActiveRosterByDefault()
     {
         var ready = ReadyForPlayerPick();
@@ -78,6 +91,8 @@ internal sealed class ProspectDecisionTests
 
         Assert.True(result.Success, result.Message);
         Assert.Equal(ProspectStatus.ReturnedToJunior, result.Prospect.Status);
+        Assert.True(result.ScenarioSnapshot.ProspectRights.Any(item => item.ProspectPersonId == prospect.ProspectPersonId), "Returning to junior should retain prospect rights record.");
+        Assert.False(result.ScenarioSnapshot.Contracts.Any(contract => contract.PersonId == prospect.ProspectPersonId), "Returning to junior should not create a contract.");
     }
 
     public void ReturnToYouthTeamChangesProspectStatus()

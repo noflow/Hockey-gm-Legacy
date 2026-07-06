@@ -380,6 +380,7 @@ runner.Run("pending GM action creates inbox message", pendingGmActionTests.Inbox
 runner.Run("AlphaDesktop exposes pending GM actions", pendingGmActionTests.AlphaDesktopExposesPendingActions);
 runner.Run("pending GM actions have no Godot save or full game simulation dependency", pendingGmActionTests.PendingActionsHaveNoGodotSaveOrFullGameSimulationDependency);
 runner.Run("prospect decision drafted player starts as rights held", prospectDecisionTests.DraftedPlayerStartsAsDraftRightsHeld);
+runner.Run("prospect decision drafted player has non-contract paths", prospectDecisionTests.DraftedPlayerHasNonContractProspectPaths);
 runner.Run("prospect decision drafted player is not rostered by default", prospectDecisionTests.DraftedPlayerIsNotActiveRosterByDefault);
 runner.Run("prospect decision offer contract creates pending action", prospectDecisionTests.OfferContractCreatesPendingAction);
 runner.Run("prospect decision approving signing creates contract", prospectDecisionTests.ApprovingSigningCreatesContract);
@@ -535,6 +536,8 @@ runner.Run("alpha 2.7.1 junior roster target is 26", alpha271RosterFrontOfficeRe
 runner.Run("alpha 2.7.1 scenario starts with legal roster", alpha271RosterFrontOfficeRealismTests.ScenarioStartsWithLegalRoster);
 runner.Run("alpha 2.7.1 draft prospects include physical and team bio", alpha271RosterFrontOfficeRealismTests.DraftProspectsIncludePhysicalAndTeamBio);
 runner.Run("alpha 2.7.1 draft measurements match position ranges", alpha271RosterFrontOfficeRealismTests.DraftProspectMeasurementsMatchPositionRanges);
+runner.Run("alpha 2.7.1 scenario starts with inherited scouting reports", alpha271RosterFrontOfficeRealismTests.ScenarioStartsWithInheritedScoutingReports);
+runner.Run("alpha 2.7.1 scenario roster has age mix and contract decisions", alpha271RosterFrontOfficeRealismTests.ScenarioRosterHasAgeMixAndContractDecisions);
 runner.Run("alpha 2.7.1 complete staff positions exist", alpha271RosterFrontOfficeRealismTests.CompleteStaffPositionsExist);
 runner.Run("alpha 2.7.1 vacancies generated", alpha271RosterFrontOfficeRealismTests.VacanciesGenerated);
 runner.Run("alpha 2.7.1 candidate hiring works", alpha271RosterFrontOfficeRealismTests.CandidateHiringWorks);
@@ -568,6 +571,7 @@ runner.Run("alpha 2.9 Action Center pulls roster warnings", alpha29ActionCenterT
 runner.Run("alpha 2.9 Action Center pulls staff vacancies", alpha29ActionCenterTests.ActionCenterPullsStaffVacancies);
 runner.Run("alpha 2.9 Action Center pulls budget warnings", alpha29ActionCenterTests.ActionCenterPullsBudgetWarnings);
 runner.Run("alpha 2.9 Action Center pulls scouting completion", alpha29ActionCenterTests.ActionCenterPullsScoutingCompletion);
+runner.Run("alpha 2.9 medical inbox action includes player name and position", alpha29ActionCenterTests.MedicalInboxActionIncludesPlayerNameAndPosition);
 runner.Run("alpha 2.9 action item has required fields", alpha29ActionCenterTests.ActionItemHasRequiredFields);
 runner.Run("alpha 2.9 daily agenda generated", alpha29ActionCenterTests.DailyAgendaGenerated);
 runner.Run("alpha 2.9 assistant GM recommendations generated", alpha29ActionCenterTests.AssistantGmRecommendationsGenerated);

@@ -62,6 +62,26 @@ internal sealed class Alpha29ActionCenterTests
         Assert.True(items.Any(item => item.Category == ActionCenterCategory.Scouting && item.Title.Contains("Scout report returned", StringComparison.Ordinal)), "Completed scouting assignment should create Action Center item.");
     }
 
+    public void MedicalInboxActionIncludesPlayerNameAndPosition()
+    {
+        var ready = NewGmScenarioBootstrapper.CreateScenario();
+        var injury = ready.ScenarioSnapshot.AlphaSnapshot.Injuries.First(injury => injury.IsActive);
+        var player = ready.ScenarioSnapshot.AlphaSnapshot.Players.First(person => person.PersonId == injury.PersonId);
+        var position = ready.ScenarioSnapshot.AlphaSnapshot.Roster.FindPlayer(injury.PersonId)!.Position.ToString();
+        var medicalInbox = ready.ScenarioSnapshot.FirstDayInbox.First(item => item.EventType == LegacyEventType.PlayerInjured);
+        var items = BuildItems(ready.Registry, ready.ScenarioSnapshot);
+        var medicalAction = items.First(item => item.Category == ActionCenterCategory.Medical && item.SourceInboxItemId == medicalInbox.InboxItemId);
+
+        Assert.True(medicalInbox.Title.Contains(player.Identity.DisplayName, StringComparison.Ordinal), "Medical title should include injured player name.");
+        Assert.True(medicalInbox.Title.Contains(position, StringComparison.Ordinal), "Medical title should include injured player position.");
+        Assert.True(medicalInbox.Summary.Contains(player.Identity.DisplayName, StringComparison.Ordinal), "Medical summary should include injured player name.");
+        Assert.True(medicalInbox.Summary.Contains(position, StringComparison.Ordinal), "Medical summary should include injured player position.");
+        Assert.False(medicalInbox.Summary.Contains("One roster player", StringComparison.Ordinal), "Medical summary should not use vague roster-player wording.");
+        Assert.Equal(player.Identity.DisplayName, medicalAction.RelatedPersonName);
+        Assert.True(medicalAction.Reason.Contains(player.Identity.DisplayName, StringComparison.Ordinal), "Action reason should include injured player name.");
+        Assert.True(medicalAction.Reason.Contains(position, StringComparison.Ordinal), "Action reason should include injured player position.");
+    }
+
     public void ActionItemHasRequiredFields()
     {
         var ready = NewGmScenarioBootstrapper.CreateScenario();

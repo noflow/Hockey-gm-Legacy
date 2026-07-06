@@ -120,7 +120,7 @@ internal sealed class AlphaDraftExperienceTests
         Assert.True(result.ScenarioSnapshot.DraftRights.Any(selection => selection.ProspectPersonId == prospect.ProspectPersonId), "Player selection should be added to draft rights/prospect list.");
         Assert.Equal(originalRosterCount, result.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Count);
         Assert.False(result.ScenarioSnapshot.AlphaSnapshot.Roster.Players.Any(player => player.PersonId == prospect.ProspectPersonId), "Drafted prospect should not be auto-added to active roster.");
-        Assert.True(result.ScenarioSnapshot.PendingActions.Any(action => action.ActionType == PendingGmActionType.SignDraftPick && action.PersonId == prospect.ProspectPersonId), "Drafted prospect should create a pending signing decision.");
+        Assert.False(result.ScenarioSnapshot.PendingActions.Any(action => action.ActionType == PendingGmActionType.SignDraftPick && action.PersonId == prospect.ProspectPersonId), "Drafted prospect should not create a mandatory pending signing decision.");
     }
 
     public void DuplicateDraftSelectionIsPrevented()
@@ -170,7 +170,7 @@ internal sealed class AlphaDraftExperienceTests
         Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftStarted), "Draft start event should exist.");
         Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.PlayerDrafted), "Player drafted event should exist.");
         Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.OwnerDraftReaction), "Owner draft reaction event should exist.");
-        Assert.True(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.PendingGmActionCreated), "Pending GM action event should exist.");
+        Assert.False(ready.Registry.EventEngine.Queue.PendingEvents.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.PendingGmActionCreated), "Drafting alone should not create a mandatory pending GM signing action.");
     }
 
     public void DraftCompletionCreatesRecapEvent()

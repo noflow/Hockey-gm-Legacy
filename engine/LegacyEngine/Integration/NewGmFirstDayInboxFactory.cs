@@ -18,6 +18,7 @@ public sealed class NewGmFirstDayInboxFactory
         Person headCoach,
         Scout headScout,
         Roster roster,
+        IReadOnlyList<Person> players,
         IReadOnlyList<Injury> injuries,
         Season season,
         string? generalManagerPreferredName = null)
@@ -63,13 +64,16 @@ public sealed class NewGmFirstDayInboxFactory
         var activeInjury = injuries.FirstOrDefault(injury => injury.IsActive);
         if (activeInjury is not null)
         {
+            var injuredPlayer = players.FirstOrDefault(player => player.PersonId == activeInjury.PersonId);
+            var injuredPlayerName = injuredPlayer?.Identity.DisplayName ?? activeInjury.PersonId;
+            var injuredPlayerPosition = roster.FindPlayer(activeInjury.PersonId)?.Position ?? RosterPosition.Unknown;
             items.Add(new AlphaInboxItem(
                 InboxItemId: "new-gm-inbox-injury-warning",
                 Date: at.AddHours(1).AddMinutes(20),
                 EventType: LegacyEventType.PlayerInjured,
                 Severity: LegacyEventSeverity.Warning,
-                Title: "Medical note before roster review",
-                Summary: $"One roster player is recovering from a {activeInjury.Severity} {activeInjury.InjuryType}. Expected return is {activeInjury.ExpectedReturnDate:yyyy-MM-dd}.",
+                Title: $"Medical note: {injuredPlayerName} ({injuredPlayerPosition})",
+                Summary: $"{injuredPlayerName} ({injuredPlayerPosition}) is recovering from a {activeInjury.Severity} {activeInjury.BodyPart} {activeInjury.InjuryType}. Expected return is {activeInjury.ExpectedReturnDate:yyyy-MM-dd}.",
                 PrimaryPersonId: activeInjury.PersonId));
         }
 
