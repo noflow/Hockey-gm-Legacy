@@ -2,6 +2,7 @@ using LegacyEngine.Contracts;
 using LegacyEngine.Events;
 using LegacyEngine.Names;
 using LegacyEngine.People;
+using LegacyEngine.RuleEngine;
 using LegacyEngine.Staff;
 
 namespace LegacyEngine.Integration;
@@ -9,11 +10,14 @@ namespace LegacyEngine.Integration;
 public sealed class StaffOfficeService
 {
     public IReadOnlyList<StaffOfficeProfile> BuildStaffProfiles(NewGmScenarioSnapshot scenario) =>
+        BuildStaffProfiles(scenario, RulebookPresets.CreateJuniorMajor());
+
+    public IReadOnlyList<StaffOfficeProfile> BuildStaffProfiles(NewGmScenarioSnapshot scenario, Rulebook rulebook) =>
         scenario.StaffMembers
             .Where(member => member.EmploymentStatus == StaffEmploymentStatus.Employed)
             .OrderBy(member => member.Department)
             .ThenBy(member => member.CurrentRole)
-            .Select(member => BuildProfile(scenario, member))
+            .Select(member => BuildProfile(scenario, member, rulebook))
             .ToArray();
 
     public StaffOfficeResult GenerateCandidatePool(EngineRegistry registry, NewGmScenarioSnapshot scenario)
@@ -36,9 +40,9 @@ public sealed class StaffOfficeService
         var nameGenerator = new NameGenerator(NameGenerationSettings.CreateDefault(scenario.Season.Year + scenario.StaffMembers.Count + 41));
         var candidates = new[]
         {
-            BuildCandidate(registry, scenario, "candidate-staff-001", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.DevelopmentCoach, 73, 76, 61, new[] { "player development", "communication" }, new[] { "limited head-coach experience" }, "Collaborative teacher with strong patience.", "Low chemistry risk; likely aligns with a development-first GM."),
-            BuildCandidate(registry, scenario, "candidate-staff-002", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.AthleticTherapist, 68, 71, 56, new[] { "injury prevention", "recovery planning" }, new[] { "modest hockey operations background" }, "Calm medical communicator with practical habits.", "Low to moderate risk; needs clear role boundaries."),
-            BuildCandidate(registry, scenario, "candidate-staff-003", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.Scout, 78, 74, 58, new[] { "character reads", "regional coverage" }, new[] { "smaller network in Europe" }, "Detail-heavy scout who values evidence.", "Moderate risk; may push back if assignments are vague.")
+            BuildCandidate(registry, scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor(), "candidate-staff-001", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.DevelopmentCoach, 73, 76, 61, new[] { "player development", "communication" }, new[] { "limited head-coach experience" }, "Collaborative teacher with strong patience.", "Low chemistry risk; likely aligns with a development-first GM."),
+            BuildCandidate(registry, scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor(), "candidate-staff-002", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.AthleticTherapist, 68, 71, 56, new[] { "injury prevention", "recovery planning" }, new[] { "modest hockey operations background" }, "Calm medical communicator with practical habits.", "Low to moderate risk; needs clear role boundaries."),
+            BuildCandidate(registry, scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor(), "candidate-staff-003", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.Scout, 78, 74, 58, new[] { "character reads", "regional coverage" }, new[] { "smaller network in Europe" }, "Detail-heavy scout who values evidence.", "Moderate risk; may push back if assignments are vague.")
         };
 
         var updatedPeople = scenario.AlphaSnapshot.People
@@ -93,7 +97,17 @@ public sealed class StaffOfficeService
         };
 
         QueueEvent(registry, updated, LegacyEventType.StaffHired, "Staff hired", $"{candidate.Person.Identity.DisplayName} was hired as {StaffRoles.Title(role)}.", candidate.Person.PersonId);
-        var inbox = new[] { Inbox(updated, LegacyEventType.StaffHired, "Staff hired", $"{candidate.Person.Identity.DisplayName} joined the front office as {StaffRoles.Title(role)}.", candidate.Person.PersonId) };
+        var inbox = new List<AlphaInboxItem>
+        {
+            Inbox(updated, LegacyEventType.StaffHired, "Staff hired", $"{candidate.Person.Identity.DisplayName} joined the front office as {StaffRoles.Title(role)} at {candidate.ExpectedSalary.AnnualAmount:C0}.", candidate.Person.PersonId)
+        };
+        var budget = new StaffBudgetService().Build(updated, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+        if (budget.Status == BudgetStatus.OverBudget)
+        {
+            QueueEvent(registry, updated, LegacyEventType.BudgetApproved, "Owner budget warning", budget.Warnings.FirstOrDefault() ?? "Hockey operations budget is over limit.", candidate.Person.PersonId);
+            inbox.Add(Inbox(updated, LegacyEventType.BudgetApproved, "Owner budget warning", budget.Warnings.FirstOrDefault() ?? "Hockey operations budget is over limit.", candidate.Person.PersonId, LegacyEventSeverity.Warning));
+        }
+
         return Result(true, updated, candidate, null, null, null, inbox, $"{candidate.Person.Identity.DisplayName} hired as {StaffRoles.Title(role)}.");
     }
 
@@ -183,7 +197,7 @@ public sealed class StaffOfficeService
 
     public StaffOfficeResult GenerateChemistryWarning(EngineRegistry registry, NewGmScenarioSnapshot scenario)
     {
-        var reports = BuildStaffProfiles(scenario).Select(profile => profile.Chemistry).ToArray();
+        var reports = BuildStaffProfiles(scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor()).Select(profile => profile.Chemistry).ToArray();
         var warning = reports
             .OrderBy(report => report.GmFit)
             .FirstOrDefault(report => report.ConflictWarnings.Count > 0);
@@ -235,7 +249,7 @@ public sealed class StaffOfficeService
         return report;
     }
 
-    private StaffOfficeProfile BuildProfile(NewGmScenarioSnapshot scenario, StaffMember member)
+    private StaffOfficeProfile BuildProfile(NewGmScenarioSnapshot scenario, StaffMember member, Rulebook rulebook)
     {
         var focus = scenario.StaffFocusAssignments
             .Where(item => item.PersonId == member.PersonId)
@@ -256,6 +270,7 @@ public sealed class StaffOfficeService
             CurrentRole: member.CurrentRole,
             Department: member.Department,
             ContractStatus: contract,
+            Salary: new StaffBudgetService().CompensationFor(member, scenario, rulebook).Salary,
             Strengths: Strengths(member),
             Weaknesses: Weaknesses(member),
             RelationshipWithGm: RelationshipWithGm(scenario, member.PersonId),
@@ -295,6 +310,7 @@ public sealed class StaffOfficeService
     private static StaffCandidate BuildCandidate(
         EngineRegistry registry,
         NewGmScenarioSnapshot scenario,
+        Rulebook rulebook,
         string candidateId,
         GeneratedName generatedName,
         StaffRole role,
@@ -323,10 +339,15 @@ public sealed class StaffOfficeService
             yearsExperience: Math.Max(2, reputation / 7),
             reputation: reputation,
             attributes: attributes);
-        var recommendation = roleFit + departmentFit + reputation >= 205
+        var budgetService = new StaffBudgetService();
+        var expectedSalary = budgetService.EstimateSalaryForRole(role, reputation, rulebook);
+        var expensive = expectedSalary.AnnualAmount > budgetService.RangeFor(role, rulebook).Midpoint;
+        var recommendation = roleFit + departmentFit + reputation >= 205 && !expensive
             ? "Recommended hire for the current staff plan."
-            : "Useful candidate, but fit should be reviewed before hiring.";
-        var candidate = new StaffCandidate(candidateId, person, member, roleFit, departmentFit, reputation, strengths, weaknesses, personality, chemistryRisk, recommendation);
+            : expensive && chemistryRisk.Contains("risk", StringComparison.OrdinalIgnoreCase)
+                ? "High-cost candidate; review chemistry risk before committing budget."
+                : "Useful candidate, but fit and salary should be reviewed before hiring.";
+        var candidate = new StaffCandidate(candidateId, person, member, roleFit, departmentFit, reputation, expectedSalary, strengths, weaknesses, personality, chemistryRisk, recommendation);
         candidate.Validate();
         return candidate;
     }

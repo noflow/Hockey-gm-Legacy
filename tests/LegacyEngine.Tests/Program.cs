@@ -37,6 +37,7 @@ var staffControlTests = new StaffControlTests();
 var alphaDesktopInteractionTests = new AlphaDesktopInteractionTests();
 var budgetOverviewTests = new BudgetOverviewTests();
 var alpha231DedupHiringTests = new Alpha231DedupHiringTests();
+var alpha24StaffBudgetTests = new Alpha24StaffBudgetTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -475,6 +476,16 @@ runner.Run("alpha 2.3.1 candidate can be selected", alpha231DedupHiringTests.Can
 runner.Run("alpha 2.3.1 hire candidate creates staff member", alpha231DedupHiringTests.HireCandidateCreatesStaffMember);
 runner.Run("alpha 2.3.1 hire candidate creates event and inbox", alpha231DedupHiringTests.HireCandidateCreatesEventAndInbox);
 runner.Run("alpha 2.3.1 candidate cannot be hired twice", alpha231DedupHiringTests.CandidateCannotBeHiredTwice);
+runner.Run("alpha 2.4 GM salary counted in budget", alpha24StaffBudgetTests.GmSalaryCountedInBudget);
+runner.Run("alpha 2.4 staff salary counted in budget", alpha24StaffBudgetTests.StaffSalaryCountedInBudget);
+runner.Run("alpha 2.4 hiring staff increases used budget", alpha24StaffBudgetTests.HiringStaffIncreasesUsedBudget);
+runner.Run("alpha 2.4 releasing staff changes budget and creates obligation", alpha24StaffBudgetTests.ReleasingStaffChangesBudgetAndCreatesObligation);
+runner.Run("alpha 2.4 candidate salary displayed", alpha24StaffBudgetTests.CandidateSalaryDisplayed);
+runner.Run("alpha 2.4 over-budget warning generated", alpha24StaffBudgetTests.OverBudgetWarningGenerated);
+runner.Run("alpha 2.4 league salary ranges differ", alpha24StaffBudgetTests.LeagueSalaryRangesDifferForJuniorAhlAndNhl);
+runner.Run("alpha 2.4 relationship chemistry warning can appear", alpha24StaffBudgetTests.RelationshipChemistryWarningCanAppear);
+runner.Run("alpha 2.4 AlphaDesktop exposes hockey operations budget", alpha24StaffBudgetTests.AlphaDesktopExposesHockeyOperationsBudget);
+runner.Run("alpha 2.4 no Godot save or game simulation added", alpha24StaffBudgetTests.NoGodotSaveOrGameSimulationAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

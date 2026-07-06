@@ -10,6 +10,7 @@ public sealed record StaffCandidate(
     int RoleFit,
     int DepartmentFit,
     int Reputation,
+    StaffSalary ExpectedSalary,
     IReadOnlyList<string> Strengths,
     IReadOnlyList<string> Weaknesses,
     string PersonalityFitSummary,
@@ -28,6 +29,7 @@ public sealed record StaffCandidate(
         ValidateScore(RoleFit, nameof(RoleFit));
         ValidateScore(DepartmentFit, nameof(DepartmentFit));
         ValidateScore(Reputation, nameof(Reputation));
+        ExpectedSalary.Validate();
 
         if (Strengths.Count == 0)
         {

@@ -7,6 +7,7 @@ using LegacyEngine.Integration;
 using LegacyEngine.People;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Rosters;
+using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
 
 namespace AlphaDesktop;
@@ -19,7 +20,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.3.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -248,7 +249,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.3.1 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.4 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1130,8 +1131,8 @@ internal sealed class MainWindow : Window
                 profile.PersonId,
                 profile.Name,
                 "Staff",
-                $"Current Staff - {profile.CurrentRole}",
-                $"{profile.Department} | GM relationship {profile.RelationshipWithGm}",
+                $"Current Staff - {profile.CurrentRole} - {profile.Salary.AnnualAmount:C0}",
+                $"{profile.Department} | GM relationship {profile.RelationshipWithGm} | salary {profile.Salary.AnnualAmount:C0}",
                 profile.Chemistry.Summary))
             .ToList();
 
@@ -1139,8 +1140,8 @@ internal sealed class MainWindow : Window
             candidate.Person.PersonId,
             candidate.Person.Identity.DisplayName,
             "Candidate",
-            $"Staff Candidate - {candidate.StaffMember.CurrentRole}",
-            $"{candidate.StaffMember.Department} | reputation {candidate.Reputation} | role fit {candidate.RoleFit}",
+            $"Staff Candidate - {candidate.StaffMember.CurrentRole} - ask {candidate.ExpectedSalary.AnnualAmount:C0}",
+            $"{candidate.StaffMember.Department} | reputation {candidate.Reputation} | role fit {candidate.RoleFit} | salary ask {candidate.ExpectedSalary.AnnualAmount:C0}",
             $"{candidate.HiringRecommendation} Strengths: {string.Join(", ", candidate.Strengths)}. Risk: {candidate.ChemistryRisk}")));
 
         return rows;
@@ -1341,6 +1342,7 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Role fit", candidate.RoleFit);
             AddLine(panel, "Department fit", candidate.DepartmentFit);
             AddLine(panel, "Reputation", candidate.Reputation);
+            AddLine(panel, "Salary ask", $"{candidate.ExpectedSalary.AnnualAmount:C0}");
             AddLine(panel, "Strengths", string.Join(", ", candidate.Strengths));
             AddLine(panel, "Weaknesses", string.Join(", ", candidate.Weaknesses));
             AddLine(panel, "Chemistry risk", candidate.ChemistryRisk);
@@ -1361,6 +1363,7 @@ internal sealed class MainWindow : Window
         var detail = CreateDetailPanel(profile.Name, "Selected staff profile");
         AddLine(detail, "Role", profile.CurrentRole);
         AddLine(detail, "Department", profile.Department);
+        AddLine(detail, "Salary", $"{profile.Salary.AnnualAmount:C0}");
         AddLine(detail, "Contract", profile.ContractStatus);
         AddLine(detail, "GM relationship", $"{profile.RelationshipWithGm}/100");
         AddLine(detail, "Fit / chemistry", profile.Chemistry.Summary);
@@ -2382,6 +2385,12 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Over/under budget: {budget.OverUnderBudget:C0}");
         builder.AppendLine($"Player contracts total: {budget.PlayerContractsTotal:C0}");
         builder.AppendLine($"Staff contracts total: {budget.StaffContractsTotal:C0}");
+        builder.AppendLine($"GM salary: {budget.GmSalary:C0}");
+        builder.AppendLine($"Coaching salaries: {budget.CoachingSalaries:C0}");
+        builder.AppendLine($"Scouting salaries: {budget.ScoutingSalaries:C0}");
+        builder.AppendLine($"Medical/training salaries: {budget.MedicalTrainingSalaries:C0}");
+        builder.AppendLine($"Staff total: {budget.StaffTotal:C0}");
+        builder.AppendLine($"Staff release obligations: {budget.StaffReleaseObligations:C0}");
         builder.AppendLine($"Scouting budget: {budget.ScoutingBudget:C0}");
         builder.AppendLine($"Medical/staff operations placeholder: {budget.MedicalAndStaffOperationsBudget:C0}");
         builder.AppendLine($"Owner status: {budget.OwnerBudgetConfidence}");
@@ -2417,6 +2426,7 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"{selected.Name} - {selected.CurrentRole}");
             builder.AppendLine($"  Department: {selected.Department}");
+            builder.AppendLine($"  Salary: {selected.Salary.AnnualAmount:C0}");
             builder.AppendLine($"  Contract: {selected.ContractStatus}");
             builder.AppendLine($"  Strengths: {string.Join(", ", selected.Strengths)}");
             builder.AppendLine($"  Weaknesses: {string.Join(", ", selected.Weaknesses)}");
@@ -2430,6 +2440,7 @@ internal sealed class MainWindow : Window
         foreach (var member in State.StaffProfiles)
         {
             builder.AppendLine($"{member.Name} - {member.CurrentRole} - {member.Department}");
+            builder.AppendLine($"  Salary: {member.Salary.AnnualAmount:C0}");
             builder.AppendLine($"  Contract/status: {member.ContractStatus}");
             builder.AppendLine($"  Strengths: {string.Join(", ", member.Strengths)}");
             builder.AppendLine($"  Weaknesses: {string.Join(", ", member.Weaknesses)}");
@@ -2449,6 +2460,7 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"{candidate.Person.Identity.DisplayName} - {candidate.StaffMember.CurrentRole}");
             builder.AppendLine($"  Role fit: {candidate.RoleFit}  Department fit: {candidate.DepartmentFit}  Reputation: {candidate.Reputation}");
+            builder.AppendLine($"  Salary ask: {candidate.ExpectedSalary.AnnualAmount:C0}");
             builder.AppendLine($"  Strengths: {string.Join(", ", candidate.Strengths)}");
             builder.AppendLine($"  Weaknesses: {string.Join(", ", candidate.Weaknesses)}");
             builder.AppendLine($"  Personality/fit: {candidate.PersonalityFitSummary}");
@@ -3086,7 +3098,7 @@ internal sealed class AlphaDesktopState
 
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
 
-    public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot);
+    public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
     public int PendingDecisionCount => OpenPendingActions.Count;
 
@@ -3159,7 +3171,7 @@ internal sealed class AlphaDesktopState
             .Where(profile => ScenarioSnapshot.ScoutingOperations.All(assignment => assignment.ScoutPersonId != profile.ScoutPersonId || !assignment.IsOpen))
             .ToArray();
 
-    public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot);
+    public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
     public PlayerDossierView? CurrentDossier =>
         _selectedDossierPersonId is null

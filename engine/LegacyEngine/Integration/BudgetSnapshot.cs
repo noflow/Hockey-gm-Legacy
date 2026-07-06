@@ -11,11 +11,23 @@ public sealed record BudgetSnapshot(
     BudgetStatus Status,
     string OwnerBudgetConfidence)
 {
+    public decimal GmSalary { get; init; }
+
+    public decimal CoachingSalaries { get; init; }
+
+    public decimal ScoutingSalaries { get; init; }
+
+    public decimal MedicalTrainingSalaries { get; init; }
+
+    public decimal StaffTotal { get; init; }
+
+    public decimal StaffReleaseObligations { get; init; }
+
     public decimal OverUnderBudget => RemainingBudget;
 
     public void Validate()
     {
-        if (TotalBudget < 0 || UsedBudget < 0 || PlayerContractsTotal < 0 || StaffContractsTotal < 0 || ScoutingBudget < 0 || MedicalAndStaffOperationsBudget < 0)
+        if (TotalBudget < 0 || UsedBudget < 0 || PlayerContractsTotal < 0 || StaffContractsTotal < 0 || ScoutingBudget < 0 || MedicalAndStaffOperationsBudget < 0 || GmSalary < 0 || CoachingSalaries < 0 || ScoutingSalaries < 0 || MedicalTrainingSalaries < 0 || StaffTotal < 0 || StaffReleaseObligations < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(TotalBudget), "Budget values cannot be negative.");
         }

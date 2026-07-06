@@ -1,4 +1,5 @@
 using LegacyEngine.Contracts;
+using LegacyEngine.RuleEngine;
 
 namespace LegacyEngine.Integration;
 
@@ -6,9 +7,15 @@ public sealed class BudgetOverviewService
 {
     public BudgetSnapshot Build(NewGmScenarioSnapshot scenario)
     {
+        return Build(scenario, RulebookPresets.CreateJuniorMajor());
+    }
+
+    public BudgetSnapshot Build(NewGmScenarioSnapshot scenario, Rulebook rulebook)
+    {
         ArgumentNullException.ThrowIfNull(scenario);
         scenario.Validate();
 
+        var hockeyOps = new StaffBudgetService().Build(scenario, rulebook);
         var contracts = scenario.Contracts
             .Concat(scenario.AlphaSnapshot.Contracts)
             .Where(contract => contract.Status == ContractStatus.Signed)
@@ -19,12 +26,8 @@ public sealed class BudgetOverviewService
         var playerContracts = contracts
             .Where(contract => contract.ContractType == ContractType.JuniorPlayerAgreement)
             .Sum(contract => contract.Money.SalaryOrStipend + contract.Money.SigningBonus);
-        var staffContracts = contracts
-            .Where(contract => contract.ContractType != ContractType.JuniorPlayerAgreement)
-            .Sum(contract => contract.Money.SalaryOrStipend + contract.Money.SigningBonus);
-
         var ownerBudget = scenario.AlphaSnapshot.Owner.Budget;
-        var used = playerContracts + staffContracts;
+        var used = hockeyOps.UsedBudget;
         var remaining = ownerBudget.Total - used;
         var ratio = ownerBudget.Total == 0 ? 1 : used / ownerBudget.Total;
         var status = remaining < 0
@@ -45,11 +48,19 @@ public sealed class BudgetOverviewService
             UsedBudget: used,
             RemainingBudget: remaining,
             PlayerContractsTotal: playerContracts,
-            StaffContractsTotal: staffContracts,
+            StaffContractsTotal: hockeyOps.StaffTotal + hockeyOps.StaffReleaseObligations,
             ScoutingBudget: ownerBudget.Scouting,
             MedicalAndStaffOperationsBudget: ownerBudget.Staff + ownerBudget.Operations,
             Status: status,
-            OwnerBudgetConfidence: confidence);
+            OwnerBudgetConfidence: hockeyOps.Warnings.Count == 0 ? confidence : string.Join(" ", hockeyOps.Warnings))
+        {
+            GmSalary = hockeyOps.GmSalary,
+            CoachingSalaries = hockeyOps.CoachingSalaries,
+            ScoutingSalaries = hockeyOps.ScoutingSalaries,
+            MedicalTrainingSalaries = hockeyOps.MedicalTrainingSalaries,
+            StaffTotal = hockeyOps.StaffTotal,
+            StaffReleaseObligations = hockeyOps.StaffReleaseObligations
+        };
         snapshot.Validate();
         return snapshot;
     }

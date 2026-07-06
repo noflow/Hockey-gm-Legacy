@@ -8,6 +8,7 @@ public sealed record StaffOfficeProfile(
     StaffRole CurrentRole,
     StaffDepartment Department,
     string ContractStatus,
+    StaffSalary Salary,
     IReadOnlyList<string> Strengths,
     IReadOnlyList<string> Weaknesses,
     int RelationshipWithGm,
@@ -28,5 +29,6 @@ public sealed record StaffOfficeProfile(
         }
 
         Chemistry.Validate();
+        Salary.Validate();
     }
 }

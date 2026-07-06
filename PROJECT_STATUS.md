@@ -60,14 +60,15 @@ The five foundation pillars remain:
 - Alpha 2.2.1 - Dossier Window, Roster Filters, Budget Overview, and Scouting Cleanup
 - Alpha 2.3 - Recruiting v2
 - Alpha 2.3.1 - Name Generation System + Deduping
+- Alpha 2.4 - Staff Control v2 + Hockey Operations Budget
 
 ## Current Milestone
 
-Alpha 2.3.1 - Name Generation System + Deduping
+Alpha 2.4 - Staff Control v2 + Hockey Operations Budget
 
 ## Current Goal
 
-Generate clean regional names at scale, keep identity unique through PersonId, dedupe recruit/draft/scouting displays, and clarify true same-name players with hockey context.
+Improve staff management with salary asks, league-driven compensation ranges, staff salary budget impact, release obligations, and owner budget warnings.
 
 ## Why Relationship Engine Was Next
 
@@ -77,11 +78,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.4 - Opening Week Setup
+Alpha 2.5 - Opening Week Setup
 
 ## Next Milestones
 
-1. Alpha 2.4 - Opening Week Setup
+1. Alpha 2.5 - Opening Week Setup
 
 ## Build Rule
 

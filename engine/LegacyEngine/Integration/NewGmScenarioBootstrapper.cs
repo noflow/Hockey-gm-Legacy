@@ -94,7 +94,7 @@ public sealed class NewGmScenarioBootstrapper
         owner.Validate();
 
         var organization = CreateOrganization(registry, scenarioSettings, ownerPerson.PersonId, startDate);
-        var contracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
+        var contracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, activeRulebook, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
         var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, contracts);
         var roster = CreateRoster(registry, scenarioSettings, rosterPlayers, startDate);
         var recruitProfiles = CreateRecruitProfiles(scenarioSettings.OrganizationId, recruits, startDate);
@@ -226,9 +226,11 @@ public sealed class NewGmScenarioBootstrapper
         EngineRegistry registry,
         string organizationId,
         DateOnly startDate,
+        Rulebook rulebook,
         params Person[] people)
     {
         var contracts = new List<Contract>();
+        var budget = new StaffBudgetService();
         for (var index = 0; index < people.Length; index++)
         {
             var person = people[index];
@@ -238,13 +240,21 @@ public sealed class NewGmScenarioBootstrapper
                 1 or 2 => ContractType.CoachContract,
                 _ => ContractType.ScoutContract
             };
+            var salary = index switch
+            {
+                0 => budget.GmSalaryRange(rulebook).Midpoint,
+                1 => budget.RangeFor(StaffRole.HeadCoach, rulebook).Midpoint,
+                2 => budget.RangeFor(StaffRole.AssistantCoach, rulebook).Midpoint,
+                3 => budget.RangeFor(StaffRole.HeadScout, rulebook).Midpoint,
+                _ => budget.RangeFor(StaffRole.Scout, rulebook).Midpoint
+            };
             var offered = registry.ContractEngine.CreateOffer(new ContractOffer(
                 OfferId: $"new-gm-contract-offer-{index + 1:00}",
                 PersonId: person.PersonId,
                 OrganizationId: organizationId,
                 ContractType: type,
                 Term: new ContractTerm(startDate.AddDays(-30), startDate.AddYears(1).AddDays(-1)),
-                Money: new ContractMoney(42_000 + (index * 5_000), Currency: "CAD"),
+                Money: new ContractMoney(salary, Currency: "CAD"),
                 Clauses: Array.Empty<ContractClause>(),
                 OfferedOn: startDate.AddDays(-30),
                 Notes: "Existing organization contract reference for the Alpha 1.0 scenario."));

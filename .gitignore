@@ -15,6 +15,7 @@ obj/
 .alpha-desktop-bin-alpha10/
 .alpha-desktop-bin-alpha11/
 .alpha-desktop-bin-alpha12/
+.alpha-desktop-bin-alpha*/
 
 # Python
 __pycache__/
