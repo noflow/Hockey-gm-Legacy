@@ -73,6 +73,45 @@ internal sealed class Alpha271RosterFrontOfficeRealismTests
         }
     }
 
+    public void DraftProspectDescriptionsMatchKnownPosition()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        foreach (var entry in scenario.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries)
+        {
+            var bio = entry.Bio!;
+            var text = $"{bio.PotentialLineupProjection} {entry.ProjectionText} {entry.AnalyticsSummary}".ToLowerInvariant();
+
+            if (bio.Position == RosterPosition.Goalie)
+            {
+                Assert.True(text.Contains("goalie"), $"Goalie projection should describe a goalie: {entry.ProjectionText}");
+                Assert.False(text.Contains("center"), $"Goalie projection should not describe a center: {entry.ProjectionText}");
+                Assert.False(text.Contains("winger"), $"Goalie projection should not describe a winger: {entry.ProjectionText}");
+                Assert.False(text.Contains("defense"), $"Goalie projection should not describe defense: {entry.ProjectionText}");
+            }
+            else if (bio.Position == RosterPosition.Defense)
+            {
+                Assert.True(text.Contains("defense"), $"Defense projection should describe defense: {entry.ProjectionText}");
+                Assert.False(text.Contains("center"), $"Defense projection should not describe a center: {entry.ProjectionText}");
+                Assert.False(text.Contains("winger"), $"Defense projection should not describe a winger: {entry.ProjectionText}");
+                Assert.False(text.Contains("goalie"), $"Defense projection should not describe a goalie: {entry.ProjectionText}");
+            }
+            else if (bio.Position == RosterPosition.Center)
+            {
+                Assert.True(text.Contains("center"), $"Center projection should describe a center: {entry.ProjectionText}");
+                Assert.False(text.Contains("winger"), $"Center projection should not describe a winger: {entry.ProjectionText}");
+                Assert.False(text.Contains("goalie"), $"Center projection should not describe a goalie: {entry.ProjectionText}");
+                Assert.False(text.Contains("defense"), $"Center projection should not describe defense: {entry.ProjectionText}");
+            }
+            else
+            {
+                Assert.True(text.Contains("winger"), $"Winger projection should describe a winger: {entry.ProjectionText}");
+                Assert.False(text.Contains("center"), $"Winger projection should not describe a center: {entry.ProjectionText}");
+                Assert.False(text.Contains("goalie"), $"Winger projection should not describe a goalie: {entry.ProjectionText}");
+                Assert.False(text.Contains("defense"), $"Winger projection should not describe defense: {entry.ProjectionText}");
+            }
+        }
+    }
+
     public void ScenarioStartsWithInheritedScoutingReports()
     {
         var scenario = NewGmScenarioBootstrapper.CreateScenario();
@@ -89,11 +128,36 @@ internal sealed class Alpha271RosterFrontOfficeRealismTests
         var rosterPlayers = scenario.ScenarioSnapshot.AlphaSnapshot.Roster.ActivePlayers;
         var ages = rosterPlayers.Select(player => player.Age ?? scenario.ScenarioSnapshot.AlphaSnapshot.Players.First(person => person.PersonId == player.PersonId).CalculateAge(scenario.ScenarioSnapshot.CurrentDate)).ToArray();
         var playerContracts = scenario.ScenarioSnapshot.Contracts.Where(contract => contract.ContractType == ContractType.JuniorPlayerAgreement).ToArray();
+        var currentExpiry = ContractExpiryCalendar.CommonExpiryDate(scenario.ScenarioSnapshot.Season.Year, scenario.ScenarioSnapshot.Season.Settings);
 
         Assert.True(ages.Any(age => age < 18), "Opening roster should include younger players.");
         Assert.True(ages.Any(age => age >= 20), "Opening roster should include older/overage players.");
-        Assert.True(playerContracts.Any(contract => contract.Status == ContractStatus.Expired), "Some inherited player contracts should already be up for renewal/walk-away decisions.");
-        Assert.True(playerContracts.Any(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate <= scenario.ScenarioSnapshot.CurrentDate.AddDays(30)), "Some inherited player contracts should expire soon.");
+        Assert.True(playerContracts.Any(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate == currentExpiry), "Some inherited player contracts should expire on the common pre-draft expiry day.");
+        Assert.True(playerContracts.Any(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate <= scenario.ScenarioSnapshot.CurrentDate.AddDays(30)), "Some inherited player contracts should require renewal/walk-away review soon.");
+    }
+
+    public void ContractTermsUseCommonPreDraftExpiryDay()
+    {
+        var settings = NewGmScenarioSettings.CreateDefaultSeasonSettings();
+        var oneYear = ContractExpiryCalendar.ExpiryDateForTerm(new DateOnly(2026, 7, 1), settings, 1);
+        var eightYear = ContractExpiryCalendar.ExpiryDateForTerm(new DateOnly(2026, 7, 1), settings, 8);
+
+        Assert.Equal(oneYear.Month, eightYear.Month);
+        Assert.Equal(oneYear.Day, eightYear.Day);
+        Assert.True(eightYear.Year > oneYear.Year, "Longer terms should expire on the same calendar day in a later year.");
+    }
+
+    public void ScenarioContractsExpireOnCommonPreDraftDates()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario().ScenarioSnapshot;
+        var commonDates = Enumerable.Range(scenario.Season.Year, 5)
+            .Select(year => ContractExpiryCalendar.CommonExpiryDate(year, scenario.Season.Settings))
+            .ToArray();
+
+        Assert.True(scenario.Contracts.Count > 0, "Scenario should include inherited contracts.");
+        Assert.True(
+            scenario.Contracts.All(contract => commonDates.Any(date => date == contract.Term.EndDate)),
+            "Every scenario contract should expire on a common pre-draft expiry date.");
     }
 
     public void CompleteStaffPositionsExist()

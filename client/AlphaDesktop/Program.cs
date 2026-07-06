@@ -1612,7 +1612,7 @@ internal sealed class MainWindow : Window
                     FindPersonName(player.PersonId),
                     "RosterPlayer",
                     $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {player.Status}",
-                    $"{State.PlayerType(player.PersonId)} | {State.CurrentLineupRole(player.PersonId)} now | {State.PotentialLineupRole(player.PersonId)} potential",
+                    $"{State.PlayerType(player.PersonId)} | {State.LastSeasonStats(player.PersonId)}",
                     $"Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
             })
             .ToArray());
@@ -1958,6 +1958,8 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Player type", State.PlayerType(row.PersonId));
             AddLine(panel, "Current lineup role", State.CurrentLineupRole(row.PersonId));
             AddLine(panel, "Potential lineup role", State.PotentialLineupRole(row.PersonId));
+            AddLine(panel, "Last-season stats", State.LastSeasonStats(row.PersonId));
+            AddLine(panel, "Career summary", State.CareerStatSummary(row.PersonId));
             AddLine(panel, "Contract / rights status", State.ContractRightsStatus(row.PersonId));
             AddLine(panel, "Development trend", State.DevelopmentTrend(row.PersonId));
             AddLine(panel, "Injury status", State.InjuryStatus(row.PersonId));
@@ -3119,6 +3121,11 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Pending GM decisions: {State.PendingDecisionCount}");
         builder.AppendLine($"Roster warnings: {State.RosterWarningCount}");
         builder.AppendLine($"Scouting reports: {State.ScoutingReportCount}");
+        if (State.ScenarioSnapshot.OrganizationHistory is not null)
+        {
+            builder.AppendLine($"Prior season: {State.ScenarioSnapshot.OrganizationHistory.RecordText}");
+            builder.AppendLine($"Previous champion: {State.ScenarioSnapshot.OrganizationHistory.PreviousLeagueChampion}");
+        }
         builder.AppendLine();
         builder.AppendLine("Owner Review");
         builder.AppendLine(readiness.OwnerReview);
@@ -3163,8 +3170,32 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Career History");
         builder.AppendLine("==============");
-        builder.AppendLine("Future career history placeholder.");
-        builder.AppendLine("Executive reports, monthly summaries, draft recaps, and season records will live here as the career grows.");
+        if (State.ScenarioSnapshot.OrganizationHistory is not null)
+        {
+            var history = State.ScenarioSnapshot.OrganizationHistory;
+            builder.AppendLine("Organization Prior Season");
+            builder.AppendLine($"{history.OrganizationName}: {history.RecordText}");
+            builder.AppendLine($"Playoffs: {history.PlayoffResult}");
+            builder.AppendLine($"Previous champion: {history.PreviousLeagueChampion}");
+            builder.AppendLine(history.Summary);
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Returning Player History");
+        foreach (var stat in State.ScenarioSnapshot.PriorSeasonStats
+            .Where(stat => State.Snapshot.Roster.Players.Any(player => player.PersonId == stat.PersonId))
+            .Take(12))
+        {
+            builder.AppendLine($"  {stat.PlayerName}: {stat.SummaryText}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Recent Draft History");
+        foreach (var record in State.ScenarioSnapshot.DraftHistory.Take(8))
+        {
+            builder.AppendLine($"  {record.SeasonYear} R{record.Round} P{record.Pick}: {record.ProspectName} - {record.OutcomeSummary}");
+        }
+
         return builder.ToString();
     }
 
@@ -5065,6 +5096,21 @@ internal sealed class AlphaDesktopState
 
         var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId);
         return prospect is null ? "No contract/rights record" : $"Draft rights {prospect.Status}";
+    }
+
+    public string LastSeasonStats(string personId)
+    {
+        var stat = ScenarioSnapshot.PriorSeasonStats
+            .Where(stat => stat.PersonId == personId)
+            .OrderByDescending(stat => stat.SeasonYear)
+            .FirstOrDefault();
+        return stat?.SummaryText ?? "No prior stats tracked";
+    }
+
+    public string CareerStatSummary(string personId)
+    {
+        var summary = ScenarioSnapshot.CareerStatSummaries.FirstOrDefault(summary => summary.PersonId == personId);
+        return summary?.DisplaySummary ?? "No career summary tracked";
     }
 
     public string DevelopmentTrend(string personId)

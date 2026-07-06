@@ -188,7 +188,7 @@ public sealed class PendingGmActionService
             PersonId: action.PersonId,
             OrganizationId: action.OrganizationId,
             ContractType: action.ContractType ?? ContractType.JuniorPlayerAgreement,
-            Term: new ContractTerm(scenario.CurrentDate, scenario.CurrentDate.AddYears(1).AddDays(-1)),
+            Term: ContractExpiryCalendar.TermForYears(scenario.CurrentDate, scenario.Season.Settings, 1),
             Money: new ContractMoney(SalaryOrStipend: 1_500m, Currency: "CAD"),
             Clauses: Array.Empty<ContractClause>(),
             OfferedOn: scenario.CurrentDate,

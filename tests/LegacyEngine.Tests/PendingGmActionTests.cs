@@ -69,7 +69,9 @@ internal sealed class PendingGmActionTests
 
         Assert.True(approved.Success, approved.Message);
         Assert.Equal(contractCount + 1, approved.ScenarioSnapshot.Contracts.Count);
-        Assert.True(approved.ScenarioSnapshot.Contracts.Any(contract => contract.PersonId == recruit.RecruitPersonId && contract.Status == ContractStatus.Signed), "Approved recruit should have a signed contract.");
+        var contract = approved.ScenarioSnapshot.Contracts.Single(contract => contract.PersonId == recruit.RecruitPersonId && contract.Status == ContractStatus.Signed);
+        var expectedExpiry = ContractExpiryCalendar.ExpiryDateForTerm(scenario.ScenarioSnapshot.CurrentDate, scenario.ScenarioSnapshot.Season.Settings, 1);
+        Assert.Equal(expectedExpiry, contract.Term.EndDate);
     }
 
     public void DecliningSignRecruitDoesNotCreateContract()

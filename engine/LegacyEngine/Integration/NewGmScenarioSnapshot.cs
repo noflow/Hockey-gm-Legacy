@@ -62,6 +62,18 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<MonthlyGmSummary> MonthlySummaries { get; init; } = Array.Empty<MonthlyGmSummary>();
 
+    public IReadOnlyList<PriorSeasonStatLine> PriorSeasonStats { get; init; } = Array.Empty<PriorSeasonStatLine>();
+
+    public IReadOnlyList<CareerStatSummary> CareerStatSummaries { get; init; } = Array.Empty<CareerStatSummary>();
+
+    public IReadOnlyList<PlayerTeamHistory> PlayerTeamHistories { get; init; } = Array.Empty<PlayerTeamHistory>();
+
+    public IReadOnlyList<PlayerCareerTimeline> PlayerCareerTimelines { get; init; } = Array.Empty<PlayerCareerTimeline>();
+
+    public OrganizationHistorySnapshot? OrganizationHistory { get; init; }
+
+    public IReadOnlyList<DraftHistoryRecord> DraftHistory { get; init; } = Array.Empty<DraftHistoryRecord>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -172,6 +184,33 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var summary in MonthlySummaries)
         {
             summary.Validate();
+        }
+
+        foreach (var stat in PriorSeasonStats)
+        {
+            stat.Validate();
+        }
+
+        foreach (var summary in CareerStatSummaries)
+        {
+            summary.Validate();
+        }
+
+        foreach (var history in PlayerTeamHistories)
+        {
+            history.Validate();
+        }
+
+        foreach (var timeline in PlayerCareerTimelines)
+        {
+            timeline.Validate();
+        }
+
+        OrganizationHistory?.Validate();
+
+        foreach (var record in DraftHistory)
+        {
+            record.Validate();
         }
     }
 }

@@ -41,6 +41,7 @@ public sealed class PlayerDossierService
             BuildContractRights(scenario, personId),
             BuildStaffOpinions(scenario, personId),
             BuildRelationships(scenario, personId),
+            BuildCareerHistory(scenario, personId),
             new PlayerDossierSection("GM Notes", string.IsNullOrWhiteSpace(notes) ? new[] { "No GM notes yet." } : new[] { notes })
         };
 
@@ -293,6 +294,37 @@ public sealed class PlayerDossierService
         }
 
         return new PlayerDossierSection("Relationships", lines);
+    }
+
+    private static PlayerDossierSection BuildCareerHistory(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new List<string>();
+        foreach (var stat in scenario.PriorSeasonStats.Where(stat => stat.PersonId == personId).OrderByDescending(stat => stat.SeasonYear))
+        {
+            lines.Add($"Last-season stats: {stat.SummaryText}");
+        }
+
+        foreach (var summary in scenario.CareerStatSummaries.Where(summary => summary.PersonId == personId).Take(1))
+        {
+            lines.Add($"Career summary: {summary.DisplaySummary}");
+        }
+
+        foreach (var history in scenario.PlayerTeamHistories.Where(history => history.PersonId == personId).OrderByDescending(history => history.ToSeasonYear).Take(3))
+        {
+            lines.Add($"Team history: {history.FromSeasonYear}-{history.ToSeasonYear} {history.TeamName} ({history.LeagueName}) - {history.Role}. {history.Notes}");
+        }
+
+        foreach (var timeline in scenario.PlayerCareerTimelines.Where(timeline => timeline.PersonId == personId).Take(1))
+        {
+            lines.AddRange(timeline.Entries.Select(entry => $"Timeline: {entry}"));
+        }
+
+        if (lines.Count == 0)
+        {
+            lines.Add("No prior stats or career history are currently tracked.");
+        }
+
+        return new PlayerDossierSection("Career History", lines);
     }
 
     private static PlayerDossierSource ResolveSource(NewGmScenarioSnapshot scenario, string personId)

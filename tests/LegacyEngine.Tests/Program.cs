@@ -46,6 +46,7 @@ var alpha272InboxCleanupTransactionWireTests = new Alpha272InboxCleanupTransacti
 var alpha273DraftStaffLayoutTests = new Alpha273DraftStaffLayoutTests();
 var alpha28GmOfficeNavigationTests = new Alpha28GmOfficeNavigationTests();
 var alpha29ActionCenterTests = new Alpha29ActionCenterTests();
+var alpha30ExistingWorldHistoryTests = new Alpha30ExistingWorldHistoryTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -536,8 +537,11 @@ runner.Run("alpha 2.7.1 junior roster target is 26", alpha271RosterFrontOfficeRe
 runner.Run("alpha 2.7.1 scenario starts with legal roster", alpha271RosterFrontOfficeRealismTests.ScenarioStartsWithLegalRoster);
 runner.Run("alpha 2.7.1 draft prospects include physical and team bio", alpha271RosterFrontOfficeRealismTests.DraftProspectsIncludePhysicalAndTeamBio);
 runner.Run("alpha 2.7.1 draft measurements match position ranges", alpha271RosterFrontOfficeRealismTests.DraftProspectMeasurementsMatchPositionRanges);
+runner.Run("alpha 2.7.1 draft descriptions match known position", alpha271RosterFrontOfficeRealismTests.DraftProspectDescriptionsMatchKnownPosition);
 runner.Run("alpha 2.7.1 scenario starts with inherited scouting reports", alpha271RosterFrontOfficeRealismTests.ScenarioStartsWithInheritedScoutingReports);
 runner.Run("alpha 2.7.1 scenario roster has age mix and contract decisions", alpha271RosterFrontOfficeRealismTests.ScenarioRosterHasAgeMixAndContractDecisions);
+runner.Run("alpha 2.7.1 contract terms use common pre-draft expiry day", alpha271RosterFrontOfficeRealismTests.ContractTermsUseCommonPreDraftExpiryDay);
+runner.Run("alpha 2.7.1 scenario contracts expire on common pre-draft dates", alpha271RosterFrontOfficeRealismTests.ScenarioContractsExpireOnCommonPreDraftDates);
 runner.Run("alpha 2.7.1 complete staff positions exist", alpha271RosterFrontOfficeRealismTests.CompleteStaffPositionsExist);
 runner.Run("alpha 2.7.1 vacancies generated", alpha271RosterFrontOfficeRealismTests.VacanciesGenerated);
 runner.Run("alpha 2.7.1 candidate hiring works", alpha271RosterFrontOfficeRealismTests.CandidateHiringWorks);
@@ -578,6 +582,14 @@ runner.Run("alpha 2.9 assistant GM recommendations generated", alpha29ActionCent
 runner.Run("alpha 2.9 action status can change", alpha29ActionCenterTests.ActionStatusCanChange);
 runner.Run("alpha 2.9 AlphaDesktop dashboard exposes Action Center counts", alpha29ActionCenterTests.AlphaDesktopDashboardExposesActionCenterCounts);
 runner.Run("alpha 2.9 no Godot save or game simulation changes", alpha29ActionCenterTests.Alpha29HasNoGodotSaveOrGameSimulationChanges);
+runner.Run("alpha 3.0 roster players have prior stats", alpha30ExistingWorldHistoryTests.NewGmScenarioRosterPlayersHavePriorStats);
+runner.Run("alpha 3.0 older players have multi-year stats", alpha30ExistingWorldHistoryTests.OlderPlayersHaveMultiYearStats);
+runner.Run("alpha 3.0 prospects have prior youth stats", alpha30ExistingWorldHistoryTests.ProspectsHavePriorYouthStats);
+runner.Run("alpha 3.0 player dossier includes career history", alpha30ExistingWorldHistoryTests.PlayerDossierIncludesCareerHistory);
+runner.Run("alpha 3.0 organization has prior season history", alpha30ExistingWorldHistoryTests.OrganizationHasPriorSeasonHistory);
+runner.Run("alpha 3.0 history does not expose hidden ratings", alpha30ExistingWorldHistoryTests.HistoryDoesNotExposeHiddenRatings);
+runner.Run("alpha 3.0 staff have career history where possible", alpha30ExistingWorldHistoryTests.StaffHaveCareerHistoryWherePossible);
+runner.Run("alpha 3.0 AlphaDesktop exposes existing world history", alpha30ExistingWorldHistoryTests.AlphaDesktopExposesExistingWorldHistory);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

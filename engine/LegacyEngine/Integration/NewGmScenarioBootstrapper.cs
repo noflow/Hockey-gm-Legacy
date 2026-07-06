@@ -94,8 +94,8 @@ public sealed class NewGmScenarioBootstrapper
         owner.Validate();
 
         var organization = CreateOrganization(registry, scenarioSettings, ownerPerson.PersonId, startDate);
-        var staffContracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, activeRulebook, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
-        var playerContracts = CreateRosterPlayerContracts(registry, scenarioSettings.OrganizationId, startDate, rosterPlayers);
+        var staffContracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, activeRulebook, scenarioSettings.SeasonSettings, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
+        var playerContracts = CreateRosterPlayerContracts(registry, scenarioSettings.OrganizationId, startDate, scenarioSettings.SeasonSettings, rosterPlayers);
         var contracts = staffContracts.Concat(playerContracts).ToArray();
         var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, staffContracts);
         var roster = CreateRoster(registry, scenarioSettings, rosterPlayers, startDate);
@@ -180,6 +180,16 @@ public sealed class NewGmScenarioBootstrapper
         {
             CompletedScoutingReports = inheritedScoutingReports
         };
+        var history = new ExistingWorldHistoryService().CreateHistory(scenarioSnapshot);
+        scenarioSnapshot = scenarioSnapshot with
+        {
+            PriorSeasonStats = history.PriorSeasonStats,
+            CareerStatSummaries = history.CareerStatSummaries,
+            PlayerTeamHistories = history.PlayerTeamHistories,
+            PlayerCareerTimelines = history.PlayerCareerTimelines,
+            OrganizationHistory = history.OrganizationHistory,
+            DraftHistory = history.DraftHistory
+        };
         scenarioSnapshot.Validate();
 
         return new NewGmScenarioResult(
@@ -237,6 +247,7 @@ public sealed class NewGmScenarioBootstrapper
         string organizationId,
         DateOnly startDate,
         Rulebook rulebook,
+        SeasonSettings seasonSettings,
         params Person[] people)
     {
         var contracts = new List<Contract>();
@@ -258,15 +269,16 @@ public sealed class NewGmScenarioBootstrapper
                 3 => budget.RangeFor(StaffRole.HeadScout, rulebook).Midpoint,
                 _ => budget.RangeFor(StaffRole.Scout, rulebook).Midpoint
             };
+            var contractStart = startDate.AddDays(-30);
             var offered = registry.ContractEngine.CreateOffer(new ContractOffer(
                 OfferId: $"new-gm-contract-offer-{index + 1:00}",
                 PersonId: person.PersonId,
                 OrganizationId: organizationId,
                 ContractType: type,
-                Term: new ContractTerm(startDate.AddDays(-30), startDate.AddYears(1).AddDays(-1)),
+                Term: ContractExpiryCalendar.TermForYears(contractStart, seasonSettings, 1),
                 Money: new ContractMoney(salary, Currency: "CAD"),
                 Clauses: Array.Empty<ContractClause>(),
-                OfferedOn: startDate.AddDays(-30),
+                OfferedOn: contractStart,
                 Notes: "Existing organization contract reference for the Alpha 1.0 scenario."));
             contracts.Add(registry.ContractEngine.SignContract(offered, startDate.AddDays(-29)).Contract);
         }
@@ -278,26 +290,27 @@ public sealed class NewGmScenarioBootstrapper
         EngineRegistry registry,
         string organizationId,
         DateOnly startDate,
+        SeasonSettings seasonSettings,
         IReadOnlyList<Person> rosterPlayers)
     {
         var contracts = new List<Contract>();
         for (var index = 0; index < rosterPlayers.Count; index++)
         {
             var player = rosterPlayers[index];
-            var endDate = index switch
+            var termYears = index switch
             {
-                < 3 => startDate.AddDays(-1),
-                < 8 => startDate.AddDays(14),
-                < 14 => startDate.AddMonths(3),
-                _ => startDate.AddYears(1).AddDays(-1)
+                < 8 => 1,
+                < 14 => 2,
+                _ => 3
             };
             var offeredOn = startDate.AddMonths(-10).AddDays(index % 20);
+            var term = ContractExpiryCalendar.TermForYears(offeredOn, seasonSettings, termYears);
             var offered = registry.ContractEngine.CreateOffer(new ContractOffer(
                 OfferId: $"inherited-player-contract-{index + 1:00}",
                 PersonId: player.PersonId,
                 OrganizationId: organizationId,
                 ContractType: ContractType.JuniorPlayerAgreement,
-                Term: new ContractTerm(offeredOn, endDate),
+                Term: term,
                 Money: new ContractMoney(SalaryOrStipend: 1_200m + (index % 6 * 150m), Currency: "CAD"),
                 Clauses: index % 4 == 0
                     ? new[] { new ContractClause("education-support", ContractClauseType.EducationPackage, "Existing education support from prior management.") }
@@ -305,7 +318,7 @@ public sealed class NewGmScenarioBootstrapper
                 OfferedOn: offeredOn,
                 Notes: "Inherited junior player agreement from previous management."));
             var signed = registry.ContractEngine.SignContract(offered, offeredOn.AddDays(1)).Contract;
-            contracts.Add(endDate < startDate ? signed.Expire(startDate) : signed);
+            contracts.Add(term.EndDate < startDate ? signed.Expire(startDate) : signed);
         }
 
         return contracts;
@@ -516,16 +529,17 @@ public sealed class NewGmScenarioBootstrapper
         var board = DraftBoard.Create(settings.DraftBoardId, settings.OrganizationId);
         for (var index = 0; index < recruits.Count; index++)
         {
+            var position = PositionFor(index);
             board = board.AddProspect(new DraftBoardEntry(
                 ProspectPersonId: recruits[index].RecruitPersonId,
                 Rank: index + 1,
                 ScoutingReportId: index < 45 ? $"scenario-report-{index + 1:000}" : null,
                 ScoutingConfidence: index < 10 ? ScoutingConfidenceLevel.High : index < 45 ? ScoutingConfidenceLevel.Medium : ScoutingConfidenceLevel.Low,
-                ProjectionText: ProjectionFor(index),
+                ProjectionText: ProjectionFor(position, index),
                 IsStarred: index < 2,
                 PersonalNotes: index < 3 ? "GM note: review again before draft day." : "",
-                AnalyticsSummary: AnalyticsFor(index),
-                Bio: BioFor(recruits[index], PositionFor(index), index)));
+                AnalyticsSummary: AnalyticsFor(position, index),
+                Bio: BioFor(recruits[index], position, index)));
         }
 
         return board;
@@ -854,24 +868,39 @@ public sealed class NewGmScenarioBootstrapper
             };
     }
 
-    private static string ProjectionFor(int index) =>
-        index switch
+    private static string ProjectionFor(RosterPosition position, int index) =>
+        position switch
         {
-            0 => "Top board forward with high pace, strong habits, and a realistic top-six junior path.",
-            1 => "Reliable defense prospect; projection leans safer than flashy.",
-            2 => "High-upside goalie with uneven viewings and strong technical growth indicators.",
-            3 => "Competitive center whose family comfort and school fit may decide recruitment.",
-            4 => "Import winger with skill, confidence, and adjustment risk.",
-            _ => "Useful draft option with incomplete information and enough traits to keep tracking."
+            RosterPosition.Goalie => index % 2 == 0
+                ? "Goalie prospect with starter upside, uneven viewings, and strong technical growth indicators."
+                : "Goalie prospect with backup-to-starter range and a development path tied to consistency.",
+            RosterPosition.Defense => index % 2 == 0
+                ? "Defense prospect with top-four upside, mobility, and enough puck-moving skill to keep tracking."
+                : "Defense prospect with second-pair tools, reliable habits, and room to sharpen decision-making.",
+            RosterPosition.Center => index % 2 == 0
+                ? "Center prospect with middle-six upside, responsible habits, and a realistic junior scoring path."
+                : "Center prospect whose faceoff detail, support play, and family comfort may decide recruitment.",
+            RosterPosition.LeftWing or RosterPosition.RightWing => index % 2 == 0
+                ? "Winger prospect with scoring-line traits, pace, and adjustment risk."
+                : "Winger prospect with useful compete, finishing touch, and enough traits to keep tracking.",
+            _ => "Draft option with incomplete information and enough traits to keep tracking."
         };
 
-    private static string AnalyticsFor(int index) =>
-        index switch
+    private static string AnalyticsFor(RosterPosition position, int index) =>
+        position switch
         {
-            0 => "Analytics: top pace and chance-creation indicators in this class.",
-            1 => "Analytics: low-risk transition profile, limited offensive ceiling.",
-            2 => "Analytics: volatile goalie sample, strong recovery trend.",
-            _ when index % 5 == 0 => "Analytics: high-event profile with some risk in repeat viewings.",
+            RosterPosition.Goalie => index % 2 == 0
+                ? "Analytics: volatile goalie sample, strong recovery trend."
+                : "Analytics: goalie tracking shows stable workload response with rebound control still under review.",
+            RosterPosition.Defense => index % 2 == 0
+                ? "Analytics: low-risk transition profile with controlled defensive-zone exits."
+                : "Analytics: defensive involvement is steady; offensive ceiling needs more viewings.",
+            RosterPosition.Center => index % 2 == 0
+                ? "Analytics: strong support-lane and puck-touch profile for a center."
+                : "Analytics: two-way center indicators are useful, with faceoff sample still developing.",
+            RosterPosition.LeftWing or RosterPosition.RightWing => index % 2 == 0
+                ? "Analytics: winger chance-creation indicators are trending up."
+                : "Analytics: wing profile is neutral; more scouting confidence needed.",
             _ => "Analytics: neutral profile; more scouting confidence needed."
         };
 
