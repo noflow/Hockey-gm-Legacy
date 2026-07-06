@@ -8,5 +8,6 @@ public enum PlayerDossierSource
     Scouting,
     DraftBoard,
     ProspectList,
-    TrainingCamp
+    TrainingCamp,
+    FreeAgent
 }

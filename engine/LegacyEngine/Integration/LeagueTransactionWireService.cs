@@ -119,6 +119,7 @@ public sealed class LeagueTransactionWireService
         {
             LegacyEventType.ContractOffered => LeagueTransactionType.ContractOffered,
             LegacyEventType.ContractSigned => LeagueTransactionType.ContractSigned,
+            LegacyEventType.FreeAgentSigned => LeagueTransactionType.PlayerSigned,
             LegacyEventType.ProspectSigned => LeagueTransactionType.PlayerSigned,
             LegacyEventType.PlayerAddedToRoster => LeagueTransactionType.PlayerAddedToRoster,
             LegacyEventType.PlayerRemovedFromRoster or LegacyEventType.PlayerReleased => LeagueTransactionType.PlayerReleased,

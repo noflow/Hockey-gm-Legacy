@@ -54,6 +54,8 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 2.7.3 Live Draft Layout + Staff Hiring Layout Fix
 - Alpha 2.8 GM Office Navigation Redesign
 - Alpha 2.9 Action Center & Daily Workflow UI
+- Alpha 3.0 Existing World History v1
+- Alpha 3.1 Free Agent Market v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -99,6 +101,10 @@ Alpha 2.8 - GM Office Navigation Redesign replaces the crowded top-level AlphaDe
 
 Alpha 2.9 - Action Center & Daily Workflow UI makes the dashboard answer "What should I do today?" The desktop now aggregates pending GM actions, urgent inbox messages, roster warnings, staff vacancies, budget warnings, scouting completions, upcoming games, injury issues, and season readiness into a filterable Action Center with daily agenda, Assistant GM recommendations, priority counts, and resolve/defer/dismiss workflow. It does not auto-complete GM decisions.
 
+Alpha 3.0 - Existing World History v1 gives the New GM scenario a lived-in past. Roster players and prospects now have prior stats, older players have multi-year summaries, staff can carry career timeline entries, the organization has a prior-season record, and dossiers/roster views expose history without revealing hidden ratings.
+
+Alpha 3.1 - Free Agent Market v1 adds unsigned player management to Hockey Operations. The scenario now generates a clean-name free-agent market with veterans, released players, undrafted players, depth skaters, goalies, prior stats, contract asks, interest, fit summaries, and staff recommendations. The GM can view dossiers, shortlist players, invite players to camp, submit offers, withdraw offers, and approve/decline pending signings; contracts are created only after explicit GM approval.
+
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 
 Alpha 1.2 refines the desktop inbox into an email-style GM workspace with a category sidebar, message list, reading pane, row-level actions, and local filters.
@@ -117,7 +123,7 @@ Run the basic desktop UI:
 dotnet run --project client/AlphaDesktop
 ```
 
-The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, staff vacancies, Hockey Operations Budget, Recruiting v2, Player Dossier windows, roster filters, selectable person-specific action panels, a League News transaction wire, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. The first-month flow adds smarter advance controls, priority inbox handling, monthly GM summaries, realistic draft prospect bios, a 26-player junior roster target, and a clearer three-column live draft experience. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
+The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, staff vacancies, Hockey Operations Budget, Recruiting v2, Free Agent Market v1, Player Dossier windows, roster filters, selectable person-specific action panels, a League News transaction wire, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. The first-month flow adds smarter advance controls, priority inbox handling, monthly GM summaries, realistic draft prospect bios, a 26-player junior roster target, and a clearer three-column live draft experience. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

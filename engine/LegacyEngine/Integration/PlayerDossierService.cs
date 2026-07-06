@@ -115,6 +115,19 @@ public sealed class PlayerDossierService
             lines.Add($"Scouting confidence: {boardEntry.ScoutingConfidence?.ToString() ?? "Unknown"}");
         }
 
+        var freeAgent = scenario.FreeAgentMarket?.Find(person.PersonId);
+        if (freeAgent is not null)
+        {
+            lines.Add($"Free agent status: {freeAgent.Status}");
+            lines.Add($"Shoots/Catches: {freeAgent.ShootsCatches}");
+            lines.Add($"Height/Weight: {freeAgent.HeightDisplay}, {freeAgent.WeightDisplay}");
+            lines.Add($"Previous team: {freeAgent.PreviousTeam}");
+            lines.Add($"Projected role: {freeAgent.ProjectedLineupRole}");
+            lines.Add($"Contract ask: {freeAgent.ContractAsk.TermYears} year(s), {freeAgent.ContractAsk.AnnualAmount:C0} {freeAgent.ContractAsk.Currency}");
+            lines.Add($"Interest: {freeAgent.Interest.PlayerOrganizationInterest}/100");
+            lines.Add($"Staff recommendation: {freeAgent.FitSummary.StaffRecommendation}");
+        }
+
         return new PlayerDossierSection("Overview", lines);
     }
 
@@ -344,6 +357,11 @@ public sealed class PlayerDossierService
             return PlayerDossierSource.TrainingCamp;
         }
 
+        if (scenario.FreeAgentMarket?.FreeAgents.Any(agent => agent.PersonId == personId) == true)
+        {
+            return PlayerDossierSource.FreeAgent;
+        }
+
         if (scenario.AlphaSnapshot.Recruits.Any(recruit => recruit.RecruitPersonId == personId))
         {
             return PlayerDossierSource.Recruit;
@@ -366,6 +384,7 @@ public sealed class PlayerDossierService
         scenario.AlphaSnapshot.Roster.Players.SingleOrDefault(player => player.PersonId == personId)?.Position
         ?? scenario.ProspectRights.SingleOrDefault(prospect => prospect.ProspectPersonId == personId)?.Position
         ?? scenario.TrainingCamp?.FindPlayer(personId)?.Position
+        ?? scenario.FreeAgentMarket?.Find(personId)?.Position
         ?? scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position
         ?? RosterPosition.Unknown;
 
@@ -430,6 +449,12 @@ public sealed class PlayerDossierService
         if (scenario.AlphaSnapshot.Recruits.Any(recruit => recruit.RecruitPersonId == personId))
         {
             return "Recruit pool";
+        }
+
+        var freeAgent = scenario.FreeAgentMarket?.Find(personId);
+        if (freeAgent is not null)
+        {
+            return $"Free agent market - previous team {freeAgent.PreviousTeam}";
         }
 
         if (scenario.AlphaSnapshot.DraftBoard.Entries.Any(entry => entry.ProspectPersonId == personId))

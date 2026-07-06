@@ -129,7 +129,18 @@ public sealed class InboxManager
                 or LegacyEventType.RecruitingClosed => InboxCategory.Recruiting,
             LegacyEventType.PlayerDevelopmentUpdated or LegacyEventType.PlayerBreakout or LegacyEventType.PlayerRegression => InboxCategory.PlayerDevelopment,
             LegacyEventType.PlayerInjured or LegacyEventType.PlayerRecovered or LegacyEventType.InjuryReAggravated or LegacyEventType.InjuryCareerThreatening or LegacyEventType.PlayerMovedToInjuredReserve => InboxCategory.Medical,
-            LegacyEventType.ContractOffered or LegacyEventType.ContractSigned or LegacyEventType.ContractRejected or LegacyEventType.ContractTerminated => InboxCategory.Contracts,
+            LegacyEventType.ContractOffered
+                or LegacyEventType.ContractSigned
+                or LegacyEventType.ContractRejected
+                or LegacyEventType.ContractTerminated
+                or LegacyEventType.FreeAgentMarketOpened
+                or LegacyEventType.FreeAgentShortlisted
+                or LegacyEventType.FreeAgentOfferSubmitted
+                or LegacyEventType.FreeAgentOfferAccepted
+                or LegacyEventType.FreeAgentOfferRejected
+                or LegacyEventType.FreeAgentSigned
+                or LegacyEventType.FreeAgentInvitedToCamp
+                or LegacyEventType.FreeAgentOfferWithdrawn => InboxCategory.Contracts,
             LegacyEventType.DraftStarted or LegacyEventType.PlayerDrafted or LegacyEventType.DraftCompleted or LegacyEventType.DraftRecapCreated or LegacyEventType.DraftBoardChanged or LegacyEventType.OwnerDraftReaction or LegacyEventType.DraftOpened or LegacyEventType.DraftClosed or LegacyEventType.ProspectDecisionMade or LegacyEventType.ProspectContractOffered or LegacyEventType.ProspectSigned or LegacyEventType.ProspectInvitedToCamp or LegacyEventType.ProspectReturned or LegacyEventType.ProspectAssignedToAffiliate or LegacyEventType.ProspectRightsReleased => InboxCategory.Draft,
             LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.OpeningRosterValidated or LegacyEventType.OpeningRosterRejected or LegacyEventType.SeasonReady or LegacyEventType.FrontOfficeReadinessReportCreated or LegacyEventType.EndOfSeasonExecutiveReviewCreated or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded or LegacyEventType.MonthlyGmSummaryCreated => InboxCategory.League,
             _ => CategorizeByText(item)

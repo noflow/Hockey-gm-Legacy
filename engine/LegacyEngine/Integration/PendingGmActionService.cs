@@ -89,7 +89,7 @@ public sealed class PendingGmActionService
 
         return action.ActionType switch
         {
-            PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick or PendingGmActionType.ApproveContract =>
+            PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick or PendingGmActionType.SignFreeAgent or PendingGmActionType.ApproveContract =>
                 ApproveContractAction(registry, scenario, action),
             PendingGmActionType.AddToRoster =>
                 ApproveRosterAdd(registry, scenario, action),
@@ -109,7 +109,10 @@ public sealed class PendingGmActionService
         ArgumentNullException.ThrowIfNull(scenario);
         var action = FindOpenAction(scenario, actionId);
         var declined = action with { Status = PendingGmActionStatus.Declined };
-        var updatedScenario = UpdateProspectStatus(ReplaceAction(scenario, declined), action, ProspectStatus.Declined);
+        var updatedScenario = UpdateFreeAgentStatus(
+            UpdateProspectStatus(ReplaceAction(scenario, declined), action, ProspectStatus.Declined),
+            action,
+            FreeAgentStatus.Rejected);
 
         QueuePendingEvent(registry, declined, scenario.CurrentDate, "Pending GM action declined", $"{declined.Title} was declined by the GM.");
         var inbox = new[] { ToInboxItem(declined, "Pending action declined", $"{declined.Title} was declined. No contract or roster change was made.") };
@@ -128,7 +131,7 @@ public sealed class PendingGmActionService
         var completed = action with { Status = PendingGmActionStatus.Completed };
         var contracts = scenario.Contracts.Append(signed).ToArray();
         var alphaSnapshot = scenario.AlphaSnapshot with { Contracts = contracts };
-        var updatedScenario = UpdateProspectStatus(ReplaceAction(scenario, completed), action, ProspectStatus.Signed) with
+        var updatedScenario = UpdateFreeAgentStatus(UpdateProspectStatus(ReplaceAction(scenario, completed), action, ProspectStatus.Signed), action, FreeAgentStatus.Signed) with
         {
             Contracts = contracts,
             AlphaSnapshot = alphaSnapshot
@@ -188,8 +191,10 @@ public sealed class PendingGmActionService
             PersonId: action.PersonId,
             OrganizationId: action.OrganizationId,
             ContractType: action.ContractType ?? ContractType.JuniorPlayerAgreement,
-            Term: ContractExpiryCalendar.TermForYears(scenario.CurrentDate, scenario.Season.Settings, 1),
-            Money: new ContractMoney(SalaryOrStipend: 1_500m, Currency: "CAD"),
+            Term: ContractExpiryCalendar.TermForYears(scenario.CurrentDate, scenario.Season.Settings, scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.TermYears ?? 1),
+            Money: new ContractMoney(
+                SalaryOrStipend: scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.AnnualAmount ?? 1_500m,
+                Currency: scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.Currency ?? "CAD"),
             Clauses: Array.Empty<ContractClause>(),
             OfferedOn: scenario.CurrentDate,
             Notes: action.Reason);
@@ -231,6 +236,19 @@ public sealed class PendingGmActionService
                 .Select(record => record.ProspectPersonId == action.PersonId ? record with { Status = status } : record)
                 .ToArray()
         };
+    }
+
+    private static NewGmScenarioSnapshot UpdateFreeAgentStatus(
+        NewGmScenarioSnapshot scenario,
+        PendingGmAction action,
+        FreeAgentStatus status)
+    {
+        if (action.ActionType != PendingGmActionType.SignFreeAgent)
+        {
+            return scenario;
+        }
+
+        return FreeAgentMarketService.MarkStatus(scenario, action.PersonId, status);
     }
 
     private static PendingGmActionResult BuildResult(
@@ -284,6 +302,7 @@ public sealed class PendingGmActionService
         {
             PendingGmActionType.SignRecruit => $"Sign recruit: {personName}",
             PendingGmActionType.SignDraftPick => $"Sign draft pick: {personName}",
+            PendingGmActionType.SignFreeAgent => $"Sign free agent: {personName}",
             PendingGmActionType.InviteToCamp => $"Invite to camp: {personName}",
             PendingGmActionType.AddToRoster => $"Add to roster: {personName}",
             PendingGmActionType.ReleasePlayer => $"Release player: {personName}",
@@ -298,18 +317,20 @@ public sealed class PendingGmActionService
         };
 
     private static ContractType? DefaultContractType(PendingGmActionType actionType) =>
-        actionType is PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick or PendingGmActionType.ApproveContract
+        actionType is PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick or PendingGmActionType.SignFreeAgent or PendingGmActionType.ApproveContract
             ? ContractType.JuniorPlayerAgreement
             : null;
 
     private static RosterPosition GuessPosition(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Position
         ?? scenario.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId)?.Position
+        ?? scenario.FreeAgentMarket?.Find(personId)?.Position
         ?? scenario.AlphaSnapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position
         ?? RosterPosition.Unknown;
 
     private static string ResolvePersonName(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.People.SingleOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
         ?? scenario.AlphaSnapshot.Players.SingleOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
+        ?? scenario.FreeAgentMarket?.Find(personId)?.Name
         ?? personId;
 }

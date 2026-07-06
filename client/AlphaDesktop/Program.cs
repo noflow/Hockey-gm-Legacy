@@ -23,7 +23,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -109,7 +109,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.9 starts with your created GM inside a cleaner GM Office workspace.",
+            Text = "Alpha 3.1 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -251,6 +251,7 @@ internal sealed class MainWindow : Window
             new("Roster", CreateSelectablePeopleContent("Roster")),
             new("Prospects", CreateSelectablePeopleContent("Prospect List")),
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
+            new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
             new("Training Camp", CreateSelectablePeopleContent("Training Camp"))
@@ -301,7 +302,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.9 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 3.1 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1211,6 +1212,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
         RefreshSelectableTab("Roster", BuildRosterRows());
         RefreshSelectableTab("Recruits", BuildRecruitRows());
+        RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         if (_tabs.ContainsKey("Pending Actions"))
@@ -1538,6 +1540,7 @@ internal sealed class MainWindow : Window
             "Vacancies" => BuildStaffDetail(row),
             "Roster" => BuildPlayerDetail(title, row),
             "Recruits" => BuildPlayerDetail(title, row),
+            "Free Agents" => BuildPlayerDetail(title, row),
             "Scouting" => BuildPlayerDetail(title, row),
             "Scouting Operations" => BuildScoutingOperationDetail(row),
             "Draft Board" => BuildPlayerDetail(title, row),
@@ -1690,6 +1693,20 @@ internal sealed class MainWindow : Window
             })
             .ToArray();
 
+    private IReadOnlyList<SelectablePersonRow> BuildFreeAgentRows() =>
+        State.FreeAgents
+            .OrderByDescending(agent => agent.IsShortlisted)
+            .ThenByDescending(agent => agent.FitSummary.FitScore)
+            .ThenBy(agent => agent.Name, StringComparer.Ordinal)
+            .Select(agent => new SelectablePersonRow(
+                agent.PersonId,
+                agent.Name,
+                "FreeAgent",
+                $"{agent.Position} - age {agent.Age} - {agent.Status}",
+                $"{agent.PreviousTeam} | {agent.LastSeasonStats.SummaryText} | ask {agent.ContractAsk.AnnualAmount:C0}",
+                $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {agent.ProjectedLineupRole} | {agent.FitSummary.StaffRecommendation}"))
+            .ToArray();
+
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
         State.Snapshot.DraftBoard.Entries
             .GroupBy(entry => entry.ProspectPersonId, StringComparer.Ordinal)
@@ -1761,6 +1778,7 @@ internal sealed class MainWindow : Window
         BuildRosterRows()
             .Concat(BuildStaffRows().Where(row => row.Kind == "Staff"))
             .Concat(BuildRecruitRows())
+            .Concat(BuildFreeAgentRows())
             .Concat(BuildScoutingRows())
             .Concat(BuildProspectRows())
             .Concat(BuildTrainingCampRows())
@@ -1998,6 +2016,32 @@ internal sealed class MainWindow : Window
             }
         }
 
+        if (tab == "Free Agents")
+        {
+            var agent = State.FreeAgentFor(row.PersonId);
+            if (agent is not null)
+            {
+                AddLine(panel, "Position", agent.Position);
+                AddLine(panel, "Age", agent.Age);
+                AddLine(panel, "Shoots/Catches", agent.ShootsCatches);
+                AddLine(panel, "Height / Weight", $"{agent.HeightDisplay}, {agent.WeightDisplay}");
+                AddLine(panel, "Nationality / hometown", $"{agent.Nationality} / {agent.Hometown}");
+                AddLine(panel, "Previous team", agent.PreviousTeam);
+                AddLine(panel, "Last-season stats", agent.LastSeasonStats.SummaryText);
+                AddLine(panel, "Career summary", agent.CareerStats.DisplaySummary);
+                AddLine(panel, "Player type", agent.PlayerType);
+                AddLine(panel, "Projected role", agent.ProjectedLineupRole);
+                AddLine(panel, "Contract ask", $"{agent.ContractAsk.TermYears} year(s), {agent.ContractAsk.AnnualAmount:C0} {agent.ContractAsk.Currency} - {agent.ContractAsk.Notes}");
+                AddLine(panel, "Interest", $"{agent.Interest.PlayerOrganizationInterest}/100 - {agent.Interest.MotivationSummary}");
+                AddLine(panel, "Competing interest", agent.Interest.CompetingInterest);
+                AddLine(panel, "Budget impact", State.FreeAgentBudgetImpact(row.PersonId));
+                AddLine(panel, "Staff recommendation", agent.FitSummary.StaffRecommendation);
+                AddLine(panel, "Fit / risk", $"{agent.FitSummary.RosterNeed} {agent.FitSummary.RiskSummary}");
+                AddLine(panel, "Scouting confidence", agent.ScoutingConfidence);
+                AddLine(panel, "Rights / eligibility", agent.RightsEligibilityNotes);
+            }
+        }
+
         if (tab is "Scouting" or "Draft Board")
         {
             var entry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == row.PersonId);
@@ -2129,6 +2173,16 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Education Package", () => State.OfferRecruitEducationPackageFor(row.PersonId));
             yield return CreateDetailButton("Ask Scout", () => State.AskScoutForRecruitFor(row.PersonId));
             yield return CreateDetailButton("Withdraw Offer", () => State.WithdrawRecruitOfferFor(row.PersonId), State.CanWithdrawRecruitOffer(row.PersonId));
+            yield break;
+        }
+
+        if (tab == "Free Agents")
+        {
+            var agent = State.FreeAgentFor(row.PersonId);
+            yield return CreateDetailButton(agent?.IsShortlisted == true ? "Remove Shortlist" : "Shortlist", () => State.ToggleFreeAgentShortlist(row.PersonId), agent is not null);
+            yield return CreateDetailButton("Offer Contract", () => State.OfferFreeAgentContractFor(row.PersonId), State.CanOfferFreeAgent(row.PersonId));
+            yield return CreateDetailButton("Invite to Camp", () => State.InviteFreeAgentToCampFor(row.PersonId), agent is not null && agent.Status is not FreeAgentStatus.Signed and not FreeAgentStatus.Unavailable);
+            yield return CreateDetailButton("Withdraw Offer", () => State.WithdrawFreeAgentOfferFor(row.PersonId), agent is not null && (agent.Status is FreeAgentStatus.Offered or FreeAgentStatus.Negotiating));
             yield break;
         }
 
@@ -3527,7 +3581,7 @@ internal sealed class MainWindow : Window
     private static string PendingActionConsequence(PendingGmAction action) =>
         action.ActionType switch
         {
-            PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick => "Approve signing or the player remains unsigned.",
+            PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick or PendingGmActionType.SignFreeAgent => "Approve signing or the player remains unsigned.",
             PendingGmActionType.AddToRoster => "Resolve roster issue before the next game.",
             PendingGmActionType.ReleasePlayer or PendingGmActionType.CutPlayer => "Declining keeps the player in the current roster/camp state.",
             PendingGmActionType.AssignToAffiliate or PendingGmActionType.ReturnToParent => "Declining keeps the player in your current decision queue.",
@@ -4221,6 +4275,7 @@ internal sealed class AlphaDesktopState
     private readonly SeasonStatsPolishService _statsPolish = new();
     private readonly FirstMonthAdvanceService _firstMonthAdvance = new();
     private readonly ActionCenterService _actionCenter = new();
+    private readonly FreeAgentMarketService _freeAgents = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
@@ -4250,6 +4305,9 @@ internal sealed class AlphaDesktopState
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
             .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
             .ToArray();
+
+    public IReadOnlyList<FreeAgent> FreeAgents =>
+        ScenarioSnapshot.FreeAgentMarket?.FreeAgents ?? Array.Empty<FreeAgent>();
 
     public int UnreadInboxCount => Inbox.Count(message => message.IsUnread);
 
@@ -4994,6 +5052,12 @@ internal sealed class AlphaDesktopState
             return draftBioPosition.Value;
         }
 
+        var freeAgentPosition = ScenarioSnapshot.FreeAgentMarket?.Find(personId)?.Position;
+        if (freeAgentPosition is not null)
+        {
+            return freeAgentPosition.Value;
+        }
+
         try
         {
             return _playerDossiers.CreateDossier(ScenarioSnapshot, personId).Position;
@@ -5132,6 +5196,12 @@ internal sealed class AlphaDesktopState
 
     public string RegionTeamText(string personId)
     {
+        var freeAgent = ScenarioSnapshot.FreeAgentMarket?.Find(personId);
+        if (freeAgent is not null)
+        {
+            return freeAgent.PreviousTeam;
+        }
+
         var draftBio = ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries
             .FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio;
         if (draftBio is not null)
@@ -5333,6 +5403,81 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyRecruitingV2(_recruitingV2.WithdrawOffer(_registry, ScenarioSnapshot, recruitPersonId));
+    }
+
+    public FreeAgent? FreeAgentFor(string personId) =>
+        ScenarioSnapshot.FreeAgentMarket?.Find(personId);
+
+    public string FreeAgentBudgetImpact(string personId)
+    {
+        var agent = FreeAgentFor(personId);
+        if (agent is null)
+        {
+            return "No free-agent budget impact.";
+        }
+
+        var remaining = BudgetOverview.RemainingBudget;
+        var afterAsk = remaining - agent.ContractAsk.AnnualAmount;
+        return afterAsk < 0
+            ? $"Ask {agent.ContractAsk.AnnualAmount:C0}; would put hockey operations {Math.Abs(afterAsk):C0} over budget."
+            : $"Ask {agent.ContractAsk.AnnualAmount:C0}; would leave {afterAsk:C0} in hockey operations budget.";
+    }
+
+    public bool CanOfferFreeAgent(string personId)
+    {
+        var agent = FreeAgentFor(personId);
+        return agent is not null
+            && agent.Status == FreeAgentStatus.Available
+            && OpenPendingActions.All(action => action.PersonId != personId || action.ActionType != PendingGmActionType.SignFreeAgent);
+    }
+
+    public void ToggleFreeAgentShortlist(string personId)
+    {
+        var agent = FreeAgentFor(personId);
+        if (agent is null)
+        {
+            LatestSummary = "Selected free agent is no longer available.";
+            return;
+        }
+
+        ApplyFreeAgentResult(agent.IsShortlisted
+            ? _freeAgents.RemoveFromShortlist(_registry, ScenarioSnapshot, personId)
+            : _freeAgents.Shortlist(_registry, ScenarioSnapshot, personId));
+    }
+
+    public void OfferFreeAgentContractFor(string personId)
+    {
+        if (!CanOfferFreeAgent(personId))
+        {
+            LatestSummary = "Selected free agent is not available for a contract offer.";
+            return;
+        }
+
+        ApplyFreeAgentResult(_freeAgents.OfferContract(_registry, ScenarioSnapshot, personId));
+    }
+
+    public void InviteFreeAgentToCampFor(string personId)
+    {
+        var agent = FreeAgentFor(personId);
+        if (agent is null || agent.Status is FreeAgentStatus.Signed or FreeAgentStatus.Unavailable)
+        {
+            LatestSummary = "Selected free agent is not available for a camp invite.";
+            return;
+        }
+
+        ApplyFreeAgentResult(_freeAgents.InviteToCamp(_registry, ScenarioSnapshot, personId));
+    }
+
+    public void WithdrawFreeAgentOfferFor(string personId)
+    {
+        var agent = FreeAgentFor(personId);
+        if (agent is null || agent.Status is not (FreeAgentStatus.Offered or FreeAgentStatus.Negotiating))
+        {
+            LatestSummary = "Selected free agent does not have an active offer to withdraw.";
+            return;
+        }
+
+        ApplyFreeAgentResult(_freeAgents.WithdrawOffer(_registry, ScenarioSnapshot, personId));
     }
 
     public void ViewNextDossier()
@@ -6047,6 +6192,21 @@ internal sealed class AlphaDesktopState
         LatestSummary = result.Message;
     }
 
+    private void ApplyFreeAgentResult(FreeAgentMarketResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+            InboxManager.AddRange(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
     private TrainingCampPlayer? NextActionableCampPlayer() =>
         ScenarioSnapshot.TrainingCamp?.Players
             .Where(player => player.Status is TrainingCampStatus.Invited or TrainingCampStatus.InCamp)
@@ -6080,7 +6240,7 @@ internal sealed class AlphaDesktopState
 
         var person = Snapshot.People.FirstOrDefault(person => person.PersonId == personId)
             ?? ScenarioSnapshot.StaffCandidates.Select(candidate => candidate.Person).FirstOrDefault(person => person.PersonId == personId);
-        return person?.Identity.DisplayName ?? personId;
+        return person?.Identity.DisplayName ?? ScenarioSnapshot.FreeAgentMarket?.Find(personId)?.Name ?? personId;
     }
 
     private string? FirstDossierPersonId() => DossierPersonIds().FirstOrDefault();
@@ -6091,6 +6251,7 @@ internal sealed class AlphaDesktopState
             .Concat(Snapshot.Recruits.Select(recruit => recruit.RecruitPersonId))
             .Concat(Snapshot.DraftBoard.Entries.Select(entry => entry.ProspectPersonId))
             .Concat(ScenarioSnapshot.ProspectRights.Select(prospect => prospect.ProspectPersonId))
+            .Concat(ScenarioSnapshot.FreeAgentMarket?.FreeAgents.Select(agent => agent.PersonId) ?? Array.Empty<string>())
             .Concat(ScenarioSnapshot.TrainingCamp?.Players.Select(player => player.PersonId) ?? Array.Empty<string>())
             .Distinct(StringComparer.Ordinal)
             .ToArray();

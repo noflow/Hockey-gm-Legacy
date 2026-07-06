@@ -4,6 +4,7 @@ public enum PendingGmActionType
 {
     SignRecruit,
     SignDraftPick,
+    SignFreeAgent,
     InviteToCamp,
     AddToRoster,
     ReleasePlayer,

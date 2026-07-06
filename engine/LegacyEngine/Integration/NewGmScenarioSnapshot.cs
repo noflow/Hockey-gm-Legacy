@@ -74,6 +74,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<DraftHistoryRecord> DraftHistory { get; init; } = Array.Empty<DraftHistoryRecord>();
 
+    public FreeAgentMarket? FreeAgentMarket { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -212,5 +214,7 @@ public sealed record NewGmScenarioSnapshot(
         {
             record.Validate();
         }
+
+        FreeAgentMarket?.Validate();
     }
 }

@@ -69,14 +69,16 @@ The five foundation pillars remain:
 - Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix
 - Alpha 2.8 - GM Office Navigation Redesign
 - Alpha 2.9 - Action Center & Daily Workflow UI
+- Alpha 3.0 - Existing World History v1
+- Alpha 3.1 - Free Agent Market v1
 
 ## Current Milestone
 
-Alpha 2.9 - Action Center & Daily Workflow UI
+Alpha 3.1 - Free Agent Market v1
 
 ## Current Goal
 
-Make the AlphaDesktop dashboard answer "What should I do today?" by aggregating pending decisions, urgent inbox items, roster warnings, staff vacancies, budget issues, scouting completions, upcoming games, medical issues, and season readiness into a focused Action Center.
+Add a player-controlled free-agent market for unsigned veterans, released players, undrafted players, depth players, goalies, and replacement options without adding full negotiation, agents, salary cap, save/load, Godot, or tactical simulation.
 
 ## Why Relationship Engine Was Next
 
@@ -86,11 +88,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 3.0 - TBD
+Alpha 3.2 - TBD
 
 ## Next Milestones
 
-1. Alpha 3.0 - TBD
+1. Alpha 3.2 - TBD
 
 ## Build Rule
 

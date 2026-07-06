@@ -47,6 +47,7 @@ var alpha273DraftStaffLayoutTests = new Alpha273DraftStaffLayoutTests();
 var alpha28GmOfficeNavigationTests = new Alpha28GmOfficeNavigationTests();
 var alpha29ActionCenterTests = new Alpha29ActionCenterTests();
 var alpha30ExistingWorldHistoryTests = new Alpha30ExistingWorldHistoryTests();
+var alpha31FreeAgentMarketTests = new Alpha31FreeAgentMarketTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -590,6 +591,21 @@ runner.Run("alpha 3.0 organization has prior season history", alpha30ExistingWor
 runner.Run("alpha 3.0 history does not expose hidden ratings", alpha30ExistingWorldHistoryTests.HistoryDoesNotExposeHiddenRatings);
 runner.Run("alpha 3.0 staff have career history where possible", alpha30ExistingWorldHistoryTests.StaffHaveCareerHistoryWherePossible);
 runner.Run("alpha 3.0 AlphaDesktop exposes existing world history", alpha30ExistingWorldHistoryTests.AlphaDesktopExposesExistingWorldHistory);
+runner.Run("alpha 3.1 free-agent market generated at scenario start", alpha31FreeAgentMarketTests.FreeAgentMarketGeneratedAtScenarioStart);
+runner.Run("alpha 3.1 free agents have clean names and known bio", alpha31FreeAgentMarketTests.FreeAgentsHaveCleanNamesAndKnownBio);
+runner.Run("alpha 3.1 free agents have prior stats and career history", alpha31FreeAgentMarketTests.FreeAgentsHavePriorStatsAndCareerHistory);
+runner.Run("alpha 3.1 contract ask and budget impact exist", alpha31FreeAgentMarketTests.ContractAskAndBudgetImpactExist);
+runner.Run("alpha 3.1 shortlist works", alpha31FreeAgentMarketTests.ShortlistWorks);
+runner.Run("alpha 3.1 offer creates pending GM action and does not auto-sign", alpha31FreeAgentMarketTests.OfferCreatesPendingGmActionAndDoesNotAutoSign);
+runner.Run("alpha 3.1 approving free-agent signing creates contract", alpha31FreeAgentMarketTests.ApprovingFreeAgentSigningCreatesContract);
+runner.Run("alpha 3.1 declining free-agent signing does not create contract", alpha31FreeAgentMarketTests.DecliningFreeAgentSigningDoesNotCreateContract);
+runner.Run("alpha 3.1 invite to camp creates workflow", alpha31FreeAgentMarketTests.InviteToCampCreatesCampWorkflow);
+runner.Run("alpha 3.1 withdraw offer works", alpha31FreeAgentMarketTests.WithdrawOfferWorks);
+runner.Run("alpha 3.1 low-interest free agent can reject offer", alpha31FreeAgentMarketTests.LowInterestFreeAgentCanRejectOffer);
+runner.Run("alpha 3.1 other-team free-agent signing goes to league news not inbox", alpha31FreeAgentMarketTests.OtherTeamFreeAgentSigningGoesToLeagueNewsNotInbox);
+runner.Run("alpha 3.1 player dossier includes free-agent sections without hidden ratings", alpha31FreeAgentMarketTests.PlayerDossierIncludesFreeAgentSectionsWithoutHiddenRatings);
+runner.Run("alpha 3.1 AlphaDesktop exposes free-agent workspace and actions", alpha31FreeAgentMarketTests.AlphaDesktopExposesFreeAgentWorkspaceAndActions);
+runner.Run("alpha 3.1 no Godot save or full negotiation added", alpha31FreeAgentMarketTests.Alpha31HasNoGodotSaveOrFullNegotiation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

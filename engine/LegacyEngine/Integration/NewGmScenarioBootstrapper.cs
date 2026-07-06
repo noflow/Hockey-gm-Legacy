@@ -70,9 +70,11 @@ public sealed class NewGmScenarioBootstrapper
 
         var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
+        var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
             .Concat(rosterPlayers)
             .Concat(recruits)
+            .Concat(freeAgentPeople)
             .ToArray();
 
         var owner = new Owner(
@@ -181,15 +183,18 @@ public sealed class NewGmScenarioBootstrapper
             CompletedScoutingReports = inheritedScoutingReports
         };
         var history = new ExistingWorldHistoryService().CreateHistory(scenarioSnapshot);
+        var freeAgentMarket = new FreeAgentMarketService().GenerateMarket(scenarioSnapshot, freeAgentPeople);
         scenarioSnapshot = scenarioSnapshot with
         {
-            PriorSeasonStats = history.PriorSeasonStats,
-            CareerStatSummaries = history.CareerStatSummaries,
+            PriorSeasonStats = history.PriorSeasonStats.Concat(freeAgentMarket.FreeAgents.Select(agent => agent.LastSeasonStats)).ToArray(),
+            CareerStatSummaries = history.CareerStatSummaries.Concat(freeAgentMarket.FreeAgents.Select(agent => agent.CareerStats)).ToArray(),
             PlayerTeamHistories = history.PlayerTeamHistories,
             PlayerCareerTimelines = history.PlayerCareerTimelines,
             OrganizationHistory = history.OrganizationHistory,
-            DraftHistory = history.DraftHistory
+            DraftHistory = history.DraftHistory,
+            FreeAgentMarket = freeAgentMarket
         };
+        QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
         scenarioSnapshot.Validate();
 
         return new NewGmScenarioResult(
@@ -678,6 +683,36 @@ public sealed class NewGmScenarioBootstrapper
             .ToArray();
     }
 
+    private static IReadOnlyList<Person> CreateFreeAgentPeople(
+        DateOnly startDate,
+        NameGenerator nameGenerator,
+        NameUniquenessRegistry nameRegistry,
+        int seasonYear) =>
+        Enumerable.Range(0, 28)
+            .Select(index =>
+            {
+                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "free-agent-market"), PlayerOrigins());
+                var birthDate = index switch
+                {
+                    < 4 => startDate.AddYears(-20).AddDays(-(index * 47 + 12)),
+                    < 12 => startDate.AddYears(-18).AddDays(-(index * 31 + 7)),
+                    _ => startDate.AddYears(-17).AddDays(-(index * 29 + 5))
+                };
+                return CreatePerson(
+                        $"person-free-agent-{index + 1:000}",
+                        name.FirstName,
+                        name.LastName,
+                        Gender.Male,
+                        birthDate,
+                        name.Nationality,
+                        name.Birthplace,
+                        28 + index % 15,
+                        18 + index % 12,
+                        4 + index % 6)
+                    .AddRole(new PersonRole($"role-free-agent-player-{index + 1:000}", PersonRoleType.Player, "free-agent-market", startDate.AddYears(-1), null, "Unsigned Player"));
+            })
+            .ToArray();
+
     private static string ClassScope(int seasonYear, string group) => $"new-gm-scenario:{seasonYear}:{group}";
 
     private static NameOrigin[] PlayerOrigins() =>
@@ -909,15 +944,18 @@ public sealed class NewGmScenarioBootstrapper
         DateOnly date,
         string organizationId,
         string gmPersonId,
-        DateOnly draftDate)
+        DateOnly draftDate,
+        LegacyEventType eventType = LegacyEventType.Generic,
+        string title = "New GM scenario started",
+        string? description = null)
     {
         var legacyEvent = eventEngine.CreateEvent(
             new DateTimeOffset(date.Year, date.Month, date.Day, 9, 0, 0, TimeSpan.Zero),
-            LegacyEventType.Generic,
+            eventType,
             LegacyEventSeverity.Notice,
             LegacyEventVisibility.Organization,
-            "New GM scenario started",
-            $"The newly hired GM took over two weeks before the draft on {draftDate:yyyy-MM-dd}.",
+            title,
+            description ?? $"The newly hired GM took over two weeks before the draft on {draftDate:yyyy-MM-dd}.",
             new LegacyEventContext(PrimaryPersonId: gmPersonId, OrganizationId: organizationId),
             new Dictionary<string, object?> { ["scenario"] = "alpha_1_0_new_gm", ["draft_date"] = draftDate });
 

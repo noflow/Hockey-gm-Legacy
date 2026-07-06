@@ -24,8 +24,8 @@ public sealed record PriorSeasonStatLine(
     public bool IsGoalie => Position == RosterPosition.Goalie;
 
     public string SummaryText => IsGoalie
-        ? $"{SeasonYear}: {GamesPlayed} GP, {Wins}-{Losses}, {SavePercentage:0.000} SV%, {GoalsAgainstAverage:0.00} GAA with {TeamName} ({LeagueName})."
-        : $"{SeasonYear}: {GamesPlayed} GP, {Goals}-{Assists}-{Points}, {PlusMinus:+#;-#;0}, {PenaltyMinutes} PIM with {TeamName} ({LeagueName}).";
+        ? $"{PlayerName} {SeasonYear}: {GamesPlayed} GP, {Wins}-{Losses}, {SavePercentage:0.000} SV%, {GoalsAgainstAverage:0.00} GAA with {TeamName} ({LeagueName})."
+        : $"{PlayerName} {SeasonYear}: {GamesPlayed} GP, {Goals}-{Assists}-{Points}, {PlusMinus:+#;-#;0}, {PenaltyMinutes} PIM with {TeamName} ({LeagueName}).";
 
     public void Validate()
     {
