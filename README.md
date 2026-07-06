@@ -52,6 +52,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 2.7.1 Roster & Front Office Realism Pass
 - Alpha 2.7.2 Inbox Cleanup + League Transaction Wire
 - Alpha 2.7.3 Live Draft Layout + Staff Hiring Layout Fix
+- Alpha 2.8 GM Office Navigation Redesign
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -92,6 +93,8 @@ Alpha 2.7.1 - Roster & Front Office Realism Pass updates the junior roster targe
 Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire keeps the GM inbox focused on your organization and decisions that need attention. Other-team signings, contract updates, roster moves, injuries, draft picks, and staff transactions now route into a separate League News / Transaction Wire feed with team, player/staff, category, date, and description.
 
 Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix reshapes the live draft modal into selected prospect, draft list, and draft status columns. Draft rows now surface basic visible bio and scouting context, dossier overviews include draft bio facts, and the Staff tab separates Current Staff, Hire Staff / Staff Candidates, and Vacancies so candidate actions no longer look like staff actions.
+
+Alpha 2.8 - GM Office Navigation Redesign replaces the crowded top-level AlphaDesktop tabs with a cleaner GM Office shell: Dashboard, Inbox, Organization, Hockey Operations, Season, Reports / History, and Settings. Existing features are preserved inside workspace sub-navigation, the dashboard now acts as an action center with owner mood and grouped advance controls, and League News remains near the Inbox without adding save/load, Godot, or new game simulation behavior.
 
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 

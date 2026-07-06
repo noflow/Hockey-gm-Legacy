@@ -22,7 +22,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -33,6 +33,8 @@ public static class Program
 
 internal sealed class MainWindow : Window
 {
+    private sealed record WorkspaceScreen(string Label, UIElement Content);
+
     private AlphaDesktopState? _state;
     private readonly TextBlock _dateText = new();
     private readonly TextBlock _summaryText = new();
@@ -100,7 +102,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.7.3 starts with your created GM preparing for a clearer live draft, then keeps staff candidates separate from employed staff.",
+            Text = "Alpha 2.8 starts with your created GM inside a cleaner GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -214,29 +216,65 @@ internal sealed class MainWindow : Window
         };
         _mainTabs = tabs;
 
-        AddDashboardTab(tabs);
-        AddInboxTab(tabs);
-        AddTab(tabs, "Owner");
-        AddSelectablePeopleTab(tabs, "Staff");
-        AddSelectablePeopleTab(tabs, "Roster");
-        AddSelectablePeopleTab(tabs, "Recruits");
-        AddSelectablePeopleTab(tabs, "Scouting");
-        AddSelectablePeopleTab(tabs, "Scouting Operations");
-        AddTab(tabs, "Pending Actions");
-        AddTab(tabs, "League News");
+        AddWorkspaceTab(tabs, "Dashboard", new[]
+        {
+            new WorkspaceScreen("Dashboard", CreateDashboardContent()),
+            new WorkspaceScreen("Action Center / Pending Decisions", CreateTextScreen("Pending Actions"))
+        });
+
+        AddWorkspaceTab(tabs, "Inbox", new[]
+        {
+            new WorkspaceScreen("GM Inbox", BuildInboxLayout()),
+            new WorkspaceScreen("League News / Transaction Wire", CreateTextScreen("League News"))
+        });
+
+        AddWorkspaceTab(tabs, "Organization", new[]
+        {
+            new WorkspaceScreen("Owner", CreateTextScreen("Owner")),
+            new WorkspaceScreen("Staff", CreateSelectablePeopleContent("Staff")),
+            new WorkspaceScreen("Staff Hiring", CreateSelectablePeopleContent("Staff Hiring")),
+            new WorkspaceScreen("Vacancies", CreateSelectablePeopleContent("Vacancies")),
+            new WorkspaceScreen("Budget", CreateTextScreen("Budget")),
+            new WorkspaceScreen("Organization Health", CreateTextScreen("Organization Health")),
+            new WorkspaceScreen("Relationships", CreateTextScreen("Relationships"))
+        });
+
+        var hockeyOperations = new List<WorkspaceScreen>
+        {
+            new("Roster", CreateSelectablePeopleContent("Roster")),
+            new("Prospects", CreateSelectablePeopleContent("Prospect List")),
+            new("Recruits", CreateSelectablePeopleContent("Recruits")),
+            new("Scouting", CreateSelectablePeopleContent("Scouting")),
+            new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
+            new("Training Camp", CreateSelectablePeopleContent("Training Camp"))
+        };
         if (State.IsDraftUiEnabled)
         {
-            AddSelectablePeopleTab(tabs, "Draft Board");
+            hockeyOperations.Insert(5, new WorkspaceScreen("Draft Board", CreateSelectablePeopleContent("Draft Board")));
         }
-        AddSelectablePeopleTab(tabs, "Prospect List");
-        AddSelectablePeopleTab(tabs, "Training Camp");
-        AddTab(tabs, "Season Readiness");
-        AddTab(tabs, "Schedule");
-        AddTab(tabs, "Standings");
-        AddTab(tabs, "Stats");
-        AddTab(tabs, "Monthly Summary");
-        AddTab(tabs, "Executive Reports");
-        AddTab(tabs, "Relationships");
+        AddWorkspaceTab(tabs, "Hockey Operations", hockeyOperations);
+
+        AddWorkspaceTab(tabs, "Season", new[]
+        {
+            new WorkspaceScreen("Schedule", CreateTextScreen("Schedule")),
+            new WorkspaceScreen("Standings", CreateTextScreen("Standings")),
+            new WorkspaceScreen("Stats", CreateTextScreen("Stats")),
+            new WorkspaceScreen("Monthly Summary", CreateTextScreen("Monthly Summary")),
+            new WorkspaceScreen("Season Readiness", CreateTextScreen("Season Readiness"))
+        });
+
+        AddWorkspaceTab(tabs, "Reports / History", new[]
+        {
+            new WorkspaceScreen("Executive Reports", CreateTextScreen("Executive Reports")),
+            new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
+            new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
+            new WorkspaceScreen("Career History", CreateTextScreen("Career History"))
+        });
+
+        AddWorkspaceTab(tabs, "Settings placeholder", new[]
+        {
+            new WorkspaceScreen("Settings", CreateTextScreen("Settings"))
+        });
 
         app.Children.Add(tabs);
         root.Children.Add(app);
@@ -256,7 +294,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.7.3 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.8 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -277,6 +315,26 @@ internal sealed class MainWindow : Window
         textPanel.Children.Add(_processedText);
 
         panel.Children.Add(textPanel);
+
+        var searchBox = new TextBox
+        {
+            Text = "Quick search placeholder - players, staff, prospects, messages",
+            IsReadOnly = true,
+            MinHeight = 30,
+            MaxWidth = 520,
+            Margin = new Thickness(0, 0, 0, 10),
+            Background = new SolidColorBrush(Color.FromRgb(234, 241, 248)),
+            Foreground = new SolidColorBrush(Color.FromRgb(78, 92, 108))
+        };
+        panel.Children.Add(searchBox);
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Grouped advance controls",
+            Foreground = new SolidColorBrush(Color.FromRgb(210, 225, 240)),
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
 
         var buttonPanel = new WrapPanel
         {
@@ -336,6 +394,17 @@ internal sealed class MainWindow : Window
 
     private void AddTab(TabControl tabs, string title)
     {
+        var item = new TabItem
+        {
+            Header = title,
+            Content = CreateTextScreen(title)
+        };
+        _tabItems[title] = item;
+        tabs.Items.Add(item);
+    }
+
+    private TextBox CreateTextScreen(string title)
+    {
         var text = new TextBox
         {
             IsReadOnly = true,
@@ -350,35 +419,43 @@ internal sealed class MainWindow : Window
         };
 
         _tabs[title] = text;
-        var item = new TabItem
-        {
-            Header = title,
-            Content = text
-        };
-        _tabItems[title] = item;
-        tabs.Items.Add(item);
+        return text;
     }
 
     private void AddDashboardTab(TabControl tabs)
     {
-        _dashboardPanel = new StackPanel { Margin = new Thickness(16) };
-        var scroll = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Background = Brushes.White,
-            Content = _dashboardPanel
-        };
-
         var item = new TabItem
         {
             Header = "Dashboard",
-            Content = scroll
+            Content = CreateDashboardContent()
         };
         _tabItems["Dashboard"] = item;
         tabs.Items.Add(item);
     }
 
+    private UIElement CreateDashboardContent()
+    {
+        _dashboardPanel = new StackPanel { Margin = new Thickness(16) };
+        return new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = Brushes.White,
+            Content = _dashboardPanel
+        };
+    }
+
     private void AddSelectablePeopleTab(TabControl tabs, string title)
+    {
+        var item = new TabItem
+        {
+            Header = title,
+            Content = CreateSelectablePeopleContent(title)
+        };
+        _tabItems[title] = item;
+        tabs.Items.Add(item);
+    }
+
+    private UIElement CreateSelectablePeopleContent(string title)
     {
         var root = new Grid { Background = Brushes.White };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -427,13 +504,65 @@ internal sealed class MainWindow : Window
 
         _selectableLists[title] = list;
         _selectableDetails[title] = detail;
-        var item = new TabItem
+        return root;
+    }
+
+    private void AddWorkspaceTab(TabControl tabs, string title, IReadOnlyList<WorkspaceScreen> screens)
+    {
+        var root = new Grid { Background = Brushes.White };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var navigation = new ListBox
+        {
+            BorderThickness = new Thickness(0, 0, 1, 0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
+            Background = new SolidColorBrush(Color.FromRgb(239, 243, 248)),
+            Padding = new Thickness(8),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        var contentHost = new ContentControl
+        {
+            Content = screens.FirstOrDefault()?.Content
+        };
+
+        foreach (var screen in screens)
+        {
+            navigation.Items.Add(new ListBoxItem
+            {
+                Content = screen.Label,
+                Tag = screen.Content,
+                Padding = new Thickness(10, 8, 10, 8),
+                Margin = new Thickness(0, 0, 0, 4),
+                FontWeight = FontWeights.SemiBold
+            });
+        }
+
+        navigation.SelectionChanged += (_, _) =>
+        {
+            if (navigation.SelectedItem is ListBoxItem item && item.Tag is UIElement content)
+            {
+                contentHost.Content = content;
+            }
+        };
+
+        if (navigation.Items.Count > 0)
+        {
+            navigation.SelectedIndex = 0;
+        }
+
+        Grid.SetColumn(navigation, 0);
+        Grid.SetColumn(contentHost, 1);
+        root.Children.Add(navigation);
+        root.Children.Add(contentHost);
+
+        var tab = new TabItem
         {
             Header = title,
             Content = root
         };
-        _tabItems[title] = item;
-        tabs.Items.Add(item);
+        _tabItems[title] = tab;
+        tabs.Items.Add(tab);
     }
 
     private UIElement BuildRosterFilters()
@@ -909,12 +1038,16 @@ internal sealed class MainWindow : Window
         RefreshInboxPanels();
         _tabs["Owner"].Text = BuildOwner();
         RefreshSelectableTab("Staff", BuildStaffRows());
+        RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
+        RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
         RefreshSelectableTab("Roster", BuildRosterRows());
         RefreshSelectableTab("Recruits", BuildRecruitRows());
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         _tabs["Pending Actions"].Text = BuildPendingActions();
         _tabs["League News"].Text = BuildLeagueNews();
+        _tabs["Budget"].Text = BuildBudgetWorkspace();
+        _tabs["Organization Health"].Text = BuildOrganizationHealth();
         RefreshSelectableTab("Player Dossier", BuildDossierRows());
         if (_selectableLists.ContainsKey("Draft Board"))
         {
@@ -928,6 +1061,10 @@ internal sealed class MainWindow : Window
         _tabs["Stats"].Text = BuildStats();
         _tabs["Monthly Summary"].Text = BuildMonthlySummary();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
+        _tabs["Draft Recaps"].Text = BuildDraftRecaps();
+        _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
+        _tabs["Career History"].Text = BuildCareerHistory();
+        _tabs["Settings"].Text = BuildSettings();
         _tabs["Relationships"].Text = BuildRelationships();
         UpdateTabBadges();
         RefreshDraftModal();
@@ -973,6 +1110,7 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
+        metrics.Children.Add(CreateDashboardMetric("Owner Mood", OwnerMoodText(), $"Trust {snapshot.Owner.Trust} | Confidence {snapshot.Owner.Confidence}", snapshot.Owner.Trust < 45 || snapshot.Owner.Confidence < 45));
         var nextGame = State.NextGame;
         var lastGame = State.LastGameRecap;
         var record = State.TeamRecordText;
@@ -994,19 +1132,19 @@ internal sealed class MainWindow : Window
         lower.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.25, GridUnitType.Star) });
         lower.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var actionsCard = CreateDashboardCard("Quick Actions", out var actions);
+        var actionsCard = CreateDashboardCard("Quick Advance Controls", out var actions);
         AddActions(actions,
             CreateDetailButton("Advance Day", () => Advance(1)),
             CreateDetailButton("Advance Week", () => Advance(7)),
             CreateDetailButton("Advance to Next Game", AdvanceToNextGame),
             CreateDetailButton("Advance to Month End", AdvanceToMonthEnd),
             CreateDetailButton("Review Inbox", () => SelectTab("Inbox")),
-            CreateDetailButton("Review Draft Board", () => SelectTab(State.IsDraftUiEnabled ? "Draft Board" : "Scouting")),
-            CreateDetailButton("Review Pending Actions", () => SelectTab("Pending Actions")));
+            CreateDetailButton("Review Draft Board", () => SelectTab("Hockey Operations")),
+            CreateDetailButton("Review Pending Actions", () => SelectTab("Dashboard")));
         Grid.SetColumn(actionsCard, 0);
         lower.Children.Add(actionsCard);
 
-        var summaryCard = CreateDashboardCard("Today At A Glance", out var summary);
+        var summaryCard = CreateDashboardCard("Action Center / Pending Decisions", out var summary);
         AddLine(summary, "Owner", snapshot.Owner.Name);
         AddLine(summary, "GM", snapshot.GeneralManager.Identity.DisplayName);
         AddLine(summary, "Head scout", snapshot.Scout.Name);
@@ -1071,6 +1209,19 @@ internal sealed class MainWindow : Window
         };
     }
 
+    private string OwnerMoodText()
+    {
+        var owner = State.Snapshot.Owner;
+        var average = (owner.Trust + owner.Confidence + owner.Patience) / 3;
+        return average switch
+        {
+            >= 75 => "Supportive",
+            >= 60 => "Steady",
+            >= 45 => "Watchful",
+            _ => "Concerned"
+        };
+    }
+
     private Border CreateDashboardCard(string title, out StackPanel panel)
     {
         panel = new StackPanel();
@@ -1097,11 +1248,14 @@ internal sealed class MainWindow : Window
 
     private void UpdateTabBadges()
     {
-        SetTabHeader("Dashboard", "Dashboard");
+        SetTabHeader("Dashboard", State.PendingDecisionCount > 0 ? $"Dashboard ({State.PendingDecisionCount})" : "Dashboard");
         SetTabHeader("Inbox", $"Inbox ({State.UnreadInboxCount})");
-        SetTabHeader("Roster", $"Roster ({State.RosterWarningCount})");
-        SetTabHeader("Scouting", $"Scouting ({State.ScoutingReportCount})");
-        SetTabHeader("Pending Actions", $"Pending Actions ({State.PendingDecisionCount})");
+        SetTabHeader("Organization", State.StaffVacancies.Count > 0 ? $"Organization ({State.StaffVacancies.Count})" : "Organization");
+        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount;
+        SetTabHeader("Hockey Operations", operationsCount > 0 ? $"Hockey Operations ({operationsCount})" : "Hockey Operations");
+        SetTabHeader("Season", "Season");
+        SetTabHeader("Reports / History", "Reports / History");
+        SetTabHeader("Settings placeholder", "Settings");
     }
 
     private void SetTabHeader(string title, string header)
@@ -1161,6 +1315,8 @@ internal sealed class MainWindow : Window
         detail.Children.Add(title switch
         {
             "Staff" => BuildStaffDetail(row),
+            "Staff Hiring" => BuildStaffDetail(row),
+            "Vacancies" => BuildStaffDetail(row),
             "Roster" => BuildPlayerDetail(title, row),
             "Recruits" => BuildPlayerDetail(title, row),
             "Scouting" => BuildPlayerDetail(title, row),
@@ -1173,22 +1329,20 @@ internal sealed class MainWindow : Window
         });
     }
 
-    private IReadOnlyList<SelectablePersonRow> BuildStaffRows()
-    {
-        var rows = new List<SelectablePersonRow>
-        {
-            new("staff-section:current", "Current Staff", "StaffSection", "Employed staff only", "Release/Reassign actions appear only on current staff.", "Candidates are intentionally kept out of this section.")
-        };
-
-        rows.AddRange(State.StaffProfiles
+    private IReadOnlyList<SelectablePersonRow> BuildStaffRows() =>
+        State.StaffProfiles
             .Select(profile => new SelectablePersonRow(
                 profile.PersonId,
                 profile.Name,
                 "Staff",
                 $"Current Staff - {profile.CurrentRole} - {profile.Salary.AnnualAmount:C0}",
                 $"{profile.Department} | GM relationship {profile.RelationshipWithGm} | salary {profile.Salary.AnnualAmount:C0}",
-                profile.Chemistry.Summary)));
+                profile.Chemistry.Summary))
+            .ToArray();
 
+    private IReadOnlyList<SelectablePersonRow> BuildStaffCandidateRows()
+    {
+        var rows = new List<SelectablePersonRow>();
         rows.Add(new SelectablePersonRow("staff-section:candidates", "Hire Staff / Staff Candidates", "StaffSection", "Available candidates only", "Hire button appears only for candidate rows.", "Generate candidates, select one, then hire from the candidate detail panel."));
         rows.AddRange(State.ScenarioSnapshot.StaffCandidates.Select(candidate => new SelectablePersonRow(
             candidate.Person.PersonId,
@@ -1197,7 +1351,12 @@ internal sealed class MainWindow : Window
             $"Staff Candidate - {candidate.StaffMember.CurrentRole} - ask {candidate.ExpectedSalary.AnnualAmount:C0}",
             $"{candidate.StaffMember.Department} | reputation {candidate.Reputation} | role fit {candidate.RoleFit} | salary ask {candidate.ExpectedSalary.AnnualAmount:C0}",
             $"{candidate.HiringRecommendation} Strengths: {string.Join(", ", candidate.Strengths)}. Risk: {candidate.ChemistryRisk}")));
+        return rows;
+    }
 
+    private IReadOnlyList<SelectablePersonRow> BuildStaffVacancyRows()
+    {
+        var rows = new List<SelectablePersonRow>();
         rows.Add(new SelectablePersonRow("staff-section:vacancies", "Vacancies", "StaffSection", "Rulebook staff openings", "Vacant positions and limits from the active rulebook.", State.StaffVacancySummary));
         rows.AddRange(State.StaffVacancies.Select(vacancy => new SelectablePersonRow(
             $"vacancy:{vacancy.Role}",
@@ -2668,6 +2827,125 @@ internal sealed class MainWindow : Window
 
         return builder.ToString();
     }
+
+    private string BuildBudgetWorkspace()
+    {
+        var budget = State.BudgetOverview;
+        var builder = new StringBuilder();
+        builder.AppendLine("Budget");
+        builder.AppendLine("======");
+        builder.AppendLine("Hockey Operations Budget");
+        builder.AppendLine($"Owner status: {budget.OwnerBudgetConfidence}");
+        builder.AppendLine($"Budget status: {budget.Status}");
+        builder.AppendLine($"Total budget: {budget.TotalBudget:C0}");
+        builder.AppendLine($"Used budget: {budget.UsedBudget:C0}");
+        builder.AppendLine($"Remaining budget: {budget.RemainingBudget:C0}");
+        builder.AppendLine($"Over/under budget: {budget.OverUnderBudget:C0}");
+        builder.AppendLine();
+        builder.AppendLine("Breakdown");
+        builder.AppendLine($"GM salary: {budget.GmSalary:C0}");
+        builder.AppendLine($"Coaching salaries: {budget.CoachingSalaries:C0}");
+        builder.AppendLine($"Scouting salaries: {budget.ScoutingSalaries:C0}");
+        builder.AppendLine($"Medical/training salaries: {budget.MedicalTrainingSalaries:C0}");
+        builder.AppendLine($"Staff contracts: {budget.StaffContractsTotal:C0}");
+        builder.AppendLine($"Staff total: {budget.StaffTotal:C0}");
+        builder.AppendLine($"Staff release obligations: {budget.StaffReleaseObligations:C0}");
+        builder.AppendLine($"Player contracts: {budget.PlayerContractsTotal:C0}");
+        builder.AppendLine($"Scouting budget: {budget.ScoutingBudget:C0}");
+        builder.AppendLine($"Medical/staff operations: {budget.MedicalAndStaffOperationsBudget:C0}");
+        return builder.ToString();
+    }
+
+    private string BuildOrganizationHealth()
+    {
+        var readiness = State.SeasonReadinessReport;
+        var builder = new StringBuilder();
+        builder.AppendLine("Organization Health");
+        builder.AppendLine("===================");
+        builder.AppendLine($"Owner mood: {OwnerMoodText()}");
+        builder.AppendLine($"Owner satisfaction: {readiness.OwnerSatisfaction}");
+        builder.AppendLine($"Organization health: {readiness.OrganizationHealth}");
+        builder.AppendLine($"Roster status: {readiness.RosterStatus}");
+        builder.AppendLine($"Staff vacancies: {State.StaffVacancySummary}");
+        builder.AppendLine($"Budget: {State.BudgetOverview.Status} ({State.BudgetOverview.RemainingBudget:C0} remaining)");
+        builder.AppendLine($"Pending GM decisions: {State.PendingDecisionCount}");
+        builder.AppendLine($"Roster warnings: {State.RosterWarningCount}");
+        builder.AppendLine($"Scouting reports: {State.ScoutingReportCount}");
+        builder.AppendLine();
+        builder.AppendLine("Owner Review");
+        builder.AppendLine(readiness.OwnerReview);
+        builder.AppendLine();
+        builder.AppendLine("Staff Recommendations");
+        builder.AppendLine(readiness.StaffRecommendations);
+        return builder.ToString();
+    }
+
+    private string BuildDraftRecaps()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Draft Recaps");
+        builder.AppendLine("============");
+        var recap = State.ScenarioSnapshot.DraftExperience?.Recap;
+        if (recap is null)
+        {
+            builder.AppendLine("No completed draft recap yet.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine($"Rounds completed: {recap.RoundsCompleted}");
+        builder.AppendLine($"Players drafted: {recap.PlayersDrafted}");
+        builder.AppendLine($"Owner reaction: {recap.OwnerReaction}");
+        builder.AppendLine($"Head scout reaction: {recap.HeadScoutReaction}");
+        builder.AppendLine();
+        builder.AppendLine("Your Selections / Draft Rights");
+        AppendDraftPickSummaries(builder, recap.YourSelections);
+        builder.AppendLine();
+        builder.AppendLine("Other Notable Selections");
+        AppendDraftPickSummaries(builder, recap.OtherNotableSelections);
+        builder.AppendLine();
+        builder.AppendLine($"Biggest steal: {DraftPickSummaryText(recap.BiggestSteal)}");
+        builder.AppendLine($"Biggest surprise: {DraftPickSummaryText(recap.BiggestSurprise)}");
+        return builder.ToString();
+    }
+
+    private string BuildMonthlySummaries() => BuildMonthlySummary();
+
+    private string BuildCareerHistory()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Career History");
+        builder.AppendLine("==============");
+        builder.AppendLine("Future career history placeholder.");
+        builder.AppendLine("Executive reports, monthly summaries, draft recaps, and season records will live here as the career grows.");
+        return builder.ToString();
+    }
+
+    private string BuildSettings()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Settings");
+        builder.AppendLine("========");
+        builder.AppendLine("Settings placeholder.");
+        builder.AppendLine("Save/load, preferences, and accessibility options are intentionally not implemented yet.");
+        return builder.ToString();
+    }
+
+    private static void AppendDraftPickSummaries(StringBuilder builder, IReadOnlyList<DraftPickSummary> picks)
+    {
+        if (picks.Count == 0)
+        {
+            builder.AppendLine("  None.");
+            return;
+        }
+
+        foreach (var pick in picks)
+        {
+            builder.AppendLine($"  R{pick.RoundNumber} P{pick.PickNumber}: {pick.ProspectName} - {pick.OrganizationName}");
+        }
+    }
+
+    private static string DraftPickSummaryText(DraftPickSummary? pick) =>
+        pick is null ? "None" : $"R{pick.RoundNumber} P{pick.PickNumber}: {pick.ProspectName} - {pick.OrganizationName}";
 
     private string BuildStaff()
     {

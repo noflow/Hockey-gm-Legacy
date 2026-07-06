@@ -67,14 +67,15 @@ The five foundation pillars remain:
 - Alpha 2.7.1 - Roster & Front Office Realism Pass
 - Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire
 - Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix
+- Alpha 2.8 - GM Office Navigation Redesign
 
 ## Current Milestone
 
-Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix
+Alpha 2.8 - GM Office Navigation Redesign
 
 ## Current Goal
 
-Make draft day easier to read with a three-column live draft layout and keep current staff, candidates, and vacancies visually separated.
+Replace the crowded tab-heavy AlphaDesktop layout with a cleaner GM Office workspace while preserving existing GM functions.
 
 ## Why Relationship Engine Was Next
 
@@ -84,11 +85,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.8 - Deeper First-Month Decisions
+Alpha 2.9 - TBD
 
 ## Next Milestones
 
-1. Alpha 2.8 - Deeper First-Month Decisions
+1. Alpha 2.9 - TBD
 
 ## Build Rule
 

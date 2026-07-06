@@ -106,9 +106,10 @@ internal sealed class Alpha25SeasonFrameworkTests
     {
         var text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 
-        Assert.True(text.Contains("AddTab(tabs, \"Schedule\")", StringComparison.Ordinal), "AlphaDesktop should expose Schedule.");
-        Assert.True(text.Contains("AddTab(tabs, \"Standings\")", StringComparison.Ordinal), "AlphaDesktop should expose Standings.");
-        Assert.True(text.Contains("AddTab(tabs, \"Stats\")", StringComparison.Ordinal), "AlphaDesktop should expose Stats.");
+        Assert.True(text.Contains("AddWorkspaceTab(tabs, \"Season\"", StringComparison.Ordinal), "AlphaDesktop should expose Season workspace.");
+        Assert.True(text.Contains("new WorkspaceScreen(\"Schedule\", CreateTextScreen(\"Schedule\"))", StringComparison.Ordinal), "AlphaDesktop should expose Schedule.");
+        Assert.True(text.Contains("new WorkspaceScreen(\"Standings\", CreateTextScreen(\"Standings\"))", StringComparison.Ordinal), "AlphaDesktop should expose Standings.");
+        Assert.True(text.Contains("new WorkspaceScreen(\"Stats\", CreateTextScreen(\"Stats\"))", StringComparison.Ordinal), "AlphaDesktop should expose Stats.");
         Assert.True(text.Contains("Next Game", StringComparison.Ordinal), "Dashboard should expose next game.");
     }
 

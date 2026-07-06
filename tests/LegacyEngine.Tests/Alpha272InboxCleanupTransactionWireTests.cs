@@ -149,7 +149,7 @@ internal sealed class Alpha272InboxCleanupTransactionWireTests
     {
         var text = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 
-        Assert.True(text.Contains("AddTab(tabs, \"League News\")", StringComparison.Ordinal), "AlphaDesktop should expose League News.");
+        Assert.True(text.Contains("new WorkspaceScreen(\"League News / Transaction Wire\", CreateTextScreen(\"League News\"))", StringComparison.Ordinal), "AlphaDesktop should expose League News.");
         Assert.True(text.Contains("League News / Transaction Wire", StringComparison.Ordinal), "League News should name the transaction wire.");
         Assert.True(text.Contains("Filters: All | Signings | Roster Moves | Injuries | Draft | Staff", StringComparison.Ordinal), "League News should expose transaction filters.");
     }

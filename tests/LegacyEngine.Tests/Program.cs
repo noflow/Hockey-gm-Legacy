@@ -44,6 +44,7 @@ var alpha27FirstMonthPlayabilityTests = new Alpha27FirstMonthPlayabilityTests();
 var alpha271RosterFrontOfficeRealismTests = new Alpha271RosterFrontOfficeRealismTests();
 var alpha272InboxCleanupTransactionWireTests = new Alpha272InboxCleanupTransactionWireTests();
 var alpha273DraftStaffLayoutTests = new Alpha273DraftStaffLayoutTests();
+var alpha28GmOfficeNavigationTests = new Alpha28GmOfficeNavigationTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -554,6 +555,12 @@ runner.Run("alpha 2.7.3 draft and prospect rows expose basic bio without hidden 
 runner.Run("alpha 2.7.3 current staff excludes candidates and hire staff contains candidates", alpha273DraftStaffLayoutTests.CurrentStaffExcludesCandidatesAndHireStaffContainsCandidates);
 runner.Run("alpha 2.7.3 hired candidate moves to current staff", alpha273DraftStaffLayoutTests.HiredCandidateMovesToCurrentStaff);
 runner.Run("alpha 2.7.3 staff context buttons are correct", alpha273DraftStaffLayoutTests.StaffContextButtonsAreCorrect);
+runner.Run("alpha 2.8 dashboard loads as GM Office workspace", alpha28GmOfficeNavigationTests.DashboardLoadsAsGmOfficeWorkspace);
+runner.Run("alpha 2.8 Organization workspace exposes owner staff budget and health", alpha28GmOfficeNavigationTests.OrganizationWorkspaceExposesOwnerStaffBudgetAndHealth);
+runner.Run("alpha 2.8 Hockey Operations workspace exposes roster prospects recruiting scouting draft and camp", alpha28GmOfficeNavigationTests.HockeyOperationsWorkspaceExposesRosterProspectsRecruitingScoutingDraftAndCamp);
+runner.Run("alpha 2.8 Season workspace exposes schedule standings stats monthly summary and readiness", alpha28GmOfficeNavigationTests.SeasonWorkspaceExposesScheduleStandingsStatsMonthlySummaryAndReadiness);
+runner.Run("alpha 2.8 Reports workspace exposes reports summaries and history placeholder", alpha28GmOfficeNavigationTests.ReportsWorkspaceExposesReportsSummariesAndHistoryPlaceholder);
+runner.Run("alpha 2.8 main navigation is reduced to GM Office workspaces", alpha28GmOfficeNavigationTests.MainNavigationIsReducedToGmOfficeWorkspaces);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

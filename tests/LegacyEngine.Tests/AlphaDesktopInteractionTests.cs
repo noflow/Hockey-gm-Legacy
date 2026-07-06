@@ -4,7 +4,7 @@ internal sealed class AlphaDesktopInteractionTests
     {
         var source = ReadAlphaDesktopSource();
 
-        Assert.True(source.Contains("AddSelectablePeopleTab(tabs, \"Staff\")", StringComparison.Ordinal), "Staff should use selectable rows.");
+        Assert.True(source.Contains("CreateSelectablePeopleContent(\"Staff\")", StringComparison.Ordinal), "Staff should use selectable rows.");
         Assert.True(source.Contains("BuildStaffDetail", StringComparison.Ordinal), "Staff should render a selected staff detail panel.");
         Assert.True(source.Contains("Reassign Role", StringComparison.Ordinal), "Selected staff should expose reassign role.");
         Assert.True(source.Contains("Release Staff", StringComparison.Ordinal), "Selected staff should expose release staff.");
@@ -16,8 +16,8 @@ internal sealed class AlphaDesktopInteractionTests
     {
         var source = ReadAlphaDesktopSource();
 
-        Assert.True(source.Contains("AddSelectablePeopleTab(tabs, \"Roster\")", StringComparison.Ordinal), "Roster should use selectable rows.");
-        Assert.True(source.Contains("AddSelectablePeopleTab(tabs, \"Prospect List\")", StringComparison.Ordinal), "Prospect List should use selectable rows.");
+        Assert.True(source.Contains("CreateSelectablePeopleContent(\"Roster\")", StringComparison.Ordinal), "Roster should use selectable rows.");
+        Assert.True(source.Contains("CreateSelectablePeopleContent(\"Prospect List\")", StringComparison.Ordinal), "Prospect List should use selectable rows.");
         Assert.True(source.Contains("BuildPlayerDetail", StringComparison.Ordinal), "Player screens should render selected player details.");
         Assert.True(source.Contains("Offer Contract", StringComparison.Ordinal), "Selected players/prospects should expose contract actions when valid.");
         Assert.True(source.Contains("Invite Prospect", StringComparison.Ordinal), "Selected prospects should expose camp invite actions when valid.");
