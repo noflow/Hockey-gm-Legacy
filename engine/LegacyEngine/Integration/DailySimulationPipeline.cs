@@ -63,7 +63,8 @@ public sealed class DailySimulationPipeline
         LegacyEventType.PlayerReleased,
         LegacyEventType.OwnerGoalSet,
         LegacyEventType.BudgetApproved,
-        LegacyEventType.ScoutAssigned
+        LegacyEventType.ScoutAssigned,
+        LegacyEventType.GamePlayed
     ];
 
     public AlphaSimulationResult RunOneDay(EngineRegistry registry, AlphaWorldSnapshot snapshot)

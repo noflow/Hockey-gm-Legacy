@@ -25,6 +25,7 @@ public sealed class RecruitingV2Service
         var relationship = RelationshipWithGm(scenario, recruitPersonId);
         var familyPriorities = BuildFamilyPriorities(recruit);
         var competitors = BuildCompetitors(scenario, recruit).ToArray();
+        var topCompetitor = competitors.OrderByDescending(team => team.InterestStrength).First();
         var decisionStyle = DecideStyle(recruit, person, familyPriorities);
         var currentOffers = recruit.Status == RecruitStatus.Offered
             ? new[] { scenario.Organization.Name }
@@ -55,7 +56,7 @@ public sealed class RecruitingV2Service
             CompetingTeams: competitors,
             WhyTheyAreInterested: WhyInterested(scenario, recruit, relationship),
             WhyTheyMayChooseUs: WhyChooseUs(scenario, recruit, relationship),
-            WhyTheyMayRejectUs: WhyRejectUs(recruit, competitors[0]),
+            WhyTheyMayRejectUs: WhyRejectUs(recruit, topCompetitor),
             PromisesMade: promises,
             GmNotes: scenario.PlayerDossierNotes.GetValueOrDefault(recruitPersonId, "No GM note yet."));
         profile.Validate();

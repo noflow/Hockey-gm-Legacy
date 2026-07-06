@@ -20,7 +20,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -98,7 +98,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.1 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, and player dossiers.",
+            Text = "Alpha 2.5 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, player dossiers, and a basic season loop.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -228,6 +228,9 @@ internal sealed class MainWindow : Window
         AddSelectablePeopleTab(tabs, "Prospect List");
         AddSelectablePeopleTab(tabs, "Training Camp");
         AddTab(tabs, "Season Readiness");
+        AddTab(tabs, "Schedule");
+        AddTab(tabs, "Standings");
+        AddTab(tabs, "Stats");
         AddTab(tabs, "Executive Reports");
         AddTab(tabs, "Relationships");
 
@@ -249,7 +252,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.4 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.5 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -909,6 +912,9 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Prospect List", BuildProspectRows());
         RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
         _tabs["Season Readiness"].Text = BuildSeasonReadiness();
+        _tabs["Schedule"].Text = BuildSchedule();
+        _tabs["Standings"].Text = BuildStandings();
+        _tabs["Stats"].Text = BuildStats();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
         _tabs["Relationships"].Text = BuildRelationships();
         UpdateTabBadges();
@@ -953,6 +959,12 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
+        var nextGame = State.NextGame;
+        metrics.Children.Add(CreateDashboardMetric(
+            "Next Game",
+            nextGame is null ? "None" : nextGame.Date.ToString("yyyy-MM-dd"),
+            nextGame is null ? "Season schedule pending" : DescribeGame(nextGame),
+            false));
         _dashboardPanel.Children.Add(metrics);
 
         var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
@@ -975,6 +987,7 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Head scout", snapshot.Scout.Name);
         AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
         AddLine(summary, "Season readiness", readiness.RosterStatus);
+        AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
         AddLine(summary, "Budget", $"{budget.UsedBudget:C0} used of {budget.TotalBudget:C0}");
         AddParagraph(summary, State.LatestSummary);
         Grid.SetColumn(summaryCard, 1);
@@ -2882,6 +2895,133 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildSchedule()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Schedule");
+        builder.AppendLine("========");
+
+        var schedule = State.ScenarioSnapshot.Schedule;
+        if (schedule is null)
+        {
+            builder.AppendLine("No regular-season schedule has been generated yet.");
+            builder.AppendLine("Complete season readiness and use Begin Season to generate the first schedule.");
+            return builder.ToString();
+        }
+
+        var next = State.NextGame;
+        builder.AppendLine(next is null ? "Next game: none remaining" : $"Next game: {next.Date:yyyy-MM-dd} - {DescribeGame(next)}");
+        builder.AppendLine();
+        builder.AppendLine("Upcoming / Recent Games");
+        builder.AppendLine("-----------------------");
+
+        foreach (var game in schedule.Games
+            .OrderBy(game => Math.Abs(game.Date.DayNumber - State.Snapshot.CurrentDate.DayNumber))
+            .ThenBy(game => game.Date)
+            .ThenBy(game => game.GameId, StringComparer.Ordinal)
+            .Take(40)
+            .OrderBy(game => game.Date)
+            .ThenBy(game => game.GameId, StringComparer.Ordinal))
+        {
+            var result = game.Result is null
+                ? game.Status.ToString()
+                : $"{game.Result.HomeGoals}-{game.Result.AwayGoals}, winner {TeamName(game.Result.WinnerOrganizationId)}";
+            builder.AppendLine($"{game.Date:yyyy-MM-dd} | {TeamName(game.AwayOrganizationId)} at {TeamName(game.HomeOrganizationId)} | {result}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildStandings()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Standings");
+        builder.AppendLine("=========");
+
+        var standings = State.ScenarioSnapshot.Standings;
+        if (standings is null)
+        {
+            builder.AppendLine("Standings will appear after the season schedule is generated.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine("Team                         GP   W   L OTL  PTS   GF   GA");
+        builder.AppendLine("------------------------------------------------------------");
+        foreach (var team in standings.OrderedTeams())
+        {
+            builder.AppendLine($"{team.TeamName,-28} {team.GamesPlayed,2} {team.Wins,3} {team.Losses,3} {team.OvertimeLosses,3} {team.Points,4} {team.GoalsFor,4} {team.GoalsAgainst,4}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildStats()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Stats");
+        builder.AppendLine("=====");
+
+        if (State.ScenarioSnapshot.TeamStats.Count == 0
+            && State.ScenarioSnapshot.PlayerStats.Count == 0
+            && State.ScenarioSnapshot.GoalieStats.Count == 0)
+        {
+            builder.AppendLine("Season stats will appear after the season begins.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine("Team Stats");
+        builder.AppendLine("----------");
+        foreach (var line in State.ScenarioSnapshot.TeamStats.OrderBy(line => line.TeamName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"{line.TeamName,-28} GP {line.GamesPlayed,2}  GF {line.GoalsFor,3}  GA {line.GoalsAgainst,3}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Player Stats");
+        builder.AppendLine("------------");
+        foreach (var line in State.ScenarioSnapshot.PlayerStats
+            .OrderByDescending(line => line.Points)
+            .ThenByDescending(line => line.Goals)
+            .ThenBy(line => line.PlayerName, StringComparer.Ordinal)
+            .Take(30))
+        {
+            builder.AppendLine($"{line.PlayerName,-24} GP {line.GamesPlayed,2}  G {line.Goals,2}  A {line.Assists,2}  PTS {line.Points,2}  +/- {line.PlusMinus,2}  PIM {line.PenaltyMinutes,2}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Goalie Stats");
+        builder.AppendLine("------------");
+        foreach (var line in State.ScenarioSnapshot.GoalieStats.OrderBy(line => line.PlayerName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"{line.PlayerName,-24} GP {line.GamesPlayed,2}  W {line.Wins,2}  L {line.Losses,2}  GA {line.GoalsAgainst,3}  SV {line.Saves,3}  SV% {line.SavePercentage:0.000}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string DescribeGame(ScheduledGame game) =>
+        $"{TeamName(game.AwayOrganizationId)} at {TeamName(game.HomeOrganizationId)}";
+
+    private string TeamName(string organizationId)
+    {
+        if (organizationId == State.ScenarioSnapshot.Organization.OrganizationId)
+        {
+            return State.ScenarioSnapshot.Organization.Name;
+        }
+
+        var standingsName = State.ScenarioSnapshot.Standings?.Teams
+            .FirstOrDefault(team => string.Equals(team.OrganizationId, organizationId, StringComparison.Ordinal))
+            ?.TeamName;
+        if (!string.IsNullOrWhiteSpace(standingsName))
+        {
+            return standingsName;
+        }
+
+        var leagueTeam = SeasonFrameworkService.LeagueTeams(State.ScenarioSnapshot)
+            .FirstOrDefault(team => string.Equals(team.OrganizationId, organizationId, StringComparison.Ordinal));
+        return string.IsNullOrWhiteSpace(leagueTeam.TeamName) ? organizationId : leagueTeam.TeamName;
+    }
+
     private string BuildSeasonReadiness()
     {
         var report = State.SeasonReadinessReport;
@@ -3054,6 +3194,7 @@ internal sealed class AlphaDesktopState
     private readonly StaffOfficeService _staffOffice = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
+    private readonly SeasonFrameworkService _seasonFramework = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
@@ -3099,6 +3240,8 @@ internal sealed class AlphaDesktopState
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
 
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+
+    public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
 
     public int PendingDecisionCount => OpenPendingActions.Count;
 

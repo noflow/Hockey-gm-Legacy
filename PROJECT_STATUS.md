@@ -61,14 +61,15 @@ The five foundation pillars remain:
 - Alpha 2.3 - Recruiting v2
 - Alpha 2.3.1 - Name Generation System + Deduping
 - Alpha 2.4 - Staff Control v2 + Hockey Operations Budget
+- Alpha 2.5 - Season Framework v1
 
 ## Current Milestone
 
-Alpha 2.4 - Staff Control v2 + Hockey Operations Budget
+Alpha 2.5 - Season Framework v1
 
 ## Current Goal
 
-Improve staff management with salary asks, league-driven compensation ranges, staff salary budget impact, release obligations, and owner budget warnings.
+Allow the player to begin a season, advance through a generated schedule, simulate basic game results, and review standings plus team/player/goalie stats.
 
 ## Why Relationship Engine Was Next
 
@@ -78,14 +79,14 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.5 - Opening Week Setup
+Alpha 2.6 - Opening Week Polish
 
 ## Next Milestones
 
-1. Alpha 2.5 - Opening Week Setup
+1. Alpha 2.6 - Opening Week Polish
 
 ## Build Rule
 
-Do not build Godot scenes, Trades, gameplay, schedule generation, save systems, or database persistence yet.
+Do not build Godot scenes, Trades, advanced gameplay simulation, save systems, or database persistence yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

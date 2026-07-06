@@ -38,6 +38,7 @@ var alphaDesktopInteractionTests = new AlphaDesktopInteractionTests();
 var budgetOverviewTests = new BudgetOverviewTests();
 var alpha231DedupHiringTests = new Alpha231DedupHiringTests();
 var alpha24StaffBudgetTests = new Alpha24StaffBudgetTests();
+var alpha25SeasonFrameworkTests = new Alpha25SeasonFrameworkTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -486,6 +487,16 @@ runner.Run("alpha 2.4 league salary ranges differ", alpha24StaffBudgetTests.Leag
 runner.Run("alpha 2.4 relationship chemistry warning can appear", alpha24StaffBudgetTests.RelationshipChemistryWarningCanAppear);
 runner.Run("alpha 2.4 AlphaDesktop exposes hockey operations budget", alpha24StaffBudgetTests.AlphaDesktopExposesHockeyOperationsBudget);
 runner.Run("alpha 2.4 no Godot save or game simulation added", alpha24StaffBudgetTests.NoGodotSaveOrGameSimulationAdded);
+runner.Run("alpha 2.5 schedule generated", alpha25SeasonFrameworkTests.ScheduleGenerated);
+runner.Run("alpha 2.5 games have dates home and away", alpha25SeasonFrameworkTests.GamesHaveDatesHomeAndAway);
+runner.Run("alpha 2.5 game sim creates result", alpha25SeasonFrameworkTests.GameSimCreatesResult);
+runner.Run("alpha 2.5 standings update", alpha25SeasonFrameworkTests.StandingsUpdate);
+runner.Run("alpha 2.5 player stats update", alpha25SeasonFrameworkTests.PlayerStatsUpdate);
+runner.Run("alpha 2.5 goalie stats update", alpha25SeasonFrameworkTests.GoalieStatsUpdate);
+runner.Run("alpha 2.5 daily pipeline simulates scheduled games", alpha25SeasonFrameworkTests.DailyPipelineSimulatesScheduledGames);
+runner.Run("alpha 2.5 inbox game recap generated", alpha25SeasonFrameworkTests.InboxGameRecapGenerated);
+runner.Run("alpha 2.5 AlphaDesktop exposes schedule standings and stats", alpha25SeasonFrameworkTests.AlphaDesktopExposesScheduleStandingsAndStats);
+runner.Run("alpha 2.5 no Godot save or full 3D simulation added", alpha25SeasonFrameworkTests.SeasonFrameworkHasNoGodotSaveOrFull3DSimulation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

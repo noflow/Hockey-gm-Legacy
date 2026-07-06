@@ -48,6 +48,16 @@ public sealed record NewGmScenarioSnapshot(
 
     public ExecutiveReportArchive ExecutiveReports { get; init; } = ExecutiveReportArchive.Empty;
 
+    public GameSchedule? Schedule { get; init; }
+
+    public StandingsTable? Standings { get; init; }
+
+    public IReadOnlyList<TeamSeasonStatLine> TeamStats { get; init; } = Array.Empty<TeamSeasonStatLine>();
+
+    public IReadOnlyList<PlayerSeasonStatLine> PlayerStats { get; init; } = Array.Empty<PlayerSeasonStatLine>();
+
+    public IReadOnlyList<GoalieSeasonStatLine> GoalieStats { get; init; } = Array.Empty<GoalieSeasonStatLine>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -132,5 +142,22 @@ public sealed record NewGmScenarioSnapshot(
 
         SeasonReadiness.Validate();
         ExecutiveReports.Validate();
+        Schedule?.Validate();
+        Standings?.Validate();
+
+        foreach (var stat in TeamStats)
+        {
+            stat.Validate();
+        }
+
+        foreach (var stat in PlayerStats)
+        {
+            stat.Validate();
+        }
+
+        foreach (var stat in GoalieStats)
+        {
+            stat.Validate();
+        }
     }
 }

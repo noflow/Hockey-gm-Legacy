@@ -94,6 +94,7 @@ public sealed class SeasonReadinessService
             AlphaSnapshot = alphaSnapshot,
             SeasonReadiness = scenario.SeasonReadiness with { SeasonBegun = true }
         };
+        updated = new SeasonFrameworkService().EnsureSeasonFramework(registry, updated);
 
         var reportResult = new ExecutiveReportService().GenerateFrontOfficeReadinessReport(registry, updated);
         var finalScenario = reportResult.Success ? reportResult.ScenarioSnapshot : updated;
