@@ -17,7 +17,8 @@ public sealed class InboxManager
             Category: Categorize(item),
             Status: InboxMessageStatus.Unread,
             IsPinned: item.Severity is LegacyEventSeverity.Warning or LegacyEventSeverity.Critical,
-            ReplyAvailable: CanReply(item));
+            ReplyAvailable: CanReply(item),
+            Priority: PriorityFor(item));
         message.Validate();
 
         var existingIndex = _messages.FindIndex(existing => existing.InboxItemId == message.InboxItemId);
@@ -61,8 +62,8 @@ public sealed class InboxManager
             InboxMessageAction.MarkUnread => current with { Status = InboxMessageStatus.Unread },
             InboxMessageAction.Archive => current with { Status = InboxMessageStatus.Archived },
             InboxMessageAction.Delete => current with { Status = InboxMessageStatus.Deleted },
-            InboxMessageAction.Pin => current with { IsPinned = true },
-            InboxMessageAction.Unpin => current with { IsPinned = false },
+            InboxMessageAction.Pin => current with { IsPinned = true, Priority = InboxPriority.Urgent },
+            InboxMessageAction.Unpin => current with { IsPinned = false, Priority = PriorityFor(current.Item) },
             _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported inbox action.")
         };
         updated.Validate();
@@ -130,8 +131,27 @@ public sealed class InboxManager
             LegacyEventType.PlayerInjured or LegacyEventType.PlayerRecovered or LegacyEventType.InjuryReAggravated or LegacyEventType.InjuryCareerThreatening or LegacyEventType.PlayerMovedToInjuredReserve => InboxCategory.Medical,
             LegacyEventType.ContractOffered or LegacyEventType.ContractSigned or LegacyEventType.ContractRejected or LegacyEventType.ContractTerminated => InboxCategory.Contracts,
             LegacyEventType.DraftStarted or LegacyEventType.PlayerDrafted or LegacyEventType.DraftCompleted or LegacyEventType.DraftRecapCreated or LegacyEventType.DraftBoardChanged or LegacyEventType.OwnerDraftReaction or LegacyEventType.DraftOpened or LegacyEventType.DraftClosed or LegacyEventType.ProspectDecisionMade or LegacyEventType.ProspectContractOffered or LegacyEventType.ProspectSigned or LegacyEventType.ProspectInvitedToCamp or LegacyEventType.ProspectReturned or LegacyEventType.ProspectAssignedToAffiliate or LegacyEventType.ProspectRightsReleased => InboxCategory.Draft,
-            LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.OpeningRosterValidated or LegacyEventType.OpeningRosterRejected or LegacyEventType.SeasonReady or LegacyEventType.FrontOfficeReadinessReportCreated or LegacyEventType.EndOfSeasonExecutiveReviewCreated or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded => InboxCategory.League,
+            LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.OpeningRosterValidated or LegacyEventType.OpeningRosterRejected or LegacyEventType.SeasonReady or LegacyEventType.FrontOfficeReadinessReportCreated or LegacyEventType.EndOfSeasonExecutiveReviewCreated or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded or LegacyEventType.MonthlyGmSummaryCreated => InboxCategory.League,
             _ => CategorizeByText(item)
+        };
+
+    public static InboxPriority PriorityFor(AlphaInboxItem item) =>
+        item.Severity switch
+        {
+            LegacyEventSeverity.Critical => InboxPriority.Urgent,
+            LegacyEventSeverity.Warning => InboxPriority.Important,
+            _ => item.EventType switch
+            {
+                LegacyEventType.PlayerInjured
+                    or LegacyEventType.OpeningRosterRejected
+                    or LegacyEventType.PendingGmActionCreated => InboxPriority.Urgent,
+                LegacyEventType.MonthlyGmSummaryCreated
+                    or LegacyEventType.GamePlayed
+                    or LegacyEventType.ScoutAssignmentCompleted
+                    or LegacyEventType.EndOfSeasonExecutiveReviewCreated => InboxPriority.Important,
+                LegacyEventType.PlayerDevelopmentUpdated => InboxPriority.Low,
+                _ => InboxPriority.Normal
+            }
         };
 
     private static InboxCategory CategorizeByText(AlphaInboxItem item)
@@ -185,8 +205,10 @@ public sealed class InboxManager
     private static IReadOnlyList<InboxMessage> Ordered(IEnumerable<InboxMessage> messages, bool includeDeleted) =>
         messages
             .Where(message => includeDeleted || !message.IsDeleted)
-            .OrderByDescending(message => message.IsPinned)
+            .OrderByDescending(message => message.Priority)
+            .ThenByDescending(message => message.IsUnread)
             .ThenByDescending(message => message.Item.Date)
+            .ThenByDescending(message => message.IsPinned)
             .ThenBy(message => message.InboxItemId, StringComparer.Ordinal)
             .ToArray();
 }

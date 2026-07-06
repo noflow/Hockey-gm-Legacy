@@ -40,6 +40,7 @@ var alpha231DedupHiringTests = new Alpha231DedupHiringTests();
 var alpha24StaffBudgetTests = new Alpha24StaffBudgetTests();
 var alpha25SeasonFrameworkTests = new Alpha25SeasonFrameworkTests();
 var alpha26GameRecapStatsPolishTests = new Alpha26GameRecapStatsPolishTests();
+var alpha27FirstMonthPlayabilityTests = new Alpha27FirstMonthPlayabilityTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -511,6 +512,19 @@ runner.Run("alpha 2.6 upcoming games shown", alpha26GameRecapStatsPolishTests.Up
 runner.Run("alpha 2.6 dashboard shows last game next game and record", alpha26GameRecapStatsPolishTests.DashboardShowsLastGameNextGameAndRecord);
 runner.Run("alpha 2.6 recap does not expose hidden ratings", alpha26GameRecapStatsPolishTests.RecapDoesNotExposeHiddenRatings);
 runner.Run("alpha 2.6 no Godot save or full tactical simulation added", alpha26GameRecapStatsPolishTests.GameRecapPolishHasNoGodotSaveOrFullTacticalSimulation);
+runner.Run("alpha 2.7 advance to next game stops on player game", alpha27FirstMonthPlayabilityTests.AdvanceToNextGameStopsOnPlayerGame);
+runner.Run("alpha 2.7 advance to month end stops at monthly report", alpha27FirstMonthPlayabilityTests.AdvanceToMonthEndStopsAtMonthlyReport);
+runner.Run("alpha 2.7 advance stops on injury", alpha27FirstMonthPlayabilityTests.AdvanceStopsOnInjury);
+runner.Run("alpha 2.7 advance stops on urgent pending action", alpha27FirstMonthPlayabilityTests.AdvanceStopsOnUrgentPendingAction);
+runner.Run("alpha 2.7 monthly summary generated", alpha27FirstMonthPlayabilityTests.MonthlySummaryGenerated);
+runner.Run("alpha 2.7 monthly summary includes record", alpha27FirstMonthPlayabilityTests.MonthlySummaryIncludesRecord);
+runner.Run("alpha 2.7 monthly summary includes required sections", alpha27FirstMonthPlayabilityTests.MonthlySummaryIncludesRequiredSections);
+runner.Run("alpha 2.7 monthly summary inbox created once", alpha27FirstMonthPlayabilityTests.MonthlySummaryInboxCreatedOnce);
+runner.Run("alpha 2.7 routine development does not spam inbox", alpha27FirstMonthPlayabilityTests.RoutineDevelopmentDoesNotSpamInbox);
+runner.Run("alpha 2.7 league-wide games do not spam inbox", alpha27FirstMonthPlayabilityTests.LeagueWideGamesDoNotSpamInbox);
+runner.Run("alpha 2.7 inbox priority sorting works", alpha27FirstMonthPlayabilityTests.InboxPrioritySortingWorks);
+runner.Run("alpha 2.7 dashboard exposes advance controls and summary counts", alpha27FirstMonthPlayabilityTests.DashboardExposesAdvanceControlsAndSummaryCounts);
+runner.Run("alpha 2.7 no Godot save or full tactical simulation added", alpha27FirstMonthPlayabilityTests.FirstMonthPassHasNoGodotSaveOrFullTacticalSimulation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

@@ -97,5 +97,6 @@ public enum LegacyEventType
     GamePlayed,
     SeasonStarted,
     SeasonEnded,
+    MonthlyGmSummaryCreated,
     Generic
 }

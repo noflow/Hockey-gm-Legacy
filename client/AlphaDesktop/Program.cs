@@ -20,7 +20,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -98,7 +98,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.6 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, player dossiers, a basic season loop, and readable game recaps.",
+            Text = "Alpha 2.7 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, player dossiers, a basic season loop, readable game recaps, and first-month pacing.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -231,6 +231,7 @@ internal sealed class MainWindow : Window
         AddTab(tabs, "Schedule");
         AddTab(tabs, "Standings");
         AddTab(tabs, "Stats");
+        AddTab(tabs, "Monthly Summary");
         AddTab(tabs, "Executive Reports");
         AddTab(tabs, "Relationships");
 
@@ -252,7 +253,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.6 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.7 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -280,7 +281,9 @@ internal sealed class MainWindow : Window
         };
 
         buttonPanel.Children.Add(CreateButton("Advance Day", () => Advance(1)));
-        buttonPanel.Children.Add(CreateButton("Advance 7 Days", () => Advance(7)));
+        buttonPanel.Children.Add(CreateButton("Advance Week", () => Advance(7)));
+        buttonPanel.Children.Add(CreateButton("To Next Game", AdvanceToNextGame));
+        buttonPanel.Children.Add(CreateButton("To Month End", AdvanceToMonthEnd));
         buttonPanel.Children.Add(CreateButton("Approve Pending", ApprovePendingAction));
         buttonPanel.Children.Add(CreateButton("Decline Pending", DeclinePendingAction));
         buttonPanel.Children.Add(CreateButton("Reviews", GenerateSeasonReadinessReviews));
@@ -608,6 +611,10 @@ internal sealed class MainWindow : Window
 
     private void Advance(int days) => State.Advance(days);
 
+    private void AdvanceToNextGame() => State.AdvanceToNextGame();
+
+    private void AdvanceToMonthEnd() => State.AdvanceToMonthEnd();
+
     private void MoveDraftBoardPlayerUp() => State.MoveDraftBoardPlayer(direction: -1);
 
     private void MoveDraftBoardPlayerDown() => State.MoveDraftBoardPlayer(direction: 1);
@@ -915,6 +922,7 @@ internal sealed class MainWindow : Window
         _tabs["Schedule"].Text = BuildSchedule();
         _tabs["Standings"].Text = BuildStandings();
         _tabs["Stats"].Text = BuildStats();
+        _tabs["Monthly Summary"].Text = BuildMonthlySummary();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
         _tabs["Relationships"].Text = BuildRelationships();
         UpdateTabBadges();
@@ -956,6 +964,7 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Training Camp", State.TrainingCampCountdownText, State.TrainingCampStatusText, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Inbox Unread", State.UnreadInboxCount.ToString(), "messages needing review", State.UnreadInboxCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Urgent Decisions", State.UrgentPendingDecisionCount.ToString(), State.NextDecisionDeadlineText, State.UrgentPendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
@@ -973,6 +982,7 @@ internal sealed class MainWindow : Window
             lastGame is null ? "No completed game yet" : lastGame.NarrativeSummary,
             lastGame is not null && lastGame.WinnerOrganizationId != State.ScenarioSnapshot.Organization.OrganizationId));
         metrics.Children.Add(CreateDashboardMetric("Team Record", record, "regular season", false));
+        metrics.Children.Add(CreateDashboardMetric("Standings Rank", State.StandingsRankText, "league table", false));
         _dashboardPanel.Children.Add(metrics);
 
         var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
@@ -982,7 +992,9 @@ internal sealed class MainWindow : Window
         var actionsCard = CreateDashboardCard("Quick Actions", out var actions);
         AddActions(actions,
             CreateDetailButton("Advance Day", () => Advance(1)),
-            CreateDetailButton("Advance 7 Days", () => Advance(7)),
+            CreateDetailButton("Advance Week", () => Advance(7)),
+            CreateDetailButton("Advance to Next Game", AdvanceToNextGame),
+            CreateDetailButton("Advance to Month End", AdvanceToMonthEnd),
             CreateDetailButton("Review Inbox", () => SelectTab("Inbox")),
             CreateDetailButton("Review Draft Board", () => SelectTab(State.IsDraftUiEnabled ? "Draft Board" : "Scouting")),
             CreateDetailButton("Review Pending Actions", () => SelectTab("Pending Actions")));
@@ -998,6 +1010,14 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Last game", lastGame is null ? "No completed game" : lastGame.BoxScore.FinalScore);
         AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
         AddLine(summary, "Team record", record);
+        AddLine(summary, "Standings rank", State.StandingsRankText);
+        AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
+        AddLine(summary, "Next stop reason", State.LastStopReason);
+        if (State.LatestMonthlySummary is not null)
+        {
+            AddLine(summary, "Monthly summary", $"{State.LatestMonthlySummary.MonthName}: {State.LatestMonthlySummary.TeamRecordForMonth}");
+            AddParagraph(summary, State.LatestMonthlySummary.ExecutiveNarrative);
+        }
         AddLine(summary, "Budget", $"{budget.UsedBudget:C0} used of {budget.TotalBudget:C0}");
         AddParagraph(summary, State.LatestSummary);
         Grid.SetColumn(summaryCard, 1);
@@ -2661,6 +2681,7 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  Created: {action.CreatedOn:yyyy-MM-dd}");
             builder.AppendLine($"  Reason: {action.Reason}");
             builder.AppendLine($"  Recommended action: {action.RecommendedAction}");
+            builder.AppendLine($"  Consequence: {PendingActionConsequence(action)}");
             builder.AppendLine($"  Approve button: approves only this kind of pending action; Decline button makes no roster/contract change.");
             builder.AppendLine();
         }
@@ -2674,6 +2695,18 @@ internal sealed class MainWindow : Window
 
         return builder.ToString();
     }
+
+    private static string PendingActionConsequence(PendingGmAction action) =>
+        action.ActionType switch
+        {
+            PendingGmActionType.SignRecruit or PendingGmActionType.SignDraftPick => "Approve signing or the player remains unsigned.",
+            PendingGmActionType.AddToRoster => "Resolve roster issue before the next game.",
+            PendingGmActionType.ReleasePlayer or PendingGmActionType.CutPlayer => "Declining keeps the player in the current roster/camp state.",
+            PendingGmActionType.AssignToAffiliate or PendingGmActionType.ReturnToParent => "Declining keeps the player in your current decision queue.",
+            PendingGmActionType.ApproveContract => "Approve contract or negotiation remains unresolved.",
+            PendingGmActionType.DeclineContract => "Decline contract only if you are ready to move on.",
+            _ => "No automatic change will happen without GM approval."
+        };
 
     private string BuildDraftBoard()
     {
@@ -3062,6 +3095,56 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildMonthlySummary()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Monthly GM Summaries");
+        builder.AppendLine("====================");
+
+        if (State.ScenarioSnapshot.MonthlySummaries.Count == 0)
+        {
+            builder.AppendLine("No monthly summaries yet. Use Advance to Month End once the season is underway.");
+            return builder.ToString();
+        }
+
+        foreach (var summary in State.ScenarioSnapshot.MonthlySummaries
+            .OrderByDescending(summary => summary.Year)
+            .ThenByDescending(summary => summary.Month))
+        {
+            builder.AppendLine($"{summary.MonthName} {summary.Year}");
+            builder.AppendLine($"  Month record: {summary.TeamRecordForMonth}");
+            builder.AppendLine($"  Overall record: {summary.OverallRecord}");
+            builder.AppendLine($"  Standings: {summary.StandingsPosition}");
+            builder.AppendLine($"  Best player: {summary.BestPlayer}");
+            builder.AppendLine($"  Struggling player: {summary.StrugglingPlayer}");
+            builder.AppendLine($"  Top goalie: {summary.TopGoalie}");
+            builder.AppendLine($"  Injury concern: {summary.BiggestInjuryConcern}");
+            builder.AppendLine($"  Owner mood: {summary.OwnerMood}");
+            builder.AppendLine($"  Coach concern: {summary.CoachConcern}");
+            builder.AppendLine($"  Scout update: {summary.HeadScoutUpdate}");
+            builder.AppendLine($"  Development: {summary.DevelopmentUpdate}");
+            builder.AppendLine($"  Roster: {summary.RosterWarning}");
+            builder.AppendLine($"  Budget: {summary.BudgetStatus}");
+            builder.AppendLine($"  Scouting reports: {summary.ScoutingReportsCompleted}");
+            builder.AppendLine($"  Pending GM actions: {summary.PendingGmActions}");
+            builder.AppendLine();
+            builder.AppendLine(summary.ExecutiveNarrative);
+            builder.AppendLine();
+            foreach (var section in summary.Sections)
+            {
+                builder.AppendLine(section.Title);
+                foreach (var line in section.Lines)
+                {
+                    builder.AppendLine($"  - {line}");
+                }
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
     private void AppendScheduleGames(StringBuilder builder, IReadOnlyList<ScheduledGame> games, bool includeResult)
     {
         if (games.Count == 0)
@@ -3300,6 +3383,7 @@ internal sealed class AlphaDesktopState
     private readonly SeasonFrameworkService _seasonFramework = new();
     private readonly GameRecapService _gameRecaps = new();
     private readonly SeasonStatsPolishService _statsPolish = new();
+    private readonly FirstMonthAdvanceService _firstMonthAdvance = new();
     private readonly EngineRegistry _registry;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
@@ -3366,6 +3450,47 @@ internal sealed class AlphaDesktopState
             return standing is null ? "0-0-0" : $"{standing.Wins}-{standing.Losses}-{standing.OvertimeLosses}, {standing.Points} pts";
         }
     }
+
+    public int UrgentPendingDecisionCount => FirstMonthAdvanceService.UrgentPendingActions(ScenarioSnapshot).Count;
+
+    public string NextDecisionDeadlineText
+    {
+        get
+        {
+            var urgent = FirstMonthAdvanceService.UrgentPendingActions(ScenarioSnapshot).FirstOrDefault();
+            if (urgent is not null)
+            {
+                return $"{urgent.PersonName}: {urgent.RecommendedAction}";
+            }
+
+            var open = OpenPendingActions.FirstOrDefault();
+            return open is null ? "no immediate deadline" : $"{open.PersonName}: {open.RecommendedAction}";
+        }
+    }
+
+    public string StandingsRankText
+    {
+        get
+        {
+            if (ScenarioSnapshot.Standings is null)
+            {
+                return "n/a";
+            }
+
+            var ranked = ScenarioSnapshot.Standings.OrderedTeams()
+                .Select((team, index) => new { Team = team, Rank = index + 1 })
+                .FirstOrDefault(item => item.Team.OrganizationId == ScenarioSnapshot.Organization.OrganizationId);
+            return ranked is null ? "n/a" : $"{ranked.Rank}/{ScenarioSnapshot.Standings.Teams.Count}";
+        }
+    }
+
+    public MonthlyGmSummary? LatestMonthlySummary =>
+        ScenarioSnapshot.MonthlySummaries
+            .OrderByDescending(summary => summary.Year)
+            .ThenByDescending(summary => summary.Month)
+            .FirstOrDefault();
+
+    public string LastStopReason { get; private set; } = "No advance pause yet.";
 
     public int PendingDecisionCount => OpenPendingActions.Count;
 
@@ -3481,29 +3606,14 @@ internal sealed class AlphaDesktopState
             throw new ArgumentOutOfRangeException(nameof(days), "Advance days must be positive.");
         }
 
-        var totalProcessed = 0;
-        var newInboxItems = new List<AlphaInboxItem>();
-        AlphaSimulationResult? latest = null;
-
-        for (var day = 0; day < days; day++)
-        {
-            var scenarioResult = _coordinator.AdvanceScenarioOneDay(_registry, ScenarioSnapshot);
-            latest = scenarioResult.SimulationResult;
-            ScenarioSnapshot = scenarioResult.ScenarioSnapshot;
-            Snapshot = ScenarioSnapshot.AlphaSnapshot;
-            EnsureSelectedDossierStillExists();
-            totalProcessed += latest.ProcessedEventCount;
-            newInboxItems.AddRange(scenarioResult.InboxItems);
-        }
-
-        InboxManager.AddRange(newInboxItems);
-        LastProcessedEventCount = totalProcessed;
-        LatestSummary = latest is null
-            ? "No simulation result was produced."
-            : days == 1
-                ? latest.Summary
-                : $"Advanced {Snapshot.WorldState.WorldName} over {days} days; processed {totalProcessed} event(s), created {newInboxItems.Count} inbox item(s), and ended on {Snapshot.CurrentDate:yyyy-MM-dd}.";
+        ApplyAdvanceResult(_firstMonthAdvance.AdvanceDays(_registry, ScenarioSnapshot, days));
     }
+
+    public void AdvanceToNextGame() =>
+        ApplyAdvanceResult(_firstMonthAdvance.AdvanceToNextGame(_registry, ScenarioSnapshot));
+
+    public void AdvanceToMonthEnd() =>
+        ApplyAdvanceResult(_firstMonthAdvance.AdvanceToMonthEnd(_registry, ScenarioSnapshot));
 
     public void MoveDraftBoardPlayer(int direction)
     {
@@ -4708,6 +4818,21 @@ internal sealed class AlphaDesktopState
         InboxManager.AddRange(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
+    }
+
+    private void ApplyAdvanceResult(FirstMonthAdvanceResult result)
+    {
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        EnsureSelectedDossierStillExists();
+        InboxManager.AddRange(result.InboxItems);
+        LastProcessedEventCount = result.ProcessedEventCount;
+        LastStopReason = result.StopReason;
+        LatestSummary = result.MonthlySummary is not null
+            ? $"{result.StopReason} {result.MonthlySummary.ExecutiveNarrative}"
+            : result.DaysAdvanced == 0
+                ? result.StopReason
+                : $"{result.StopReason} Advanced {result.DaysAdvanced} day(s), processed {result.ProcessedEventCount} event(s), and created {result.InboxItems.Count} inbox item(s).";
     }
 
     private void ApplyRecruitingV2(RecruitingV2Result result)

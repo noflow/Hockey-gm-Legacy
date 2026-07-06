@@ -63,14 +63,15 @@ The five foundation pillars remain:
 - Alpha 2.4 - Staff Control v2 + Hockey Operations Budget
 - Alpha 2.5 - Season Framework v1
 - Alpha 2.6 - Game Recap + Stats Polish
+- Alpha 2.7 - First Month Playability Pass
 
 ## Current Milestone
 
-Alpha 2.6 - Game Recap + Stats Polish
+Alpha 2.7 - First Month Playability Pass
 
 ## Current Goal
 
-Make simulated games easier to understand with boxscore-style recaps, improved post-game inbox summaries, recent/upcoming schedule context, team record, and useful team/skater/goalie leaders.
+Make the first month easier to play by adding smarter time-advance options, clear stop reasons, priority inbox ordering, dashboard decision counts, and monthly GM summaries.
 
 ## Why Relationship Engine Was Next
 
@@ -80,11 +81,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.7 - Opening Week Decisions
+Alpha 2.8 - Deeper First-Month Decisions
 
 ## Next Milestones
 
-1. Alpha 2.7 - Opening Week Decisions
+1. Alpha 2.8 - Deeper First-Month Decisions
 
 ## Build Rule
 

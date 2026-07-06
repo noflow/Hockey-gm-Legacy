@@ -60,6 +60,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<GameRecap> GameRecaps { get; init; } = Array.Empty<GameRecap>();
 
+    public IReadOnlyList<MonthlyGmSummary> MonthlySummaries { get; init; } = Array.Empty<MonthlyGmSummary>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -165,6 +167,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var recap in GameRecaps)
         {
             recap.Validate();
+        }
+
+        foreach (var summary in MonthlySummaries)
+        {
+            summary.Validate();
         }
     }
 }

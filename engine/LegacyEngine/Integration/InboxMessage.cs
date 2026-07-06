@@ -7,7 +7,8 @@ public sealed record InboxMessage(
     InboxCategory Category,
     InboxMessageStatus Status,
     bool IsPinned,
-    bool ReplyAvailable = false)
+    bool ReplyAvailable = false,
+    InboxPriority Priority = InboxPriority.Normal)
 {
     public string InboxItemId => Item.InboxItemId;
 
@@ -19,6 +20,7 @@ public sealed record InboxMessage(
 
     public bool IsImportant =>
         IsPinned
+        || Priority is InboxPriority.Important or InboxPriority.Urgent
         || Item.Severity is LegacyEventSeverity.Warning or LegacyEventSeverity.Critical;
 
     public void Validate()
