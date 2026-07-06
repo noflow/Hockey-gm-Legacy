@@ -68,14 +68,15 @@ The five foundation pillars remain:
 - Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire
 - Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix
 - Alpha 2.8 - GM Office Navigation Redesign
+- Alpha 2.9 - Action Center & Daily Workflow UI
 
 ## Current Milestone
 
-Alpha 2.8 - GM Office Navigation Redesign
+Alpha 2.9 - Action Center & Daily Workflow UI
 
 ## Current Goal
 
-Replace the crowded tab-heavy AlphaDesktop layout with a cleaner GM Office workspace while preserving existing GM functions.
+Make the AlphaDesktop dashboard answer "What should I do today?" by aggregating pending decisions, urgent inbox items, roster warnings, staff vacancies, budget issues, scouting completions, upcoming games, medical issues, and season readiness into a focused Action Center.
 
 ## Why Relationship Engine Was Next
 
@@ -85,11 +86,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 2.9 - TBD
+Alpha 3.0 - TBD
 
 ## Next Milestones
 
-1. Alpha 2.9 - TBD
+1. Alpha 3.0 - TBD
 
 ## Build Rule
 

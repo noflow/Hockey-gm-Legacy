@@ -22,7 +22,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -59,8 +59,14 @@ internal sealed class MainWindow : Window
     private CheckBox? _pinnedOnlyFilter;
     private CheckBox? _importantOnlyFilter;
     private ComboBox? _sortOrderFilter;
+    private ListBox? _actionCenterList;
+    private StackPanel? _actionCenterDetail;
+    private ComboBox? _actionCategoryFilter;
+    private ComboBox? _actionPriorityFilter;
+    private ComboBox? _actionStatusFilter;
     private InboxCategory _selectedInboxCategory = InboxCategory.All;
     private string? _selectedInboxItemId;
+    private string? _selectedActionCenterItemId;
     private readonly TextBox _firstNameInput = new() { Text = "Jordan" };
     private readonly TextBox _lastNameInput = new() { Text = "Hayes" };
     private readonly TextBox _preferredNameInput = new() { Text = "Jordan" };
@@ -102,7 +108,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.8 starts with your created GM inside a cleaner GM Office workspace.",
+            Text = "Alpha 2.9 starts with your created GM inside a cleaner GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -219,7 +225,7 @@ internal sealed class MainWindow : Window
         AddWorkspaceTab(tabs, "Dashboard", new[]
         {
             new WorkspaceScreen("Dashboard", CreateDashboardContent()),
-            new WorkspaceScreen("Action Center / Pending Decisions", CreateTextScreen("Pending Actions"))
+            new WorkspaceScreen("Action Center / Pending Decisions", BuildActionCenterLayout())
         });
 
         AddWorkspaceTab(tabs, "Inbox", new[]
@@ -294,7 +300,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.8 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 2.9 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -726,6 +732,167 @@ internal sealed class MainWindow : Window
         return panel;
     }
 
+    private UIElement BuildActionCenterLayout()
+    {
+        var root = new Grid { Background = Brushes.White };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var filters = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(14, 10, 14, 10)
+        };
+        _actionCategoryFilter = CreateActionFilter(Enum.GetNames<ActionCenterCategory>().Prepend("All").ToArray());
+        _actionPriorityFilter = CreateActionFilter(Enum.GetNames<ActionCenterPriority>().Prepend("All").ToArray());
+        _actionStatusFilter = CreateActionFilter(Enum.GetNames<ActionCenterStatus>().Prepend("Open").Prepend("All").Distinct().ToArray());
+        _actionStatusFilter.SelectedItem = "Open";
+        filters.Children.Add(LabeledControl("Category", _actionCategoryFilter));
+        filters.Children.Add(LabeledControl("Priority", _actionPriorityFilter));
+        filters.Children.Add(LabeledControl("Status", _actionStatusFilter));
+        Grid.SetRow(filters, 0);
+        Grid.SetColumnSpan(filters, 2);
+        root.Children.Add(filters);
+
+        _actionCenterList = new ListBox
+        {
+            BorderThickness = new Thickness(0, 1, 1, 0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
+            Background = new SolidColorBrush(Color.FromRgb(248, 250, 253)),
+            Padding = new Thickness(8),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        _actionCenterList.SelectionChanged += (_, _) =>
+        {
+            if (_actionCenterList.SelectedItem is ActionCenterItem item)
+            {
+                _selectedActionCenterItemId = item.ActionCenterItemId;
+                RenderActionCenterDetail(item);
+            }
+        };
+
+        _actionCenterDetail = new StackPanel { Margin = new Thickness(18) };
+        var detailScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = _actionCenterDetail
+        };
+
+        Grid.SetRow(_actionCenterList, 1);
+        Grid.SetColumn(_actionCenterList, 0);
+        Grid.SetRow(detailScroll, 1);
+        Grid.SetColumn(detailScroll, 1);
+        root.Children.Add(_actionCenterList);
+        root.Children.Add(detailScroll);
+        return root;
+    }
+
+    private ComboBox CreateActionFilter(string[] items)
+    {
+        var combo = new ComboBox
+        {
+            ItemsSource = items,
+            SelectedIndex = 0,
+            MinWidth = 135,
+            MinHeight = 30,
+            Margin = new Thickness(0, 0, 8, 8)
+        };
+        combo.SelectionChanged += (_, _) => RefreshActionCenter();
+        return combo;
+    }
+
+    private void RefreshActionCenter()
+    {
+        if (_actionCenterList is null)
+        {
+            return;
+        }
+
+        var rows = FilterActionCenterItems().ToArray();
+        var previous = _selectedActionCenterItemId;
+        _actionCenterList.ItemsSource = null;
+        _actionCenterList.ItemsSource = rows;
+
+        var selected = rows.FirstOrDefault(item => item.ActionCenterItemId == previous)
+            ?? rows.FirstOrDefault();
+        _actionCenterList.SelectedItem = selected;
+        _selectedActionCenterItemId = selected?.ActionCenterItemId;
+        RenderActionCenterDetail(selected);
+    }
+
+    private IReadOnlyList<ActionCenterItem> FilterActionCenterItems()
+    {
+        var items = State.ActionCenterItems.AsEnumerable();
+        var category = _actionCategoryFilter?.SelectedItem?.ToString();
+        if (!string.IsNullOrWhiteSpace(category) && category != "All" && Enum.TryParse<ActionCenterCategory>(category, out var selectedCategory))
+        {
+            items = items.Where(item => item.Category == selectedCategory);
+        }
+
+        var priority = _actionPriorityFilter?.SelectedItem?.ToString();
+        if (!string.IsNullOrWhiteSpace(priority) && priority != "All" && Enum.TryParse<ActionCenterPriority>(priority, out var selectedPriority))
+        {
+            items = items.Where(item => item.Priority == selectedPriority);
+        }
+
+        var status = _actionStatusFilter?.SelectedItem?.ToString();
+        if (!string.IsNullOrWhiteSpace(status) && status != "All" && Enum.TryParse<ActionCenterStatus>(status, out var selectedStatus))
+        {
+            items = items.Where(item => item.Status == selectedStatus);
+        }
+
+        return items.ToArray();
+    }
+
+    private void RenderActionCenterDetail(ActionCenterItem? item)
+    {
+        if (_actionCenterDetail is null)
+        {
+            return;
+        }
+
+        _actionCenterDetail.Children.Clear();
+        if (item is null)
+        {
+            _actionCenterDetail.Children.Add(new TextBlock
+            {
+                Text = "No action selected.",
+                Foreground = new SolidColorBrush(Color.FromRgb(92, 106, 122))
+            });
+            return;
+        }
+
+        var panel = CreateDetailPanel(item.Title, $"{item.Priority} | {item.Category} | {item.Status}");
+        _actionCenterDetail.Children.Add(panel);
+        AddLine(panel, "Due date", item.DueDate?.ToString("yyyy-MM-dd") ?? "none");
+        AddLine(panel, "Related person", item.RelatedPersonName ?? "none");
+        AddLine(panel, "Related team", item.RelatedTeamName ?? "none");
+        AddSubHeader(panel, "Reason");
+        AddParagraph(panel, item.Reason);
+        AddSubHeader(panel, "Consequence");
+        AddParagraph(panel, item.Consequence);
+        AddSubHeader(panel, "Recommended Action");
+        AddParagraph(panel, item.RecommendedAction);
+        AddActions(panel,
+            CreateDetailButton("Go To Related Screen", () => GoToActionRelatedScreen(item)),
+            CreateDetailButton("Mark Resolved", () => State.SetActionCenterStatus(item.ActionCenterItemId, ActionCenterStatus.Resolved)),
+            CreateDetailButton("Defer", () => State.SetActionCenterStatus(item.ActionCenterItemId, ActionCenterStatus.Deferred)),
+            CreateDetailButton("Dismiss", () => State.SetActionCenterStatus(item.ActionCenterItemId, ActionCenterStatus.Dismissed)));
+    }
+
+    private void GoToActionRelatedScreen(ActionCenterItem item)
+    {
+        SelectTab(item.Category switch
+        {
+            ActionCenterCategory.Contracts or ActionCenterCategory.Roster or ActionCenterCategory.Recruiting or ActionCenterCategory.Scouting or ActionCenterCategory.Medical or ActionCenterCategory.GameDay => "Hockey Operations",
+            ActionCenterCategory.Staff or ActionCenterCategory.Owner or ActionCenterCategory.Budget => "Organization",
+            ActionCenterCategory.League => "Season",
+            _ => "Dashboard"
+        });
+    }
+
     private CheckBox CreateFilterBox(string text)
     {
         var box = new CheckBox
@@ -1036,6 +1203,7 @@ internal sealed class MainWindow : Window
 
         RefreshDashboard();
         RefreshInboxPanels();
+        RefreshActionCenter();
         _tabs["Owner"].Text = BuildOwner();
         RefreshSelectableTab("Staff", BuildStaffRows());
         RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
@@ -1044,7 +1212,10 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Recruits", BuildRecruitRows());
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
-        _tabs["Pending Actions"].Text = BuildPendingActions();
+        if (_tabs.ContainsKey("Pending Actions"))
+        {
+            _tabs["Pending Actions"].Text = BuildPendingActions();
+        }
         _tabs["League News"].Text = BuildLeagueNews();
         _tabs["Budget"].Text = BuildBudgetWorkspace();
         _tabs["Organization Health"].Text = BuildOrganizationHealth();
@@ -1104,6 +1275,8 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Draft Countdown", State.DraftCountdownText, State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft", false));
         metrics.Children.Add(CreateDashboardMetric("Training Camp", State.TrainingCampCountdownText, State.TrainingCampStatusText, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Inbox Unread", State.UnreadInboxCount.ToString(), "messages needing review", State.UnreadInboxCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Open Actions", State.OpenActionCount.ToString(), "Action Center items", State.OpenActionCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Urgent Actions", State.UrgentActionCount.ToString(), "need attention before advancing", State.UrgentActionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Urgent Decisions", State.UrgentPendingDecisionCount.ToString(), State.NextDecisionDeadlineText, State.UrgentPendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
@@ -1156,7 +1329,11 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Team record", record);
         AddLine(summary, "Standings rank", State.StandingsRankText);
         AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
+        AddLine(summary, "Open actions", $"{State.OpenActionCount} open / {State.UrgentActionCount} urgent");
+        AddLine(summary, "Last advance result", State.LastStopReason);
         AddLine(summary, "Next stop reason", State.LastStopReason);
+        var nextAction = State.ActionCenterItems.FirstOrDefault(item => item.Status == ActionCenterStatus.Open);
+        AddLine(summary, "Next recommended action", nextAction?.RecommendedAction ?? "No urgent work queued.");
         if (State.LatestMonthlySummary is not null)
         {
             AddLine(summary, "Monthly summary", $"{State.LatestMonthlySummary.MonthName}: {State.LatestMonthlySummary.TeamRecordForMonth}");
@@ -1167,6 +1344,47 @@ internal sealed class MainWindow : Window
         Grid.SetColumn(summaryCard, 1);
         lower.Children.Add(summaryCard);
         _dashboardPanel.Children.Add(lower);
+
+        var workflow = new Grid { Margin = new Thickness(0, 14, 0, 0) };
+        workflow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        workflow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        workflow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var agendaCard = CreateDashboardCard("Daily Agenda", out var agenda);
+        foreach (var line in State.DailyAgenda)
+        {
+            AddParagraph(agenda, line);
+        }
+        Grid.SetColumn(agendaCard, 0);
+        workflow.Children.Add(agendaCard);
+
+        var urgentCard = CreateDashboardCard("Top Urgent Actions", out var urgent);
+        var topActions = State.ActionCenterItems.Where(item => item.Status == ActionCenterStatus.Open).Take(4).ToArray();
+        if (topActions.Length == 0)
+        {
+            AddParagraph(urgent, "No open Action Center items.");
+        }
+        foreach (var item in topActions)
+        {
+            AddLine(urgent, item.Category.ToString(), $"{item.Title} - {item.RecommendedAction}");
+        }
+        AddActions(urgent, CreateDetailButton("View All Actions", () => SelectTab("Dashboard")));
+        Grid.SetColumn(urgentCard, 1);
+        workflow.Children.Add(urgentCard);
+
+        var assistantCard = CreateDashboardCard("Assistant GM Recommendations", out var assistant);
+        foreach (var recommendation in State.AssistantGmRecommendations)
+        {
+            AddParagraph(assistant, recommendation);
+        }
+        AddSubHeader(assistant, "Upcoming Events");
+        foreach (var item in State.UpcomingActionEvents)
+        {
+            AddParagraph(assistant, item);
+        }
+        Grid.SetColumn(assistantCard, 2);
+        workflow.Children.Add(assistantCard);
+        _dashboardPanel.Children.Add(workflow);
     }
 
     private Border CreateDashboardMetric(string label, string value, string note, bool warning)
@@ -1248,7 +1466,7 @@ internal sealed class MainWindow : Window
 
     private void UpdateTabBadges()
     {
-        SetTabHeader("Dashboard", State.PendingDecisionCount > 0 ? $"Dashboard ({State.PendingDecisionCount})" : "Dashboard");
+        SetTabHeader("Dashboard", State.OpenActionCount > 0 ? $"Dashboard ({State.OpenActionCount})" : "Dashboard");
         SetTabHeader("Inbox", $"Inbox ({State.UnreadInboxCount})");
         SetTabHeader("Organization", State.StaffVacancies.Count > 0 ? $"Organization ({State.StaffVacancies.Count})" : "Organization");
         var operationsCount = State.RosterWarningCount + State.ScoutingReportCount;
@@ -3941,8 +4159,10 @@ internal sealed class AlphaDesktopState
     private readonly GameRecapService _gameRecaps = new();
     private readonly SeasonStatsPolishService _statsPolish = new();
     private readonly FirstMonthAdvanceService _firstMonthAdvance = new();
+    private readonly ActionCenterService _actionCenter = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
+    private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
@@ -4017,6 +4237,19 @@ internal sealed class AlphaDesktopState
     }
 
     public int UrgentPendingDecisionCount => FirstMonthAdvanceService.UrgentPendingActions(ScenarioSnapshot).Count;
+
+    public IReadOnlyList<ActionCenterItem> ActionCenterItems =>
+        _actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses);
+
+    public int OpenActionCount => ActionCenterItems.Count(item => item.Status == ActionCenterStatus.Open);
+
+    public int UrgentActionCount => ActionCenterItems.Count(item => item.Status == ActionCenterStatus.Open && item.Priority == ActionCenterPriority.Urgent);
+
+    public IReadOnlyList<string> DailyAgenda => _actionCenter.BuildDailyAgenda(ScenarioSnapshot, ActionCenterItems, BudgetOverview);
+
+    public IReadOnlyList<string> AssistantGmRecommendations => _actionCenter.BuildAssistantGmRecommendations(ScenarioSnapshot, ActionCenterItems, BudgetOverview);
+
+    public IReadOnlyList<string> UpcomingActionEvents => _actionCenter.BuildUpcomingEvents(ScenarioSnapshot);
 
     public string NextDecisionDeadlineText
     {
@@ -4191,6 +4424,12 @@ internal sealed class AlphaDesktopState
 
     public void AdvanceToMonthEnd() =>
         ApplyAdvanceResult(_firstMonthAdvance.AdvanceToMonthEnd(_registry, ScenarioSnapshot));
+
+    public void SetActionCenterStatus(string itemId, ActionCenterStatus status)
+    {
+        _actionCenterStatuses[itemId] = status;
+        LatestSummary = $"Action Center item marked {status}.";
+    }
 
     public void MoveDraftBoardPlayer(int direction)
     {

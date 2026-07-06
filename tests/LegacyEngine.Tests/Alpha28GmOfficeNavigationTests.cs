@@ -4,7 +4,7 @@ internal sealed class Alpha28GmOfficeNavigationTests
     {
         var source = ReadAlphaDesktopSource();
 
-        Assert.True(source.Contains("Hockey GM Legacy - Alpha 2.8 - GM Office", StringComparison.Ordinal), "Desktop should identify the Alpha 2.8 GM Office.");
+        Assert.True(source.Contains("Hockey GM Legacy - Alpha 2.9 - GM Office", StringComparison.Ordinal), "Desktop should identify the current Alpha GM Office.");
         Assert.True(source.Contains("AddWorkspaceTab(tabs, \"Dashboard\"", StringComparison.Ordinal), "Dashboard should be a top-level workspace.");
         Assert.True(source.Contains("Action Center / Pending Decisions", StringComparison.Ordinal), "Dashboard should expose the Action Center.");
         Assert.True(source.Contains("Quick search placeholder", StringComparison.Ordinal), "Header should expose a quick search placeholder.");

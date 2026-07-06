@@ -45,6 +45,7 @@ var alpha271RosterFrontOfficeRealismTests = new Alpha271RosterFrontOfficeRealism
 var alpha272InboxCleanupTransactionWireTests = new Alpha272InboxCleanupTransactionWireTests();
 var alpha273DraftStaffLayoutTests = new Alpha273DraftStaffLayoutTests();
 var alpha28GmOfficeNavigationTests = new Alpha28GmOfficeNavigationTests();
+var alpha29ActionCenterTests = new Alpha29ActionCenterTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -562,6 +563,17 @@ runner.Run("alpha 2.8 Hockey Operations workspace exposes roster prospects recru
 runner.Run("alpha 2.8 Season workspace exposes schedule standings stats monthly summary and readiness", alpha28GmOfficeNavigationTests.SeasonWorkspaceExposesScheduleStandingsStatsMonthlySummaryAndReadiness);
 runner.Run("alpha 2.8 Reports workspace exposes reports summaries and history placeholder", alpha28GmOfficeNavigationTests.ReportsWorkspaceExposesReportsSummariesAndHistoryPlaceholder);
 runner.Run("alpha 2.8 main navigation is reduced to GM Office workspaces", alpha28GmOfficeNavigationTests.MainNavigationIsReducedToGmOfficeWorkspaces);
+runner.Run("alpha 2.9 Action Center pulls pending GM actions", alpha29ActionCenterTests.ActionCenterPullsPendingGmActions);
+runner.Run("alpha 2.9 Action Center pulls roster warnings", alpha29ActionCenterTests.ActionCenterPullsRosterWarnings);
+runner.Run("alpha 2.9 Action Center pulls staff vacancies", alpha29ActionCenterTests.ActionCenterPullsStaffVacancies);
+runner.Run("alpha 2.9 Action Center pulls budget warnings", alpha29ActionCenterTests.ActionCenterPullsBudgetWarnings);
+runner.Run("alpha 2.9 Action Center pulls scouting completion", alpha29ActionCenterTests.ActionCenterPullsScoutingCompletion);
+runner.Run("alpha 2.9 action item has required fields", alpha29ActionCenterTests.ActionItemHasRequiredFields);
+runner.Run("alpha 2.9 daily agenda generated", alpha29ActionCenterTests.DailyAgendaGenerated);
+runner.Run("alpha 2.9 assistant GM recommendations generated", alpha29ActionCenterTests.AssistantGmRecommendationsGenerated);
+runner.Run("alpha 2.9 action status can change", alpha29ActionCenterTests.ActionStatusCanChange);
+runner.Run("alpha 2.9 AlphaDesktop dashboard exposes Action Center counts", alpha29ActionCenterTests.AlphaDesktopDashboardExposesActionCenterCounts);
+runner.Run("alpha 2.9 no Godot save or game simulation changes", alpha29ActionCenterTests.Alpha29HasNoGodotSaveOrGameSimulationChanges);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
