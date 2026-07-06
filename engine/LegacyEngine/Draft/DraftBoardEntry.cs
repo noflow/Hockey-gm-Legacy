@@ -10,7 +10,8 @@ public sealed record DraftBoardEntry(
     string ProjectionText,
     bool IsStarred = false,
     string PersonalNotes = "",
-    string AnalyticsSummary = "")
+    string AnalyticsSummary = "",
+    DraftProspectBio? Bio = null)
 {
     public void Validate()
     {
@@ -28,5 +29,7 @@ public sealed record DraftBoardEntry(
         {
             throw new ArgumentException("Projection text is required.", nameof(ProjectionText));
         }
+
+        Bio?.Validate();
     }
 }

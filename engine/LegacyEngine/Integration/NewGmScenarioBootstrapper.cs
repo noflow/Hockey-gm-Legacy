@@ -218,8 +218,11 @@ public sealed class NewGmScenarioBootstrapper
             new[]
             {
                 new OrganizationDepartment("dept-hockey-ops", "Hockey Operations", StaffDepartment.Management),
+                new OrganizationDepartment("dept-executive", "Executive", StaffDepartment.Executive),
                 new OrganizationDepartment("dept-coaching", "Coaching", StaffDepartment.Coaching),
-                new OrganizationDepartment("dept-scouting", "Scouting", StaffDepartment.Scouting)
+                new OrganizationDepartment("dept-scouting", "Scouting", StaffDepartment.Scouting),
+                new OrganizationDepartment("dept-medical", "Medical", StaffDepartment.Medical),
+                new OrganizationDepartment("dept-equipment", "Equipment", StaffDepartment.Equipment)
             });
 
     private static IReadOnlyList<Contract> CreateContracts(
@@ -364,7 +367,8 @@ public sealed class NewGmScenarioBootstrapper
                 ProjectionText: ProjectionFor(index),
                 IsStarred: index < 2,
                 PersonalNotes: index < 3 ? "GM note: review again before draft day." : "",
-                AnalyticsSummary: AnalyticsFor(index)));
+                AnalyticsSummary: AnalyticsFor(index),
+                Bio: BioFor(recruits[index], PositionFor(index), index)));
         }
 
         return board;
@@ -441,10 +445,10 @@ public sealed class NewGmScenarioBootstrapper
         NameUniquenessRegistry nameRegistry,
         int seasonYear)
     {
-        return Enumerable.Range(0, 22)
+        return Enumerable.Range(0, 26)
             .Select(index =>
             {
-                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "roster"), PlayerOrigins());
+                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "roster"), RosterPlayerOrigins(index));
                 return CreatePlayer(
                 $"person-roster-{index + 1:000}",
                 name.FirstName,
@@ -499,6 +503,11 @@ public sealed class NewGmScenarioBootstrapper
         NameOrigin.Latvia,
         NameOrigin.GenericEuropean
     ];
+
+    private static NameOrigin[] RosterPlayerOrigins(int index) =>
+        index < 24
+            ? [NameOrigin.CanadaEnglish, NameOrigin.CanadaEnglish, NameOrigin.CanadaFrench]
+            : [NameOrigin.Usa, NameOrigin.Sweden, NameOrigin.Finland, NameOrigin.Czechia];
 
     private static NameOrigin[] StaffOrigins() =>
     [
@@ -575,6 +584,95 @@ public sealed class NewGmScenarioBootstrapper
             [RecruitPriority.TrustInGm] = 62 + (index % 10),
             [RecruitPriority.PlayingRole] = 66 + (index % 16)
         };
+
+    private static DraftProspectBio BioFor(RecruitProfile recruit, RosterPosition position, int index)
+    {
+        var personId = recruit.RecruitPersonId;
+        var parts = personId.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        var seed = Math.Abs(HashCode.Combine(personId, position, index));
+        var birthplace = BirthplacePartsFromPersonIdHint(index);
+        var height = position switch
+        {
+            RosterPosition.Goalie => 71 + (seed % 10),
+            RosterPosition.Defense => 70 + (seed % 10),
+            _ => 68 + (seed % 10)
+        };
+        var weight = position switch
+        {
+            RosterPosition.Goalie => 170 + (seed % 81),
+            RosterPosition.Defense => 175 + (seed % 66),
+            _ => 160 + (seed % 66)
+        };
+        var league = LeagueFor(birthplace.Country, index);
+        var role = position switch
+        {
+            RosterPosition.Goalie => "development goalie with starter upside",
+            RosterPosition.Defense => index % 2 == 0 ? "top-four defense projection" : "mobile second-pair defense projection",
+            RosterPosition.Center => "middle-six center projection",
+            RosterPosition.LeftWing or RosterPosition.RightWing => "scoring-line winger projection",
+            _ => "depth lineup projection"
+        };
+
+        return new DraftProspectBio(
+            ShootsCatches: position == RosterPosition.Goalie
+                ? (seed % 2 == 0 ? "Catches L" : "Catches R")
+                : (seed % 3 == 0 ? "Shoots R" : "Shoots L"),
+            HeightInches: height,
+            WeightPounds: weight,
+            BirthYear: 2009,
+            Hometown: birthplace.Hometown,
+            ProvinceState: birthplace.Region,
+            Country: birthplace.Country,
+            CurrentTeam: $"{birthplace.Hometown} {TeamNickname(index)}",
+            League: league,
+            CharacterSummary: CharacterSummaryFor(index),
+            PotentialLineupProjection: role);
+
+        static (string Hometown, string Region, string Country) BirthplacePartsFromPersonIdHint(int value)
+        {
+            var hometowns = new[]
+            {
+                ("Saskatoon", "SK", "Canada"),
+                ("Red Deer", "AB", "Canada"),
+                ("Brandon", "MB", "Canada"),
+                ("Kelowna", "BC", "Canada"),
+                ("Regina", "SK", "Canada"),
+                ("Winnipeg", "MB", "Canada"),
+                ("Grand Forks", "ND", "USA"),
+                ("Minneapolis", "MN", "USA"),
+                ("Turku", "Varsinais-Suomi", "Finland"),
+                ("Gothenburg", "Vastra Gotaland", "Sweden"),
+                ("Brno", "South Moravia", "Czechia"),
+                ("Zurich", "ZH", "Switzerland")
+            };
+            return hometowns[value % hometowns.Length];
+        }
+
+        static string TeamNickname(int value) =>
+            new[] { "Raiders", "Blazers", "Kings", "Flyers", "Storm", "Royals", "Tigers", "Saints" }[value % 8];
+
+        static string LeagueFor(string country, int value) =>
+            country switch
+            {
+                "USA" => value % 2 == 0 ? "USHL Futures" : "Minnesota High School",
+                "Finland" => "U18 SM-sarja",
+                "Sweden" => "J18 Nationell",
+                "Czechia" => "Czech U20",
+                "Switzerland" => "U20-Elit",
+                _ => value % 3 == 0 ? "CSSHL U18" : value % 3 == 1 ? "SMAAAHL" : "AEHL U18"
+            };
+
+        static string CharacterSummaryFor(int value) =>
+            value switch
+            {
+                0 => "Highly competitive; staff like his practice pace and confidence.",
+                1 => "Reliable habits; coaches describe him as low-maintenance and coachable.",
+                2 => "Quiet worker with strong family support and room to grow confidence.",
+                3 => "Driven player who wants a clear development plan and ice-time path.",
+                _ when value % 5 == 0 => "High-energy personality; leadership traits are emerging.",
+                _ => "Solid character profile with no major staff concerns."
+            };
+    }
 
     private static string ProjectionFor(int index) =>
         index switch

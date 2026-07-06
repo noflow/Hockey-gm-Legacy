@@ -64,14 +64,15 @@ The five foundation pillars remain:
 - Alpha 2.5 - Season Framework v1
 - Alpha 2.6 - Game Recap + Stats Polish
 - Alpha 2.7 - First Month Playability Pass
+- Alpha 2.7.1 - Roster & Front Office Realism Pass
 
 ## Current Milestone
 
-Alpha 2.7 - First Month Playability Pass
+Alpha 2.7.1 - Roster & Front Office Realism Pass
 
 ## Current Goal
 
-Make the first month easier to play by adding smarter time-advance options, clear stop reasons, priority inbox ordering, dashboard decision counts, and monthly GM summaries.
+Make the junior front office feel more realistic by using a 26-player roster target, richer draft prospect bios, complete hockey operations staff roles, staff vacancies, rulebook staff limits, and candidate hiring context.
 
 ## Why Relationship Engine Was Next
 

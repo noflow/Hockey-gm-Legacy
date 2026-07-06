@@ -41,8 +41,8 @@ public static class RulebookPresets
         bool draftEnabled,
         int rounds,
         AffiliateRules? affiliateRules = null,
-        int activeRoster = 20,
-        int maxRoster = 25) =>
+        int activeRoster = 26,
+        int maxRoster = 26) =>
         new()
         {
             RulebookId = rulebookId,
@@ -50,7 +50,7 @@ public static class RulebookPresets
             Version = "1.0",
             RosterRules = new RosterRules
             {
-                MinRoster = 18,
+                MinRoster = activeRoster,
                 MaxRoster = maxRoster,
                 ActiveRoster = activeRoster,
                 GoaliesRequired = 2,
@@ -113,6 +113,7 @@ public static class RulebookPresets
                 FreeAgencyOpenOffsetDays = 310,
                 FreeAgencyCloseOffsetDays = 330
             },
+            StaffRules = CreateJuniorStaffRules(),
             AffiliateRules = affiliateRules
         };
 
@@ -139,5 +140,32 @@ public static class RulebookPresets
                 "Morale",
                 "VeteranLeadership"
             }
+        };
+
+    private static StaffRules CreateJuniorStaffRules() =>
+        new()
+        {
+            PositionLimits = new[]
+            {
+                Limit("GeneralManager", "Executive", 1, 1),
+                Limit("AssistantGM", "Executive", 1, 1),
+                Limit("HeadCoach", "Coaching", 1, 1),
+                Limit("AssistantCoach", "Coaching", 2, 2),
+                Limit("DevelopmentCoach", "Coaching", 1, 1),
+                Limit("HeadScout", "Scouting", 1, 1),
+                Limit("Scout", "Scouting", 3, 3),
+                Limit("HeadAthleticTherapist", "Medical", 1, 1),
+                Limit("TeamDoctor", "Medical", 1, 1),
+                Limit("HeadEquipmentManager", "Equipment", 1, 1)
+            }
+        };
+
+    private static StaffPositionLimit Limit(string role, string department, int minimum, int maximum) =>
+        new()
+        {
+            Role = role,
+            Department = department,
+            Minimum = minimum,
+            Maximum = maximum
         };
 }

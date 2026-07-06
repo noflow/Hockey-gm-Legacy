@@ -56,6 +56,14 @@ public sealed class FirstMonthAdvanceService
             var playerRecap = newRecaps.FirstOrDefault(recap =>
                 recap.BoxScore.Home.OrganizationId == current.Organization.OrganizationId
                 || recap.BoxScore.Away.OrganizationId == current.Organization.OrganizationId);
+            if (playerRecap is not null && mode == FirstMonthAdvanceMode.NextGame)
+            {
+                var opponent = playerRecap.BoxScore.Home.OrganizationId == current.Organization.OrganizationId
+                    ? playerRecap.BoxScore.Away.TeamName
+                    : playerRecap.BoxScore.Home.TeamName;
+                return Result(current, day + 1, processed, inbox, $"Stopped because {current.Organization.Name} played {opponent}.", true);
+            }
+
             if (current.GameRecaps.SelectMany(recap => recap.InjuryNotes).Count() > previousInjuryNotes)
             {
                 var note = current.GameRecaps.SelectMany(recap => recap.InjuryNotes).Last();

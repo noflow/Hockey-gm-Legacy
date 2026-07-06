@@ -3,9 +3,9 @@
   "league_type": "junior",
   "version": "1.0",
   "roster_rules": {
-    "min_roster": 18,
-    "max_roster": 25,
-    "active_roster": 20,
+    "min_roster": 26,
+    "max_roster": 26,
+    "active_roster": 26,
     "goalies_required": 2,
     "overage_slots": 3,
     "import_slots": 2,
@@ -50,6 +50,70 @@
   "budget_rules": {
     "owner_budget_enabled": true,
     "hard_salary_cap_enabled": false
+  },
+  "staff_rules": {
+    "position_limits": [
+      {
+        "role": "GeneralManager",
+        "department": "Executive",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "AssistantGM",
+        "department": "Executive",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "HeadCoach",
+        "department": "Coaching",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "AssistantCoach",
+        "department": "Coaching",
+        "minimum": 2,
+        "maximum": 2
+      },
+      {
+        "role": "DevelopmentCoach",
+        "department": "Coaching",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "HeadScout",
+        "department": "Scouting",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "Scout",
+        "department": "Scouting",
+        "minimum": 3,
+        "maximum": 3
+      },
+      {
+        "role": "HeadAthleticTherapist",
+        "department": "Medical",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "TeamDoctor",
+        "department": "Medical",
+        "minimum": 1,
+        "maximum": 1
+      },
+      {
+        "role": "HeadEquipmentManager",
+        "department": "Equipment",
+        "minimum": 1,
+        "maximum": 1
+      }
+    ]
   },
   "season_rules": {
     "season_start_month": 9,

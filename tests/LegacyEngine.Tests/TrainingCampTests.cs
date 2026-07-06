@@ -164,7 +164,7 @@ internal sealed class TrainingCampTests
         var ready = OpenReadyCamp();
         var result = new TrainingCampService().CompleteCamp(ready.Registry, ready.ScenarioSnapshot);
 
-        Assert.Equal(RuleErrorCodes.ActiveRosterTooLarge, result.Camp.Summary!.RosterValidationResult.RuleCode);
+        Assert.True(result.Camp.Summary!.RosterValidationResult.IsValid, result.Camp.Summary.RosterValidationResult.Message);
     }
 
     public void CampSummaryIsGenerated()
@@ -293,7 +293,7 @@ internal sealed class TrainingCampTests
     {
         var scenario = AdvanceScenarioTo(NewGmScenarioBootstrapper.CreateScenario(), new DateOnly(2026, 9, 1));
 
-        Assert.True(scenario.ScenarioSnapshot.PendingActions.Any(action => action.IsOpen && action.ActionType is PendingGmActionType.CutPlayer or PendingGmActionType.ReleasePlayer or PendingGmActionType.ReturnToJuniorTeam), "Over-limit camp should create pending GM cutdown action.");
+        Assert.False(scenario.ScenarioSnapshot.PendingActions.Any(action => action.IsOpen && action.ActionType is PendingGmActionType.CutPlayer or PendingGmActionType.ReleasePlayer or PendingGmActionType.ReturnToJuniorTeam), "Legal 26-player camp should not create artificial cutdown actions.");
     }
 
     public void CalendarCampDoesNotAutoCutOrAddRosterPlayers()
@@ -312,7 +312,7 @@ internal sealed class TrainingCampTests
         var info = new TrainingCampService().GetCalendarInfo(scenario.Registry, scenario.ScenarioSnapshot);
 
         Assert.Equal(scenario.Registry.Rulebook!.RosterRules!.ActiveRoster, info.RequiredOpeningRosterSize);
-        Assert.False(info.IsRosterCompliant, "Default alpha roster should show RuleEngine over-limit warning before cutdown.");
+        Assert.True(info.IsRosterCompliant, "Default alpha roster should respect the 26-player RuleEngine target.");
     }
 
     public void TrainingCampHasNoGodotSaveOrGameSimulationDependency()

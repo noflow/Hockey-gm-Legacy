@@ -49,6 +49,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 2.5 Season Framework v1
 - Alpha 2.6 Game Recap + Stats Polish
 - Alpha 2.7 First Month Playability Pass
+- Alpha 2.7.1 Roster & Front Office Realism Pass
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -84,6 +85,8 @@ Alpha 2.6 - Game Recap + Stats Polish turns simulated results into readable GM i
 
 Alpha 2.7 - First Month Playability Pass makes time advancement more playable. The desktop now supports Advance Day, Advance Week, Advance to Next Game, and Advance to Month End, with clear stop reasons for player games, injuries, urgent GM decisions, roster problems, scouting reports, and month-end reports. Inbox messages now carry priority, urgent/unread/newest sorting is clearer, routine league-wide games stay out of the GM inbox, and monthly GM summaries collect record, standings, owner/staff, medical, development, roster, budget, scouting, and pending-action context.
 
+Alpha 2.7.1 - Roster & Front Office Realism Pass updates the junior roster target to 26 players, starts the New GM scenario with a legal roster, adds realistic draft prospect bios with physical/team/background context, expands hockey operations staff roles, adds rulebook-driven staff limits and vacancies, and improves staff candidate hiring information with salary, role, employer, experience, strengths, weaknesses, and chemistry risk.
+
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 
 Alpha 1.2 refines the desktop inbox into an email-style GM workspace with a category sidebar, message list, reading pane, row-level actions, and local filters.
@@ -102,7 +105,7 @@ Run the basic desktop UI:
 dotnet run --project client/AlphaDesktop
 ```
 
-The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, Hockey Operations Budget, Recruiting v2, Player Dossier windows, roster filters, selectable person-specific action panels, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. The first-month flow adds smarter advance controls, priority inbox handling, and monthly GM summaries. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
+The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, staff vacancies, Hockey Operations Budget, Recruiting v2, Player Dossier windows, roster filters, selectable person-specific action panels, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. The first-month flow adds smarter advance controls, priority inbox handling, monthly GM summaries, realistic draft prospect bios, and a 26-player junior roster target. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

@@ -20,6 +20,38 @@ public sealed class StaffOfficeService
             .Select(member => BuildProfile(scenario, member, rulebook))
             .ToArray();
 
+    public IReadOnlyList<StaffVacancy> BuildVacancies(NewGmScenarioSnapshot scenario, Rulebook rulebook)
+    {
+        ArgumentNullException.ThrowIfNull(scenario);
+        ArgumentNullException.ThrowIfNull(rulebook);
+        scenario.Validate();
+
+        var limits = StaffLimits(rulebook);
+        var vacancies = limits
+            .Select(limit =>
+            {
+                var current = CurrentStaffCount(scenario, limit.Role);
+                var warning = current < limit.Minimum
+                    ? MissingWarning(limit.Role, current)
+                    : $"{StaffRoles.Title(limit.Role)} staffing is covered.";
+                return new StaffVacancy(limit.Role, StaffRoles.DepartmentFor(limit.Role), limit.Minimum, current, limit.Maximum, warning);
+            })
+            .Where(vacancy => vacancy.IsOpen)
+            .ToArray();
+
+        foreach (var vacancy in vacancies)
+        {
+            vacancy.Validate();
+        }
+
+        return vacancies;
+    }
+
+    public IReadOnlyList<string> BuildStaffWarnings(NewGmScenarioSnapshot scenario, Rulebook rulebook) =>
+        BuildVacancies(scenario, rulebook)
+            .Select(vacancy => vacancy.Warning)
+            .ToArray();
+
     public StaffOfficeResult GenerateCandidatePool(EngineRegistry registry, NewGmScenarioSnapshot scenario)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -38,12 +70,29 @@ public sealed class StaffOfficeService
         }
 
         var nameGenerator = new NameGenerator(NameGenerationSettings.CreateDefault(scenario.Season.Year + scenario.StaffMembers.Count + 41));
-        var candidates = new[]
-        {
-            BuildCandidate(registry, scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor(), "candidate-staff-001", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.DevelopmentCoach, 73, 76, 61, new[] { "player development", "communication" }, new[] { "limited head-coach experience" }, "Collaborative teacher with strong patience.", "Low chemistry risk; likely aligns with a development-first GM."),
-            BuildCandidate(registry, scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor(), "candidate-staff-002", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.AthleticTherapist, 68, 71, 56, new[] { "injury prevention", "recovery planning" }, new[] { "modest hockey operations background" }, "Calm medical communicator with practical habits.", "Low to moderate risk; needs clear role boundaries."),
-            BuildCandidate(registry, scenario, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor(), "candidate-staff-003", GenerateCandidateName(nameGenerator, nameRegistry, scenario), StaffRole.Scout, 78, 74, 58, new[] { "character reads", "regional coverage" }, new[] { "smaller network in Europe" }, "Detail-heavy scout who values evidence.", "Moderate risk; may push back if assignments are vague.")
-        };
+        var rulebook = registry.Rulebook ?? RulebookPresets.CreateJuniorMajor();
+        var openRoles = BuildVacancies(scenario, rulebook)
+            .Where(vacancy => vacancy.Role != StaffRole.GeneralManager)
+            .Select(vacancy => vacancy.Role)
+            .DefaultIfEmpty(StaffRole.DevelopmentCoach)
+            .Take(8)
+            .ToArray();
+        var candidates = openRoles
+            .Select((role, index) => BuildCandidate(
+                registry,
+                scenario,
+                rulebook,
+                $"candidate-staff-{index + 1:000}",
+                GenerateCandidateName(nameGenerator, nameRegistry, scenario),
+                role,
+                68 + ((index * 7) % 16),
+                65 + ((index * 5) % 18),
+                52 + ((index * 6) % 20),
+                StrengthsFor(role),
+                WeaknessesFor(role),
+                PersonalityFor(role),
+                ChemistryRiskFor(role, index)))
+            .ToArray();
 
         var updatedPeople = scenario.AlphaSnapshot.People
             .Concat(candidates.Select(candidate => candidate.Person))
@@ -79,6 +128,13 @@ public sealed class StaffOfficeService
         }
 
         var role = candidate.StaffMember.CurrentRole;
+        var rulebook = registry.Rulebook ?? RulebookPresets.CreateJuniorMajor();
+        var limit = StaffLimits(rulebook).FirstOrDefault(limit => limit.Role == role);
+        if (limit is not null && CurrentStaffCount(scenario, role) >= limit.Maximum)
+        {
+            return Result(false, scenario, candidate, null, null, null, Array.Empty<AlphaInboxItem>(), $"{StaffRoles.Title(role)} staff limit is already full.");
+        }
+
         var hired = registry.StaffEngine.AssignRole(registry.StaffEngine.Hire(candidate.StaffMember, scenario.CurrentDate), role, scenario.CurrentDate);
         var people = scenario.AlphaSnapshot.People
             .Concat(new[] { candidate.Person })
@@ -101,7 +157,7 @@ public sealed class StaffOfficeService
         {
             Inbox(updated, LegacyEventType.StaffHired, "Staff hired", $"{candidate.Person.Identity.DisplayName} joined the front office as {StaffRoles.Title(role)} at {candidate.ExpectedSalary.AnnualAmount:C0}.", candidate.Person.PersonId)
         };
-        var budget = new StaffBudgetService().Build(updated, registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+        var budget = new StaffBudgetService().Build(updated, rulebook);
         if (budget.Status == BudgetStatus.OverBudget)
         {
             QueueEvent(registry, updated, LegacyEventType.BudgetApproved, "Owner budget warning", budget.Warnings.FirstOrDefault() ?? "Hockey operations budget is over limit.", candidate.Person.PersonId);
@@ -347,7 +403,28 @@ public sealed class StaffOfficeService
             : expensive && chemistryRisk.Contains("risk", StringComparison.OrdinalIgnoreCase)
                 ? "High-cost candidate; review chemistry risk before committing budget."
                 : "Useful candidate, but fit and salary should be reviewed before hiring.";
-        var candidate = new StaffCandidate(candidateId, person, member, roleFit, departmentFit, reputation, expectedSalary, strengths, weaknesses, personality, chemistryRisk, recommendation);
+        var currentEmployer = role switch
+        {
+            StaffRole.AssistantGM or StaffRole.DirectorOfHockeyOperations => "Independent hockey operations consultant",
+            StaffRole.TeamDoctor or StaffRole.Physiotherapist or StaffRole.MassageTherapist => "Regional sports medicine clinic",
+            StaffRole.HeadEquipmentManager or StaffRole.AssistantEquipmentManager => "Minor hockey equipment room",
+            _ => "Available"
+        };
+        var candidate = new StaffCandidate(
+            candidateId,
+            person,
+            member,
+            roleFit,
+            departmentFit,
+            reputation,
+            expectedSalary,
+            strengths,
+            weaknesses,
+            personality,
+            chemistryRisk,
+            recommendation,
+            currentEmployer,
+            member.Profile.YearsExperience);
         candidate.Validate();
         return candidate;
     }
@@ -392,6 +469,107 @@ public sealed class StaffOfficeService
             }),
             _ => StaffAttributes.Empty
         };
+
+    private sealed record StaffLimit(StaffRole Role, int Minimum, int Maximum);
+
+    private static IReadOnlyList<StaffLimit> StaffLimits(Rulebook rulebook)
+    {
+        var configured = rulebook.StaffRules?.PositionLimits
+            .Select(limit => TryBuildLimit(limit, out var built) ? built : null)
+            .Where(limit => limit is not null)
+            .Cast<StaffLimit>()
+            .ToArray();
+
+        return configured is { Length: > 0 }
+            ? configured
+            : DefaultJuniorStaffLimits();
+    }
+
+    private static bool TryBuildLimit(StaffPositionLimit limit, out StaffLimit? staffLimit)
+    {
+        if (Enum.TryParse<StaffRole>(limit.Role, ignoreCase: true, out var role))
+        {
+            staffLimit = new StaffLimit(role, limit.Minimum, limit.Maximum);
+            return true;
+        }
+
+        staffLimit = null;
+        return false;
+    }
+
+    private static IReadOnlyList<StaffLimit> DefaultJuniorStaffLimits() =>
+        new[]
+        {
+            new StaffLimit(StaffRole.GeneralManager, 1, 1),
+            new StaffLimit(StaffRole.AssistantGM, 1, 1),
+            new StaffLimit(StaffRole.HeadCoach, 1, 1),
+            new StaffLimit(StaffRole.AssistantCoach, 2, 2),
+            new StaffLimit(StaffRole.DevelopmentCoach, 1, 1),
+            new StaffLimit(StaffRole.HeadScout, 1, 1),
+            new StaffLimit(StaffRole.Scout, 3, 3),
+            new StaffLimit(StaffRole.HeadAthleticTherapist, 1, 1),
+            new StaffLimit(StaffRole.TeamDoctor, 1, 1),
+            new StaffLimit(StaffRole.HeadEquipmentManager, 1, 1)
+        };
+
+    private static int CurrentStaffCount(NewGmScenarioSnapshot scenario, StaffRole role)
+    {
+        if (role == StaffRole.GeneralManager)
+        {
+            return string.IsNullOrWhiteSpace(scenario.AlphaSnapshot.GeneralManager.PersonId) ? 0 : 1;
+        }
+
+        return scenario.StaffMembers.Count(member => member.CurrentRole == role && member.EmploymentStatus == StaffEmploymentStatus.Employed);
+    }
+
+    private static string MissingWarning(StaffRole role, int current) =>
+        role switch
+        {
+            StaffRole.HeadScout => "No Head Scout employed.",
+            StaffRole.HeadAthleticTherapist => "No Athletic Therapist.",
+            StaffRole.Scout => current == 0 ? "No regional scouts assigned." : $"Only {current} regional scout assigned.",
+            StaffRole.TeamDoctor => "No Team Doctor attached to hockey operations.",
+            StaffRole.HeadEquipmentManager => "No Equipment Manager employed.",
+            _ => $"No {StaffRoles.Title(role)} employed."
+        };
+
+    private static IReadOnlyList<string> StrengthsFor(StaffRole role) =>
+        StaffRoles.DepartmentFor(role) switch
+        {
+            StaffDepartment.Executive => new[] { "operations planning", "budget discipline" },
+            StaffDepartment.Coaching => new[] { "player teaching", "practice standards" },
+            StaffDepartment.Scouting => new[] { "live viewings", "regional contacts" },
+            StaffDepartment.Medical => new[] { "injury prevention", "clear communication" },
+            StaffDepartment.Equipment => new[] { "room organization", "travel preparation" },
+            _ => new[] { "professional habits", "department fit" }
+        };
+
+    private static IReadOnlyList<string> WeaknessesFor(StaffRole role) =>
+        StaffRoles.DepartmentFor(role) switch
+        {
+            StaffDepartment.Executive => new[] { "limited history with this owner" },
+            StaffDepartment.Coaching => new[] { "needs roster familiarity" },
+            StaffDepartment.Scouting => new[] { "network still being verified" },
+            StaffDepartment.Medical => new[] { "junior hockey travel demands" },
+            StaffDepartment.Equipment => new[] { "limited league-specific setup knowledge" },
+            _ => new[] { "fit still being evaluated" }
+        };
+
+    private static string PersonalityFor(StaffRole role) =>
+        StaffRoles.DepartmentFor(role) switch
+        {
+            StaffDepartment.Executive => "Detail-oriented hockey operations thinker with a steady communication style.",
+            StaffDepartment.Coaching => "Teaching-first staffer who values role clarity and player growth.",
+            StaffDepartment.Scouting => "Evidence-driven evaluator who prefers clear assignment priorities.",
+            StaffDepartment.Medical => "Calm support staffer who prioritizes prevention and honest updates.",
+            StaffDepartment.Equipment => "Practical organizer who keeps routines quiet and dependable.",
+            _ => "Professional staff candidate with fit still under review."
+        };
+
+    private static string ChemistryRiskFor(StaffRole role, int index) =>
+        index % 3 == 0
+            ? $"Moderate risk; {StaffRoles.Title(role)} candidate expects defined authority."
+            : $"Low risk; {StaffRoles.Title(role)} candidate profiles as collaborative.";
 
     private static StaffMember FindStaff(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.StaffMembers.SingleOrDefault(member => member.PersonId == personId)

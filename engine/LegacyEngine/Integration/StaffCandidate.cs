@@ -15,7 +15,9 @@ public sealed record StaffCandidate(
     IReadOnlyList<string> Weaknesses,
     string PersonalityFitSummary,
     string ChemistryRisk,
-    string HiringRecommendation)
+    string HiringRecommendation,
+    string CurrentEmployer = "Available",
+    int YearsExperience = 0)
 {
     public void Validate()
     {
@@ -43,9 +45,15 @@ public sealed record StaffCandidate(
 
         if (string.IsNullOrWhiteSpace(PersonalityFitSummary)
             || string.IsNullOrWhiteSpace(ChemistryRisk)
-            || string.IsNullOrWhiteSpace(HiringRecommendation))
+            || string.IsNullOrWhiteSpace(HiringRecommendation)
+            || string.IsNullOrWhiteSpace(CurrentEmployer))
         {
             throw new ArgumentException("Staff candidate summaries are required.");
+        }
+
+        if (YearsExperience < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(YearsExperience), "Staff candidate experience cannot be negative.");
         }
     }
 

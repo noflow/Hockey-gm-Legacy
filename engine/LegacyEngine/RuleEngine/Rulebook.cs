@@ -34,6 +34,9 @@ public sealed class Rulebook
     [JsonPropertyName("season_rules")]
     public SeasonRules? SeasonRules { get; init; }
 
+    [JsonPropertyName("staff_rules")]
+    public StaffRules? StaffRules { get; init; }
+
     [JsonPropertyName("affiliate_rules")]
     public AffiliateRules? AffiliateRules { get; init; }
 }
@@ -141,6 +144,27 @@ public sealed class BudgetRules
 
     [JsonPropertyName("hard_salary_cap_amount")]
     public decimal? HardSalaryCapAmount { get; init; }
+}
+
+public sealed class StaffRules
+{
+    [JsonPropertyName("position_limits")]
+    public IReadOnlyList<StaffPositionLimit> PositionLimits { get; init; } = Array.Empty<StaffPositionLimit>();
+}
+
+public sealed class StaffPositionLimit
+{
+    [JsonPropertyName("role")]
+    public string Role { get; init; } = string.Empty;
+
+    [JsonPropertyName("department")]
+    public string Department { get; init; } = string.Empty;
+
+    [JsonPropertyName("minimum")]
+    public int Minimum { get; init; }
+
+    [JsonPropertyName("maximum")]
+    public int Maximum { get; init; }
 }
 
 public sealed class AffiliateRules

@@ -121,7 +121,7 @@ internal sealed class StaffEngineTests
         Assert.Equal(StaffDepartment.Scouting, StaffEngine.DepartmentFor(StaffRole.DirectorOfScouting));
         Assert.Equal(StaffDepartment.Medical, StaffEngine.DepartmentFor(StaffRole.TeamDoctor));
         Assert.Equal(StaffDepartment.Equipment, StaffEngine.DepartmentFor(StaffRole.EquipmentManager));
-        Assert.Equal(StaffDepartment.Management, StaffEngine.DepartmentFor(StaffRole.AssistantGM));
+        Assert.Equal(StaffDepartment.Executive, StaffEngine.DepartmentFor(StaffRole.AssistantGM));
 
         var scout = new StaffEngine().CreateStaffMember("person-002", "org-001", StaffRole.HeadScout);
         Assert.Equal(StaffDepartment.Scouting, scout.Department);

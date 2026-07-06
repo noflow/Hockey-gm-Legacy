@@ -54,7 +54,7 @@ internal sealed class NewGmScenarioTests
     {
         var scenario = NewGmScenarioBootstrapper.CreateScenario();
 
-        Assert.Equal(22, scenario.AlphaSnapshot.Roster.Players.Count);
+        Assert.Equal(26, scenario.AlphaSnapshot.Roster.Players.Count);
     }
 
     public void RecruitPoolExists()

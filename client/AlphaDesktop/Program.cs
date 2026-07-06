@@ -3,12 +3,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using LegacyEngine.Draft;
 using LegacyEngine.Integration;
 using LegacyEngine.People;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
+using LegacyEngine.Staff;
 
 namespace AlphaDesktop;
 
@@ -20,7 +22,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -98,7 +100,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.7 starts with your created GM preparing for a live draft, then unlocks staff control, training camp, player dossiers, a basic season loop, readable game recaps, and first-month pacing.",
+            Text = "Alpha 2.7.1 starts with your created GM preparing for a live draft, then unlocks staff vacancies, draft prospect bios, training camp, player dossiers, a basic season loop, readable game recaps, and first-month pacing.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -253,7 +255,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.7 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.7.1 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -966,6 +968,7 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Urgent Decisions", State.UrgentPendingDecisionCount.ToString(), State.NextDecisionDeadlineText, State.UrgentPendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
         var nextGame = State.NextGame;
@@ -1006,6 +1009,7 @@ internal sealed class MainWindow : Window
         AddLine(summary, "GM", snapshot.GeneralManager.Identity.DisplayName);
         AddLine(summary, "Head scout", snapshot.Scout.Name);
         AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
+        AddLine(summary, "Staff vacancies", State.StaffVacancySummary);
         AddLine(summary, "Season readiness", readiness.RosterStatus);
         AddLine(summary, "Last game", lastGame is null ? "No completed game" : lastGame.BoxScore.FinalScore);
         AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
@@ -1179,6 +1183,14 @@ internal sealed class MainWindow : Window
                 profile.Chemistry.Summary))
             .ToList();
 
+        rows.AddRange(State.StaffVacancies.Select(vacancy => new SelectablePersonRow(
+            $"vacancy:{vacancy.Role}",
+            StaffRoles.Title(vacancy.Role),
+            "Vacancy",
+            $"Vacant Position - {vacancy.Department}",
+            $"{vacancy.Current}/{vacancy.Required} filled | max {vacancy.Maximum}",
+            vacancy.Warning)));
+
         rows.AddRange(State.ScenarioSnapshot.StaffCandidates.Select(candidate => new SelectablePersonRow(
             candidate.Person.PersonId,
             candidate.Person.Identity.DisplayName,
@@ -1288,7 +1300,7 @@ internal sealed class MainWindow : Window
                 "ScoutingProspect",
                 $"{State.PersonPosition(entry.ProspectPersonId)} - age {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"} - rank #{entry.Rank}",
                 $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
-                $"{State.RegionTeamText(entry.ProspectPersonId)} | {State.ScoutingReportStatus(entry.ProspectPersonId)} | {entry.ProjectionText}"))
+                $"{State.DraftBioSummary(entry)} | {State.ScoutingReportStatus(entry.ProspectPersonId)} | {entry.ProjectionText}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingOperationRows() =>
@@ -1314,8 +1326,8 @@ internal sealed class MainWindow : Window
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "DraftBoard",
                 $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank}",
-                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}",
-                $"{State.RegionTeamText(entry.ProspectPersonId)} | {entry.ProjectionText}"))
+                $"{State.PersonPosition(entry.ProspectPersonId)} | {entry.Bio?.ShootsCatches ?? "Hand unknown"} | {entry.Bio?.HeightDisplay ?? "height n/a"} | {entry.Bio?.WeightDisplay ?? "weight n/a"}",
+                $"{State.DraftBioSummary(entry)} | {entry.ProjectionText}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildProspectRows() =>
@@ -1363,12 +1375,35 @@ internal sealed class MainWindow : Window
             var empty = EmptyDetail("Staff", "Current Staff are listed with active roles. Staff Candidates appear below once generated. Use Hire Staff to open the candidate pool.");
             AddSubHeader(empty, "Current Staff");
             AddParagraph(empty, "Select an employed staff member to view profile, focus, chemistry, and staff actions.");
-            AddSubHeader(empty, "Staff Candidates");
+            AddSubHeader(empty, "Vacant Positions");
+            AddParagraph(empty, State.StaffVacancySummary);
+            AddSubHeader(empty, "Available Candidates");
             AddParagraph(empty, "Candidate rows show role fit, department, reputation, strengths, weaknesses, chemistry risk, and recommendation.");
             AddSubHeader(empty, "Hire Staff");
             AddParagraph(empty, "Generate candidates, select a candidate row, then use Hire Candidate in the detail panel.");
             AddActions(empty, CreateDetailButton("Hire Staff", GenerateStaffCandidates), CreateDetailButton("Generate Candidates", GenerateStaffCandidates), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
             return empty;
+        }
+
+        if (row.Kind == "Vacancy")
+        {
+            var roleText = row.PersonId.Replace("vacancy:", string.Empty, StringComparison.Ordinal);
+            var vacancy = State.StaffVacancies.FirstOrDefault(vacancy => vacancy.Role.ToString() == roleText);
+            if (vacancy is null)
+            {
+                return EmptyDetail("Vacancy", "This vacancy has already been filled.");
+            }
+
+            var panel = CreateDetailPanel(StaffRoles.Title(vacancy.Role), "Vacant position");
+            AddLine(panel, "Department", vacancy.Department);
+            AddLine(panel, "Filled", $"{vacancy.Current}/{vacancy.Required}");
+            AddLine(panel, "Maximum", vacancy.Maximum);
+            AddLine(panel, "Warning", vacancy.Warning);
+            AddParagraph(panel, "Generate candidates, compare fit and salary, then hire a candidate for this role.");
+            AddActions(panel,
+                CreateDetailButton("Generate Candidates", GenerateStaffCandidates),
+                CreateDetailButton("Hire Staff", GenerateStaffCandidates));
+            return panel;
         }
 
         if (row.Kind == "Candidate")
@@ -1386,6 +1421,8 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Department fit", candidate.DepartmentFit);
             AddLine(panel, "Reputation", candidate.Reputation);
             AddLine(panel, "Salary ask", $"{candidate.ExpectedSalary.AnnualAmount:C0}");
+            AddLine(panel, "Current employer", candidate.CurrentEmployer);
+            AddLine(panel, "Years experience", candidate.YearsExperience);
             AddLine(panel, "Strengths", string.Join(", ", candidate.Strengths));
             AddLine(panel, "Weaknesses", string.Join(", ", candidate.Weaknesses));
             AddLine(panel, "Chemistry risk", candidate.ChemistryRisk);
@@ -1393,6 +1430,9 @@ internal sealed class MainWindow : Window
             AddParagraph(panel, candidate.HiringRecommendation);
             AddActions(panel,
                 CreateDetailButton("Hire Candidate", () => State.HireCandidateFor(row.PersonId)),
+                CreateDetailButton("Replace", () => State.HireCandidateFor(row.PersonId)),
+                CreateDetailButton("Compare", () => MessageBox.Show(State.CompareCandidateText(row.PersonId), "Compare Candidate", MessageBoxButton.OK, MessageBoxImage.Information)),
+                CreateDetailButton("Salary Offer", () => MessageBox.Show("Salary offer is a placeholder for now. Hiring uses the listed salary ask.", "Salary Offer", MessageBoxButton.OK, MessageBoxImage.Information)),
                 CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
             return panel;
         }
@@ -1533,6 +1573,17 @@ internal sealed class MainWindow : Window
             if (entry is not null)
             {
                 AddLine(panel, "Report", entry.ScoutingReportId ?? "none");
+                if (entry.Bio is not null)
+                {
+                    AddLine(panel, "Shoots/Catches", entry.Bio.ShootsCatches);
+                    AddLine(panel, "Height / Weight", $"{entry.Bio.HeightDisplay}, {entry.Bio.WeightDisplay}");
+                    AddLine(panel, "Birth year", entry.Bio.BirthYear);
+                    AddLine(panel, "Hometown", $"{entry.Bio.Hometown}, {entry.Bio.ProvinceState}, {entry.Bio.Country}");
+                    AddLine(panel, "Current team", $"{entry.Bio.CurrentTeam} - {entry.Bio.League}");
+                    AddLine(panel, "Character", entry.Bio.CharacterSummary);
+                    AddLine(panel, "Lineup projection", entry.Bio.PotentialLineupProjection);
+                }
+
                 AddLine(panel, "Analytics", string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary);
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes);
             }
@@ -2461,7 +2512,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Coach: {snapshot.CoachPerson?.Identity.DisplayName ?? "Not assigned"}");
         builder.AppendLine();
         builder.AppendLine("Staff Actions");
-        builder.AppendLine("Reassign Staff, Release Staff, Hire Staff, Candidates, Development Focus, Medical Focus, Scouting Focus, Staff Evaluation.");
+        builder.AppendLine("Reassign Staff, Release Staff, Hire, Release, Replace, Compare, View Profile, View Dossier, Assign Focus, Development Focus, Medical Focus, Scouting Focus, Staff Evaluation, Generate Evaluation, Salary Offer placeholder.");
         builder.AppendLine();
         builder.AppendLine("Selected Staff Details");
         var selected = State.StaffProfiles.FirstOrDefault();
@@ -2493,7 +2544,21 @@ internal sealed class MainWindow : Window
             builder.AppendLine();
         }
 
-        builder.AppendLine("Candidate Pool");
+        builder.AppendLine("Vacant Positions");
+        if (State.StaffVacancies.Count == 0)
+        {
+            builder.AppendLine("  No required vacancies.");
+        }
+
+        foreach (var vacancy in State.StaffVacancies)
+        {
+            builder.AppendLine($"{StaffRoles.Title(vacancy.Role)} - {vacancy.Department}");
+            builder.AppendLine($"  Filled: {vacancy.Current}/{vacancy.Required}  Maximum: {vacancy.Maximum}");
+            builder.AppendLine($"  Warning: {vacancy.Warning}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Candidate Pool / Available Candidates");
         if (State.ScenarioSnapshot.StaffCandidates.Count == 0)
         {
             builder.AppendLine("  No candidates generated yet. Use Candidates to create the first pool.");
@@ -2504,6 +2569,8 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"{candidate.Person.Identity.DisplayName} - {candidate.StaffMember.CurrentRole}");
             builder.AppendLine($"  Role fit: {candidate.RoleFit}  Department fit: {candidate.DepartmentFit}  Reputation: {candidate.Reputation}");
             builder.AppendLine($"  Salary ask: {candidate.ExpectedSalary.AnnualAmount:C0}");
+            builder.AppendLine($"  Current employer: {candidate.CurrentEmployer}");
+            builder.AppendLine($"  Years experience: {candidate.YearsExperience}");
             builder.AppendLine($"  Strengths: {string.Join(", ", candidate.Strengths)}");
             builder.AppendLine($"  Weaknesses: {string.Join(", ", candidate.Weaknesses)}");
             builder.AppendLine($"  Personality/fit: {candidate.PersonalityFitSummary}");
@@ -2759,6 +2826,14 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"#{entry.Rank} {(entry.IsStarred ? "[STAR] " : string.Empty)}{FindPersonName(entry.ProspectPersonId)} - confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
             builder.AppendLine($"  Report: {entry.ScoutingReportId ?? "none"}");
+            if (entry.Bio is not null)
+            {
+                builder.AppendLine($"  Bio: {State.PersonPosition(entry.ProspectPersonId)} | {entry.Bio.ShootsCatches} | {entry.Bio.HeightDisplay}, {entry.Bio.WeightDisplay} | age {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"} | born {entry.Bio.BirthYear}");
+                builder.AppendLine($"  Hometown: {entry.Bio.Hometown}, {entry.Bio.ProvinceState}, {entry.Bio.Country} | Team: {entry.Bio.CurrentTeam} ({entry.Bio.League})");
+                builder.AppendLine($"  Character: {entry.Bio.CharacterSummary}");
+                builder.AppendLine($"  Lineup projection: {entry.Bio.PotentialLineupProjection}");
+            }
+
             builder.AppendLine($"  Projection: {entry.ProjectionText}");
             builder.AppendLine($"  Analytics: {(string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary)}");
             builder.AppendLine($"  GM Notes: {(string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes)}");
@@ -3490,6 +3565,11 @@ internal sealed class AlphaDesktopState
             .ThenByDescending(summary => summary.Month)
             .FirstOrDefault();
 
+    public string DraftBioSummary(DraftBoardEntry entry) =>
+        entry.Bio is null
+            ? RegionTeamText(entry.ProspectPersonId)
+            : $"{entry.Bio.Hometown}, {entry.Bio.ProvinceState} | {entry.Bio.CurrentTeam} ({entry.Bio.League})";
+
     public string LastStopReason { get; private set; } = "No advance pause yet.";
 
     public int PendingDecisionCount => OpenPendingActions.Count;
@@ -3564,6 +3644,13 @@ internal sealed class AlphaDesktopState
             .ToArray();
 
     public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+
+    public IReadOnlyList<StaffVacancy> StaffVacancies => _staffOffice.BuildVacancies(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+
+    public string StaffVacancySummary =>
+        StaffVacancies.Count == 0
+            ? "All required hockey operations positions are covered."
+            : string.Join(" ", StaffVacancies.Take(3).Select(vacancy => vacancy.Warning));
 
     public PlayerDossierView? CurrentDossier =>
         _selectedDossierPersonId is null
@@ -3922,6 +4009,29 @@ internal sealed class AlphaDesktopState
         }
 
         return builder.ToString();
+    }
+
+    public string CompareCandidateText(string personId)
+    {
+        var candidate = ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == personId);
+        if (candidate is null)
+        {
+            return "Candidate is no longer available.";
+        }
+
+        var peers = ScenarioSnapshot.StaffCandidates
+            .Where(peer => peer.StaffMember.CurrentRole == candidate.StaffMember.CurrentRole)
+            .OrderByDescending(peer => peer.RoleFit + peer.DepartmentFit + peer.Reputation)
+            .Take(3)
+            .Select(peer => $"{peer.Person.Identity.DisplayName}: fit {peer.RoleFit}/{peer.DepartmentFit}, rep {peer.Reputation}, salary {peer.ExpectedSalary.AnnualAmount:C0}")
+            .ToArray();
+
+        return $"{candidate.Person.Identity.DisplayName} - {candidate.StaffMember.CurrentRole}\n"
+            + $"Expected salary: {candidate.ExpectedSalary.AnnualAmount:C0}\n"
+            + $"Current employer: {candidate.CurrentEmployer}\n"
+            + $"Experience: {candidate.YearsExperience} years\n"
+            + $"Chemistry risk: {candidate.ChemistryRisk}\n\n"
+            + $"Comparable candidates:\n{string.Join(Environment.NewLine, peers)}";
     }
 
     public void ReassignStaffRoleFor(string personId)

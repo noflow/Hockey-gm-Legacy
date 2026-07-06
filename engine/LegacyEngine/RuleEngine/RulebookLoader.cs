@@ -164,6 +164,20 @@ public sealed class RulebookLoader
             return InvalidField("budget_rules.hard_salary_cap_amount", "Enabled hard salary caps require a non-negative amount.");
         }
 
+        if (rulebook.StaffRules is { } staffRules)
+        {
+            foreach (var limit in staffRules.PositionLimits)
+            {
+                if (string.IsNullOrWhiteSpace(limit.Role)
+                    || string.IsNullOrWhiteSpace(limit.Department)
+                    || limit.Minimum < 0
+                    || limit.Maximum < limit.Minimum)
+                {
+                    return InvalidField("staff_rules.position_limits", "Staff position limits require role, department, and valid min/max values.");
+                }
+            }
+        }
+
         if (rulebook.AffiliateRules is { AffiliateEnabled: true } affiliate
             && affiliate.AllowedAcquisitionSources.Count == 0)
         {

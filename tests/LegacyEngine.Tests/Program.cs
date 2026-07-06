@@ -41,6 +41,7 @@ var alpha24StaffBudgetTests = new Alpha24StaffBudgetTests();
 var alpha25SeasonFrameworkTests = new Alpha25SeasonFrameworkTests();
 var alpha26GameRecapStatsPolishTests = new Alpha26GameRecapStatsPolishTests();
 var alpha27FirstMonthPlayabilityTests = new Alpha27FirstMonthPlayabilityTests();
+var alpha271RosterFrontOfficeRealismTests = new Alpha271RosterFrontOfficeRealismTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -525,6 +526,16 @@ runner.Run("alpha 2.7 league-wide games do not spam inbox", alpha27FirstMonthPla
 runner.Run("alpha 2.7 inbox priority sorting works", alpha27FirstMonthPlayabilityTests.InboxPrioritySortingWorks);
 runner.Run("alpha 2.7 dashboard exposes advance controls and summary counts", alpha27FirstMonthPlayabilityTests.DashboardExposesAdvanceControlsAndSummaryCounts);
 runner.Run("alpha 2.7 no Godot save or full tactical simulation added", alpha27FirstMonthPlayabilityTests.FirstMonthPassHasNoGodotSaveOrFullTacticalSimulation);
+runner.Run("alpha 2.7.1 junior roster target is 26", alpha271RosterFrontOfficeRealismTests.JuniorRosterTargetIsTwentySix);
+runner.Run("alpha 2.7.1 scenario starts with legal roster", alpha271RosterFrontOfficeRealismTests.ScenarioStartsWithLegalRoster);
+runner.Run("alpha 2.7.1 draft prospects include physical and team bio", alpha271RosterFrontOfficeRealismTests.DraftProspectsIncludePhysicalAndTeamBio);
+runner.Run("alpha 2.7.1 draft measurements match position ranges", alpha271RosterFrontOfficeRealismTests.DraftProspectMeasurementsMatchPositionRanges);
+runner.Run("alpha 2.7.1 complete staff positions exist", alpha271RosterFrontOfficeRealismTests.CompleteStaffPositionsExist);
+runner.Run("alpha 2.7.1 vacancies generated", alpha271RosterFrontOfficeRealismTests.VacanciesGenerated);
+runner.Run("alpha 2.7.1 candidate hiring works", alpha271RosterFrontOfficeRealismTests.CandidateHiringWorks);
+runner.Run("alpha 2.7.1 staff limits enforced", alpha271RosterFrontOfficeRealismTests.StaffLimitsEnforced);
+runner.Run("alpha 2.7.1 dashboard warnings generated", alpha271RosterFrontOfficeRealismTests.DashboardWarningsGenerated);
+runner.Run("alpha 2.7.1 AlphaDesktop exposes vacancies candidates and hiring", alpha271RosterFrontOfficeRealismTests.AlphaDesktopExposesVacanciesCandidatesAndHiring);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
@@ -537,7 +548,7 @@ internal sealed class RuleEngineTests
     {
         Assert.Equal("junior_v1", _rulebook.RulebookId);
         Assert.Equal("junior", _rulebook.LeagueType);
-        Assert.Equal(18, _rulebook.RosterRules!.MinRoster);
+        Assert.Equal(26, _rulebook.RosterRules!.MinRoster);
         Assert.Contains("junior_player_agreement", _rulebook.ContractRules!.AllowedContractTypes);
     }
 
@@ -554,13 +565,13 @@ internal sealed class RuleEngineTests
     {
         var validator = new RosterRuleValidator(_rulebook);
 
-        Assert.Valid(validator.Validate(new RosterValidationRequest(22, 20, 2, 3, 2)));
+        Assert.Valid(validator.Validate(new RosterValidationRequest(26, 26, 2, 3, 2)));
         Assert.Code(RuleErrorCodes.RosterTooSmall, validator.Validate(new RosterValidationRequest(17, 17, 2, 0, 0)));
-        Assert.Code(RuleErrorCodes.RosterTooLarge, validator.Validate(new RosterValidationRequest(26, 20, 2, 0, 0)));
-        Assert.Code(RuleErrorCodes.ActiveRosterTooLarge, validator.Validate(new RosterValidationRequest(22, 21, 2, 0, 0)));
-        Assert.Code(RuleErrorCodes.NotEnoughGoalies, validator.Validate(new RosterValidationRequest(22, 20, 1, 0, 0)));
-        Assert.Code(RuleErrorCodes.TooManyOveragePlayers, validator.Validate(new RosterValidationRequest(22, 20, 2, 4, 0)));
-        Assert.Code(RuleErrorCodes.TooManyImportPlayers, validator.Validate(new RosterValidationRequest(22, 20, 2, 0, 3)));
+        Assert.Code(RuleErrorCodes.RosterTooLarge, validator.Validate(new RosterValidationRequest(27, 26, 2, 0, 0)));
+        Assert.Code(RuleErrorCodes.ActiveRosterTooLarge, validator.Validate(new RosterValidationRequest(26, 27, 2, 0, 0)));
+        Assert.Code(RuleErrorCodes.NotEnoughGoalies, validator.Validate(new RosterValidationRequest(26, 26, 1, 0, 0)));
+        Assert.Code(RuleErrorCodes.TooManyOveragePlayers, validator.Validate(new RosterValidationRequest(26, 26, 2, 4, 0)));
+        Assert.Code(RuleErrorCodes.TooManyImportPlayers, validator.Validate(new RosterValidationRequest(26, 26, 2, 0, 3)));
     }
 
     public void EligibilityValidator()
