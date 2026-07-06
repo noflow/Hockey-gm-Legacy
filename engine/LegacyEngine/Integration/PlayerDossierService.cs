@@ -90,18 +90,30 @@ public sealed class PlayerDossierService
         RosterPosition position,
         string status,
         string teamOrRights,
-        PlayerDossierSource source) =>
-        new(
-            "Overview",
-            new[]
-            {
-                $"Name: {person.Identity.DisplayName}",
-                $"Age: {person.CalculateAge(scenario.CurrentDate)}",
-                $"Position: {position}",
-                $"Status: {status}",
-                $"Team/Rights: {teamOrRights}",
-                $"Source: {source}"
-            });
+        PlayerDossierSource source)
+    {
+        var lines = new List<string>
+        {
+            $"Name: {person.Identity.DisplayName}",
+            $"Age: {person.CalculateAge(scenario.CurrentDate)}",
+            $"Position: {position}",
+            $"Status: {status}",
+            $"Team/Rights: {teamOrRights}",
+            $"Source: {source}"
+        };
+
+        var boardEntry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == person.PersonId);
+        if (boardEntry?.Bio is not null)
+        {
+            lines.Add($"Shoots/Catches: {boardEntry.Bio.ShootsCatches}");
+            lines.Add($"Height/Weight: {boardEntry.Bio.HeightDisplay}, {boardEntry.Bio.WeightDisplay}");
+            lines.Add($"Current team/league: {boardEntry.Bio.CurrentTeam} / {boardEntry.Bio.League}");
+            lines.Add($"Projection: {boardEntry.ProjectionText}");
+            lines.Add($"Scouting confidence: {boardEntry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+        }
+
+        return new PlayerDossierSection("Overview", lines);
+    }
 
     private static PlayerDossierSection BuildFacts(NewGmScenarioSnapshot scenario, Person person, PlayerDossierSource source)
     {

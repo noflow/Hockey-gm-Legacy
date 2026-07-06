@@ -66,14 +66,15 @@ The five foundation pillars remain:
 - Alpha 2.7 - First Month Playability Pass
 - Alpha 2.7.1 - Roster & Front Office Realism Pass
 - Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire
+- Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix
 
 ## Current Milestone
 
-Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire
+Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix
 
 ## Current Goal
 
-Keep the GM inbox focused on player-organization decisions and route other-team transactions into a separate League News / Transaction Wire feed.
+Make draft day easier to read with a three-column live draft layout and keep current staff, candidates, and vacancies visually separated.
 
 ## Why Relationship Engine Was Next
 

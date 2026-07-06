@@ -43,6 +43,7 @@ var alpha26GameRecapStatsPolishTests = new Alpha26GameRecapStatsPolishTests();
 var alpha27FirstMonthPlayabilityTests = new Alpha27FirstMonthPlayabilityTests();
 var alpha271RosterFrontOfficeRealismTests = new Alpha271RosterFrontOfficeRealismTests();
 var alpha272InboxCleanupTransactionWireTests = new Alpha272InboxCleanupTransactionWireTests();
+var alpha273DraftStaffLayoutTests = new Alpha273DraftStaffLayoutTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -544,6 +545,15 @@ runner.Run("alpha 2.7.2 vague system messages are filtered", alpha272InboxCleanu
 runner.Run("alpha 2.7.2 League News feed displays transactions", alpha272InboxCleanupTransactionWireTests.LeagueNewsFeedDisplaysTransactions);
 runner.Run("alpha 2.7.2 inbox remains team decision focused", alpha272InboxCleanupTransactionWireTests.InboxRemainsTeamDecisionFocused);
 runner.Run("alpha 2.7.2 AlphaDesktop exposes League News tab", alpha272InboxCleanupTransactionWireTests.AlphaDesktopExposesLeagueNewsTab);
+runner.Run("alpha 2.7.3 live draft middle rows include name position team and confidence", alpha273DraftStaffLayoutTests.LiveDraftMiddleRowsIncludeNamePositionTeamAndConfidence);
+runner.Run("alpha 2.7.3 selecting draft prospect populates left prospect card", alpha273DraftStaffLayoutTests.SelectingDraftProspectPopulatesLeftProspectCard);
+runner.Run("alpha 2.7.3 prospect card includes bio and scouting info", alpha273DraftStaffLayoutTests.ProspectCardIncludesBioAndScoutingInfo);
+runner.Run("alpha 2.7.3 draft status appears on right", alpha273DraftStaffLayoutTests.DraftStatusAppearsOnRight);
+runner.Run("alpha 2.7.3 drafting selected prospect removes them and adds rights", alpha273DraftStaffLayoutTests.DraftingSelectedProspectRemovesThemAndAddsRights);
+runner.Run("alpha 2.7.3 draft and prospect rows expose basic bio without hidden ratings", alpha273DraftStaffLayoutTests.DraftAndProspectRowsExposeBasicBioWithoutHiddenRatings);
+runner.Run("alpha 2.7.3 current staff excludes candidates and hire staff contains candidates", alpha273DraftStaffLayoutTests.CurrentStaffExcludesCandidatesAndHireStaffContainsCandidates);
+runner.Run("alpha 2.7.3 hired candidate moves to current staff", alpha273DraftStaffLayoutTests.HiredCandidateMovesToCurrentStaff);
+runner.Run("alpha 2.7.3 staff context buttons are correct", alpha273DraftStaffLayoutTests.StaffContextButtonsAreCorrect);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

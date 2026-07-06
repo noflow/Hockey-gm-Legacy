@@ -22,7 +22,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 2.7.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -100,7 +100,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 2.7.2 starts with your created GM preparing for a live draft, then keeps the GM inbox focused while other-team transactions move to League News.",
+            Text = "Alpha 2.7.3 starts with your created GM preparing for a clearer live draft, then keeps staff candidates separate from employed staff.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -256,7 +256,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 2.7.2 - GM Workspace",
+            Text = "Hockey GM Legacy - Alpha 2.7.3 - GM Workspace",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1175,24 +1175,21 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildStaffRows()
     {
-        var rows = State.StaffProfiles
+        var rows = new List<SelectablePersonRow>
+        {
+            new("staff-section:current", "Current Staff", "StaffSection", "Employed staff only", "Release/Reassign actions appear only on current staff.", "Candidates are intentionally kept out of this section.")
+        };
+
+        rows.AddRange(State.StaffProfiles
             .Select(profile => new SelectablePersonRow(
                 profile.PersonId,
                 profile.Name,
                 "Staff",
                 $"Current Staff - {profile.CurrentRole} - {profile.Salary.AnnualAmount:C0}",
                 $"{profile.Department} | GM relationship {profile.RelationshipWithGm} | salary {profile.Salary.AnnualAmount:C0}",
-                profile.Chemistry.Summary))
-            .ToList();
+                profile.Chemistry.Summary)));
 
-        rows.AddRange(State.StaffVacancies.Select(vacancy => new SelectablePersonRow(
-            $"vacancy:{vacancy.Role}",
-            StaffRoles.Title(vacancy.Role),
-            "Vacancy",
-            $"Vacant Position - {vacancy.Department}",
-            $"{vacancy.Current}/{vacancy.Required} filled | max {vacancy.Maximum}",
-            vacancy.Warning)));
-
+        rows.Add(new SelectablePersonRow("staff-section:candidates", "Hire Staff / Staff Candidates", "StaffSection", "Available candidates only", "Hire button appears only for candidate rows.", "Generate candidates, select one, then hire from the candidate detail panel."));
         rows.AddRange(State.ScenarioSnapshot.StaffCandidates.Select(candidate => new SelectablePersonRow(
             candidate.Person.PersonId,
             candidate.Person.Identity.DisplayName,
@@ -1200,6 +1197,15 @@ internal sealed class MainWindow : Window
             $"Staff Candidate - {candidate.StaffMember.CurrentRole} - ask {candidate.ExpectedSalary.AnnualAmount:C0}",
             $"{candidate.StaffMember.Department} | reputation {candidate.Reputation} | role fit {candidate.RoleFit} | salary ask {candidate.ExpectedSalary.AnnualAmount:C0}",
             $"{candidate.HiringRecommendation} Strengths: {string.Join(", ", candidate.Strengths)}. Risk: {candidate.ChemistryRisk}")));
+
+        rows.Add(new SelectablePersonRow("staff-section:vacancies", "Vacancies", "StaffSection", "Rulebook staff openings", "Vacant positions and limits from the active rulebook.", State.StaffVacancySummary));
+        rows.AddRange(State.StaffVacancies.Select(vacancy => new SelectablePersonRow(
+            $"vacancy:{vacancy.Role}",
+            StaffRoles.Title(vacancy.Role),
+            "Vacancy",
+            $"Vacant Position - {vacancy.Department}",
+            $"{vacancy.Current}/{vacancy.Required} filled | max {vacancy.Maximum}",
+            vacancy.Warning)));
 
         return rows;
     }
@@ -1327,9 +1333,9 @@ internal sealed class MainWindow : Window
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "DraftBoard",
-                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank}",
-                $"{State.PersonPosition(entry.ProspectPersonId)} | {entry.Bio?.ShootsCatches ?? "Hand unknown"} | {entry.Bio?.HeightDisplay ?? "height n/a"} | {entry.Bio?.WeightDisplay ?? "weight n/a"}",
-                $"{State.DraftBioSummary(entry)} | {entry.ProjectionText}"))
+                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank} | {State.PersonPosition(entry.ProspectPersonId)} | {entry.Bio?.CurrentTeam ?? "team n/a"} / {entry.Bio?.League ?? "league n/a"}",
+                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Projection: {entry.ProjectionText}",
+                $"{entry.Bio?.ShootsCatches ?? "Hand unknown"} | {entry.Bio?.HeightDisplay ?? "height n/a"} | {entry.Bio?.WeightDisplay ?? "weight n/a"} | {State.DraftBioSummary(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildProspectRows() =>
@@ -1340,8 +1346,8 @@ internal sealed class MainWindow : Window
                 prospect.ProspectName,
                 "Prospect",
                 $"{prospect.Position} - {prospect.Status}",
-                $"Age {prospect.Age} | R{prospect.RoundNumber} P{prospect.PickNumber}",
-                prospect.ProjectionText))
+                $"Age {prospect.Age} | R{prospect.RoundNumber} P{prospect.PickNumber} | Confidence {prospect.ScoutingConfidence?.ToString() ?? "Unknown"}",
+                $"Projection: {prospect.ProjectionText}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildTrainingCampRows() =>
@@ -1385,6 +1391,24 @@ internal sealed class MainWindow : Window
             AddParagraph(empty, "Generate candidates, select a candidate row, then use Hire Candidate in the detail panel.");
             AddActions(empty, CreateDetailButton("Hire Staff", GenerateStaffCandidates), CreateDetailButton("Generate Candidates", GenerateStaffCandidates), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
             return empty;
+        }
+
+        if (row.Kind == "StaffSection")
+        {
+            var panel = CreateDetailPanel(row.Name, row.Primary);
+            AddLine(panel, "Section", row.Name);
+            AddLine(panel, "Scope", row.Secondary);
+            AddParagraph(panel, row.Summary);
+            if (row.PersonId == "staff-section:candidates")
+            {
+                AddActions(panel, CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
+            }
+            else if (row.PersonId == "staff-section:vacancies")
+            {
+                AddActions(panel, CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
+            }
+
+            return panel;
         }
 
         if (row.Kind == "Vacancy")
@@ -1850,8 +1874,8 @@ internal sealed class MainWindow : Window
             Background = Brushes.White,
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(22),
-            MaxWidth = 1060,
-            MaxHeight = 660,
+            MaxWidth = 1320,
+            MaxHeight = 720,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -1928,7 +1952,8 @@ internal sealed class MainWindow : Window
     {
         var state = State.ScenarioSnapshot.DraftExperience!;
         var root = new Grid();
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.15, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var prospectList = new ListBox
@@ -1943,7 +1968,7 @@ internal sealed class MainWindow : Window
             prospectList.Items.Add(new ListBoxItem
             {
                 Tag = entry.ProspectPersonId,
-                Content = $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | {entry.ProjectionText}"
+                Content = BuildLiveDraftMiddleRow(entry)
             });
         }
 
@@ -1952,9 +1977,41 @@ internal sealed class MainWindow : Window
             prospectList.SelectedIndex = 0;
         }
 
+        var prospectCard = new TextBox
+        {
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(218, 226, 235)),
+            BorderThickness = new Thickness(1),
+            Background = new SolidColorBrush(Color.FromRgb(250, 252, 254)),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 13,
+            Padding = new Thickness(12),
+            Text = BuildLiveDraftProspectCard((prospectList.SelectedItem as ListBoxItem)?.Tag as string)
+        };
+        prospectList.SelectionChanged += (_, _) =>
+        {
+            prospectCard.Text = BuildLiveDraftProspectCard((prospectList.SelectedItem as ListBoxItem)?.Tag as string);
+        };
+
         var left = new Grid { Margin = new Thickness(0, 0, 16, 0) };
         left.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         left.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        AddPanelHeader(left, "Selected Prospect Card");
+        Grid.SetRow(prospectCard, 1);
+        left.Children.Add(prospectCard);
+        Grid.SetColumn(left, 0);
+        root.Children.Add(left);
+
+        var middle = new Grid { Margin = new Thickness(0, 0, 16, 0) };
+        middle.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        middle.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        AddPanelHeader(middle, "Draft Player List");
+        Grid.SetRow(prospectList, 1);
+        middle.Children.Add(prospectList);
+        Grid.SetColumn(middle, 1);
+        root.Children.Add(middle);
 
         var draftButton = CreateButton("Draft Player", () =>
         {
@@ -1976,30 +2033,34 @@ internal sealed class MainWindow : Window
 
         var actionBar = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center
+            Orientation = Orientation.Vertical,
+            Margin = new Thickness(0, 0, 0, 10)
         };
+
+        if (State.ScenarioSnapshot.DraftExperience?.Status is DraftExperienceStatus.NotStarted or DraftExperienceStatus.PreDraft)
+        {
+            actionBar.Children.Add(CreateButton("Start Draft", State.StartLiveDraft));
+        }
+
         actionBar.Children.Add(draftButton);
-        actionBar.Children.Add(new TextBlock
+        if (State.ScenarioSnapshot.DraftExperience?.Status == DraftExperienceStatus.Completed)
+        {
+            actionBar.Children.Add(CreateButton("End Draft", State.EndLiveDraftModal));
+        }
+
+        var instruction = new TextBlock
         {
             Text = state.IsPlayerTurn
                 ? "Select a prospect, then click Draft Player."
                 : "Waiting for your next pick.",
-            VerticalAlignment = VerticalAlignment.Center,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(Color.FromRgb(55, 70, 88)),
-            TextWrapping = TextWrapping.Wrap
-        });
-        Grid.SetRow(actionBar, 0);
-        left.Children.Add(actionBar);
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 2, 0, 10)
+        };
+        actionBar.Children.Add(instruction);
 
-        Grid.SetRow(prospectList, 1);
-        left.Children.Add(prospectList);
-
-        Grid.SetColumn(left, 0);
-        root.Children.Add(left);
-
-        var right = new TextBox
+        var statusText = new TextBox
         {
             IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap,
@@ -2012,10 +2073,34 @@ internal sealed class MainWindow : Window
             Padding = new Thickness(12),
             Text = BuildLiveDraftText()
         };
-        Grid.SetColumn(right, 1);
+
+        var right = new Grid();
+        right.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        right.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        right.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        AddPanelHeader(right, "Draft Status");
+        Grid.SetRow(actionBar, 1);
+        right.Children.Add(actionBar);
+        Grid.SetRow(statusText, 2);
+        right.Children.Add(statusText);
+        Grid.SetColumn(right, 2);
         root.Children.Add(right);
 
         return root;
+    }
+
+    private static void AddPanelHeader(Grid grid, string text)
+    {
+        var header = new TextBlock
+        {
+            Text = text,
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 15,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        Grid.SetRow(header, 0);
+        grid.Children.Add(header);
     }
 
     private string BuildLiveDraftText()
@@ -2063,6 +2148,90 @@ internal sealed class MainWindow : Window
 
         return builder.ToString();
     }
+
+    private string BuildLiveDraftMiddleRow(DraftBoardEntry entry)
+    {
+        var teamLeague = entry.Bio is null ? State.RegionTeamText(entry.ProspectPersonId) : $"{entry.Bio.CurrentTeam} / {entry.Bio.League}";
+        return $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {State.PersonPosition(entry.ProspectPersonId)} | {teamLeague} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"}";
+    }
+
+    private string BuildLiveDraftProspectCard(string? prospectId)
+    {
+        var entry = string.IsNullOrWhiteSpace(prospectId)
+            ? State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault()
+            : State.Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == prospectId);
+        if (entry is null)
+        {
+            return "No available draft prospect selected.";
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("Selected Prospect Card");
+        builder.AppendLine("======================");
+        builder.AppendLine($"Name: {FindPersonName(entry.ProspectPersonId)}");
+        builder.AppendLine($"Position: {State.PersonPosition(entry.ProspectPersonId)}");
+        builder.AppendLine($"Age: {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"}");
+        if (entry.Bio is not null)
+        {
+            builder.AppendLine($"Shoots/Catches: {entry.Bio.ShootsCatches}");
+            builder.AppendLine($"Height: {entry.Bio.HeightDisplay}");
+            builder.AppendLine($"Weight: {entry.Bio.WeightDisplay}");
+            builder.AppendLine($"Birth year: {entry.Bio.BirthYear}");
+            builder.AppendLine($"Hometown: {entry.Bio.Hometown}, {entry.Bio.ProvinceState}, {entry.Bio.Country}");
+            builder.AppendLine($"Current team: {entry.Bio.CurrentTeam}");
+            builder.AppendLine($"Current league: {entry.Bio.League}");
+            builder.AppendLine($"Region: {entry.Bio.ProvinceState}, {entry.Bio.Country}");
+            builder.AppendLine($"Potential lineup role: {entry.Bio.PotentialLineupProjection}");
+            builder.AppendLine($"Character summary: {entry.Bio.CharacterSummary}");
+        }
+        else
+        {
+            builder.AppendLine("Shoots/Catches: basic bio pending");
+            builder.AppendLine("Height: basic bio pending");
+            builder.AppendLine("Weight: basic bio pending");
+            builder.AppendLine($"Region: {State.RegionTeamText(entry.ProspectPersonId)}");
+        }
+
+        builder.AppendLine($"Scouting confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+        builder.AppendLine($"Projection: {entry.ProjectionText}");
+        builder.AppendLine($"Player type: {State.PlayerType(entry.ProspectPersonId)}");
+        builder.AppendLine($"Risk summary: {DraftRiskSummary(entry)}");
+        builder.AppendLine($"GM notes: {(string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes)}");
+
+        var reports = State.ScenarioSnapshot.CompletedScoutingReports
+            .Where(report => report.PlayerId == entry.ProspectPersonId)
+            .OrderByDescending(report => report.CreatedOn)
+            .ToArray();
+        builder.AppendLine("Scouting reports:");
+        if (reports.Length == 0)
+        {
+            builder.AppendLine("  No completed report yet. Basic bio remains visible.");
+        }
+
+        foreach (var report in reports.Take(3))
+        {
+            builder.AppendLine($"  {report.CreatedOn:yyyy-MM-dd} | {report.Confidence} | {report.Recommendation}");
+            if (report.Confidence is ScoutingConfidenceLevel.High or ScoutingConfidenceLevel.VeryHigh)
+            {
+                builder.AppendLine($"    {report.Opinions.FirstOrDefault() ?? report.Observations.FirstOrDefault() ?? "No detailed note."}");
+            }
+        }
+
+        var recommendation = reports.FirstOrDefault()?.Recommendation.ToString() ?? State.AssignedScoutText(entry.ProspectPersonId);
+        builder.AppendLine($"Staff/scout recommendation: {recommendation}");
+        return builder.ToString();
+    }
+
+    private static string DraftRiskSummary(DraftBoardEntry entry) =>
+        !string.IsNullOrWhiteSpace(entry.AnalyticsSummary)
+            ? entry.AnalyticsSummary
+            : entry.ScoutingConfidence switch
+            {
+                ScoutingConfidenceLevel.VeryHigh or ScoutingConfidenceLevel.High => "Risk is mostly role-fit and development timeline; staff have useful evidence.",
+                ScoutingConfidenceLevel.Medium => "Moderate uncertainty; staff want another viewing before changing the board.",
+                ScoutingConfidenceLevel.Low or ScoutingConfidenceLevel.Unknown or null => "High uncertainty; basic bio is known but projection detail is limited.",
+                _ => "Risk summary unavailable."
+            };
 
     private string BuildDashboard()
     {
