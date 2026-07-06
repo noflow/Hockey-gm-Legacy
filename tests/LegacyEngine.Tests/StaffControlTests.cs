@@ -108,6 +108,24 @@ internal sealed class StaffControlTests
         Assert.True(result.ScenarioSnapshot.StaffEvaluations.Any(item => item.PersonId == staff.PersonId), "Staff evaluation should be stored.");
     }
 
+    public void StaffProfilesTolerateDuplicatePersonIds()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var duplicate = scenario.ScenarioSnapshot.StaffMembers.First(member => member.EmploymentStatus == StaffEmploymentStatus.Employed);
+        var snapshot = scenario.ScenarioSnapshot with
+        {
+            StaffMembers = scenario.ScenarioSnapshot.StaffMembers.Append(duplicate).ToArray(),
+            AlphaSnapshot = scenario.ScenarioSnapshot.AlphaSnapshot with
+            {
+                StaffMembers = scenario.ScenarioSnapshot.AlphaSnapshot.StaffMembers.Append(duplicate).ToArray()
+            }
+        };
+
+        var profiles = new StaffOfficeService().BuildStaffProfiles(snapshot, scenario.Registry.Rulebook!);
+
+        Assert.Equal(1, profiles.Count(profile => profile.PersonId == duplicate.PersonId));
+    }
+
     public void ChemistryWarningGenerated()
     {
         var scenario = WithPoorGmRelationship(NewGmScenarioBootstrapper.CreateScenario());

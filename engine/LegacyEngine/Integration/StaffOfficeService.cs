@@ -15,6 +15,8 @@ public sealed class StaffOfficeService
     public IReadOnlyList<StaffOfficeProfile> BuildStaffProfiles(NewGmScenarioSnapshot scenario, Rulebook rulebook) =>
         scenario.StaffMembers
             .Where(member => member.EmploymentStatus == StaffEmploymentStatus.Employed)
+            .GroupBy(member => member.PersonId, StringComparer.Ordinal)
+            .Select(group => group.Last())
             .OrderBy(member => member.Department)
             .ThenBy(member => member.CurrentRole)
             .Select(member => BuildProfile(scenario, member, rulebook))
@@ -144,11 +146,11 @@ public sealed class StaffOfficeService
         var updated = scenario with
         {
             StaffCandidates = scenario.StaffCandidates.Where(item => item.CandidateId != candidateId).ToArray(),
-            StaffMembers = scenario.StaffMembers.Append(hired).ToArray(),
+            StaffMembers = UpsertStaff(scenario.StaffMembers, hired),
             AlphaSnapshot = scenario.AlphaSnapshot with
             {
                 People = people,
-                StaffMembers = scenario.AlphaSnapshot.StaffMembers.Append(hired).ToArray()
+                StaffMembers = UpsertStaff(scenario.AlphaSnapshot.StaffMembers, hired)
             }
         };
 
@@ -571,25 +573,30 @@ public sealed class StaffOfficeService
             ? $"Moderate risk; {StaffRoles.Title(role)} candidate expects defined authority."
             : $"Low risk; {StaffRoles.Title(role)} candidate profiles as collaborative.";
 
-    private static StaffMember FindStaff(NewGmScenarioSnapshot scenario, string personId) =>
-        scenario.StaffMembers.SingleOrDefault(member => member.PersonId == personId)
-        ?? throw new ArgumentException("Staff member was not found.", nameof(personId));
+    private static StaffMember FindStaff(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var matches = scenario.StaffMembers
+            .Where(member => member.PersonId == personId)
+            .ToArray();
+        return matches.LastOrDefault(member => member.EmploymentStatus == StaffEmploymentStatus.Employed)
+            ?? matches.LastOrDefault()
+            ?? throw new ArgumentException("Staff member was not found.", nameof(personId));
+    }
 
     private static NewGmScenarioSnapshot ReplaceStaff(NewGmScenarioSnapshot scenario, StaffMember member)
     {
-        var staff = scenario.StaffMembers
-            .Select(existing => existing.PersonId == member.PersonId ? member : existing)
-            .ToArray();
-        var snapshotStaff = scenario.AlphaSnapshot.StaffMembers
-            .Select(existing => existing.PersonId == member.PersonId ? member : existing)
-            .ToArray();
-
         return scenario with
         {
-            StaffMembers = staff,
-            AlphaSnapshot = scenario.AlphaSnapshot with { StaffMembers = snapshotStaff }
+            StaffMembers = UpsertStaff(scenario.StaffMembers, member),
+            AlphaSnapshot = scenario.AlphaSnapshot with { StaffMembers = UpsertStaff(scenario.AlphaSnapshot.StaffMembers, member) }
         };
     }
+
+    private static StaffMember[] UpsertStaff(IEnumerable<StaffMember> staffMembers, StaffMember member) =>
+        staffMembers
+            .Where(existing => existing.PersonId != member.PersonId)
+            .Append(member)
+            .ToArray();
 
     private static IReadOnlyList<string> Strengths(StaffMember member)
     {

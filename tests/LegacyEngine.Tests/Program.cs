@@ -451,6 +451,7 @@ runner.Run("staff control development coach focus can be set", staffControlTests
 runner.Run("staff control medical staff focus can be set", staffControlTests.MedicalStaffFocusCanBeSet);
 runner.Run("staff control scouting department focus can be set", staffControlTests.ScoutingDepartmentFocusCanBeSet);
 runner.Run("staff control evaluation generated", staffControlTests.StaffEvaluationGenerated);
+runner.Run("staff control profiles tolerate duplicate person ids", staffControlTests.StaffProfilesTolerateDuplicatePersonIds);
 runner.Run("staff control chemistry warning generated", staffControlTests.ChemistryWarningGenerated);
 runner.Run("staff control relationship affects chemistry", staffControlTests.RelationshipAffectsChemistry);
 runner.Run("staff control events created", staffControlTests.EventsCreated);
