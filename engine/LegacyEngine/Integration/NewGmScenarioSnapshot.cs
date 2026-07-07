@@ -30,6 +30,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<DraftRightsRecord> ProspectRights { get; init; } = Array.Empty<DraftRightsRecord>();
 
+    public IReadOnlyList<AffiliateLink> AffiliateLinks { get; init; } = Array.Empty<AffiliateLink>();
+
+    public IReadOnlyList<PlayerPipelineRecord> PlayerPipeline { get; init; } = Array.Empty<PlayerPipelineRecord>();
+
     public TrainingCamp? TrainingCamp { get; init; }
 
     public IReadOnlyList<PendingGmAction> PendingActions { get; init; } = Array.Empty<PendingGmAction>();
@@ -184,6 +188,16 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var prospect in ProspectRights)
         {
             prospect.Validate();
+        }
+
+        foreach (var link in AffiliateLinks)
+        {
+            link.Validate();
+        }
+
+        foreach (var pipelineRecord in PlayerPipeline)
+        {
+            pipelineRecord.Validate();
         }
 
         TrainingCamp?.Validate();

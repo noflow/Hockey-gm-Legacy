@@ -87,14 +87,15 @@ The five foundation pillars remain:
 - Alpha 4.9 - League AI & Team Identity v2
 - Alpha 5.0 - Playability & Polish
 - Alpha 5.1 - Multi-League Career Framework
+- Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1
 
 ## Current Milestone
 
-Alpha 5.1 - Multi-League Career Framework
+Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1
 
 ## Current Goal
 
-Allow the player to begin an Alpha career in NHL-style, AHL-style, Junior, or Custom placeholder league setups while keeping one shared LegacyEngine path. League profiles now define rulebook, team choices, difficulty, gameplay focus, rules summaries, current champion/history, affiliate context, and save metadata so careers restore to the same league.
+Represent full fictional NHL-style, AHL-style, WHL, OHL, and QMJHL team universes while keeping the Alpha play loop stable. League profiles now expose full team selection, parent/affiliate relationships, organization identity, budget/quality/difficulty context, and a first-pass player pipeline for NHL roster, AHL assignment, junior return, prospect rights, and draft-rights tracking.
 
 ## Why Relationship Engine Was Next
 
@@ -104,11 +105,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.2 - TBD
+Alpha 5.4 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.2 - TBD
+1. Alpha 5.4 - TBD
 
 ## Build Rule
 

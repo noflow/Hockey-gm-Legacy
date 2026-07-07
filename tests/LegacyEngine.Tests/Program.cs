@@ -65,6 +65,7 @@ var alpha49LeagueAiTeamIdentityTests = new Alpha49LeagueAiTeamIdentityTests();
 var alpha50PlayabilityPolishTests = new Alpha50PlayabilityPolishTests();
 var alpha51MultiLeagueCareerTests = new Alpha51MultiLeagueCareerTests();
 var alpha51FunctionalUiTradeWindowTests = new Alpha51FunctionalUiTradeWindowTests();
+var alpha53FullLeaguePipelineTests = new Alpha53FullLeaguePipelineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -846,6 +847,20 @@ runner.Run("alpha 5.1 organization popup shows selectable roster", alpha51Functi
 runner.Run("alpha 5.1 trade builder shows assets and impacts", alpha51FunctionalUiTradeWindowTests.TradeBuilderPopupShowsAssetsAndImpacts);
 runner.Run("alpha 5.1 popups do not duplicate top-level tabs", alpha51FunctionalUiTradeWindowTests.NoPopupTopLevelTabDuplication);
 runner.Run("alpha 5.1 accepted trade still creates pending approval", alpha51FunctionalUiTradeWindowTests.AcceptedTradeStillCreatesPendingGmAction);
+runner.Run("alpha 5.3 NHL league has thirty-two teams", alpha53FullLeaguePipelineTests.NhlLeagueHasThirtyTwoTeams);
+runner.Run("alpha 5.3 AHL league has thirty-two teams", alpha53FullLeaguePipelineTests.AhlLeagueHasThirtyTwoTeams);
+runner.Run("alpha 5.3 junior leagues have required team counts", alpha53FullLeaguePipelineTests.JuniorLeaguesHaveRequiredTeamCounts);
+runner.Run("alpha 5.3 team selection lists all teams", alpha53FullLeaguePipelineTests.TeamSelectionListsAllTeams);
+runner.Run("alpha 5.3 NHL team has AHL affiliate", alpha53FullLeaguePipelineTests.NhlTeamHasAhlAffiliate);
+runner.Run("alpha 5.3 AHL team has NHL parent", alpha53FullLeaguePipelineTests.AhlTeamHasNhlParent);
+runner.Run("alpha 5.3 drafted NHL prospect can return to junior", alpha53FullLeaguePipelineTests.DraftedNhlProspectCanBeReturnedToJunior);
+runner.Run("alpha 5.3 drafted NHL prospect can be assigned to AHL", alpha53FullLeaguePipelineTests.DraftedNhlProspectCanBeAssignedToAhl);
+runner.Run("alpha 5.3 AHL career starts with assigned players", alpha53FullLeaguePipelineTests.AhlCareerStartsWithAssignedPlayers);
+runner.Run("alpha 5.3 Junior career still supports recruiting and draft", alpha53FullLeaguePipelineTests.JuniorCareerStillSupportsRecruitingAndDraft);
+runner.Run("alpha 5.3 player dossier shows pipeline status", alpha53FullLeaguePipelineTests.PlayerDossierShowsPipelineStatus);
+runner.Run("alpha 5.3 save load preserves full league and affiliate setup", alpha53FullLeaguePipelineTests.SaveLoadPreservesFullLeagueAndAffiliateSetup);
+runner.Run("alpha 5.3 AlphaDesktop exposes full team browser", alpha53FullLeaguePipelineTests.AlphaDesktopExposesFullTeamBrowser);
+runner.Run("alpha 5.3 generated people do not use real star player names", alpha53FullLeaguePipelineTests.GeneratedPeopleDoNotUseRealStarPlayerNames);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

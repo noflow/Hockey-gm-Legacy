@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -82,6 +82,9 @@ internal sealed class MainWindow : Window
     private readonly MultiLeagueCareerService _careerSetup = new();
     private readonly ComboBox _leagueInput = new() { ItemsSource = Enum.GetValues<LeagueExperience>(), SelectedItem = LeagueExperience.Junior };
     private readonly ComboBox _teamInput = new() { DisplayMemberPath = nameof(TeamSelectionOption.TeamName) };
+    private readonly TextBox _teamSearchInput = new() { MinWidth = 160 };
+    private readonly ComboBox _teamDivisionFilterInput = new() { MinWidth = 160 };
+    private readonly ComboBox _teamSortInput = new() { ItemsSource = new[] { "Team name", "Difficulty", "Budget", "Roster quality", "Prospect strength" }, SelectedItem = "Team name", MinWidth = 160 };
     private readonly TextBlock _leagueSummaryText = new();
     private readonly ComboBox _genderInput = new() { ItemsSource = Enum.GetValues<Gender>(), SelectedItem = Gender.NonBinary };
     private readonly ComboBox _backgroundInput = new() { ItemsSource = Enum.GetValues<GmBackground>(), SelectedItem = GmBackground.Operations };
@@ -172,6 +175,9 @@ internal sealed class MainWindow : Window
     {
         _leagueInput.SelectionChanged += (_, _) => RefreshTeamChoices();
         _teamInput.SelectionChanged += (_, _) => RefreshLeagueSummary();
+        _teamSearchInput.TextChanged += (_, _) => RefreshTeamChoices(preserveSelection: true);
+        _teamDivisionFilterInput.SelectionChanged += (_, _) => RefreshTeamChoices(preserveSelection: true);
+        _teamSortInput.SelectionChanged += (_, _) => RefreshTeamChoices(preserveSelection: true);
         var panel = new Border
         {
             Background = Brushes.White,
@@ -181,28 +187,74 @@ internal sealed class MainWindow : Window
             Margin = new Thickness(0, 0, 0, 16)
         };
         var content = new Grid();
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(210) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         content.Children.Add(LabeledControl("League", _leagueInput));
         var teamField = LabeledControl("Team", _teamInput);
         Grid.SetColumn(teamField, 1);
         content.Children.Add(teamField);
+        var searchField = LabeledControl("Search", _teamSearchInput);
+        Grid.SetColumn(searchField, 2);
+        content.Children.Add(searchField);
+        var divisionField = LabeledControl("League / Division", _teamDivisionFilterInput);
+        Grid.SetColumn(divisionField, 3);
+        content.Children.Add(divisionField);
+        var sortField = LabeledControl("Sort", _teamSortInput);
+        Grid.SetColumn(sortField, 4);
+        content.Children.Add(sortField);
         _leagueSummaryText.TextWrapping = TextWrapping.Wrap;
         _leagueSummaryText.Foreground = new SolidColorBrush(Color.FromRgb(44, 58, 74));
         _leagueSummaryText.Margin = new Thickness(16, 20, 0, 0);
-        Grid.SetColumn(_leagueSummaryText, 2);
+        Grid.SetColumn(_leagueSummaryText, 5);
         content.Children.Add(_leagueSummaryText);
         panel.Child = content;
         return panel;
     }
 
-    private void RefreshTeamChoices()
+    private void RefreshTeamChoices(bool preserveSelection = false)
     {
         var experience = SelectedLeagueExperience();
-        var teams = _careerSetup.TeamsFor(experience);
+        var prior = preserveSelection ? SelectedTeamOption()?.OrganizationId : null;
+        var allTeams = _careerSetup.TeamsFor(experience);
+        var divisionOptions = new[] { "All" }
+            .Concat(allTeams.Select(team => team.DisplayLeagueName).Distinct(StringComparer.Ordinal))
+            .Concat(allTeams.Select(team => team.DisplayDivisionConference).Distinct(StringComparer.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var selectedDivision = _teamDivisionFilterInput.SelectedItem?.ToString();
+        _teamDivisionFilterInput.ItemsSource = divisionOptions;
+        _teamDivisionFilterInput.SelectedItem = selectedDivision is not null && divisionOptions.Contains(selectedDivision, StringComparer.Ordinal)
+            ? selectedDivision
+            : "All";
+
+        var search = _teamSearchInput.Text.Trim();
+        var filter = _teamDivisionFilterInput.SelectedItem?.ToString() ?? "All";
+        var teams = allTeams
+            .Where(team => string.IsNullOrWhiteSpace(search)
+                || team.TeamName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || team.City.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || team.Region.Contains(search, StringComparison.OrdinalIgnoreCase))
+            .Where(team => filter == "All"
+                || string.Equals(team.DisplayLeagueName, filter, StringComparison.Ordinal)
+                || string.Equals(team.DisplayDivisionConference, filter, StringComparison.Ordinal))
+            .ToArray();
+
+        teams = (_teamSortInput.SelectedItem?.ToString() ?? "Team name") switch
+        {
+            "Difficulty" => teams.OrderBy(team => DifficultyRank(team.Difficulty)).ThenBy(team => team.TeamName, StringComparer.Ordinal).ToArray(),
+            "Budget" => teams.OrderByDescending(team => team.Budget).ThenBy(team => team.TeamName, StringComparer.Ordinal).ToArray(),
+            "Roster quality" => teams.OrderBy(team => QualityRank(team.RosterQuality)).ThenBy(team => team.TeamName, StringComparer.Ordinal).ToArray(),
+            "Prospect strength" => teams.OrderBy(team => QualityRank(team.ProspectStrength)).ThenBy(team => team.TeamName, StringComparer.Ordinal).ToArray(),
+            _ => teams.OrderBy(team => team.TeamName, StringComparer.Ordinal).ToArray()
+        };
+
         _teamInput.ItemsSource = teams;
-        _teamInput.SelectedItem = teams.FirstOrDefault();
+        _teamInput.SelectedItem = teams.FirstOrDefault(team => string.Equals(team.OrganizationId, prior, StringComparison.Ordinal))
+            ?? teams.FirstOrDefault();
         RefreshLeagueSummary();
     }
 
@@ -212,8 +264,29 @@ internal sealed class MainWindow : Window
         var team = SelectedTeamOption();
         _leagueSummaryText.Text = team is null
             ? $"{profile.Identity.Name}: {profile.Identity.Description}"
-            : $"{profile.Identity.Name} | {profile.Identity.Difficulty}\nFocus: {string.Join(", ", profile.Identity.PrimaryGameplayFocus)}\n{team.TeamName}: {team.PreviousRecord}, budget {team.Budget:C0}, prospects {team.ProspectStrength}, roster {team.RosterQuality}.";
+            : $"{profile.Identity.Name} | {profile.Identity.Difficulty} | {profile.Teams.Count} teams\nFocus: {string.Join(", ", profile.Identity.PrimaryGameplayFocus)}\n{team.TeamName}: {team.DisplayLeagueName}, {team.DisplayDivisionConference}, {team.PreviousRecord}, budget {team.Budget:C0}, roster {team.RosterQuality}, prospects {team.ProspectStrength}, staff {team.DisplayStaffQuality}, difficulty {team.Difficulty}.";
     }
+
+    private static int DifficultyRank(string difficulty) =>
+        difficulty switch
+        {
+            "Approachable" => 0,
+            "Medium" => 1,
+            "Hard" => 2,
+            "Demanding" => 3,
+            _ => 4
+        };
+
+    private static int QualityRank(string quality) =>
+        quality switch
+        {
+            "Excellent" or "Contender" or "High-end" or "Experienced" => 0,
+            "Strong" or "Balanced" => 1,
+            "Average" or "Developing" or "Development-focused" => 2,
+            "Emerging" or "Raw" or "Needs support" => 3,
+            "Thin" => 4,
+            _ => 5
+        };
 
     private LeagueExperience SelectedLeagueExperience() =>
         _leagueInput.SelectedItem is LeagueExperience experience ? experience : LeagueExperience.Junior;
@@ -1898,9 +1971,9 @@ internal sealed class MainWindow : Window
                 team.OrganizationId,
                 team.TeamName,
                 "Team",
-                $"{team.City}, {team.Region} | previous record {team.PreviousRecord}",
-                $"Budget {team.Budget:C0} | roster {team.RosterQuality} | prospects {team.ProspectStrength}",
-                $"{team.OwnerExpectations} | difficulty {team.Difficulty}"))
+                $"{team.DisplayLeagueName} | {team.DisplayDivisionConference} | {team.City}, {team.Region}",
+                $"Record {team.PreviousRecord} | budget {team.Budget:C0} | roster {team.RosterQuality} | prospects {team.ProspectStrength}",
+                $"{team.DisplayCurrentStrategy} | staff {team.DisplayStaffQuality} | difficulty {team.Difficulty}"))
             .ToArray();
 
     private UIElement BuildTeamDetail(SelectablePersonRow? row)
@@ -1919,14 +1992,19 @@ internal sealed class MainWindow : Window
         var roster = State.OtherTeamTradeRoster(team.OrganizationId);
         var panel = CreateDetailPanel(team.TeamName, $"{team.City}, {team.Region}, {team.Country}");
         AddSubHeader(panel, "Team Overview");
+        AddLine(panel, "League / division", $"{team.DisplayLeagueName} | {team.DisplayDivisionConference}");
+        AddLine(panel, "Arena", team.DisplayArena);
         AddLine(panel, "Previous record", team.PreviousRecord);
         AddLine(panel, "Owner expectations", team.OwnerExpectations);
         AddLine(panel, "Budget status", $"{team.Budget:C0} placeholder");
         AddLine(panel, "Roster", team.RosterQuality);
         AddLine(panel, "Prospects", team.ProspectStrength);
+        AddLine(panel, "Staff", team.DisplayStaffQuality);
         AddLine(panel, "Difficulty", team.Difficulty);
+        AddLine(panel, "Current strategy", team.DisplayCurrentStrategy);
         AddLine(panel, "Parent", string.IsNullOrWhiteSpace(team.ParentOrganizationId) ? "none" : team.ParentOrganizationId);
         AddLine(panel, "Affiliate", string.IsNullOrWhiteSpace(team.AffiliateOrganizationId) ? "none" : team.AffiliateOrganizationId);
+        AddLine(panel, "Pipeline players", State.PipelineCountForOrganization(team.OrganizationId));
         AddSubHeader(panel, "Current Needs / Trade Direction");
         AddParagraph(panel, State.TeamNeedsTextForOrganization(team.OrganizationId, team.TeamName));
         AddSubHeader(panel, "Roster Browse");
@@ -2011,9 +2089,14 @@ internal sealed class MainWindow : Window
     {
         var panel = CreateDetailPanel(team.TeamName, "Organization / Team");
         AddLine(panel, "Record", team.PreviousRecord);
+        AddLine(panel, "League / division", $"{team.DisplayLeagueName} | {team.DisplayDivisionConference}");
+        AddLine(panel, "Arena", team.DisplayArena);
         AddLine(panel, "Budget status", $"{team.Budget:C0} placeholder");
-        AddLine(panel, "Staff", "Front office and coaching staff summary placeholder");
+        AddLine(panel, "Staff", team.DisplayStaffQuality);
+        AddLine(panel, "Current strategy", team.DisplayCurrentStrategy);
         AddLine(panel, "Draft picks", "Draft picks placeholder");
+        AddLine(panel, "Parent club", string.IsNullOrWhiteSpace(team.ParentOrganizationId) ? "none" : team.ParentOrganizationId);
+        AddLine(panel, "Affiliate club", string.IsNullOrWhiteSpace(team.AffiliateOrganizationId) ? "none" : team.AffiliateOrganizationId);
         AddLine(panel, "Needs", State.TeamNeedsShortTextForOrganization(team.OrganizationId, team.TeamName));
 
         if (row is null)
@@ -2039,6 +2122,7 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Career summary", State.CareerStatSummary(entry.PersonId));
         AddLine(panel, "Scouting confidence", State.ScoutingConfidenceText(entry.PersonId));
         AddLine(panel, "Trade interest", $"{entry.InterestLevel}: {entry.ReasonAvailable}");
+        AddLine(panel, "Pipeline", State.PipelineText(entry.PersonId));
         AddActions(
             panel,
             CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)),
@@ -2471,6 +2555,7 @@ internal sealed class MainWindow : Window
         var panel = CreateDetailPanel(row.Name, row.Primary);
         AddLine(panel, "Status / role", row.Primary);
         AddLine(panel, "Context", row.Secondary);
+        AddLine(panel, "Pipeline", State.PipelineText(row.PersonId));
         AddLine(panel, "GM relationship", $"{State.RelationshipWithGm(row.PersonId)}/100");
         AddParagraph(panel, row.Summary);
 
@@ -7638,6 +7723,23 @@ internal sealed class AlphaDesktopState
         }
 
         return builder.ToString().Trim();
+    }
+
+    public string PipelineCountForOrganization(string organizationId)
+    {
+        var count = ScenarioSnapshot.PlayerPipeline.Count(record => record.CurrentOrganizationId == organizationId || record.RightsHolderOrganizationId == organizationId);
+        return count == 0 ? "none tracked yet" : count.ToString();
+    }
+
+    public string PipelineText(string personId)
+    {
+        var record = ScenarioSnapshot.PlayerPipeline.FirstOrDefault(record => record.PersonId == personId);
+        if (record is null)
+        {
+            return "No pipeline status tracked yet.";
+        }
+
+        return $"{record.CurrentLevel} | {record.PipelineStatus} | rights {record.RightsHolderTeamName ?? "none"} | parent {record.ParentOrganization?.TeamName ?? "none"} | affiliate {record.AffiliateOrganization?.TeamName ?? "none"}";
     }
 
     public string TradeTeamNeedsShortText(TradeBlockEntry entry)

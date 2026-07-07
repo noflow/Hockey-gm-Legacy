@@ -15,8 +15,23 @@ public sealed record TeamSelectionOption(
     string Difficulty,
     string RosterQuality,
     string? ParentOrganizationId = null,
-    string? AffiliateOrganizationId = null)
+    string? AffiliateOrganizationId = null,
+    string LeagueName = "",
+    string DivisionConference = "",
+    string PlaceholderArena = "",
+    string StaffQuality = "",
+    string CurrentStrategy = "")
 {
+    public string DisplayLeagueName => string.IsNullOrWhiteSpace(LeagueName) ? "League" : LeagueName;
+
+    public string DisplayDivisionConference => string.IsNullOrWhiteSpace(DivisionConference) ? "Division TBD" : DivisionConference;
+
+    public string DisplayArena => string.IsNullOrWhiteSpace(PlaceholderArena) ? "Placeholder Arena" : PlaceholderArena;
+
+    public string DisplayStaffQuality => string.IsNullOrWhiteSpace(StaffQuality) ? "Staff quality TBD" : StaffQuality;
+
+    public string DisplayCurrentStrategy => string.IsNullOrWhiteSpace(CurrentStrategy) ? OwnerExpectations : CurrentStrategy;
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(OrganizationId)

@@ -103,14 +103,14 @@ public sealed class ProspectDecisionService
             action.IsOpen
             && action.PersonId == prospect.ProspectPersonId
             && action.ActionType == PendingGmActionType.SignDraftPick);
-        var updatedScenario = statusScenario;
+        var updatedScenario = new PlayerPipelineService().UpsertProspect(statusScenario, statusScenario.ProspectRights.Single(item => item.ProspectPersonId == prospect.ProspectPersonId), $"{prospect.ProspectName} contract offer prepared.");
         var inbox = new List<AlphaInboxItem>();
 
         if (!pendingExists)
         {
             var pending = _pendingActions.CreateForDraftPickReady(
                 registry,
-                statusScenario,
+                updatedScenario,
                 prospect.ProspectPersonId,
                 $"{prospect.ProspectName} has a contract offer pending GM approval.");
             updatedScenario = pending.ScenarioSnapshot;
@@ -129,7 +129,7 @@ public sealed class ProspectDecisionService
         ProspectDecision decision)
     {
         var invited = prospect with { Status = ProspectStatus.InvitedToCamp };
-        var updatedScenario = ReplaceProspect(scenario, invited);
+        var updatedScenario = new PlayerPipelineService().UpsertProspect(ReplaceProspect(scenario, invited), invited, $"{prospect.ProspectName} invited to training camp.");
         var inbox = new List<AlphaInboxItem>();
 
         if (updatedScenario.TrainingCamp is not null)
@@ -159,6 +159,7 @@ public sealed class ProspectDecisionService
     {
         var updatedProspect = prospect with { Status = status };
         var updatedScenario = CloseOpenSigningAction(ReplaceProspect(scenario, updatedProspect), prospect.ProspectPersonId, status);
+        updatedScenario = new PlayerPipelineService().UpsertProspect(updatedScenario, updatedProspect, $"{prospect.ProspectName} status changed to {status}.");
         var eventType = EventTypeFor(status);
 
         QueueProspectEvent(registry, updatedScenario, eventType, decision, prospect, $"{prospect.ProspectName} status changed to {status}.");

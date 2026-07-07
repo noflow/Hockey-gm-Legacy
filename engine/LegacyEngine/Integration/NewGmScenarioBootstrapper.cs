@@ -214,6 +214,7 @@ public sealed class NewGmScenarioBootstrapper
             OrganizationSeasonHistory = careerHistory.OrganizationSeasonHistory,
             TransactionHistory = careerHistory.TransactionHistory
         };
+        scenarioSnapshot = new PlayerPipelineService().EnsurePipeline(scenarioSnapshot);
         scenarioSnapshot = new DevelopmentPlanningService().EnsureScenarioPlans(scenarioSnapshot);
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.TradeBlockUpdated, "League trade block updated", $"{tradeBlock.Entries.Count} players are available on the league trade block.");
@@ -591,11 +592,21 @@ public sealed class NewGmScenarioBootstrapper
                 Position: PositionFor(index),
                 TargetStatus: RosterStatus.Active,
                 Age: players[index].CalculateAge(startDate),
-                IsImport: players[index].Identity.Nationality != "Canada")).Roster;
+                IsImport: players[index].Identity.Nationality != "Canada",
+                AcquisitionSource: AcquisitionSourceFor(settings.LeagueExperience, index))).Roster;
         }
 
         return roster;
     }
+
+    private static PlayerAcquisitionSource AcquisitionSourceFor(LeagueExperience experience, int index) =>
+        experience switch
+        {
+            LeagueExperience.Ahl when index < 10 => PlayerAcquisitionSource.AssignedFromParentClub,
+            LeagueExperience.Ahl when index < 16 => PlayerAcquisitionSource.TwoWayContract,
+            LeagueExperience.Ahl => PlayerAcquisitionSource.AhlContract,
+            _ => PlayerAcquisitionSource.Unknown
+        };
 
     private static DraftBoard CreateDraftBoard(
         NewGmScenarioSettings settings,

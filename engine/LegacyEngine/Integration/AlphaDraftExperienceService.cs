@@ -7,15 +7,6 @@ namespace LegacyEngine.Integration;
 
 public sealed class AlphaDraftExperienceService
 {
-    private static readonly IReadOnlyDictionary<string, string> DefaultOrganizationNames =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["org-prairie-falcons"] = "Prairie Falcons",
-            ["org-swift-current-riders"] = "Swift Current Riders",
-            ["org-regina-plainsmen"] = "Regina Plainsmen",
-            ["org-brandon-steel"] = "Brandon Steel"
-        };
-
     public DraftExperienceResult StartDraftDay(EngineRegistry registry, NewGmScenarioSnapshot scenario)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -198,6 +189,8 @@ public sealed class AlphaDraftExperienceService
             DraftRights = scenario.DraftRights.Append(pickSummary).ToArray(),
             ProspectRights = AddDraftRightsRecord(scenario, pickSummary).ToArray()
         };
+        var prospectRecord = updatedScenario.ProspectRights.Single(record => record.ProspectPersonId == pickSummary.ProspectPersonId);
+        updatedScenario = new PlayerPipelineService().UpsertProspect(updatedScenario, prospectRecord, $"{pickSummary.ProspectName} drafted by {scenario.Organization.Name}.");
 
         var prospectName = FindPersonName(scenario, prospectPersonId);
         QueueScenarioEvent(
@@ -427,21 +420,27 @@ public sealed class AlphaDraftExperienceService
         registry.Rulebook ?? RulebookPresets.CreateJuniorMajor();
 
     private static IReadOnlyList<OrganizationStanding> BuildStandings(NewGmScenarioSnapshot scenario) =>
-        new[]
-        {
-            new OrganizationStanding(scenario.AlphaSnapshot.OrganizationId, 1),
-            new OrganizationStanding("org-swift-current-riders", 4),
-            new OrganizationStanding("org-regina-plainsmen", 3),
-            new OrganizationStanding("org-brandon-steel", 2)
-        };
+        DraftTeams(scenario)
+            .Select((team, index) => new OrganizationStanding(team.OrganizationId, index + 1))
+            .ToArray();
 
     private static IReadOnlyDictionary<string, string> OrganizationNamesFor(NewGmScenarioSnapshot scenario)
     {
-        var names = new Dictionary<string, string>(DefaultOrganizationNames, StringComparer.Ordinal)
-        {
-            [scenario.AlphaSnapshot.OrganizationId] = scenario.Organization.Name
-        };
+        var names = DraftTeams(scenario)
+            .ToDictionary(team => team.OrganizationId, team => team.TeamName, StringComparer.Ordinal);
+        names[scenario.AlphaSnapshot.OrganizationId] = scenario.Organization.Name;
         return names;
+    }
+
+    private static IReadOnlyList<(string OrganizationId, string TeamName)> DraftTeams(NewGmScenarioSnapshot scenario)
+    {
+        var opponents = SeasonFrameworkService.LeagueTeams(scenario)
+            .Where(team => team.OrganizationId != scenario.AlphaSnapshot.OrganizationId)
+            .Take(3);
+
+        return new[] { (scenario.AlphaSnapshot.OrganizationId, scenario.Organization.Name) }
+            .Concat(opponents)
+            .ToArray();
     }
 
     private static string SelectAiProspect(DraftBoard board, LegacyEngine.Draft.Draft draft, int pickNumber)

@@ -140,6 +140,16 @@ public sealed class PlayerDossierService
             lines.Add($"Budget impact: {tradeBlock.SalaryImpact:C0}");
         }
 
+        var pipeline = scenario.PlayerPipeline.FirstOrDefault(record => record.PersonId == person.PersonId);
+        if (pipeline is not null)
+        {
+            lines.Add($"Current level: {pipeline.CurrentLevel}");
+            lines.Add($"Pipeline status: {pipeline.PipelineStatus}");
+            lines.Add($"Rights holder: {pipeline.RightsHolderTeamName ?? "none"}");
+            lines.Add($"Parent club: {pipeline.ParentOrganization?.TeamName ?? "none"}");
+            lines.Add($"Affiliate club: {pipeline.AffiliateOrganization?.TeamName ?? "none"}");
+        }
+
         return new PlayerDossierSection("Overview", lines);
     }
 
@@ -286,6 +296,13 @@ public sealed class PlayerDossierService
             lines.Add($"Pending GM action: {action.Title} - {action.RecommendedAction}");
         }
 
+        var pipeline = scenario.PlayerPipeline.FirstOrDefault(record => record.PersonId == personId);
+        if (pipeline is not null)
+        {
+            lines.Add($"Pipeline rights holder: {pipeline.RightsHolderTeamName ?? "none"}.");
+            lines.Add($"Assignment status: {pipeline.AssignmentStatus}.");
+        }
+
         if (lines.Count == 0)
         {
             lines.Add("No contract, rights, or pending signing decision is currently tracked.");
@@ -375,6 +392,13 @@ public sealed class PlayerDossierService
         if (draft is not null)
         {
             lines.Add($"Draft history: {draft.Year} round {draft.Round}, pick {draft.OverallPick}; outcome so far {draft.Outcome}. {draft.OutcomeSummary}");
+        }
+
+        var pipeline = scenario.PlayerPipeline.FirstOrDefault(record => record.PersonId == personId);
+        if (pipeline is not null)
+        {
+            lines.Add($"Pipeline: {pipeline.CurrentLevel}, {pipeline.PipelineStatus}, assignment {pipeline.AssignmentStatus}.");
+            lines.AddRange(pipeline.AssignmentHistory.Take(5).Select(entry => $"Assignment history: {entry}"));
         }
 
         if (lines.Count == 0)
