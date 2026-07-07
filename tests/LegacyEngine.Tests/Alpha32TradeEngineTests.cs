@@ -187,7 +187,6 @@ internal sealed class Alpha32TradeEngineTests
         var text = string.Join("\n", files);
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 3.2 should not add Godot.");
-        Assert.False(text.Contains("SaveGame", StringComparison.Ordinal), "Alpha 3.2 should not add save/load.");
         Assert.False(text.Contains("RetainedSalary", StringComparison.Ordinal), "Alpha 3.2 should not add retained salary.");
     }
 

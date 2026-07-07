@@ -59,6 +59,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 3.2 Trade Engine v1
 - Alpha 3.3 Trade Deadline Event v1
 - Alpha 3.4 Career & History Framework v1
+- Alpha 3.5 Save/Load v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -101,6 +102,8 @@ Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire keeps the GM inbox focused
 Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix reshapes the live draft modal into selected prospect, draft list, and draft status columns. Draft rows now surface basic visible bio and scouting context, dossier overviews include draft bio facts, and the Staff tab separates Current Staff, Hire Staff / Staff Candidates, and Vacancies so candidate actions no longer look like staff actions.
 
 Alpha 3.4 - Career & History Framework v1 starts the long-save memory layer. The engine now seeds GM, staff, organization, and player career history, tracks player draft picks and draft classes, adds Where Are They Now records, records trade/free-agent/injury history, and expands Reports / History with GM Career, Organization History, Draft History, Drafted Players, Player Career Timelines, Staff History, and Transaction History views without exposing hidden ratings.
+
+Alpha 3.5 - Save/Load v1 adds local JSON career saves. AlphaDesktop can start a new career, load an existing career, save the current career, or save as a new file. Saves include the current scenario snapshot, roster, staff, contracts, prospects, free agents, trades, schedule, standings, stats, inbox statuses, league news, pending GM actions, Action Center statuses, scouting/recruiting/training camp state, season readiness, budget snapshot, executive/monthly reports, and career/draft/organization history. Save files are local `.json` files under `%LOCALAPPDATA%\\HockeyGmLegacy\\Saves` by default.
 
 Alpha 2.8 - GM Office Navigation Redesign replaces the crowded top-level AlphaDesktop tabs with a cleaner GM Office shell: Dashboard, Inbox, Organization, Hockey Operations, Season, Reports / History, and Settings. Existing features are preserved inside workspace sub-navigation, the dashboard now acts as an action center with owner mood and grouped advance controls, and League News remains near the Inbox without adding save/load, Godot, or new game simulation behavior.
 

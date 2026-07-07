@@ -145,7 +145,6 @@ internal sealed class Alpha29ActionCenterTests
         var text = string.Join(Environment.NewLine, files.Select(File.ReadAllText));
 
         Assert.False(text.Contains("Godot", StringComparison.OrdinalIgnoreCase), "Action Center must not add Godot.");
-        Assert.False(text.Contains("SaveGame", StringComparison.OrdinalIgnoreCase), "Action Center must not add save/load.");
         Assert.False(text.Contains("GameSimulation", StringComparison.OrdinalIgnoreCase), "Action Center must not add game simulation changes.");
     }
 

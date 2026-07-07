@@ -37,6 +37,17 @@ public sealed class InboxManager
     public IReadOnlyList<InboxMessage> AddRange(IEnumerable<AlphaInboxItem> items) =>
         items.Select(Add).ToArray();
 
+    public void ReplaceAll(IEnumerable<InboxMessage> messages)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        _messages.Clear();
+        foreach (var message in messages)
+        {
+            message.Validate();
+            _messages.Add(message);
+        }
+    }
+
     public InboxMessage ApplyAction(string inboxItemId, InboxMessageAction action)
     {
         if (string.IsNullOrWhiteSpace(inboxItemId))

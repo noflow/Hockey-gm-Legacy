@@ -74,14 +74,15 @@ The five foundation pillars remain:
 - Alpha 3.2 - Trade Engine v1
 - Alpha 3.3 - Trade Deadline Event v1
 - Alpha 3.4 - Career & History Framework v1
+- Alpha 3.5 - Save/Load v1
 
 ## Current Milestone
 
-Alpha 3.4 - Career & History Framework v1
+Alpha 3.5 - Save/Load v1
 
 ## Current Goal
 
-Start making long-term history matter by tracking career timeline entries, GM draft history, Where Are They Now records, staff and GM career history, organization season history, and transaction history in memory without adding save/load, Godot, deep databases, media systems, or full awards/retirement frameworks.
+Allow the player to save and load an Alpha career to local JSON files so world date, GM profile, roster, staff, contracts, prospects, schedule, standings, stats, inbox status, league news, pending actions, Action Center status, scouting, recruiting, training camp, season readiness, budget snapshot, and long-term history persist between desktop sessions.
 
 ## Why Relationship Engine Was Next
 
@@ -91,14 +92,14 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 3.5 - TBD
+Alpha 3.6 - TBD
 
 ## Next Milestones
 
-1. Alpha 3.5 - TBD
+1. Alpha 3.6 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, deep historical databases, save systems, media systems, Hall of Fame, full awards, full retirement systems, or advanced gameplay simulation yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, media systems, Hall of Fame, full awards, full retirement systems, or advanced gameplay simulation yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

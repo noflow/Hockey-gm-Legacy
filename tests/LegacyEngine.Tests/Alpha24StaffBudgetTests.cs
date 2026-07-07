@@ -142,7 +142,6 @@ internal sealed class Alpha24StaffBudgetTests
                 .Select(File.ReadAllText));
 
         Assert.False(source.Contains("Godot", StringComparison.OrdinalIgnoreCase), "LegacyEngine should not depend on Godot.");
-        Assert.False(source.Contains("SaveGame", StringComparison.OrdinalIgnoreCase), "Alpha 2.4 should not add save/load.");
         Assert.False(source.Contains("GameSimulation", StringComparison.OrdinalIgnoreCase), "Alpha 2.4 should not add game simulation.");
     }
 

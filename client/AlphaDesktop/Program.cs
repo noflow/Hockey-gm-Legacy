@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +13,7 @@ using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
 using LegacyEngine.Staff;
+using Microsoft.Win32;
 
 namespace AlphaDesktop;
 
@@ -23,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -109,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 3.4 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 3.5 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -138,12 +140,17 @@ internal sealed class MainWindow : Window
         AddField(form, "Strengths", _strengthsInput, 3, 0, 2);
         AddField(form, "Weaknesses", _weaknessesInput, 3, 2);
 
-        var button = CreateButton("Start Career", StartCareer);
-        button.HorizontalAlignment = HorizontalAlignment.Left;
-        button.Margin = new Thickness(0, 24, 0, 0);
-        Grid.SetRow(button, 5);
-        Grid.SetColumn(button, 0);
-        form.Children.Add(button);
+        var buttons = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 24, 0, 0)
+        };
+        buttons.Children.Add(CreateButton("Start Career", StartCareer));
+        buttons.Children.Add(CreateButton("Load Career", LoadCareerFromStartup));
+        Grid.SetRow(buttons, 5);
+        Grid.SetColumn(buttons, 0);
+        Grid.SetColumnSpan(buttons, 3);
+        form.Children.Add(buttons);
 
         Grid.SetRow(form, 1);
         root.Children.Add(form);
@@ -195,6 +202,109 @@ internal sealed class MainWindow : Window
         _state = AlphaDesktopState.Create(settings);
         Content = BuildLayout();
         RefreshAll();
+    }
+
+    private void LoadCareerFromStartup()
+    {
+        var path = PromptForLoadPath();
+        if (path is null)
+        {
+            return;
+        }
+
+        var result = AlphaDesktopState.LoadCareer(path, out var loaded);
+        if (!result.Success || loaded is null)
+        {
+            MessageBox.Show(result.Message, "Load Career", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _state = loaded;
+        Content = BuildLayout();
+        RefreshAll();
+        MessageBox.Show(result.Message, "Load Career", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void SaveCareer()
+    {
+        var result = State.SaveCareer();
+        if (!result.Success)
+        {
+            MessageBox.Show(result.Message, "Save Career", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        MessageBox.Show($"{result.Message}\n{result.FilePath}", "Save Career", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void SaveCareerAs()
+    {
+        var path = PromptForSavePath();
+        if (path is null)
+        {
+            return;
+        }
+
+        var result = State.SaveCareer(path);
+        if (!result.Success)
+        {
+            MessageBox.Show(result.Message, "Save Career", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        MessageBox.Show($"{result.Message}\n{result.FilePath}", "Save Career", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void LoadCareer()
+    {
+        var path = PromptForLoadPath();
+        if (path is null)
+        {
+            return;
+        }
+
+        var result = AlphaDesktopState.LoadCareer(path, out var loaded);
+        if (!result.Success || loaded is null)
+        {
+            MessageBox.Show(result.Message, "Load Career", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _state = loaded;
+        Content = BuildLayout();
+        RefreshAll();
+        MessageBox.Show(result.Message, "Load Career", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private static string? PromptForSavePath()
+    {
+        var service = new SaveGameService();
+        Directory.CreateDirectory(service.DefaultSaveFolder);
+        var dialog = new SaveFileDialog
+        {
+            Title = "Save Career",
+            InitialDirectory = service.DefaultSaveFolder,
+            Filter = "Hockey GM Save (*.json)|*.json",
+            DefaultExt = ".json",
+            AddExtension = true,
+            FileName = "hockey-gm-career.json"
+        };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    private static string? PromptForLoadPath()
+    {
+        var service = new SaveGameService();
+        Directory.CreateDirectory(service.DefaultSaveFolder);
+        var dialog = new OpenFileDialog
+        {
+            Title = "Load Career",
+            InitialDirectory = service.DefaultSaveFolder,
+            Filter = "Hockey GM Save (*.json)|*.json",
+            DefaultExt = ".json",
+            CheckFileExists = true
+        };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
     private static IReadOnlyList<string> SplitList(string text) =>
@@ -311,7 +421,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 3.4 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 3.5 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -368,6 +478,9 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Begin Season", BeginSeason));
         buttonPanel.Children.Add(CreateButton("Front Report", GenerateFrontOfficeReadinessReport));
         buttonPanel.Children.Add(CreateButton("Season Review", GenerateEndOfSeasonExecutiveReview));
+        buttonPanel.Children.Add(CreateButton("Save Career", SaveCareer));
+        buttonPanel.Children.Add(CreateButton("Save As", SaveCareerAs));
+        buttonPanel.Children.Add(CreateButton("Load Career", LoadCareer));
 
         panel.Children.Add(buttonPanel);
 
@@ -3577,8 +3690,12 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Settings");
         builder.AppendLine("========");
-        builder.AppendLine("Settings placeholder.");
-        builder.AppendLine("Save/load, preferences, and accessibility options are intentionally not implemented yet.");
+        builder.AppendLine("Save / Load");
+        builder.AppendLine($"Save folder: {State.SaveFolder}");
+        builder.AppendLine($"Current save file: {State.CurrentSavePath ?? "not saved yet"}");
+        builder.AppendLine($"Last saved: {State.LastSavedText}");
+        builder.AppendLine();
+        builder.AppendLine("Preferences, accessibility options, cloud sync, and database settings are intentionally not implemented yet.");
         return builder.ToString();
     }
 
@@ -4599,21 +4716,28 @@ internal sealed class AlphaDesktopState
     private readonly FreeAgentMarketService _freeAgents = new();
     private readonly TradeService _trades = new();
     private readonly TradeDeadlineService _tradeDeadline = new();
+    private readonly SaveGameService _saveGameService = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
+    private string? _currentSavePath;
+    private SaveGameMetadata? _lastSaveMetadata;
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
     private string? _selectedTradeTargetPersonId;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
-    private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot)
+    private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
         ScenarioSnapshot = scenarioSnapshot;
         Snapshot = scenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
-        InboxManager.AddRange(scenarioSnapshot.FirstDayInbox);
+        if (addFirstDayInbox)
+        {
+            InboxManager.AddRange(scenarioSnapshot.FirstDayInbox);
+        }
+
         LatestSummary = scenarioSnapshot.ScenarioSummary;
     }
 
@@ -4936,6 +5060,15 @@ internal sealed class AlphaDesktopState
 
     public int LastProcessedEventCount { get; private set; }
 
+    public string SaveFolder => _saveGameService.DefaultSaveFolder;
+
+    public string? CurrentSavePath => _currentSavePath;
+
+    public string LastSavedText =>
+        _lastSaveMetadata is null
+            ? "not saved yet"
+            : $"{_lastSaveMetadata.LastSavedAt:yyyy-MM-dd HH:mm} UTC";
+
     public static AlphaDesktopState Create()
     {
         var scenario = NewGmScenarioBootstrapper.CreateScenario();
@@ -4949,6 +5082,67 @@ internal sealed class AlphaDesktopState
             GmCreationSettings = gmSettings
         });
         return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
+    }
+
+    public static SaveLoadResult LoadCareer(string filePath, out AlphaDesktopState? state)
+    {
+        var service = new SaveGameService();
+        var result = service.LoadFromFile(filePath, RulebookPresets.CreateJuniorMajor());
+        if (!result.Success || result.SaveGame is null)
+        {
+            state = null;
+            return result;
+        }
+
+        state = FromSaveGame(result.SaveGame, result.Registry ?? service.RestoreRegistry(result.SaveGame.ScenarioSnapshot, RulebookPresets.CreateJuniorMajor()), filePath);
+        state.LatestSummary = result.CompatibilityWarning is null
+            ? result.Message
+            : $"{result.Message} {result.CompatibilityWarning}";
+        return result;
+    }
+
+    public SaveLoadResult SaveCareer(string? filePath = null)
+    {
+        var result = _saveGameService.SaveCareer(
+            ScenarioSnapshot,
+            InboxManager.AllMessages,
+            LeagueTransactions,
+            _actionCenterStatuses,
+            BudgetOverview,
+            filePath ?? _currentSavePath,
+            fileDisplayName: $"{ScenarioSnapshot.GeneralManagerProfile.Person.Identity.DisplayName} - {ScenarioSnapshot.Organization.Name}",
+            previousMetadata: _lastSaveMetadata);
+
+        if (result.Success && result.SaveGame is not null)
+        {
+            _currentSavePath = result.FilePath;
+            _lastSaveMetadata = result.SaveGame.Metadata;
+            LatestSummary = $"Save successful. Last saved {result.SaveGame.Metadata.LastSavedAt:yyyy-MM-dd HH:mm} UTC.";
+        }
+        else
+        {
+            LatestSummary = result.Message;
+        }
+
+        return result;
+    }
+
+    private static AlphaDesktopState FromSaveGame(SaveGame saveGame, EngineRegistry registry, string? filePath)
+    {
+        var state = new AlphaDesktopState(registry, saveGame.ScenarioSnapshot, addFirstDayInbox: false)
+        {
+            _currentSavePath = filePath,
+            _lastSaveMetadata = saveGame.Metadata
+        };
+        state.InboxManager.ReplaceAll(saveGame.InboxMessages);
+        state.AddLeagueTransactions(saveGame.LeagueTransactions);
+        foreach (var status in saveGame.ActionCenterStatuses)
+        {
+            state._actionCenterStatuses[status.Key] = status.Value;
+        }
+
+        state.EnsureSelectedDossierStillExists();
+        return state;
     }
 
     public void Advance(int days)

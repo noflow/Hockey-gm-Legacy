@@ -51,6 +51,7 @@ var alpha31FreeAgentMarketTests = new Alpha31FreeAgentMarketTests();
 var alpha32TradeEngineTests = new Alpha32TradeEngineTests();
 var alpha33TradeDeadlineTests = new Alpha33TradeDeadlineTests();
 var alpha34CareerHistoryTests = new Alpha34CareerHistoryTests();
+var alpha35SaveLoadTests = new Alpha35SaveLoadTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -656,6 +657,20 @@ runner.Run("alpha 3.4 injury creates history entry", alpha34CareerHistoryTests.I
 runner.Run("alpha 3.4 Reports History workspace exposes history views", alpha34CareerHistoryTests.ReportsHistoryWorkspaceExposesHistoryViews);
 runner.Run("alpha 3.4 hidden ratings are not exposed", alpha34CareerHistoryTests.HiddenRatingsAreNotExposed);
 runner.Run("alpha 3.4 no Godot save or deep database added", alpha34CareerHistoryTests.Alpha34HasNoGodotSaveOrDeepDatabase);
+runner.Run("alpha 3.5 save file created", alpha35SaveLoadTests.SaveFileCreated);
+runner.Run("alpha 3.5 save metadata written", alpha35SaveLoadTests.SaveMetadataWritten);
+runner.Run("alpha 3.5 load restores current date", alpha35SaveLoadTests.LoadRestoresCurrentDate);
+runner.Run("alpha 3.5 load restores roster", alpha35SaveLoadTests.LoadRestoresRoster);
+runner.Run("alpha 3.5 load restores staff", alpha35SaveLoadTests.LoadRestoresStaff);
+runner.Run("alpha 3.5 load restores inbox statuses", alpha35SaveLoadTests.LoadRestoresInboxStatuses);
+runner.Run("alpha 3.5 load restores pending actions", alpha35SaveLoadTests.LoadRestoresPendingActions);
+runner.Run("alpha 3.5 load restores schedule standings and stats", alpha35SaveLoadTests.LoadRestoresScheduleStandingsAndStats);
+runner.Run("alpha 3.5 load restores career history", alpha35SaveLoadTests.LoadRestoresCareerHistory);
+runner.Run("alpha 3.5 load restores draft history", alpha35SaveLoadTests.LoadRestoresDraftHistory);
+runner.Run("alpha 3.5 load restores GM profile and team", alpha35SaveLoadTests.LoadRestoresGmProfileAndTeam);
+runner.Run("alpha 3.5 version mismatch handled clearly", alpha35SaveLoadTests.VersionMismatchHandledClearly);
+runner.Run("alpha 3.5 AlphaDesktop exposes save/load controls", alpha35SaveLoadTests.AlphaDesktopExposesSaveLoadControls);
+runner.Run("alpha 3.5 no Godot database or cloud save added", alpha35SaveLoadTests.Alpha35HasNoGodotDatabaseOrCloudSave);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

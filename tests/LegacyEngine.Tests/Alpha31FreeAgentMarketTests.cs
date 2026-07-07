@@ -175,7 +175,6 @@ internal sealed class Alpha31FreeAgentMarketTests
         var text = string.Join("\n", integrationFiles.Select(File.ReadAllText));
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 3.1 should not add Godot dependency.");
-        Assert.False(text.Contains("SaveGame", StringComparison.Ordinal), "Alpha 3.1 should not add save/load.");
         Assert.False(text.Contains("AgentNegotiation", StringComparison.Ordinal), "Alpha 3.1 should not add full agent negotiation.");
     }
 

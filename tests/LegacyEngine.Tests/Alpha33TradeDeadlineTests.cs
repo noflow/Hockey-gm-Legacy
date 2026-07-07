@@ -149,7 +149,6 @@ internal sealed class Alpha33TradeDeadlineTests
         var text = string.Join("\n", files);
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 3.3 should not add Godot.");
-        Assert.False(text.Contains("SaveGame", StringComparison.Ordinal), "Alpha 3.3 should not add save/load.");
         Assert.False(text.Contains("RealTime", StringComparison.Ordinal), "Alpha 3.3 should not add real-time deadline clock.");
         Assert.False(text.Contains("RetainedSalary", StringComparison.Ordinal), "Alpha 3.3 should not add retained salary.");
     }
