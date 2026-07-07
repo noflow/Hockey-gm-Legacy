@@ -71,10 +71,12 @@ public sealed class NewGmScenarioBootstrapper
         var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
+        var tradeBlockPeople = TradeService.CreateTradeBlockPeople(startDate, scenarioSettings.SeasonYear, nameGenerator, nameRegistry);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
             .Concat(rosterPlayers)
             .Concat(recruits)
             .Concat(freeAgentPeople)
+            .Concat(tradeBlockPeople)
             .ToArray();
 
         var owner = new Owner(
@@ -184,6 +186,7 @@ public sealed class NewGmScenarioBootstrapper
         };
         var history = new ExistingWorldHistoryService().CreateHistory(scenarioSnapshot);
         var freeAgentMarket = new FreeAgentMarketService().GenerateMarket(scenarioSnapshot, freeAgentPeople);
+        var tradeBlock = new TradeService().GenerateTradeBlock(scenarioSnapshot, tradeBlockPeople);
         scenarioSnapshot = scenarioSnapshot with
         {
             PriorSeasonStats = history.PriorSeasonStats.Concat(freeAgentMarket.FreeAgents.Select(agent => agent.LastSeasonStats)).ToArray(),
@@ -192,9 +195,11 @@ public sealed class NewGmScenarioBootstrapper
             PlayerCareerTimelines = history.PlayerCareerTimelines,
             OrganizationHistory = history.OrganizationHistory,
             DraftHistory = history.DraftHistory,
-            FreeAgentMarket = freeAgentMarket
+            FreeAgentMarket = freeAgentMarket,
+            TradeBlock = tradeBlock
         };
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
+        QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.TradeBlockUpdated, "League trade block updated", $"{tradeBlock.Entries.Count} players are available on the league trade block.");
         scenarioSnapshot.Validate();
 
         return new NewGmScenarioResult(
@@ -785,6 +790,16 @@ public sealed class NewGmScenarioBootstrapper
         person.Validate();
         return person;
     }
+
+    internal static Person CreateScenarioPersonForGeneratedSystems(
+        string personId,
+        string firstName,
+        string lastName,
+        DateOnly birthDate,
+        string nationality,
+        string birthplace,
+        string organizationId) =>
+        CreatePlayer(personId, firstName, lastName, birthDate, nationality, birthplace, organizationId, birthDate.AddYears(15));
 
     private static RosterPosition PositionFor(int index) =>
         index switch

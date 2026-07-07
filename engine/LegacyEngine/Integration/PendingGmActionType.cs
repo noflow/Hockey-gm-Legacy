@@ -14,5 +14,7 @@ public enum PendingGmActionType
     ReturnToParent,
     PlaceOnWaivers,
     ApproveContract,
-    DeclineContract
+    DeclineContract,
+    ApproveTrade,
+    DeclineTrade
 }

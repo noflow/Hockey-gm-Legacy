@@ -95,9 +95,11 @@ public sealed class PendingGmActionService
                 ApproveRosterAdd(registry, scenario, action),
             PendingGmActionType.InviteToCamp =>
                 CompleteWithoutDomainMutation(registry, scenario, action, "Camp invite approved."),
+            PendingGmActionType.ApproveTrade =>
+                ApproveTradeAction(registry, scenario, action),
             PendingGmActionType.ReleasePlayer or PendingGmActionType.CutPlayer or PendingGmActionType.ReturnToJuniorTeam or PendingGmActionType.AssignToAffiliate or PendingGmActionType.ReturnToParent or PendingGmActionType.PlaceOnWaivers =>
                 CompleteWithoutDomainMutation(registry, scenario, action, "GM-controlled camp/roster action approved for manual processing."),
-            PendingGmActionType.DeclineContract =>
+            PendingGmActionType.DeclineContract or PendingGmActionType.DeclineTrade =>
                 Decline(registry, scenario, actionId),
             _ => BuildResult(false, scenario, action with { Status = PendingGmActionStatus.Failed }, Array.Empty<AlphaInboxItem>(), "Unsupported pending GM action.")
         };
@@ -108,6 +110,11 @@ public sealed class PendingGmActionService
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(scenario);
         var action = FindOpenAction(scenario, actionId);
+        if (action.ActionType == PendingGmActionType.ApproveTrade)
+        {
+            return DeclineTradeAction(registry, scenario, action);
+        }
+
         var declined = action with { Status = PendingGmActionStatus.Declined };
         var updatedScenario = UpdateFreeAgentStatus(
             UpdateProspectStatus(ReplaceAction(scenario, declined), action, ProspectStatus.Declined),
@@ -117,6 +124,40 @@ public sealed class PendingGmActionService
         QueuePendingEvent(registry, declined, scenario.CurrentDate, "Pending GM action declined", $"{declined.Title} was declined by the GM.");
         var inbox = new[] { ToInboxItem(declined, "Pending action declined", $"{declined.Title} was declined. No contract or roster change was made.") };
         return BuildResult(true, updatedScenario, declined, inbox, $"{declined.Title} declined. No roster or contract change was made.");
+    }
+
+    private PendingGmActionResult ApproveTradeAction(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        PendingGmAction action)
+    {
+        var trade = new TradeService().CompleteAcceptedTrade(registry, scenario, action.PersonId);
+        if (!trade.Success)
+        {
+            var failed = action with { Status = PendingGmActionStatus.Failed };
+            return BuildResult(false, ReplaceAction(scenario, failed), failed, trade.InboxItems, trade.Message);
+        }
+
+        var completed = action with { Status = PendingGmActionStatus.Completed };
+        var updated = ReplaceAction(trade.ScenarioSnapshot, completed);
+        var inbox = trade.InboxItems
+            .Append(ToInboxItem(completed, "Pending action approved", trade.Message))
+            .ToArray();
+        return BuildResult(true, updated, completed, inbox, trade.Message, trade.LeagueTransactions);
+    }
+
+    private PendingGmActionResult DeclineTradeAction(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        PendingGmAction action)
+    {
+        var trade = new TradeService().DeclineAcceptedTrade(registry, scenario, action.PersonId);
+        var declined = action with { Status = PendingGmActionStatus.Declined };
+        var updated = ReplaceAction(trade.ScenarioSnapshot, declined);
+        var inbox = trade.InboxItems
+            .Append(ToInboxItem(declined, "Pending action declined", trade.Message))
+            .ToArray();
+        return BuildResult(true, updated, declined, inbox, trade.Message, trade.LeagueTransactions);
     }
 
     private PendingGmActionResult ApproveContractAction(
@@ -256,9 +297,10 @@ public sealed class PendingGmActionService
         NewGmScenarioSnapshot scenario,
         PendingGmAction action,
         IReadOnlyList<AlphaInboxItem> inboxItems,
-        string message)
+        string message,
+        IReadOnlyList<LeagueTransaction>? leagueTransactions = null)
     {
-        var result = new PendingGmActionResult(success, scenario, action, inboxItems, message);
+        var result = new PendingGmActionResult(success, scenario, action, inboxItems, message, leagueTransactions);
         result.Validate();
         return result;
     }
@@ -313,6 +355,8 @@ public sealed class PendingGmActionService
             PendingGmActionType.PlaceOnWaivers => $"Place on waivers: {personName}",
             PendingGmActionType.ApproveContract => $"Approve contract: {personName}",
             PendingGmActionType.DeclineContract => $"Decline contract: {personName}",
+            PendingGmActionType.ApproveTrade => $"Approve trade: {personName}",
+            PendingGmActionType.DeclineTrade => $"Decline trade: {personName}",
             _ => $"Pending GM action: {personName}"
         };
 
@@ -332,5 +376,6 @@ public sealed class PendingGmActionService
         scenario.AlphaSnapshot.People.SingleOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
         ?? scenario.AlphaSnapshot.Players.SingleOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
         ?? scenario.FreeAgentMarket?.Find(personId)?.Name
+        ?? scenario.TradeOffers.FirstOrDefault(offer => offer.TradeOfferId == personId)?.OtherOrganizationName
         ?? personId;
 }

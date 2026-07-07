@@ -128,6 +128,17 @@ public sealed class PlayerDossierService
             lines.Add($"Staff recommendation: {freeAgent.FitSummary.StaffRecommendation}");
         }
 
+        var tradeBlock = scenario.TradeBlock?.Find(person.PersonId);
+        if (tradeBlock is not null)
+        {
+            lines.Add($"Trade block team: {tradeBlock.TeamName}");
+            lines.Add($"Trade block role: {tradeBlock.CurrentRole}");
+            lines.Add($"Trade block reason: {tradeBlock.ReasonAvailable}");
+            lines.Add($"Asking price: {tradeBlock.AskingPriceSummary}");
+            lines.Add($"Trade interest: {tradeBlock.InterestLevel}");
+            lines.Add($"Budget impact: {tradeBlock.SalaryImpact:C0}");
+        }
+
         return new PlayerDossierSection("Overview", lines);
     }
 
@@ -362,6 +373,11 @@ public sealed class PlayerDossierService
             return PlayerDossierSource.FreeAgent;
         }
 
+        if (scenario.TradeBlock?.Entries.Any(entry => entry.PersonId == personId) == true)
+        {
+            return PlayerDossierSource.TradeBlock;
+        }
+
         if (scenario.AlphaSnapshot.Recruits.Any(recruit => recruit.RecruitPersonId == personId))
         {
             return PlayerDossierSource.Recruit;
@@ -385,6 +401,7 @@ public sealed class PlayerDossierService
         ?? scenario.ProspectRights.SingleOrDefault(prospect => prospect.ProspectPersonId == personId)?.Position
         ?? scenario.TrainingCamp?.FindPlayer(personId)?.Position
         ?? scenario.FreeAgentMarket?.Find(personId)?.Position
+        ?? scenario.TradeBlock?.Find(personId)?.Position
         ?? scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.Position
         ?? RosterPosition.Unknown;
 
@@ -430,6 +447,12 @@ public sealed class PlayerDossierService
             return $"Recruiting: {recruit.Status}";
         }
 
+        var tradeBlock = scenario.TradeBlock?.Find(personId);
+        if (tradeBlock is not null)
+        {
+            return $"Trade block: {tradeBlock.InterestLevel} interest";
+        }
+
         return "Tracked player/prospect";
     }
 
@@ -455,6 +478,12 @@ public sealed class PlayerDossierService
         if (freeAgent is not null)
         {
             return $"Free agent market - previous team {freeAgent.PreviousTeam}";
+        }
+
+        var tradeBlock = scenario.TradeBlock?.Find(personId);
+        if (tradeBlock is not null)
+        {
+            return $"Trade block - {tradeBlock.TeamName}";
         }
 
         if (scenario.AlphaSnapshot.DraftBoard.Entries.Any(entry => entry.ProspectPersonId == personId))

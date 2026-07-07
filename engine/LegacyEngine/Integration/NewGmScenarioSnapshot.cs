@@ -76,6 +76,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public FreeAgentMarket? FreeAgentMarket { get; init; }
 
+    public TradeBlock? TradeBlock { get; init; }
+
+    public IReadOnlyList<TradeOffer> TradeOffers { get; init; } = Array.Empty<TradeOffer>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -216,5 +220,10 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         FreeAgentMarket?.Validate();
+        TradeBlock?.Validate();
+        foreach (var offer in TradeOffers)
+        {
+            offer.Validate();
+        }
     }
 }

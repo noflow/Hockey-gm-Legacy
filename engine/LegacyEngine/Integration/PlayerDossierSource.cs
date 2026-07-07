@@ -9,5 +9,6 @@ public enum PlayerDossierSource
     DraftBoard,
     ProspectList,
     TrainingCamp,
-    FreeAgent
+    FreeAgent,
+    TradeBlock
 }

@@ -385,7 +385,7 @@ public sealed class ActionCenterService
         type switch
         {
             PendingGmActionType.SignRecruit => ActionCenterCategory.Recruiting,
-            PendingGmActionType.SignDraftPick or PendingGmActionType.SignFreeAgent or PendingGmActionType.ApproveContract or PendingGmActionType.DeclineContract => ActionCenterCategory.Contracts,
+            PendingGmActionType.SignDraftPick or PendingGmActionType.SignFreeAgent or PendingGmActionType.ApproveContract or PendingGmActionType.DeclineContract or PendingGmActionType.ApproveTrade or PendingGmActionType.DeclineTrade => ActionCenterCategory.Contracts,
             PendingGmActionType.InviteToCamp or PendingGmActionType.AddToRoster or PendingGmActionType.ReleasePlayer or PendingGmActionType.CutPlayer or PendingGmActionType.AssignToAffiliate or PendingGmActionType.ReturnToParent or PendingGmActionType.ReturnToJuniorTeam or PendingGmActionType.PlaceOnWaivers => ActionCenterCategory.Roster,
             _ => ActionCenterCategory.System
         };

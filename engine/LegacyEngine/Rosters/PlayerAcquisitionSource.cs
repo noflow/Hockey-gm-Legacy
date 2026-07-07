@@ -8,5 +8,6 @@ public enum PlayerAcquisitionSource
     TwoWayContract,
     AhlContract,
     Tryout,
-    FreeAgentSigning
+    FreeAgentSigning,
+    Trade
 }

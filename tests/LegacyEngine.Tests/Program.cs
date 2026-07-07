@@ -48,6 +48,7 @@ var alpha28GmOfficeNavigationTests = new Alpha28GmOfficeNavigationTests();
 var alpha29ActionCenterTests = new Alpha29ActionCenterTests();
 var alpha30ExistingWorldHistoryTests = new Alpha30ExistingWorldHistoryTests();
 var alpha31FreeAgentMarketTests = new Alpha31FreeAgentMarketTests();
+var alpha32TradeEngineTests = new Alpha32TradeEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -606,6 +607,23 @@ runner.Run("alpha 3.1 other-team free-agent signing goes to league news not inbo
 runner.Run("alpha 3.1 player dossier includes free-agent sections without hidden ratings", alpha31FreeAgentMarketTests.PlayerDossierIncludesFreeAgentSectionsWithoutHiddenRatings);
 runner.Run("alpha 3.1 AlphaDesktop exposes free-agent workspace and actions", alpha31FreeAgentMarketTests.AlphaDesktopExposesFreeAgentWorkspaceAndActions);
 runner.Run("alpha 3.1 no Godot save or full negotiation added", alpha31FreeAgentMarketTests.Alpha31HasNoGodotSaveOrFullNegotiation);
+runner.Run("alpha 3.2 trade block generated", alpha32TradeEngineTests.TradeBlockGenerated);
+runner.Run("alpha 3.2 trade offer can include player asset", alpha32TradeEngineTests.TradeOfferCanIncludePlayerAsset);
+runner.Run("alpha 3.2 trade offer can include prospect rights", alpha32TradeEngineTests.TradeOfferCanIncludeProspectRights);
+runner.Run("alpha 3.2 trade offer can include draft pick placeholder", alpha32TradeEngineTests.TradeOfferCanIncludeDraftPickPlaceholder);
+runner.Run("alpha 3.2 invalid empty offer rejected", alpha32TradeEngineTests.InvalidEmptyOfferRejected);
+runner.Run("alpha 3.2 cannot trade asset not owned by team", alpha32TradeEngineTests.CannotTradeAssetNotOwnedByTeam);
+runner.Run("alpha 3.2 AI accepts fair offer", alpha32TradeEngineTests.AiAcceptsFairOffer);
+runner.Run("alpha 3.2 AI rejects poor offer", alpha32TradeEngineTests.AiRejectsPoorOffer);
+runner.Run("alpha 3.2 accepted trade creates pending GM action", alpha32TradeEngineTests.AcceptedTradeCreatesPendingGmAction);
+runner.Run("alpha 3.2 approved trade moves assets", alpha32TradeEngineTests.ApprovedTradeMovesAssets);
+runner.Run("alpha 3.2 declined trade does not move assets", alpha32TradeEngineTests.DeclinedTradeDoesNotMoveAssets);
+runner.Run("alpha 3.2 budget and roster impact calculated", alpha32TradeEngineTests.BudgetAndRosterImpactCalculated);
+runner.Run("alpha 3.2 league news records completed trade", alpha32TradeEngineTests.LeagueNewsRecordsCompletedTrade);
+runner.Run("alpha 3.2 inbox records player-team trade events", alpha32TradeEngineTests.InboxRecordsPlayerTeamTradeEvents);
+runner.Run("alpha 3.2 AlphaDesktop exposes trade UI actions", alpha32TradeEngineTests.AlphaDesktopExposesTradeUiActions);
+runner.Run("alpha 3.2 accepted trade does not auto-complete", alpha32TradeEngineTests.AcceptedTradeDoesNotAutoComplete);
+runner.Run("alpha 3.2 no Godot save or full trade negotiation added", alpha32TradeEngineTests.Alpha32HasNoGodotSaveOrFullTradeNegotiation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

@@ -111,6 +111,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.Injury => LeagueNewsCategory.Injuries,
             LeagueTransactionType.DraftPick => LeagueNewsCategory.Draft,
             LeagueTransactionType.StaffHired or LeagueTransactionType.StaffReleased => LeagueNewsCategory.Staff,
+            LeagueTransactionType.TradeCompleted => LeagueNewsCategory.RosterMoves,
             _ => LeagueNewsCategory.All
         };
 
@@ -128,6 +129,7 @@ public sealed class LeagueTransactionWireService
             LegacyEventType.PlayerDrafted => LeagueTransactionType.DraftPick,
             LegacyEventType.StaffHired => LeagueTransactionType.StaffHired,
             LegacyEventType.StaffReleased => LeagueTransactionType.StaffReleased,
+            LegacyEventType.TradeCompleted => LeagueTransactionType.TradeCompleted,
             _ => null
         };
 
@@ -146,6 +148,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.DraftPick => $"{teamName} drafted {personName}.",
             LeagueTransactionType.StaffHired => $"{teamName} hired {personName}.",
             LeagueTransactionType.StaffReleased => $"{teamName} released {personName}.",
+            LeagueTransactionType.TradeCompleted => $"{teamName} completed a trade involving {personName}.",
             _ => $"{teamName} updated {personName}."
         };
 

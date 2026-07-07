@@ -11,5 +11,6 @@ public enum LeagueTransactionType
     Injury,
     DraftPick,
     StaffHired,
-    StaffReleased
+    StaffReleased,
+    TradeCompleted
 }
