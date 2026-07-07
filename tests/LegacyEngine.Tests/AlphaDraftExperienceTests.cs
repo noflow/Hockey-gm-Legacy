@@ -160,6 +160,15 @@ internal sealed class AlphaDraftExperienceTests
         Assert.True(result.InboxItems.Any(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftRecapCreated), "Draft completion should create a recap inbox message.");
     }
 
+    public void DraftOnlyCreatesFinalReviewInbox()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        var result = new AlphaDraftExperienceService().SimulateToCompletion(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.Equal(1, result.InboxItems.Count);
+        Assert.True(result.InboxItems.All(item => item.EventType == LegacyEngine.Events.LegacyEventType.DraftRecapCreated), "Draft should only create the final recap inbox message.");
+    }
+
     public void DraftEventsAreGenerated()
     {
         var ready = ReadyForPlayerPick();

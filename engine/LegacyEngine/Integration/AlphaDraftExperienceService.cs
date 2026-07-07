@@ -67,14 +67,7 @@ public sealed class AlphaDraftExperienceService
             updatedScenario,
             state,
             $"Draft day started: {state.TotalRounds} rulebook-driven round(s).",
-            new[]
-            {
-                Inbox(
-                    scenario,
-                    LegacyEventType.DraftStarted,
-                    "Draft day is underway",
-                    $"The league draft has started with {state.TotalRounds} rounds from the active rulebook.")
-            });
+            Array.Empty<AlphaInboxItem>());
     }
 
     public DraftExperienceResult RunAiPicksUntilPlayerTurn(
@@ -130,15 +123,6 @@ public sealed class AlphaDraftExperienceService
             AlphaSnapshot = scenario.AlphaSnapshot with { DraftBoard = board },
             DraftExperience = awaiting
         };
-
-        if (picked > 0)
-        {
-            inboxItems.Add(Inbox(
-                scenario,
-                LegacyEventType.DraftOpened,
-                "Your pick is approaching",
-                $"{picked} AI selection(s) were made. {awaiting.TeamSelecting} is now on the clock."));
-        }
 
         return BuildResult(
             updatedScenario,
@@ -234,24 +218,7 @@ public sealed class AlphaDraftExperienceService
             updatedScenario,
             updatedState,
             $"Selected {prospectName} at pick {pick.PickNumber}.",
-            new[]
-            {
-                Inbox(
-                    scenario,
-                    LegacyEventType.OwnerDraftReaction,
-                    "Owner reaction",
-                    $"{scenario.AlphaSnapshot.Owner.Name}: Good. Make sure this fits our development mandate."),
-                Inbox(
-                    scenario,
-                    LegacyEventType.ScoutRecommendationUpdated,
-                    "Head scout reaction",
-                    $"{scenario.AlphaSnapshot.Scout.Name}: We had enough confidence to make that pick."),
-                Inbox(
-                    scenario,
-                    LegacyEventType.ProspectDecisionMade,
-                    "Prospect path decision needed",
-                    $"{prospectName} is now on your draft rights list. You can offer a contract, invite him to camp, return him to junior/youth while retaining rights where allowed, assign him to an affiliate where valid, or release his rights.")
-            });
+            Array.Empty<AlphaInboxItem>());
     }
 
     public DraftExperienceResult MakePlayerSelectionAndContinue(

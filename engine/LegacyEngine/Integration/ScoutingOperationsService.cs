@@ -626,7 +626,7 @@ public sealed class ScoutingOperationsService
         LegacyEventType eventType,
         string inboxTitle,
         string inboxSummary) =>
-        Result(true, scenario, assignment, null, new[] { Inbox(scenario, eventType, inboxTitle, inboxSummary) }, message);
+        Result(true, scenario, assignment, null, Array.Empty<AlphaInboxItem>(), message);
 
     private static ScoutingOperationResult Result(
         bool success,

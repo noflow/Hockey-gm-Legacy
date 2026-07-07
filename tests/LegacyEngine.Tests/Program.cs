@@ -332,6 +332,7 @@ runner.Run("alpha draft pick adds draft rights not active roster", alphaDraftExp
 runner.Run("alpha draft duplicate selection is prevented", alphaDraftExperienceTests.DuplicateDraftSelectionIsPrevented);
 runner.Run("alpha draft recap is generated", alphaDraftExperienceTests.DraftRecapIsGenerated);
 runner.Run("alpha draft recap inbox message is created", alphaDraftExperienceTests.DraftRecapInboxMessageCreated);
+runner.Run("alpha draft only creates final review inbox", alphaDraftExperienceTests.DraftOnlyCreatesFinalReviewInbox);
 runner.Run("alpha draft events are generated", alphaDraftExperienceTests.DraftEventsAreGenerated);
 runner.Run("alpha draft completion creates recap event", alphaDraftExperienceTests.DraftCompletionCreatesRecapEvent);
 runner.Run("alpha desktop exposes draft actions", alphaDraftExperienceTests.DesktopIntegrationExposesDraftActions);
@@ -426,6 +427,7 @@ runner.Run("scouting operations scout can be assigned to region", scoutingOperat
 runner.Run("scouting operations scout can be assigned to player", scoutingOperationsTests.ScoutCanBeAssignedToPlayer);
 runner.Run("scouting operations assignment stores priority notes and dates", scoutingOperationsTests.AssignmentStoresPriorityNotesAndDates);
 runner.Run("scouting operations assignment stores duration and return date", scoutingOperationsTests.AssignmentStoresDurationAndReturnDate);
+runner.Run("scouting operations assignment does not create inbox noise", scoutingOperationsTests.ScoutAssignmentDoesNotCreateInboxNoise);
 runner.Run("scouting operations area assignment uses duration and return date", scoutingOperationsTests.AreaAssignmentUsesDurationAndReturnDate);
 runner.Run("scouting operations assignment progresses over days", scoutingOperationsTests.AssignmentProgressesOverDays);
 runner.Run("scouting operations completed assignment creates report", scoutingOperationsTests.CompletedAssignmentCreatesReport);

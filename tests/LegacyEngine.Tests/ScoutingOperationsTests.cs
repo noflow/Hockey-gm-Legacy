@@ -76,6 +76,32 @@ internal sealed class ScoutingOperationsTests
         Assert.Equal(due, result.Assignment.ReturnDate);
     }
 
+    public void ScoutAssignmentDoesNotCreateInboxNoise()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var service = new ScoutingOperationsService();
+        var scout = RegionalScoutPersonId(scenario.ScenarioSnapshot);
+        var player = scenario.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.First().ProspectPersonId;
+
+        var region = service.AssignScoutToRegion(
+            scenario.Registry,
+            scenario.ScenarioSnapshot,
+            scout,
+            ScoutingRegionFocus.WesternCanada,
+            ScoutingOperationPriority.High,
+            "No email until return.");
+        var playerAssignment = service.AssignScoutToPlayer(
+            scenario.Registry,
+            region.ScenarioSnapshot,
+            scout,
+            player,
+            ScoutingOperationPriority.High,
+            "No email until report.");
+
+        Assert.Equal(0, region.InboxItems.Count);
+        Assert.Equal(0, playerAssignment.InboxItems.Count);
+    }
+
     public void AreaAssignmentUsesDurationAndReturnDate()
     {
         var scenario = NewGmScenarioBootstrapper.CreateScenario();
