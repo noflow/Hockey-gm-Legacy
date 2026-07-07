@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.8 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.9 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -3579,9 +3579,43 @@ internal sealed class MainWindow : Window
     private string BuildOrganizationHealth()
     {
         var readiness = State.SeasonReadinessReport;
+        var leagueProfile = State.PlayerOrganizationLeagueProfile;
         var builder = new StringBuilder();
         builder.AppendLine("Organization Health");
         builder.AppendLine("===================");
+        builder.AppendLine("Team Identity");
+        builder.AppendLine($"Identity: {leagueProfile.Identity}");
+        builder.AppendLine($"Current strategy: {leagueProfile.CurrentStrategy}");
+        builder.AppendLine($"GM personality: {leagueProfile.GmPersonality}");
+        builder.AppendLine($"Owner philosophy: {leagueProfile.OwnerPhilosophy}");
+        builder.AppendLine($"Budget style: {leagueProfile.BudgetStyle}");
+        builder.AppendLine($"Draft style: {leagueProfile.DraftStyle}");
+        builder.AppendLine($"Scouting focus: {leagueProfile.ScoutingFocus}");
+        builder.AppendLine($"Development grade: {leagueProfile.DevelopmentGrade}");
+        builder.AppendLine($"Recent direction: {leagueProfile.RecentDirection}");
+        builder.AppendLine();
+        builder.AppendLine("Current Needs");
+        foreach (var need in leagueProfile.CurrentNeeds)
+        {
+            builder.AppendLine($"- {need.Priority}: {need.Need} - {need.Reason}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Behavior");
+        builder.AppendLine(leagueProfile.Behavior.DraftBehavior);
+        builder.AppendLine(leagueProfile.Behavior.TradeBehavior);
+        builder.AppendLine(leagueProfile.Behavior.FreeAgencyBehavior);
+        builder.AppendLine(leagueProfile.Behavior.ScoutingBehavior);
+        builder.AppendLine(leagueProfile.Behavior.DevelopmentBehavior);
+        builder.AppendLine(leagueProfile.Behavior.StaffHiringBehavior);
+        builder.AppendLine();
+        builder.AppendLine("League Identity Snapshot");
+        foreach (var profile in State.LeagueOrganizationProfiles.OrderBy(profile => profile.TeamName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"- {profile.TeamName}: {profile.Identity}, {profile.CurrentStrategy}, needs {string.Join(", ", profile.CurrentNeeds.Take(2).Select(need => need.Need))}");
+        }
+
+        builder.AppendLine();
         builder.AppendLine($"Owner mood: {OwnerMoodText()}");
         builder.AppendLine($"Owner satisfaction: {readiness.OwnerSatisfaction}");
         builder.AppendLine($"Organization health: {readiness.OrganizationHealth}");
@@ -4217,6 +4251,20 @@ internal sealed class MainWindow : Window
         builder.AppendLine();
         builder.AppendLine("Filters: All | Signings | Roster Moves | Injuries | Draft | Staff");
         builder.AppendLine("Other-team transactions appear here instead of crowding the GM inbox.");
+        builder.AppendLine();
+        builder.AppendLine("League Direction");
+        if (State.LeagueIdentityNews.Count == 0)
+        {
+            builder.AppendLine("No major team identity headlines today.");
+        }
+        else
+        {
+            foreach (var news in State.LeagueIdentityNews)
+            {
+                builder.AppendLine($"  {news.Date:yyyy-MM-dd} | {news.TeamName} | {news.Description}");
+            }
+        }
+
         builder.AppendLine();
 
         if (State.LeagueTransactions.Count == 0)
@@ -5020,6 +5068,7 @@ internal sealed class AlphaDesktopState
     private readonly StaffCoachingService _staffCoaching = new();
     private readonly MedicalHealthService _medicalHealth = new();
     private readonly OwnerOfficeService _ownerOffice = new();
+    private readonly LeagueAiService _leagueAi = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
@@ -5179,6 +5228,15 @@ internal sealed class AlphaDesktopState
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
     public OwnerOfficeSummary OwnerOffice => _ownerOffice.BuildSummary(ScenarioSnapshot, BudgetOverview);
+
+    public LeagueAiReport LeagueAiReport => _leagueAi.BuildReport(ScenarioSnapshot, BudgetOverview);
+
+    public IReadOnlyList<OrganizationLeagueProfile> LeagueOrganizationProfiles => LeagueAiReport.Profiles;
+
+    public OrganizationLeagueProfile PlayerOrganizationLeagueProfile =>
+        LeagueOrganizationProfiles.First(profile => profile.OrganizationId == ScenarioSnapshot.Organization.OrganizationId);
+
+    public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
     public ContractManagementSummary ContractManagement => _contracts.BuildSummary(ScenarioSnapshot, _registry.Rulebook);
 

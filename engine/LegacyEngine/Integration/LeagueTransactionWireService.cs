@@ -114,6 +114,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.TradeCompleted => LeagueNewsCategory.RosterMoves,
             LeagueTransactionType.TradeDeadline => LeagueNewsCategory.Deadline,
             LeagueTransactionType.SeasonCompleted => LeagueNewsCategory.League,
+            LeagueTransactionType.TeamIdentityUpdate => LeagueNewsCategory.League,
             _ => LeagueNewsCategory.All
         };
 
@@ -163,6 +164,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.TradeCompleted => $"{teamName} completed a trade involving {personName}.",
             LeagueTransactionType.TradeDeadline => $"{teamName} trade deadline update: {personName}.",
             LeagueTransactionType.SeasonCompleted => $"{teamName} completed the season. Standings leader: {personName}.",
+            LeagueTransactionType.TeamIdentityUpdate => $"{teamName} direction update: {personName}.",
             _ => $"{teamName} updated {personName}."
         };
 

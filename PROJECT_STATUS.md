@@ -84,14 +84,15 @@ The five foundation pillars remain:
 - Alpha 4.6 - Staff & Coaching v3 (Philosophy & Development)
 - Alpha 4.7 - Injury & Medical v2 (Health & Recovery)
 - Alpha 4.8 - Owner & Job Security v2
+- Alpha 4.9 - League AI & Team Identity v2
 
 ## Current Milestone
 
-Alpha 4.8 - Owner & Job Security v2
+Alpha 4.9 - League AI & Team Identity v2
 
 ## Current Goal
 
-Make the owner an active accountability layer. Owners now expose richer personality, expectations, confidence, pressure, support, scheduled meetings, letters, budget/strategy decisions, performance reviews, job security explanations, Action Center items, executive report sections, and career-history hooks without adding actual firing, save/load changes, or game simulation changes.
+Make organizations feel distinct by how they build teams. League teams now expose persistent identity, AI GM personality, owner influence, current strategy, monthly needs, budget style, draft style, scouting focus, development grade, behavior tendencies, occasional League News direction items, and career-history hooks without adding media, save/load, or game simulation changes.
 
 ## Why Relationship Engine Was Next
 
@@ -101,11 +102,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 4.9 - TBD
+Alpha 5.0 - TBD
 
 ## Next Milestones
 
-1. Alpha 4.9 - TBD
+1. Alpha 5.0 - TBD
 
 ## Build Rule
 

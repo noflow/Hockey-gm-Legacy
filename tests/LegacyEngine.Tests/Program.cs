@@ -61,6 +61,7 @@ var alpha45PlayerDevelopmentV2Tests = new Alpha45PlayerDevelopmentV2Tests();
 var alpha46StaffCoachingV3Tests = new Alpha46StaffCoachingV3Tests();
 var alpha47InjuryMedicalV2Tests = new Alpha47InjuryMedicalV2Tests();
 var alpha48OwnerJobSecurityV2Tests = new Alpha48OwnerJobSecurityV2Tests();
+var alpha49LeagueAiTeamIdentityTests = new Alpha49LeagueAiTeamIdentityTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -807,6 +808,20 @@ runner.Run("alpha 4.8 executive report includes owner job security", alpha48Owne
 runner.Run("alpha 4.8 career history stores owner items", alpha48OwnerJobSecurityV2Tests.CareerHistoryStoresOwnerItems);
 runner.Run("alpha 4.8 AlphaDesktop exposes owner v2 UI", alpha48OwnerJobSecurityV2Tests.AlphaDesktopExposesOwnerV2Ui);
 runner.Run("alpha 4.8 no forbidden systems added", alpha48OwnerJobSecurityV2Tests.NoForbiddenSystemsAdded);
+runner.Run("alpha 4.9 organization identity generated", alpha49LeagueAiTeamIdentityTests.OrganizationIdentityGenerated);
+runner.Run("alpha 4.9 GM personality generated", alpha49LeagueAiTeamIdentityTests.GmPersonalityGenerated);
+runner.Run("alpha 4.9 owner philosophy influences profile", alpha49LeagueAiTeamIdentityTests.OwnerPhilosophyInfluencesProfile);
+runner.Run("alpha 4.9 needs generated", alpha49LeagueAiTeamIdentityTests.NeedsGenerated);
+runner.Run("alpha 4.9 trade behavior generated", alpha49LeagueAiTeamIdentityTests.TradeBehaviorGenerated);
+runner.Run("alpha 4.9 free agency behavior generated", alpha49LeagueAiTeamIdentityTests.FreeAgencyBehaviorGenerated);
+runner.Run("alpha 4.9 draft philosophy generated", alpha49LeagueAiTeamIdentityTests.DraftPhilosophyGenerated);
+runner.Run("alpha 4.9 scouting philosophy generated", alpha49LeagueAiTeamIdentityTests.ScoutingPhilosophyGenerated);
+runner.Run("alpha 4.9 long-term strategy is stable", alpha49LeagueAiTeamIdentityTests.LongTermStrategyIsStable);
+runner.Run("alpha 4.9 organization profile generated", alpha49LeagueAiTeamIdentityTests.OrganizationProfileGenerated);
+runner.Run("alpha 4.9 league news generated without spam", alpha49LeagueAiTeamIdentityTests.LeagueNewsGeneratedWithoutSpam);
+runner.Run("alpha 4.9 history recorded", alpha49LeagueAiTeamIdentityTests.HistoryRecorded);
+runner.Run("alpha 4.9 AlphaDesktop exposes league AI UI", alpha49LeagueAiTeamIdentityTests.AlphaDesktopExposesLeagueAiUi);
+runner.Run("alpha 4.9 no forbidden systems added", alpha49LeagueAiTeamIdentityTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

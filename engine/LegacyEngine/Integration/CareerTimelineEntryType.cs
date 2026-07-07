@@ -24,5 +24,7 @@ public enum CareerTimelineEntryType
     GMExtended,
     OwnerMeeting,
     OwnerLetter,
-    OwnerPerformanceReview
+    OwnerPerformanceReview,
+    OrganizationIdentityChanged,
+    OrganizationStrategyChanged
 }
