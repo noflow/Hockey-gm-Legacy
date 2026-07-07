@@ -77,14 +77,16 @@ The five foundation pillars remain:
 - Alpha 3.5 - Save/Load v1
 - Alpha 4.0 - Multi-Season Playability v1
 - Alpha 4.1 - Contracts v2
+- Alpha 4.2 - Free Agency v2
+- Alpha 4.3 - Trade Engine v2 (Negotiation & Team Strategy)
 
 ## Current Milestone
 
-Alpha 4.1 - Contracts v2
+Alpha 4.3 - Trade Engine v2 (Negotiation & Team Strategy)
 
 ## Current Goal
 
-Improve contract management with explainable asks, offer evaluation, budget impact, common expiry dates, relationship/fit context, and explicit GM approval before any accepted offer becomes a signed contract.
+Make trading feel like a strategic hockey management system. Organizations now evaluate needs, direction, GM trade personality, asset preferences, roster fit, budget pressure, and staff/player reactions before accepting, rejecting, or countering.
 
 ## Why Relationship Engine Was Next
 
@@ -94,11 +96,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 4.2 - TBD
+Alpha 4.4 - TBD
 
 ## Next Milestones
 
-1. Alpha 4.2 - TBD
+1. Alpha 4.4 - TBD
 
 ## Build Rule
 

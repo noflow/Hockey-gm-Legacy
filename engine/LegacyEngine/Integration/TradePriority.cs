@@ -1,10 +1,9 @@
 namespace LegacyEngine.Integration;
 
-public enum TradeInterest
+public enum TradePriority
 {
-    NotInterested,
     Low,
     Medium,
     High,
-    VeryInterested
+    Urgent
 }

@@ -76,6 +76,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public FreeAgentMarket? FreeAgentMarket { get; init; }
 
+    public FreeAgencyMarketState? FreeAgencyMarketState { get; init; }
+
     public TradeBlock? TradeBlock { get; init; }
 
     public IReadOnlyList<TradeOffer> TradeOffers { get; init; } = Array.Empty<TradeOffer>();
@@ -238,6 +240,7 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         FreeAgentMarket?.Validate();
+        FreeAgencyMarketState?.Validate();
         TradeBlock?.Validate();
         foreach (var offer in TradeOffers)
         {

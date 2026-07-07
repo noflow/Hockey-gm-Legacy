@@ -9,6 +9,8 @@ namespace LegacyEngine.Integration;
 
 public sealed class TradeService
 {
+    private readonly TradeStrategyService _strategy = new();
+
     public TradeBlock GenerateTradeBlock(NewGmScenarioSnapshot scenario, IReadOnlyList<Person> tradeBlockPeople)
     {
         ArgumentNullException.ThrowIfNull(scenario);
@@ -113,6 +115,27 @@ public sealed class TradeService
             value,
             "Draft pick placeholder");
     }
+
+    public TradeAsset CreateFutureConsiderationAsset(NewGmScenarioSnapshot scenario, TradeSide side, string organizationId, string organizationName)
+    {
+        var asset = new TradeAsset(
+            TradeAssetType.FutureConsideration,
+            side,
+            organizationId,
+            organizationName,
+            $"future-consideration:{organizationId}:{scenario.Season.Year}:{Guid.NewGuid():N}",
+            "Future consideration placeholder",
+            null,
+            null,
+            0m,
+            8,
+            "Future consideration placeholder; not conditional pick logic.");
+        asset.Validate();
+        return asset;
+    }
+
+    public TradeEvaluation EvaluateTrade(NewGmScenarioSnapshot scenario, TradeOffer offer) =>
+        _strategy.EvaluateTrade(scenario, offer);
 
     public TradeDecisionResult ProposeTrade(EngineRegistry registry, NewGmScenarioSnapshot scenario, TradeOffer offer)
     {
@@ -244,7 +267,17 @@ public sealed class TradeService
             LeagueTransactionType.TradeCompleted,
             LeagueNewsCategory.RosterMoves,
             TradeSummary(completed));
-        return Result(true, next, completed, completed.Evaluation, new[] { Inbox(next, LegacyEventType.TradeCompleted, "Trade completed", TradeSummary(completed)) }, new[] { transaction }, "Trade completed after GM approval.");
+        var completedInbox = new List<AlphaInboxItem>
+        {
+            Inbox(next, LegacyEventType.TradeCompleted, "Trade completed", TradeSummary(completed))
+        };
+        if (completed.Evaluation is not null)
+        {
+            var reactionSummary = string.Join(" ", completed.Evaluation.StaffReactionNotes.Concat(completed.Evaluation.PlayerReactionNotes).Take(3));
+            completedInbox.Add(Inbox(next, LegacyEventType.TradeCompleted, "Trade reaction", reactionSummary));
+        }
+
+        return Result(true, next, completed, completed.Evaluation, completedInbox, new[] { transaction }, "Trade completed after GM approval.");
     }
 
     public TradeDecisionResult DeclineAcceptedTrade(EngineRegistry registry, NewGmScenarioSnapshot scenario, string tradeOfferId)
@@ -307,55 +340,6 @@ public sealed class TradeService
         }
 
         return null;
-    }
-
-    private static TradeEvaluation EvaluateTrade(NewGmScenarioSnapshot scenario, TradeOffer offer)
-    {
-        var giveValue = offer.PlayerGives.Sum(asset => asset.Value);
-        var receiveValue = offer.PlayerReceives.Sum(asset => asset.Value);
-        var otherTeamScore = giveValue - receiveValue;
-        var budgetImpact = offer.PlayerReceives.Sum(asset => asset.SalaryImpact) - offer.PlayerGives.Sum(asset => asset.SalaryImpact);
-        if (budgetImpact < 0)
-        {
-            otherTeamScore -= 4;
-        }
-
-        if (offer.PlayerGives.Any(asset => asset.Position == RosterPosition.Defense))
-        {
-            otherTeamScore += 4;
-        }
-
-        var decision = otherTeamScore >= -5
-            ? TradeOfferStatus.Accepted
-            : otherTeamScore >= -22
-                ? TradeOfferStatus.Countered
-                : TradeOfferStatus.Rejected;
-        var otherName = offer.OtherOrganizationName;
-        var reasons = new List<string>
-        {
-            $"Asset value balance from {otherName}'s view: {otherTeamScore}.",
-            budgetImpact > 0 ? "The deal adds budget pressure for the player organization." : "The deal is budget-neutral or saves money for the player organization."
-        };
-        if (decision == TradeOfferStatus.Rejected)
-        {
-            reasons.Add("The offered package does not meet the asking price or roster need.");
-        }
-        else if (decision == TradeOfferStatus.Countered)
-        {
-            reasons.Add($"{otherName} would need a better fit, pick, or prospect added.");
-        }
-        else
-        {
-            reasons.Add($"{otherName} believes the offer fits their direction.");
-        }
-
-        var explanation = decision switch
-        {
-            TradeOfferStatus.Accepted => $"{otherName} accepted the framework because the value and roster fit are close enough. GM approval is still required.",
-            TradeOfferStatus.Countered => $"{otherName} countered in principle because the value is close, but they want a stronger asset or draft pick.",
-            _ => $"{otherName} rejected the offer because the package does not match their needs or asking price."
-        };
-        return new TradeEvaluation(decision, otherTeamScore, explanation, reasons, budgetImpact, offer.PlayerReceives.Count(asset => asset.AssetType == TradeAssetType.Player) - offer.PlayerGives.Count(asset => asset.AssetType == TradeAssetType.Player));
     }
 
     private static TradeBlockEntry CreateBlockEntry(NewGmScenarioSnapshot scenario, Person person, string organizationId, string teamName, int index)

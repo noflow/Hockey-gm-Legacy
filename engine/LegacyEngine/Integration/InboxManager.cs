@@ -153,13 +153,19 @@ public sealed class InboxManager
                 or LegacyEventType.ContractExpired
                 or LegacyEventType.ExpiringContractReminder
                 or LegacyEventType.FreeAgentMarketOpened
+                or LegacyEventType.FreeAgencyPhaseChanged
+                or LegacyEventType.FreeAgentCompetingOfferCreated
+                or LegacyEventType.FreeAgentOfferResponseDue
                 or LegacyEventType.FreeAgentShortlisted
                 or LegacyEventType.FreeAgentOfferSubmitted
                 or LegacyEventType.FreeAgentOfferAccepted
                 or LegacyEventType.FreeAgentOfferRejected
+                or LegacyEventType.FreeAgentOfferNeedsRevision
                 or LegacyEventType.FreeAgentSigned
+                or LegacyEventType.FreeAgentSignedElsewhere
                 or LegacyEventType.FreeAgentInvitedToCamp
                 or LegacyEventType.FreeAgentOfferWithdrawn
+                or LegacyEventType.FreeAgentMarketUpdated
                 or LegacyEventType.TradeProposed
                 or LegacyEventType.TradeAccepted
                 or LegacyEventType.TradeRejected

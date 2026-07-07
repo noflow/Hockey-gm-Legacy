@@ -291,7 +291,8 @@ public sealed class PendingGmActionService
         PendingGmAction action,
         FreeAgentStatus status)
     {
-        if (action.ActionType != PendingGmActionType.SignFreeAgent)
+        if (action.ActionType != PendingGmActionType.SignFreeAgent
+            && (action.ActionType != PendingGmActionType.ApproveContract || scenario.FreeAgentMarket?.Find(action.PersonId) is null))
         {
             return scenario;
         }

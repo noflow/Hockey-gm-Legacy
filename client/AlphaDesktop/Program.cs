@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.1 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.3 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -1850,8 +1850,8 @@ internal sealed class MainWindow : Window
                 agent.Name,
                 "FreeAgent",
                 $"{agent.Position} - age {agent.Age} - {agent.Status}",
-                $"{agent.PreviousTeam} | {agent.LastSeasonStats.SummaryText} | ask {agent.ContractAsk.AnnualAmount:C0}",
-                $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {agent.ProjectedLineupRole} | {agent.FitSummary.StaffRecommendation}"))
+                $"{agent.PreviousTeam} | ask {agent.ContractAsk.AnnualAmount:C0} | {State.FreeAgentTopMotivations(agent.PersonId)}",
+                $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildTradeRows() =>
@@ -1865,7 +1865,7 @@ internal sealed class MainWindow : Window
                 "TradeBlock",
                 $"{entry.TeamName} | {State.PositionShortText(entry.Position)} | age {entry.Age} | {entry.CurrentRole}",
                 $"Salary {entry.SalaryImpact:C0} | Ask: {entry.AskingPriceSummary}",
-                $"{entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType}"))
+                $"{State.TradeTeamNeedsShortText(entry)} | {entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
@@ -2183,6 +2183,9 @@ internal sealed class MainWindow : Window
             var agent = State.FreeAgentFor(row.PersonId);
             if (agent is not null)
             {
+                var market = State.FreeAgencyState;
+                var staffRecommendations = State.FreeAgentStaffRecommendations(row.PersonId);
+                AddLine(panel, "Market phase", $"{market.Window.Phase} | opens {market.Window.OpensOn:yyyy-MM-dd} | closes {market.Window.ClosesOn:yyyy-MM-dd}");
                 AddLine(panel, "Position", agent.Position);
                 AddLine(panel, "Age", agent.Age);
                 AddLine(panel, "Shoots/Catches", agent.ShootsCatches);
@@ -2195,9 +2198,18 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Projected role", agent.ProjectedLineupRole);
                 AddLine(panel, "Contract ask", $"{agent.ContractAsk.TermYears} year(s), {agent.ContractAsk.AnnualAmount:C0} {agent.ContractAsk.Currency} - {agent.ContractAsk.Notes}");
                 AddLine(panel, "Interest", $"{agent.Interest.PlayerOrganizationInterest}/100 - {agent.Interest.MotivationSummary}");
+                AddLine(panel, "Top motivations", State.FreeAgentTopMotivations(row.PersonId));
+                AddLine(panel, "Pending response", State.FreeAgentOfferResponseText(row.PersonId));
+                AddLine(panel, "Offer likelihood", State.FreeAgentOfferLikelihood(row.PersonId));
+                AddLine(panel, "Competing offers", State.FreeAgentCompetitionSummary(row.PersonId));
                 AddLine(panel, "Competing interest", agent.Interest.CompetingInterest);
                 AddLine(panel, "Budget impact", State.FreeAgentBudgetImpact(row.PersonId));
                 AddLine(panel, "Staff recommendation", agent.FitSummary.StaffRecommendation);
+                AddLine(panel, "Head coach", staffRecommendations.HeadCoach);
+                AddLine(panel, "Scout", staffRecommendations.Scout);
+                AddLine(panel, "Medical", staffRecommendations.Medical);
+                AddLine(panel, "Owner", staffRecommendations.Owner);
+                AddLine(panel, "Assistant GM", staffRecommendations.AssistantGm);
                 AddLine(panel, "Fit / risk", $"{agent.FitSummary.RosterNeed} {agent.FitSummary.RiskSummary}");
                 AddLine(panel, "Scouting confidence", agent.ScoutingConfidence);
                 AddLine(panel, "Rights / eligibility", agent.RightsEligibilityNotes);
@@ -2258,7 +2270,11 @@ internal sealed class MainWindow : Window
     {
         if (row is null)
         {
-            var empty = (StackPanel)EmptyDetail("Trades", "Select a player on the league trade block to review the asking price and propose a basic offer.");
+            var empty = (StackPanel)EmptyDetail("Trades", "Select a player on the league trade block to review team needs, trade value, and possible counters.");
+            AddSubHeader(empty, "Trade Workspace");
+            AddLine(empty, "Left", "Trade block");
+            AddLine(empty, "Middle", "Trade builder and projected package");
+            AddLine(empty, "Right", "Selected player, evaluation, budget impact, roster impact, reasons, and counter");
             AddSubHeader(empty, "Deadline Status");
             AddLine(empty, "Status", State.TradeDeadlineWindow.Status);
             AddLine(empty, "Deadline date", State.TradeDeadlineWindow.DeadlineDate.ToString("yyyy-MM-dd"));
@@ -2295,10 +2311,28 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Asking price", entry.AskingPriceSummary);
         AddLine(panel, "Reason available", entry.ReasonAvailable);
         AddLine(panel, "Interest level", entry.InterestLevel);
+        AddSubHeader(panel, "Other Team Strategy");
+        AddParagraph(panel, State.TradeTeamNeedsText(entry.PersonId));
+        AddSubHeader(panel, "Trade Value Screen");
+        AddParagraph(panel, State.TradeValueText(entry.PersonId));
+        AddSubHeader(panel, "Trade Builder");
         AddLine(panel, "Projected offer", State.TradeProjectedOfferText(entry.PersonId));
         AddLine(panel, "Projected roster impact", State.TradeProjectedRosterImpact(entry.PersonId));
         AddLine(panel, "Projected budget impact", State.TradeProjectedBudgetImpact(entry.PersonId));
         AddLine(panel, "Latest response", State.LatestTradeResponseText);
+        AddLine(panel, "Counter", State.LatestTradeCounterText);
+        AddSubHeader(panel, "Evaluation Reasons");
+        foreach (var reason in State.LatestTradeReasons.Take(5))
+        {
+            AddParagraph(panel, reason);
+        }
+
+        AddSubHeader(panel, "Staff / Player Reaction");
+        foreach (var reaction in State.LatestTradeReactions.Take(5))
+        {
+            AddParagraph(panel, reaction);
+        }
+
         AddActions(
             panel,
             CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)),
@@ -4860,7 +4894,9 @@ internal sealed class AlphaDesktopState
     private readonly FirstMonthAdvanceService _firstMonthAdvance = new();
     private readonly ActionCenterService _actionCenter = new();
     private readonly FreeAgentMarketService _freeAgents = new();
+    private readonly FreeAgencyV2Service _freeAgencyV2 = new();
     private readonly TradeService _trades = new();
+    private readonly TradeStrategyService _tradeStrategy = new();
     private readonly TradeDeadlineService _tradeDeadline = new();
     private readonly SaveGameService _saveGameService = new();
     private readonly SeasonRolloverService _seasonRollover = new();
@@ -4905,8 +4941,21 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<FreeAgent> FreeAgents =>
         ScenarioSnapshot.FreeAgentMarket?.FreeAgents ?? Array.Empty<FreeAgent>();
 
+    public FreeAgencyMarketState FreeAgencyState
+    {
+        get
+        {
+            var next = _freeAgencyV2.EnsureMarketState(_registry, ScenarioSnapshot);
+            ScenarioSnapshot = next;
+            Snapshot = next.AlphaSnapshot;
+            return next.FreeAgencyMarketState!;
+        }
+    }
+
     public IReadOnlyList<TradeBlockEntry> TradeBlockEntries =>
         ScenarioSnapshot.TradeBlock?.Entries ?? Array.Empty<TradeBlockEntry>();
+
+    public IReadOnlyList<TeamNeedsProfile> LeagueTradeNeeds => _tradeStrategy.BuildLeagueNeeds(ScenarioSnapshot);
 
     public TradeDeadlineWindow TradeDeadlineWindow => _tradeDeadline.GetWindow(ScenarioSnapshot, _registry.Rulebook);
 
@@ -4938,6 +4987,32 @@ internal sealed class AlphaDesktopState
             .ThenByDescending(offer => offer.TradeOfferId, StringComparer.Ordinal)
             .Select(offer => offer.Evaluation?.Explanation ?? $"{offer.Status}: {offer.OtherOrganizationName}")
             .FirstOrDefault() ?? "No trade proposal has been sent yet.";
+
+    public string LatestTradeCounterText =>
+        ScenarioSnapshot.TradeOffers
+            .OrderByDescending(offer => offer.ProposedOn)
+            .ThenByDescending(offer => offer.TradeOfferId, StringComparer.Ordinal)
+            .Select(offer => offer.Evaluation?.CounterSuggestion)
+            .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text))
+        ?? "No counter request yet.";
+
+    public IReadOnlyList<string> LatestTradeReasons =>
+        ScenarioSnapshot.TradeOffers
+            .OrderByDescending(offer => offer.ProposedOn)
+            .ThenByDescending(offer => offer.TradeOfferId, StringComparer.Ordinal)
+            .Select(offer => offer.Evaluation?.Reasons)
+            .FirstOrDefault(reasons => reasons is not null)
+        ?? Array.Empty<string>();
+
+    public IReadOnlyList<string> LatestTradeReactions =>
+        ScenarioSnapshot.TradeOffers
+            .OrderByDescending(offer => offer.ProposedOn)
+            .ThenByDescending(offer => offer.TradeOfferId, StringComparer.Ordinal)
+            .Select(offer => offer.Evaluation is null
+                ? null
+                : offer.Evaluation.StaffReactionNotes.Concat(offer.Evaluation.PlayerReactionNotes).ToArray())
+            .FirstOrDefault(reactions => reactions is not null)
+        ?? Array.Empty<string>();
 
     public bool HasTradeBuilderSelection => _selectedTradeTargetPersonId is not null;
 
@@ -6151,12 +6226,56 @@ internal sealed class AlphaDesktopState
             : $"Ask {agent.ContractAsk.AnnualAmount:C0}; would leave {afterAsk:C0} in hockey operations budget.";
     }
 
+    public string FreeAgentTopMotivations(string personId)
+    {
+        _ = FreeAgencyState;
+        var motivations = _freeAgencyV2.TopMotivations(ScenarioSnapshot, personId)
+            .Take(3)
+            .Select(score => $"{MotivationLabel(score.Motivation)} {score.Importance}/100");
+        return string.Join(", ", motivations);
+    }
+
+    public string FreeAgentCompetitionSummary(string personId)
+    {
+        var competitions = _freeAgencyV2.Competitions(ScenarioSnapshot, personId).Take(2).ToArray();
+        return competitions.Length == 0
+            ? "No known competing offers."
+            : string.Join("; ", competitions.Select(competition => $"{competition.TeamName}: {competition.EstimatedSalary:C0} x {competition.EstimatedTermYears}, {competition.RoleOffered}, interest {competition.PlayerInterest}/100"));
+    }
+
+    public string FreeAgentOfferResponseText(string personId)
+    {
+        var offer = ScenarioSnapshot.FreeAgencyMarketState?.FindOffer(personId);
+        offer = offer?.IsPendingResponse == true ? offer : null;
+        return offer is null
+            ? "No pending response."
+            : $"Response due {offer.ResponseDate:yyyy-MM-dd}; status {offer.ResponseStatus}; {offer.Explanation}";
+    }
+
+    public string FreeAgentOfferLikelihood(string personId)
+    {
+        var agent = FreeAgentFor(personId);
+        if (agent is null)
+        {
+            return "No offer available.";
+        }
+
+        var evaluation = _freeAgencyV2.BuildOffer(_registry, ScenarioSnapshot, personId, agent.ContractAsk.AnnualAmount, agent.ContractAsk.TermYears);
+        return $"{evaluation.Likelihood} ({evaluation.DecisionScore}/100): {evaluation.Explanation.Summary}";
+    }
+
+    public FreeAgencyStaffRecommendations FreeAgentStaffRecommendations(string personId) =>
+        _freeAgencyV2.BuildStaffRecommendations(ScenarioSnapshot, personId);
+
     public bool CanOfferFreeAgent(string personId)
     {
         var agent = FreeAgentFor(personId);
+        var phase = FreeAgencyState.Window.Phase;
         return agent is not null
-            && agent.Status == FreeAgentStatus.Available
-            && OpenPendingActions.All(action => action.PersonId != personId || action.ActionType != PendingGmActionType.SignFreeAgent);
+            && agent.Status is FreeAgentStatus.Available or FreeAgentStatus.Negotiating
+            && phase is not FreeAgencyPhase.NotOpen and not FreeAgencyPhase.Closed
+            && ScenarioSnapshot.FreeAgencyMarketState?.FindOffer(personId)?.IsPendingResponse is not true
+            && OpenPendingActions.All(action => action.PersonId != personId || action.ActionType is not (PendingGmActionType.SignFreeAgent or PendingGmActionType.ApproveContract));
     }
 
     public void ToggleFreeAgentShortlist(string personId)
@@ -6181,7 +6300,8 @@ internal sealed class AlphaDesktopState
             return;
         }
 
-        ApplyFreeAgentResult(_freeAgents.OfferContract(_registry, ScenarioSnapshot, personId));
+        var agent = FreeAgentFor(personId);
+        ApplyFreeAgencyV2Result(_freeAgencyV2.SubmitOffer(_registry, ScenarioSnapshot, personId, agent?.ContractAsk.AnnualAmount, agent?.ContractAsk.TermYears));
     }
 
     public void InviteFreeAgentToCampFor(string personId)
@@ -6208,8 +6328,61 @@ internal sealed class AlphaDesktopState
         ApplyFreeAgentResult(_freeAgents.WithdrawOffer(_registry, ScenarioSnapshot, personId));
     }
 
+    private static string MotivationLabel(FreeAgentMotivation motivation) =>
+        motivation switch
+        {
+            FreeAgentMotivation.TeamReputation => "team rep",
+            FreeAgentMotivation.RelationshipWithGm => "GM trust",
+            FreeAgentMotivation.RelationshipWithCoachStaff => "staff trust",
+            FreeAgentMotivation.PathwayToHigherLeague => "pathway",
+            FreeAgentMotivation.FamilyHome => "family/home",
+            _ => motivation.ToString()
+        };
+
     public TradeBlockEntry? TradeBlockEntryFor(string personId) =>
         ScenarioSnapshot.TradeBlock?.Find(personId);
+
+    public string TradeTeamNeedsShortText(TradeBlockEntry entry)
+    {
+        var profile = _tradeStrategy.BuildTeamNeedsProfile(ScenarioSnapshot, entry.OrganizationId, entry.TeamName);
+        return $"{profile.Direction} | needs {string.Join(", ", profile.Needs.Take(2).Select(need => need.Need))}";
+    }
+
+    public string TradeTeamNeedsText(string personId)
+    {
+        var entry = TradeBlockEntryFor(personId);
+        if (entry is null)
+        {
+            return "Team needs unavailable.";
+        }
+
+        var profile = _tradeStrategy.BuildTeamNeedsProfile(ScenarioSnapshot, entry.OrganizationId, entry.TeamName);
+        var builder = new StringBuilder();
+        builder.AppendLine(profile.Summary);
+        builder.AppendLine($"AI GM personality: {profile.GmPersonality}");
+        builder.AppendLine($"Asset preferences: {string.Join(", ", profile.AssetPreferences)}");
+        foreach (var need in profile.Needs)
+        {
+            builder.AppendLine($"- {need.Priority}: {need.Need} - {need.Reason}");
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    public string TradeValueText(string personId)
+    {
+        var value = _tradeStrategy.BuildTradeValueSummary(ScenarioSnapshot, personId);
+        var builder = new StringBuilder();
+        builder.AppendLine($"{value.PlayerName}, age {value.Age}");
+        builder.AppendLine($"Role: {value.Role}");
+        builder.AppendLine($"Contract: {value.Contract}");
+        builder.AppendLine($"Budget: {value.BudgetImpact:C0}; years remaining: {value.YearsRemaining}");
+        builder.AppendLine($"Development: {value.DevelopmentSummary}");
+        builder.AppendLine($"Prospect value: {value.ProspectValue}");
+        builder.AppendLine($"Estimated league value: {value.EstimatedLeagueValue}");
+        builder.AppendLine($"Opinion: {value.Opinion}");
+        return builder.ToString().Trim();
+    }
 
     public void SelectTradeTarget(string personId)
     {
@@ -6854,13 +7027,25 @@ internal sealed class AlphaDesktopState
         EnsureSelectedDossierStillExists();
         InboxManager.AddRange(result.InboxItems);
         AddLeagueTransactions(result.LeagueTransactions);
+        var freeAgency = _freeAgencyV2.ProgressMarket(_registry, ScenarioSnapshot);
+        if (freeAgency.Success)
+        {
+            ScenarioSnapshot = freeAgency.ScenarioSnapshot;
+            Snapshot = freeAgency.ScenarioSnapshot.AlphaSnapshot;
+            InboxManager.AddRange(freeAgency.InboxItems);
+            AddLeagueTransactions(freeAgency.LeagueTransactions);
+        }
+
         LastProcessedEventCount = result.ProcessedEventCount;
         LastStopReason = result.StopReason;
-        LatestSummary = result.MonthlySummary is not null
+        var baseSummary = result.MonthlySummary is not null
             ? $"{result.StopReason} {result.MonthlySummary.ExecutiveNarrative}"
             : result.DaysAdvanced == 0
                 ? result.StopReason
                 : $"{result.StopReason} Advanced {result.DaysAdvanced} day(s), processed {result.ProcessedEventCount} event(s), and created {result.InboxItems.Count} inbox item(s).";
+        LatestSummary = freeAgency.Success && (freeAgency.InboxItems.Count > 0 || freeAgency.LeagueTransactions.Count > 0)
+            ? $"{baseSummary} {freeAgency.Message}"
+            : baseSummary;
     }
 
     private void ApplyRecruitingV2(RecruitingV2Result result)
@@ -7039,6 +7224,21 @@ internal sealed class AlphaDesktopState
     }
 
     private void ApplyFreeAgentResult(FreeAgentMarketResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+            InboxManager.AddRange(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyFreeAgencyV2Result(FreeAgencyV2Result result)
     {
         if (result.Success)
         {

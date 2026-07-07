@@ -21,6 +21,7 @@ public sealed class ActionCenterService
 
         var items = new List<ActionCenterItem>();
         AddPendingActions(scenario, items);
+        AddPendingFreeAgentResponses(scenario, items);
         AddUrgentInbox(scenario, inboxMessages, items);
         AddRosterWarnings(scenario, readiness, items);
         AddStaffVacancies(staffVacancies, items);
@@ -178,6 +179,35 @@ public sealed class ActionCenterService
                 null,
                 null,
                 action.ActionId));
+        }
+    }
+
+    private static void AddPendingFreeAgentResponses(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        if (scenario.FreeAgencyMarketState is null)
+        {
+            return;
+        }
+
+        foreach (var offer in scenario.FreeAgencyMarketState.OfferStates.Where(offer => offer.IsPendingResponse))
+        {
+            var personName = PersonName(scenario, offer.PersonId);
+            items.Add(new ActionCenterItem(
+                $"action-center:free-agency-response:{offer.OfferStateId}",
+                $"Free-agent response due: {personName}",
+                ActionCenterCategory.Contracts,
+                offer.ResponseDate <= scenario.CurrentDate ? ActionCenterPriority.Important : ActionCenterPriority.Normal,
+                offer.ResponseDate,
+                offer.PersonId,
+                personName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                offer.Explanation,
+                "The player is weighing your offer against market pressure and competing clubs.",
+                "Review Free Agents and be ready to approve, revise, or move on when the response arrives.",
+                null,
+                null,
+                null));
         }
     }
 
