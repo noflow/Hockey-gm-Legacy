@@ -144,6 +144,14 @@ public sealed class InboxManager
                 or LegacyEventType.ContractSigned
                 or LegacyEventType.ContractRejected
                 or LegacyEventType.ContractTerminated
+                or LegacyEventType.ContractAskCreated
+                or LegacyEventType.ContractOfferSubmitted
+                or LegacyEventType.ContractOfferAccepted
+                or LegacyEventType.ContractOfferNeedsRevision
+                or LegacyEventType.ContractApprovedByGM
+                or LegacyEventType.ContractDeclinedByGM
+                or LegacyEventType.ContractExpired
+                or LegacyEventType.ExpiringContractReminder
                 or LegacyEventType.FreeAgentMarketOpened
                 or LegacyEventType.FreeAgentShortlisted
                 or LegacyEventType.FreeAgentOfferSubmitted
@@ -195,7 +203,9 @@ public sealed class InboxManager
             {
                 LegacyEventType.PlayerInjured
                     or LegacyEventType.OpeningRosterRejected
-                    or LegacyEventType.PendingGmActionCreated => InboxPriority.Urgent,
+                    or LegacyEventType.PendingGmActionCreated
+                    or LegacyEventType.ExpiringContractReminder
+                    or LegacyEventType.ContractOfferNeedsRevision => InboxPriority.Urgent,
                 LegacyEventType.MonthlyGmSummaryCreated
                     or LegacyEventType.GamePlayed
                     or LegacyEventType.ScoutAssignmentCompleted

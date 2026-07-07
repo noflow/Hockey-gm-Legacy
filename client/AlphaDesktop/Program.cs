@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.0 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.1 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -362,6 +362,7 @@ internal sealed class MainWindow : Window
             new("Prospects", CreateSelectablePeopleContent("Prospect List")),
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
+            new("Contracts", CreateTextScreen("Contracts")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
             new("Trades", CreateSelectablePeopleContent("Trades")),
@@ -1340,6 +1341,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Roster", BuildRosterRows());
         RefreshSelectableTab("Recruits", BuildRecruitRows());
         RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
+        _tabs["Contracts"].Text = BuildContractsWorkspace();
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         RefreshSelectableTab("Trades", BuildTradeRows());
@@ -1616,7 +1618,7 @@ internal sealed class MainWindow : Window
         SetTabHeader("Dashboard", State.OpenActionCount > 0 ? $"Dashboard ({State.OpenActionCount})" : "Dashboard");
         SetTabHeader("Inbox", $"Inbox ({State.UnreadInboxCount})");
         SetTabHeader("Organization", State.StaffVacancies.Count > 0 ? $"Organization ({State.StaffVacancies.Count})" : "Organization");
-        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount;
+        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount + State.ContractDecisionCount;
         SetTabHeader("Hockey Operations", operationsCount > 0 ? $"Hockey Operations ({operationsCount})" : "Hockey Operations");
         SetTabHeader("Season", "Season");
         SetTabHeader("Reports / History", "Reports / History");
@@ -3375,6 +3377,63 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildContractsWorkspace()
+    {
+        var summary = State.ContractManagement;
+        var builder = new StringBuilder();
+        builder.AppendLine("Contracts");
+        builder.AppendLine("=========");
+        builder.AppendLine("Contracts v2 keeps final signings under GM control. Accepted terms create pending decisions; they do not auto-sign.");
+        builder.AppendLine();
+        builder.AppendLine("Budget Impact");
+        builder.AppendLine($"  Total budget: {summary.Budget.TotalBudget:C0}");
+        builder.AppendLine($"  Used budget: {summary.Budget.UsedBudget:C0}");
+        builder.AppendLine($"  Remaining budget: {summary.Budget.RemainingBudget:C0}");
+        builder.AppendLine($"  Player contracts: {summary.Budget.PlayerContractsTotal:C0}");
+        builder.AppendLine($"  Staff contracts: {summary.Budget.StaffContractsTotal:C0}");
+        builder.AppendLine($"  Status: {summary.Budget.Status} - {summary.Budget.OwnerBudgetConfidence}");
+        builder.AppendLine();
+
+        AppendContractSection(builder, "Expiring Player Contracts", summary.ExpiringPlayers);
+        AppendContractSection(builder, "Expiring Staff Contracts", summary.ExpiringStaff);
+        AppendContractSection(builder, "Unsigned Prospects / Draft Rights", summary.UnsignedProspects);
+        AppendContractSection(builder, "Pending Contract Decisions", summary.PendingOffers);
+        AppendContractSection(builder, "Accepted Offers Awaiting GM Approval", summary.AcceptedOffersAwaitingApproval);
+        AppendContractSection(builder, "Rejected / Walk-Away Log", summary.RejectedOffers);
+
+        builder.AppendLine("Offer Builder Guidance");
+        builder.AppendLine("----------------------");
+        builder.AppendLine("Offer inputs supported by the engine: salary, term, role promise, development promise, camp invite promise, staff role/focus promise, and notes.");
+        builder.AppendLine("Evaluation output includes total cost, annual cost, common expiry date, budget before/after, likelihood, risk warning, and plain-language reasons.");
+        builder.AppendLine("Use Free Agents, Prospects, Recruits, Staff, or Pending Decisions to pick the person, then approve only the deals you actually want signed.");
+        return builder.ToString();
+    }
+
+    private static void AppendContractSection(StringBuilder builder, string title, IReadOnlyList<ContractAsk> asks)
+    {
+        builder.AppendLine(title);
+        builder.AppendLine(new string('-', title.Length));
+        if (asks.Count == 0)
+        {
+            builder.AppendLine("  None.");
+            builder.AppendLine();
+            return;
+        }
+
+        foreach (var ask in asks.OrderBy(ask => ask.PersonName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"  {ask.PersonName} | {ask.AskType} | ask {ask.RequestedSalary:C0} x {ask.RequestedTermYears} year(s)");
+            builder.AppendLine($"    Desired role: {ask.DesiredRole}");
+            builder.AppendLine($"    Interest: {ask.InterestLevel} | org fit {ask.PreferredOrganizationFit}/100 | trust {ask.RelationshipTrustImpact}/100");
+            builder.AppendLine($"    Budget after ask: {ask.BudgetImpact:C0}");
+            builder.AppendLine($"    Priority: {ask.SigningPriority}");
+            builder.AppendLine($"    Development/pathway: {ask.DevelopmentPathwayConcern}");
+            builder.AppendLine($"    Staff/coach confidence: {ask.StaffCoachConfidence}");
+        }
+
+        builder.AppendLine();
+    }
+
     private string BuildOrganizationHealth()
     {
         var readiness = State.SeasonReadinessReport;
@@ -4805,6 +4864,7 @@ internal sealed class AlphaDesktopState
     private readonly TradeDeadlineService _tradeDeadline = new();
     private readonly SaveGameService _saveGameService = new();
     private readonly SeasonRolloverService _seasonRollover = new();
+    private readonly ContractManagementService _contracts = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
@@ -4909,6 +4969,8 @@ internal sealed class AlphaDesktopState
 
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
+    public ContractManagementSummary ContractManagement => _contracts.BuildSummary(ScenarioSnapshot, _registry.Rulebook);
+
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
 
     public GameRecap? LastGameRecap => _seasonFramework.LastPlayerTeamRecap(ScenarioSnapshot);
@@ -4992,6 +5054,11 @@ internal sealed class AlphaDesktopState
     public string LastStopReason { get; private set; } = "No advance pause yet.";
 
     public int PendingDecisionCount => OpenPendingActions.Count;
+
+    public int ContractDecisionCount => ContractManagement.ExpiringPlayers.Count
+        + ContractManagement.ExpiringStaff.Count
+        + ContractManagement.UnsignedProspects.Count
+        + ContractManagement.AcceptedOffersAwaitingApproval.Count;
 
     public int ScoutingReportCount => ScenarioSnapshot.CompletedScoutingReports.Count;
 

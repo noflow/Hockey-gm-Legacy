@@ -16,7 +16,12 @@ public sealed record PendingGmAction(
     string RecommendedAction,
     RosterPosition? Position = null,
     PlayerAcquisitionSource AcquisitionSource = PlayerAcquisitionSource.Unknown,
-    ContractType? ContractType = null)
+    ContractType? ContractType = null,
+    decimal? OfferedSalary = null,
+    int? OfferedTermYears = null,
+    string RolePromise = "",
+    string DevelopmentPromise = "",
+    string ContractNotes = "")
 {
     public bool IsOpen => Status == PendingGmActionStatus.Pending;
 
@@ -45,6 +50,11 @@ public sealed record PendingGmAction(
         if (string.IsNullOrWhiteSpace(Title) || string.IsNullOrWhiteSpace(Reason) || string.IsNullOrWhiteSpace(RecommendedAction))
         {
             throw new ArgumentException("Pending GM action must include title, reason, and recommended action.");
+        }
+
+        if (OfferedSalary < 0 || OfferedTermYears <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(OfferedSalary), "Pending contract offer terms must be valid when provided.");
         }
     }
 }

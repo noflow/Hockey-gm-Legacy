@@ -53,6 +53,7 @@ var alpha33TradeDeadlineTests = new Alpha33TradeDeadlineTests();
 var alpha34CareerHistoryTests = new Alpha34CareerHistoryTests();
 var alpha35SaveLoadTests = new Alpha35SaveLoadTests();
 var alpha40MultiSeasonTests = new Alpha40MultiSeasonTests();
+var alpha41ContractsV2Tests = new Alpha41ContractsV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -688,6 +689,24 @@ runner.Run("alpha 4.0 previous draft class not reused", alpha40MultiSeasonTests.
 runner.Run("alpha 4.0 save load works after rollover", alpha40MultiSeasonTests.SaveLoadWorksAfterRollover);
 runner.Run("alpha 4.0 AlphaDesktop exposes offseason history state", alpha40MultiSeasonTests.AlphaDesktopExposesOffseasonHistoryState);
 runner.Run("alpha 4.0 no Godot database cloud playoff awards or retirement", alpha40MultiSeasonTests.Alpha40HasNoGodotDatabaseCloudPlayoffAwardsOrRetirement);
+runner.Run("alpha 4.1 contract ask created", alpha41ContractsV2Tests.ContractAskCreated);
+runner.Run("alpha 4.1 offer builder calculates budget impact", alpha41ContractsV2Tests.OfferBuilderCalculatesBudgetImpact);
+runner.Run("alpha 4.1 offer uses common expiry date", alpha41ContractsV2Tests.OfferUsesCommonExpiryDate);
+runner.Run("alpha 4.1 likelihood estimate generated", alpha41ContractsV2Tests.LikelihoodEstimateGenerated);
+runner.Run("alpha 4.1 accepted offer creates pending GM action", alpha41ContractsV2Tests.AcceptedOfferCreatesPendingGmAction);
+runner.Run("alpha 4.1 rejected offer does not create contract", alpha41ContractsV2Tests.RejectedOfferDoesNotCreateContract);
+runner.Run("alpha 4.1 approved pending offer creates contract", alpha41ContractsV2Tests.ApprovedPendingOfferCreatesContract);
+runner.Run("alpha 4.1 declined pending offer does not create contract", alpha41ContractsV2Tests.DeclinedPendingOfferDoesNotCreateContract);
+runner.Run("alpha 4.1 player role promise affects decision", alpha41ContractsV2Tests.PlayerRolePromiseAffectsDecision);
+runner.Run("alpha 4.1 staff role focus promise affects decision", alpha41ContractsV2Tests.StaffRoleFocusPromiseAffectsDecision);
+runner.Run("alpha 4.1 relationship affects decision", alpha41ContractsV2Tests.RelationshipAffectsDecision);
+runner.Run("alpha 4.1 expiring contract screen data generated", alpha41ContractsV2Tests.ExpiringContractScreenDataGenerated);
+runner.Run("alpha 4.1 contract comparison generated", alpha41ContractsV2Tests.ContractComparisonGenerated);
+runner.Run("alpha 4.1 inbox messages include explanation", alpha41ContractsV2Tests.InboxMessagesIncludeExplanation);
+runner.Run("alpha 4.1 league news receives other-team notable signing", alpha41ContractsV2Tests.LeagueNewsReceivesOtherTeamNotableSigning);
+runner.Run("alpha 4.1 no auto signing", alpha41ContractsV2Tests.NoAutoSigning);
+runner.Run("alpha 4.1 AlphaDesktop exposes contract management UI", alpha41ContractsV2Tests.AlphaDesktopExposesContractManagementUi);
+runner.Run("alpha 4.1 no Godot save full agent or salary cap system", alpha41ContractsV2Tests.Alpha41HasNoGodotSaveFullAgentOrSalaryCapSystem);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

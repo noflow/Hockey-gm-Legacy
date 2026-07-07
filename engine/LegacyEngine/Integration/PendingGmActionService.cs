@@ -122,6 +122,11 @@ public sealed class PendingGmActionService
             FreeAgentStatus.Rejected);
 
         QueuePendingEvent(registry, declined, scenario.CurrentDate, "Pending GM action declined", $"{declined.Title} was declined by the GM.");
+        if (action.ActionType is PendingGmActionType.ApproveContract or PendingGmActionType.DeclineContract)
+        {
+            QueueContractDecisionEvent(registry, declined, scenario.CurrentDate, LegacyEventType.ContractDeclinedByGM, "Contract declined by GM", $"{declined.PersonName}'s contract path was declined by the GM.");
+        }
+
         var inbox = new[] { ToInboxItem(declined, "Pending action declined", $"{declined.Title} was declined. No contract or roster change was made.") };
         return BuildResult(true, updatedScenario, declined, inbox, $"{declined.Title} declined. No roster or contract change was made.");
     }
@@ -179,6 +184,7 @@ public sealed class PendingGmActionService
         };
         updatedScenario = new CareerHistoryService().RecordContractSigned(updatedScenario, signed, completed.PersonName, action.ActionType);
 
+        QueueContractDecisionEvent(registry, completed, scenario.CurrentDate, LegacyEventType.ContractApprovedByGM, "Contract approved by GM", $"{completed.PersonName}'s contract was approved and signed by the GM.");
         var inbox = new[] { ToInboxItem(completed, "Pending action approved", $"{completed.PersonName} signed a {signed.ContractType} after GM approval.") };
         return BuildResult(true, updatedScenario, completed, inbox, $"{completed.PersonName} contract approved and signed.");
     }
@@ -233,13 +239,13 @@ public sealed class PendingGmActionService
             PersonId: action.PersonId,
             OrganizationId: action.OrganizationId,
             ContractType: action.ContractType ?? ContractType.JuniorPlayerAgreement,
-            Term: ContractExpiryCalendar.TermForYears(scenario.CurrentDate, scenario.Season.Settings, scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.TermYears ?? 1),
+            Term: ContractExpiryCalendar.TermForYears(scenario.CurrentDate, scenario.Season.Settings, action.OfferedTermYears ?? scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.TermYears ?? 1),
             Money: new ContractMoney(
-                SalaryOrStipend: scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.AnnualAmount ?? 1_500m,
+                SalaryOrStipend: action.OfferedSalary ?? scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.AnnualAmount ?? 1_500m,
                 Currency: scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.Currency ?? "CAD"),
             Clauses: Array.Empty<ContractClause>(),
             OfferedOn: scenario.CurrentDate,
-            Notes: action.Reason);
+            Notes: string.Join(" ", new[] { action.Reason, action.RolePromise, action.DevelopmentPromise, action.ContractNotes }.Where(note => !string.IsNullOrWhiteSpace(note))));
 
     private static PendingGmAction FindOpenAction(NewGmScenarioSnapshot scenario, string actionId)
     {
@@ -336,6 +342,33 @@ public sealed class PendingGmActionService
                 ["pending_gm_action_id"] = action.ActionId,
                 ["pending_gm_action_type"] = action.ActionType.ToString(),
                 ["pending_gm_action_status"] = action.Status.ToString()
+            });
+        registry.EventEngine.QueueEvent(legacyEvent);
+    }
+
+    private static void QueueContractDecisionEvent(
+        EngineRegistry registry,
+        PendingGmAction action,
+        DateOnly date,
+        LegacyEventType eventType,
+        string title,
+        string description)
+    {
+        var legacyEvent = registry.EventEngine.CreateEvent(
+            new DateTimeOffset(date.Year, date.Month, date.Day, 14, 30, 0, TimeSpan.Zero),
+            eventType,
+            LegacyEventSeverity.Notice,
+            LegacyEventVisibility.Organization,
+            title,
+            description,
+            new LegacyEventContext(PrimaryPersonId: action.PersonId, OrganizationId: action.OrganizationId),
+            new Dictionary<string, object?>
+            {
+                ["person_name"] = action.PersonName,
+                ["team_name"] = action.OrganizationId,
+                ["reason"] = action.Reason,
+                ["annual_salary"] = action.OfferedSalary,
+                ["term_years"] = action.OfferedTermYears
             });
         registry.EventEngine.QueueEvent(legacyEvent);
     }

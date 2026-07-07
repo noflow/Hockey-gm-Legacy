@@ -76,14 +76,15 @@ The five foundation pillars remain:
 - Alpha 3.4 - Career & History Framework v1
 - Alpha 3.5 - Save/Load v1
 - Alpha 4.0 - Multi-Season Playability v1
+- Alpha 4.1 - Contracts v2
 
 ## Current Milestone
 
-Alpha 4.0 - Multi-Season Playability v1
+Alpha 4.1 - Contracts v2
 
 ## Current Goal
 
-Allow the player to finish a completed regular-season schedule, archive season results and history, enter the offseason, generate the next draft class, roll expiring contracts into explicit GM decisions, reset current-season stats while preserving history, and save/load after rollover.
+Improve contract management with explainable asks, offer evaluation, budget impact, common expiry dates, relationship/fit context, and explicit GM approval before any accepted offer becomes a signed contract.
 
 ## Why Relationship Engine Was Next
 
@@ -93,11 +94,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 4.1 - TBD
+Alpha 4.2 - TBD
 
 ## Next Milestones
 
-1. Alpha 4.1 - TBD
+1. Alpha 4.2 - TBD
 
 ## Build Rule
 
