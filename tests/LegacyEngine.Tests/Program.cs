@@ -64,6 +64,7 @@ var alpha48OwnerJobSecurityV2Tests = new Alpha48OwnerJobSecurityV2Tests();
 var alpha49LeagueAiTeamIdentityTests = new Alpha49LeagueAiTeamIdentityTests();
 var alpha50PlayabilityPolishTests = new Alpha50PlayabilityPolishTests();
 var alpha51MultiLeagueCareerTests = new Alpha51MultiLeagueCareerTests();
+var alpha51FunctionalUiTradeWindowTests = new Alpha51FunctionalUiTradeWindowTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -839,6 +840,12 @@ runner.Run("alpha 5.1 Junior scenario keeps junior focus", alpha51MultiLeagueCar
 runner.Run("alpha 5.1 player pipeline uses shared person ids", alpha51MultiLeagueCareerTests.PlayerPipelineUsesSharedPersonIds);
 runner.Run("alpha 5.1 save load preserves league and rulebook", alpha51MultiLeagueCareerTests.SaveLoadPreservesLeagueAndRulebook);
 runner.Run("alpha 5.1 AlphaDesktop exposes league selection flow", alpha51MultiLeagueCareerTests.AlphaDesktopExposesLeagueSelectionFlow);
+runner.Run("alpha 5.1 functional UI uses popup framework", alpha51FunctionalUiTradeWindowTests.PlayerDossierAndStaffProfileUsePopupFramework);
+runner.Run("alpha 5.1 functional UI exposes league team areas", alpha51FunctionalUiTradeWindowTests.LeagueWorkspaceExposesFunctionalTeamAreas);
+runner.Run("alpha 5.1 organization popup shows selectable roster", alpha51FunctionalUiTradeWindowTests.OrganizationTeamPopupShowsSelectableRoster);
+runner.Run("alpha 5.1 trade builder shows assets and impacts", alpha51FunctionalUiTradeWindowTests.TradeBuilderPopupShowsAssetsAndImpacts);
+runner.Run("alpha 5.1 popups do not duplicate top-level tabs", alpha51FunctionalUiTradeWindowTests.NoPopupTopLevelTabDuplication);
+runner.Run("alpha 5.1 accepted trade still creates pending approval", alpha51FunctionalUiTradeWindowTests.AcceptedTradeStillCreatesPendingGmAction);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

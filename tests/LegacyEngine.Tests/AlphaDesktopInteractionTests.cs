@@ -101,7 +101,7 @@ internal sealed class AlphaDesktopInteractionTests
         Assert.True(source.Contains("ShowStaffProfile(row.PersonId)", StringComparison.Ordinal), "Staff View Profile should open a staff profile surface.");
         Assert.True(source.Contains("StaffProfileText", StringComparison.Ordinal), "Staff profile text should be built for the profile surface.");
         Assert.True(source.Contains("SetStaffFocusFor(row.PersonId)", StringComparison.Ordinal), "Staff Set Focus should call the selected staff focus action.");
-        Assert.True(source.Contains("MessageBox.Show(State.LatestSummary, \"Staff Focus\"", StringComparison.Ordinal), "Staff focus action should show confirmation.");
+        Assert.True(source.Contains("ShowConfirmationPopup(\"Staff Focus\", State.LatestSummary)", StringComparison.Ordinal), "Staff focus action should show confirmation.");
     }
 
     public void RecruitRowsAndDetailsShowPositionAgeAndPriorities()

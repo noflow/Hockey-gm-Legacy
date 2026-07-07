@@ -94,7 +94,7 @@ internal sealed class Alpha51MultiLeagueCareerTests
         Assert.True(source.Contains("Choose a league, choose a team", StringComparison.Ordinal), "Startup should explain league/team/GM flow.");
         Assert.True(source.Contains("new WorkspaceScreen(\"League Overview\", CreateTextScreen(\"League Overview\"))", StringComparison.Ordinal), "Desktop should expose League Overview.");
         Assert.True(source.Contains("new WorkspaceScreen(\"League Rules\", CreateTextScreen(\"League Rules\"))", StringComparison.Ordinal), "Desktop should expose League Rules.");
-        Assert.True(source.Contains("new WorkspaceScreen(\"Teams\", CreateTextScreen(\"Teams\"))", StringComparison.Ordinal), "Desktop should expose Teams.");
+        Assert.True(source.Contains("new WorkspaceScreen(\"Teams\", CreateSelectablePeopleContent(\"Teams\"))", StringComparison.Ordinal), "Desktop should expose selectable Teams.");
         Assert.True(source.Contains("SelectedLeagueExperience", StringComparison.Ordinal), "Startup should bind selected league.");
         Assert.True(source.Contains("SelectedTeamOption", StringComparison.Ordinal), "Startup should bind selected team.");
     }

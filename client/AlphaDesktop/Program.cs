@@ -420,7 +420,12 @@ internal sealed class MainWindow : Window
         {
             new WorkspaceScreen("League Overview", CreateTextScreen("League Overview")),
             new WorkspaceScreen("League Rules", CreateTextScreen("League Rules")),
-            new WorkspaceScreen("Teams", CreateTextScreen("Teams"))
+            new WorkspaceScreen("Teams", CreateSelectablePeopleContent("Teams")),
+            new WorkspaceScreen("Transactions", CreateTextScreen("Transactions")),
+            new WorkspaceScreen("League Free Agents", CreateSelectablePeopleContent("League Free Agents")),
+            new WorkspaceScreen("League Draft", CreateTextScreen("League Draft")),
+            new WorkspaceScreen("League Trade Block", CreateSelectablePeopleContent("League Trade Block")),
+            new WorkspaceScreen("League Standings", CreateTextScreen("League Standings"))
         });
 
         AddWorkspaceTab(tabs, "Organization", new[]
@@ -1243,16 +1248,7 @@ internal sealed class MainWindow : Window
             return;
         }
 
-        var window = new Window
-        {
-            Title = $"Dossier - {dossier.PlayerName}",
-            Width = 760,
-            Height = 680,
-            Owner = this,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = BuildDossierWindowContent(dossier)
-        };
-        window.ShowDialog();
+        ShowPopup($"Player Dossier - {dossier.PlayerName}", BuildDossierWindowContent(dossier), 760, 680, includeCloseButton: false);
         RefreshAll();
     }
 
@@ -1306,16 +1302,83 @@ internal sealed class MainWindow : Window
         return root;
     }
 
+    private void ShowPopup(string title, UIElement content, double width = 720, double height = 620, bool includeCloseButton = true)
+    {
+        var root = new Grid { Margin = new Thickness(18) };
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        if (includeCloseButton)
+        {
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+
+        var scroll = new ScrollViewer
+        {
+            Content = content,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        Grid.SetRow(scroll, 0);
+        root.Children.Add(scroll);
+
+        if (includeCloseButton)
+        {
+            var footer = new WrapPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 12, 0, 0)
+            };
+            footer.Children.Add(CreateButton("Close", () => Window.GetWindow(root)?.Close()));
+            Grid.SetRow(footer, 1);
+            root.Children.Add(footer);
+        }
+
+        var window = new Window
+        {
+            Title = title,
+            Width = width,
+            Height = height,
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = root
+        };
+        window.ShowDialog();
+    }
+
+    private void ShowConfirmationPopup(string title, string message, Action? confirmAction = null)
+    {
+        var panel = CreateDetailPanel(title, "Confirmation");
+        AddParagraph(panel, message);
+        if (confirmAction is not null)
+        {
+            AddActions(panel, CreateDetailButton("Confirm", () =>
+            {
+                confirmAction();
+                Window.GetWindow(panel)?.Close();
+            }));
+        }
+
+        ShowPopup(title, panel, 520, 360);
+    }
+
+    private void ShowContractOfferPlaceholder(string personId)
+    {
+        var panel = CreateDetailPanel("Contract Offer", FindPersonName(personId));
+        AddParagraph(panel, "Full contract negotiation will use the existing contract engine when this action is ready for the selected player.");
+        ShowPopup("Contract Offer", panel, 520, 360);
+    }
+
     private void ShowStaffProfile(string personId)
     {
         State.FocusStaffProfile(personId);
-        MessageBox.Show(State.StaffProfileText(personId), "Staff Profile", MessageBoxButton.OK, MessageBoxImage.Information);
+        var panel = CreateDetailPanel(FindPersonName(personId), "Staff Profile");
+        AddParagraph(panel, State.StaffProfileText(personId));
+        ShowPopup($"Staff Profile - {FindPersonName(personId)}", panel, 640, 560);
     }
 
     private void SetStaffFocusFor(string personId)
     {
         State.SetStaffFocusFor(personId);
-        MessageBox.Show(State.LatestSummary, "Staff Focus", MessageBoxButton.OK, MessageBoxImage.Information);
+        ShowConfirmationPopup("Staff Focus", State.LatestSummary);
     }
 
     private void ShowScoutAssignmentDialog(string? playerPersonId, string? scoutPersonId = null, ScoutingRegionFocus? region = null)
@@ -1383,7 +1446,7 @@ internal sealed class MainWindow : Window
 
         var window = new Window
         {
-            Title = "Assign Scout",
+            Title = "Scouting Assignment",
             Width = 420,
             Height = 430,
             Owner = this,
@@ -1436,7 +1499,12 @@ internal sealed class MainWindow : Window
         _tabs["Owner"].Text = BuildOwner();
         _tabs["League Overview"].Text = BuildLeagueOverview();
         _tabs["League Rules"].Text = BuildLeagueRules();
-        _tabs["Teams"].Text = BuildLeagueTeams();
+        RefreshSelectableTab("Teams", BuildTeamRows());
+        _tabs["Transactions"].Text = BuildLeagueNews();
+        RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
+        _tabs["League Draft"].Text = BuildDraftHistoryReport();
+        RefreshSelectableTab("League Trade Block", BuildTradeRows());
+        _tabs["League Standings"].Text = BuildStandings();
         RefreshSelectableTab("Staff", BuildStaffRows());
         RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
         RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
@@ -1798,9 +1866,12 @@ internal sealed class MainWindow : Window
             "Roster" => BuildPlayerDetail(title, row),
             "Recruits" => BuildPlayerDetail(title, row),
             "Free Agents" => BuildPlayerDetail(title, row),
+            "League Free Agents" => BuildPlayerDetail("Free Agents", row),
+            "Teams" => BuildTeamDetail(row),
             "Scouting" => BuildPlayerDetail(title, row),
             "Scouting Operations" => BuildScoutingOperationDetail(row),
             "Trades" => BuildTradeDetail(row),
+            "League Trade Block" => BuildTradeDetail(row),
             "Draft Board" => BuildPlayerDetail(title, row),
             "Prospect List" => BuildPlayerDetail(title, row),
             "Training Camp" => BuildTrainingCampDetail(row),
@@ -1819,6 +1890,163 @@ internal sealed class MainWindow : Window
                 $"{profile.Department} | GM relationship {profile.RelationshipWithGm} | salary {profile.Salary.AnnualAmount:C0}",
                 profile.Chemistry.Summary))
             .ToArray();
+
+    private IReadOnlyList<SelectablePersonRow> BuildTeamRows() =>
+        State.ScenarioSnapshot.LeagueProfile.Teams
+            .OrderBy(team => team.TeamName, StringComparer.Ordinal)
+            .Select(team => new SelectablePersonRow(
+                team.OrganizationId,
+                team.TeamName,
+                "Team",
+                $"{team.City}, {team.Region} | previous record {team.PreviousRecord}",
+                $"Budget {team.Budget:C0} | roster {team.RosterQuality} | prospects {team.ProspectStrength}",
+                $"{team.OwnerExpectations} | difficulty {team.Difficulty}"))
+            .ToArray();
+
+    private UIElement BuildTeamDetail(SelectablePersonRow? row)
+    {
+        if (row is null)
+        {
+            return EmptyDetail("Teams", "Select a league team to review its front office, roster, needs, and trade direction.");
+        }
+
+        var team = State.TeamOptionFor(row.PersonId);
+        if (team is null)
+        {
+            return EmptyDetail("Teams", "Selected team is no longer available.");
+        }
+
+        var roster = State.OtherTeamTradeRoster(team.OrganizationId);
+        var panel = CreateDetailPanel(team.TeamName, $"{team.City}, {team.Region}, {team.Country}");
+        AddSubHeader(panel, "Team Overview");
+        AddLine(panel, "Previous record", team.PreviousRecord);
+        AddLine(panel, "Owner expectations", team.OwnerExpectations);
+        AddLine(panel, "Budget status", $"{team.Budget:C0} placeholder");
+        AddLine(panel, "Roster", team.RosterQuality);
+        AddLine(panel, "Prospects", team.ProspectStrength);
+        AddLine(panel, "Difficulty", team.Difficulty);
+        AddLine(panel, "Parent", string.IsNullOrWhiteSpace(team.ParentOrganizationId) ? "none" : team.ParentOrganizationId);
+        AddLine(panel, "Affiliate", string.IsNullOrWhiteSpace(team.AffiliateOrganizationId) ? "none" : team.AffiliateOrganizationId);
+        AddSubHeader(panel, "Current Needs / Trade Direction");
+        AddParagraph(panel, State.TeamNeedsTextForOrganization(team.OrganizationId, team.TeamName));
+        AddSubHeader(panel, "Roster Browse");
+        if (roster.Count == 0)
+        {
+            AddParagraph(panel, "No trade-browsable roster entries are available yet.");
+        }
+        else
+        {
+            foreach (var player in roster.Take(8))
+            {
+                AddParagraph(panel, $"{player.Name} | {State.PositionShortText(player.Position)} | age {player.Age} | {player.CurrentRole} | {player.InterestLevel}");
+            }
+        }
+
+        AddSubHeader(panel, "Recent Transactions");
+        var transactions = State.LeagueRecentTransactions(team.OrganizationId).Take(5).ToArray();
+        if (transactions.Length == 0)
+        {
+            AddParagraph(panel, "No recent transactions for this team.");
+        }
+        else
+        {
+            foreach (var transaction in transactions)
+            {
+                AddParagraph(panel, $"{transaction.Date:yyyy-MM-dd}: {transaction.Description}");
+            }
+        }
+
+        AddActions(panel, CreateDetailButton("Open Team Window", () => ShowOrganizationPopup(team.OrganizationId)));
+        return panel;
+    }
+
+    private void ShowOrganizationPopup(string organizationId)
+    {
+        var team = State.TeamOptionFor(organizationId);
+        if (team is null)
+        {
+            ShowConfirmationPopup("Organization / Team", "Selected team is no longer available.");
+            return;
+        }
+
+        var root = new Grid();
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(320) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var rosterRows = State.OtherTeamTradeRoster(team.OrganizationId)
+            .Select(entry => new SelectablePersonRow(
+                entry.PersonId,
+                entry.Name,
+                "OtherTeamPlayer",
+                $"{State.PositionShortText(entry.Position)} | age {entry.Age} | {entry.CurrentRole}",
+                $"{entry.ContractStatus} | salary {entry.SalaryImpact:C0}",
+                $"{entry.TeamName} | trade interest {entry.InterestLevel} | ask: {entry.AskingPriceSummary}"))
+            .ToArray();
+        var list = new ListBox
+        {
+            ItemsSource = rosterRows,
+            Margin = new Thickness(0, 0, 14, 0)
+        };
+        Grid.SetColumn(list, 0);
+        root.Children.Add(list);
+
+        var detail = new StackPanel();
+        Grid.SetColumn(detail, 1);
+        root.Children.Add(detail);
+
+        void RenderPlayer(SelectablePersonRow? selected)
+        {
+            detail.Children.Clear();
+            detail.Children.Add(BuildOtherTeamPlayerDetail(team, selected));
+        }
+
+        list.SelectionChanged += (_, _) => RenderPlayer(list.SelectedItem as SelectablePersonRow);
+        list.SelectedItem = rosterRows.FirstOrDefault();
+        RenderPlayer(list.SelectedItem as SelectablePersonRow);
+
+        ShowPopup($"Organization / Team - {team.TeamName}", root, 980, 680);
+    }
+
+    private UIElement BuildOtherTeamPlayerDetail(TeamSelectionOption team, SelectablePersonRow? row)
+    {
+        var panel = CreateDetailPanel(team.TeamName, "Organization / Team");
+        AddLine(panel, "Record", team.PreviousRecord);
+        AddLine(panel, "Budget status", $"{team.Budget:C0} placeholder");
+        AddLine(panel, "Staff", "Front office and coaching staff summary placeholder");
+        AddLine(panel, "Draft picks", "Draft picks placeholder");
+        AddLine(panel, "Needs", State.TeamNeedsShortTextForOrganization(team.OrganizationId, team.TeamName));
+
+        if (row is null)
+        {
+            AddSubHeader(panel, "Roster");
+            AddParagraph(panel, "Select a player from this team roster.");
+            return panel;
+        }
+
+        var entry = State.TradeBlockEntryFor(row.PersonId);
+        if (entry is null)
+        {
+            AddParagraph(panel, "Selected player is no longer available.");
+            return panel;
+        }
+
+        AddSubHeader(panel, "Selected Player");
+        AddLine(panel, "Name", entry.Name);
+        AddLine(panel, "Bio", $"{State.PositionShortText(entry.Position)} | age {entry.Age} | {State.RegionTeamText(entry.PersonId)}");
+        AddLine(panel, "Role", entry.CurrentRole);
+        AddLine(panel, "Contract", entry.ContractStatus);
+        AddLine(panel, "Last-season stats", State.LastSeasonStats(entry.PersonId));
+        AddLine(panel, "Career summary", State.CareerStatSummary(entry.PersonId));
+        AddLine(panel, "Scouting confidence", State.ScoutingConfidenceText(entry.PersonId));
+        AddLine(panel, "Trade interest", $"{entry.InterestLevel}: {entry.ReasonAvailable}");
+        AddActions(
+            panel,
+            CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)),
+            CreateDetailButton("Add to Trade Proposal", () => ShowTradeBuilderPopup(entry.PersonId)),
+            CreateDetailButton("Scout Player", () => ShowScoutAssignmentDialog(entry.PersonId), State.AvailableScoutProfiles.Count > 0),
+            CreateDetailButton("Add to Watchlist", () => ShowConfirmationPopup("Watchlist", "Watchlist placeholder: this player would be flagged for future review.")));
+        return panel;
+    }
 
     private IReadOnlyList<SelectablePersonRow> BuildStaffCandidateRows()
     {
@@ -2478,11 +2706,122 @@ internal sealed class MainWindow : Window
         AddActions(
             panel,
             CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)),
-            CreateDetailButton("Add to Offer", () => State.SelectTradeTarget(entry.PersonId)),
-            CreateDetailButton("Propose Trade", () => State.ProposeTradeFor(entry.PersonId), State.TradeDeadlineWindow.TradesAllowed, "Trade deadline has passed"),
+            CreateDetailButton("Add to Trade Proposal", () => ShowTradeBuilderPopup(entry.PersonId)),
+            CreateDetailButton("Propose Trade", () => ShowTradeBuilderPopup(entry.PersonId), State.TradeDeadlineWindow.TradesAllowed, "Trade deadline has passed"),
             CreateDetailButton("Withdraw Offer", () => State.WithdrawLatestTradeOffer(), State.CanWithdrawLatestTradeOffer),
             CreateDetailButton("Remove from Offer", () => State.ClearTradeBuilder(), State.HasTradeBuilderSelection));
         return panel;
+    }
+
+    private void ShowTradeBuilderPopup(string otherPlayerPersonId)
+    {
+        var entry = State.TradeBlockEntryFor(otherPlayerPersonId);
+        if (entry is null)
+        {
+            ShowConfirmationPopup("Trade Builder", "Selected player is no longer available for a trade proposal.");
+            return;
+        }
+
+        State.SelectTradeTarget(otherPlayerPersonId);
+        ShowPopup($"Trade Builder - {entry.TeamName}", BuildTradeBuilderPopupContent(entry), 1100, 760);
+        RefreshAll();
+    }
+
+    private UIElement BuildTradeBuilderPopupContent(TradeBlockEntry entry)
+    {
+        var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.05, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var yourAssets = CreateDetailPanel("Your assets", State.ScenarioSnapshot.Organization.Name);
+        AddSubHeader(yourAssets, "Roster players");
+        foreach (var player in State.Snapshot.Roster.ActivePlayers.Take(10))
+        {
+            AddParagraph(yourAssets, $"{FindPersonName(player.PersonId)} | {player.Position} | age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} | {State.ContractRightsStatus(player.PersonId)}");
+        }
+
+        AddSubHeader(yourAssets, "Prospects / rights");
+        foreach (var prospect in State.ScenarioSnapshot.ProspectRights.Take(8))
+        {
+            AddParagraph(yourAssets, $"{prospect.ProspectName} | {prospect.Position} | age {prospect.Age} | {prospect.Status}");
+        }
+
+        AddSubHeader(yourAssets, "Draft picks");
+        AddParagraph(yourAssets, $"{State.ScenarioSnapshot.Season.Year + 1} draft pick placeholders");
+        Grid.SetColumn(yourAssets, 0);
+        root.Children.Add(yourAssets);
+
+        var proposal = CreateDetailPanel("Trade proposal", $"{entry.Name} from {entry.TeamName}");
+        AddLine(proposal, "You give", State.TradeProjectedOfferText(entry.PersonId));
+        AddLine(proposal, "You receive", $"{entry.Name} | {State.PositionShortText(entry.Position)} | {entry.CurrentRole}");
+        AddLine(proposal, "Roster impact", State.TradeProjectedRosterImpact(entry.PersonId));
+        AddLine(proposal, "Budget impact", State.TradeProjectedBudgetImpact(entry.PersonId));
+        AddLine(proposal, "AI evaluation", State.LatestTradeResponseText);
+        AddSubHeader(proposal, "Reasons");
+        var reasons = State.LatestTradeReasons.Take(5).ToArray();
+        if (reasons.Length == 0)
+        {
+            AddParagraph(proposal, "No response yet. Propose the trade to get the other team's answer.");
+        }
+        else
+        {
+            foreach (var reason in reasons)
+            {
+                AddParagraph(proposal, reason);
+            }
+        }
+
+        AddSubHeader(proposal, "Counter");
+        AddParagraph(proposal, State.LatestTradeCounterText);
+        Grid.SetColumn(proposal, 1);
+        root.Children.Add(proposal);
+
+        var otherAssets = CreateDetailPanel("Other team assets", entry.TeamName);
+        AddSubHeader(otherAssets, "Roster");
+        foreach (var player in State.OtherTeamTradeRoster(entry.OrganizationId).Take(12))
+        {
+            AddParagraph(otherAssets, $"{player.Name} | {State.PositionShortText(player.Position)} | age {player.Age} | {player.CurrentRole} | {player.InterestLevel}");
+        }
+
+        AddSubHeader(otherAssets, "Prospects / rights");
+        AddParagraph(otherAssets, "Team prospect list placeholder; trade-available rights appear on the roster list when exposed by the engine.");
+        AddSubHeader(otherAssets, "Draft picks");
+        AddParagraph(otherAssets, $"{entry.TeamName} draft pick placeholders");
+        Grid.SetColumn(otherAssets, 2);
+        root.Children.Add(otherAssets);
+
+        var actions = new WrapPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 14, 0, 0)
+        };
+        actions.Children.Add(CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)));
+        actions.Children.Add(CreateDetailButton("Contract Offer", () => ShowContractOfferPlaceholder(entry.PersonId), false, "Coming soon"));
+        actions.Children.Add(CreateDetailButton("Propose Trade", () =>
+        {
+            State.ProposeTradeFor(entry.PersonId);
+            RefreshAll();
+            Window.GetWindow(root)?.Close();
+        }, State.TradeDeadlineWindow.TradesAllowed, "Trade deadline has passed"));
+        actions.Children.Add(CreateDetailButton("Withdraw", () =>
+        {
+            State.WithdrawLatestTradeOffer();
+            RefreshAll();
+            Window.GetWindow(root)?.Close();
+        }, State.CanWithdrawLatestTradeOffer));
+        actions.Children.Add(CreateDetailButton("Clear", () =>
+        {
+            State.ClearTradeBuilder();
+            RefreshAll();
+            Window.GetWindow(root)?.Close();
+        }, State.HasTradeBuilderSelection));
+        Grid.SetRow(actions, 1);
+        Grid.SetColumnSpan(actions, 3);
+        root.Children.Add(actions);
+        return root;
     }
 
     private UIElement BuildTrainingCampDetail(SelectablePersonRow? row)
@@ -6909,6 +7248,15 @@ internal sealed class AlphaDesktopState
         return report is null ? "Confidence * Very Low" : $"Confidence {report.ConfidenceStars}";
     }
 
+    public string ScoutingConfidenceText(string personId)
+    {
+        var report = ScenarioSnapshot.CompletedScoutingReports
+            .Where(report => report.PlayerId == personId)
+            .OrderByDescending(report => report.CreatedOn)
+            .FirstOrDefault();
+        return report is null ? ScoutingConfidenceSummary(personId) : $"{report.Confidence} confidence";
+    }
+
     public string ScoutingReportHeadline(string personId)
     {
         var report = _scoutingIntelligence.BuildReportCards(ScenarioSnapshot, personId, _registry.Rulebook)
@@ -7230,6 +7578,67 @@ internal sealed class AlphaDesktopState
 
     public TradeBlockEntry? TradeBlockEntryFor(string personId) =>
         ScenarioSnapshot.TradeBlock?.Find(personId);
+
+    public TeamSelectionOption? TeamOptionFor(string organizationId) =>
+        ScenarioSnapshot.LeagueProfile.Teams.FirstOrDefault(team => team.OrganizationId == organizationId);
+
+    public IReadOnlyList<TradeBlockEntry> OtherTeamTradeRoster(string organizationId)
+    {
+        var team = TeamOptionFor(organizationId);
+        var byId = TradeBlockEntries
+            .Where(entry => entry.OrganizationId == organizationId)
+            .OrderBy(entry => entry.Position)
+            .ThenBy(entry => entry.Name, StringComparer.Ordinal)
+            .ToArray();
+        if (byId.Length > 0)
+        {
+            return byId;
+        }
+
+        var byName = TradeBlockEntries
+            .Where(entry => team is not null && string.Equals(entry.TeamName, team.TeamName, StringComparison.Ordinal))
+            .OrderBy(entry => entry.Position)
+            .ThenBy(entry => entry.Name, StringComparer.Ordinal)
+            .ToArray();
+        if (byName.Length > 0)
+        {
+            return byName;
+        }
+
+        return TradeBlockEntries
+            .OrderBy(entry => entry.TeamName, StringComparer.Ordinal)
+            .ThenBy(entry => entry.Name, StringComparer.Ordinal)
+            .Take(10)
+            .ToArray();
+    }
+
+    public IReadOnlyList<LeagueTransaction> LeagueRecentTransactions(string organizationId) =>
+        LeagueTransactions
+            .Where(transaction => transaction.OrganizationId == organizationId)
+            .OrderByDescending(transaction => transaction.Date)
+            .ToArray();
+
+    public string TeamNeedsShortTextForOrganization(string organizationId, string teamName)
+    {
+        var profile = _tradeStrategy.BuildTeamNeedsProfile(ScenarioSnapshot, organizationId, teamName);
+        return $"{profile.Direction} | needs {string.Join(", ", profile.Needs.Take(2).Select(need => need.Need))}";
+    }
+
+    public string TeamNeedsTextForOrganization(string organizationId, string teamName)
+    {
+        var profile = _tradeStrategy.BuildTeamNeedsProfile(ScenarioSnapshot, organizationId, teamName);
+        var builder = new StringBuilder();
+        builder.AppendLine(profile.Summary);
+        builder.AppendLine($"Trade direction: {profile.Direction}");
+        builder.AppendLine($"AI GM personality: {profile.GmPersonality}");
+        builder.AppendLine($"Asset preferences: {string.Join(", ", profile.AssetPreferences)}");
+        foreach (var need in profile.Needs.Take(5))
+        {
+            builder.AppendLine($"- {need.Priority}: {need.Need} - {need.Reason}");
+        }
+
+        return builder.ToString().Trim();
+    }
 
     public string TradeTeamNeedsShortText(TradeBlockEntry entry)
     {
