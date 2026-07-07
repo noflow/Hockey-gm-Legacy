@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.7 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.8 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -1431,7 +1431,7 @@ internal sealed class MainWindow : Window
         }
 
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
-        metrics.Children.Add(CreateDashboardMetric("Owner Mood", OwnerMoodText(), $"Trust {snapshot.Owner.Trust} | Confidence {snapshot.Owner.Confidence}", snapshot.Owner.Trust < 45 || snapshot.Owner.Confidence < 45));
+        metrics.Children.Add(CreateDashboardMetric("Owner Mood", OwnerMoodText(), $"Job security {State.OwnerOffice.JobSecurity.Level} | Support {State.OwnerOffice.Confidence.Support}", State.OwnerOffice.JobSecurity.Level is JobSecurityLevel.HotSeat or JobSecurityLevel.Critical));
         var nextGame = State.NextGame;
         var lastGame = State.LastGameRecap;
         var record = State.TeamRecordText;
@@ -1467,6 +1467,8 @@ internal sealed class MainWindow : Window
 
         var summaryCard = CreateDashboardCard("Action Center / Pending Decisions", out var summary);
         AddLine(summary, "Owner", snapshot.Owner.Name);
+        AddLine(summary, "Job security", State.OwnerOffice.JobSecurity.Level.ToString());
+        AddLine(summary, "Owner expectation", State.OwnerOffice.Expectations.FirstOrDefault()?.Description ?? "No active owner expectation.");
         AddLine(summary, "GM", snapshot.GeneralManager.Identity.DisplayName);
         AddLine(summary, "Head scout", snapshot.Scout.Name);
         AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
@@ -1578,9 +1580,8 @@ internal sealed class MainWindow : Window
 
     private string OwnerMoodText()
     {
-        var owner = State.Snapshot.Owner;
-        var average = (owner.Trust + owner.Confidence + owner.Patience) / 3;
-        return average switch
+        var ownerOffice = State.OwnerOffice;
+        return ownerOffice.Confidence.Support switch
         {
             >= 75 => "Supportive",
             >= 60 => "Steady",
@@ -3390,13 +3391,23 @@ internal sealed class MainWindow : Window
     private string BuildOwner()
     {
         var owner = State.Snapshot.Owner;
+        var office = State.OwnerOffice;
         var builder = new StringBuilder();
         builder.AppendLine("Owner");
         builder.AppendLine("=====");
         builder.AppendLine($"{owner.Name} - {owner.Archetype}");
         builder.AppendLine($"Organization: {State.ScenarioSnapshot.Organization.Name}");
+        builder.AppendLine($"Personality: {office.Personality.PersonalityType}");
+        builder.AppendLine($"Vision: {office.Personality.Vision}");
+        builder.AppendLine($"Budget philosophy: {office.Personality.BudgetPhilosophy}");
+        builder.AppendLine($"Relationship style: {office.Personality.RelationshipStyle}");
+        builder.AppendLine($"Winning expectation: {office.Personality.WinningExpectation}");
+        builder.AppendLine($"Prospect expectation: {office.Personality.ProspectExpectation}");
         builder.AppendLine($"Autonomy: {owner.AutonomyLevel}");
-        builder.AppendLine($"Trust: {owner.Trust}  Confidence: {owner.Confidence}  Patience: {owner.Patience}");
+        builder.AppendLine($"Trust: {office.Confidence.Trust}  Confidence: {office.Confidence.Confidence}  Patience: {office.Confidence.Patience}");
+        builder.AppendLine($"Pressure: {office.Confidence.Pressure}  Support: {office.Confidence.Support}");
+        builder.AppendLine($"Job security: {office.JobSecurity.Level} ({office.JobSecurity.Score}/100)");
+        builder.AppendLine(office.JobSecurity.Explanation);
         builder.AppendLine($"Budget total: {owner.Budget.Total:C0}");
         builder.AppendLine($"Player payroll: {owner.Budget.PlayerPayroll:C0}");
         builder.AppendLine($"Staff: {owner.Budget.Staff:C0}");
@@ -3423,7 +3434,55 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Medical/staff operations placeholder: {budget.MedicalAndStaffOperationsBudget:C0}");
         builder.AppendLine($"Owner status: {budget.OwnerBudgetConfidence}");
         builder.AppendLine();
-        builder.AppendLine("Goals");
+        builder.AppendLine("Season Expectations");
+        foreach (var expectation in office.Expectations)
+        {
+            builder.AppendLine($"Priority {expectation.Priority} | Difficulty {expectation.Difficulty} | {expectation.ExpectationType}");
+            builder.AppendLine($"  Progress {expectation.CurrentProgress}% by {expectation.Deadline:yyyy-MM-dd}: {expectation.Description}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Owner Confidence Drivers");
+        foreach (var driver in office.Confidence.Drivers)
+        {
+            builder.AppendLine($"- {driver}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Owner Decisions / Mandates");
+        foreach (var decision in office.Decisions)
+        {
+            builder.AppendLine($"- {decision.DecisionType}: {decision.Reason} Impact: {decision.Impact}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Letters");
+        foreach (var letter in office.Letters)
+        {
+            builder.AppendLine($"{letter.Date:yyyy-MM-dd} - {letter.Subject}");
+            builder.AppendLine(letter.Body);
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Meeting History / Schedule");
+        foreach (var meeting in office.Meetings)
+        {
+            builder.AppendLine($"{meeting.ScheduledDate:yyyy-MM-dd} - {meeting.MeetingType}");
+            builder.AppendLine($"  {meeting.Summary}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Performance Review");
+        builder.AppendLine($"Overall GM grade: {office.PerformanceReview.OverallGrade}");
+        builder.AppendLine(office.PerformanceReview.Narrative);
+        builder.AppendLine($"Recommendation: {office.PerformanceReview.Recommendation}");
+        foreach (var grade in office.PerformanceReview.CategoryGrades)
+        {
+            builder.AppendLine($"- {grade.Key}: {grade.Value}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Legacy Goals");
         foreach (var goal in owner.Goals.OrderByDescending(goal => goal.Priority))
         {
             builder.AppendLine($"Priority {goal.Priority}: {goal.GoalType} - {goal.Description}");
@@ -4960,6 +5019,7 @@ internal sealed class AlphaDesktopState
     private readonly StaffOfficeService _staffOffice = new();
     private readonly StaffCoachingService _staffCoaching = new();
     private readonly MedicalHealthService _medicalHealth = new();
+    private readonly OwnerOfficeService _ownerOffice = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
@@ -5117,6 +5177,8 @@ internal sealed class AlphaDesktopState
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
 
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+
+    public OwnerOfficeSummary OwnerOffice => _ownerOffice.BuildSummary(ScenarioSnapshot, BudgetOverview);
 
     public ContractManagementSummary ContractManagement => _contracts.BuildSummary(ScenarioSnapshot, _registry.Rulebook);
 

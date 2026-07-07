@@ -83,14 +83,15 @@ The five foundation pillars remain:
 - Alpha 4.5 - Player Development v2 (Development Plans & Progress)
 - Alpha 4.6 - Staff & Coaching v3 (Philosophy & Development)
 - Alpha 4.7 - Injury & Medical v2 (Health & Recovery)
+- Alpha 4.8 - Owner & Job Security v2
 
 ## Current Milestone
 
-Alpha 4.7 - Injury & Medical v2 (Health & Recovery)
+Alpha 4.8 - Owner & Job Security v2
 
 ## Current Goal
 
-Make health management a meaningful GM decision layer. Players now expose health profiles, durability, fatigue, recovery rate, injury risk, wear and tear, recurring concerns, medical confidence, conditioning, return-to-play recommendations, Action Center medical items, dossier medical context, executive medical reporting, and medical budget influence without changing save/load or game simulation.
+Make the owner an active accountability layer. Owners now expose richer personality, expectations, confidence, pressure, support, scheduled meetings, letters, budget/strategy decisions, performance reviews, job security explanations, Action Center items, executive report sections, and career-history hooks without adding actual firing, save/load changes, or game simulation changes.
 
 ## Why Relationship Engine Was Next
 
@@ -100,11 +101,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 4.8 - TBD
+Alpha 4.9 - TBD
 
 ## Next Milestones
 
-1. Alpha 4.8 - TBD
+1. Alpha 4.9 - TBD
 
 ## Build Rule
 

@@ -29,6 +29,7 @@ public sealed class ActionCenterService
         AddScoutingCompletions(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
         AddStaffCoachingItems(scenario, items);
+        AddOwnerOfficeItems(scenario, budget, items);
         AddUpcomingGames(scenario, items);
         AddInjuryIssues(scenario, items);
         AddSeasonReadiness(readiness, items);
@@ -265,6 +266,96 @@ public sealed class ActionCenterService
                 meeting.Summary,
                 "Staff recommendations help connect roster decisions, development plans, scouting information, and medical context.",
                 topRecommendation,
+                null,
+                null,
+                null));
+        }
+    }
+
+    private static void AddOwnerOfficeItems(NewGmScenarioSnapshot scenario, BudgetSnapshot budget, List<ActionCenterItem> items)
+    {
+        var ownerOffice = new OwnerOfficeService().BuildSummary(scenario, budget);
+        var nextMeeting = ownerOffice.Meetings
+            .Where(meeting => meeting.ScheduledDate >= scenario.CurrentDate)
+            .OrderBy(meeting => meeting.ScheduledDate)
+            .FirstOrDefault();
+        if (nextMeeting is not null && nextMeeting.ScheduledDate.DayNumber - scenario.CurrentDate.DayNumber <= 7)
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:owner-meeting:{nextMeeting.MeetingId}",
+                nextMeeting.ScheduledDate == scenario.CurrentDate ? $"Owner meeting today: {nextMeeting.MeetingType}" : $"Owner meeting upcoming: {nextMeeting.MeetingType}",
+                ActionCenterCategory.Owner,
+                nextMeeting.MeetingType is OwnerMeetingType.BudgetReview or OwnerMeetingType.TradeDeadline ? ActionCenterPriority.Important : ActionCenterPriority.Normal,
+                nextMeeting.ScheduledDate,
+                scenario.AlphaSnapshot.Owner.OwnerId,
+                scenario.AlphaSnapshot.Owner.Name,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                nextMeeting.OwnerComments,
+                "Owner meetings can reset expectations, budget pressure, and GM accountability.",
+                nextMeeting.Recommendations.First(),
+                null,
+                null,
+                null));
+        }
+
+        var warningLetter = ownerOffice.Letters.FirstOrDefault(letter => letter.IsWarning);
+        if (warningLetter is not null)
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:owner-letter:{warningLetter.LetterId}",
+                $"Owner letter: {warningLetter.Subject}",
+                ActionCenterCategory.Owner,
+                ActionCenterPriority.Important,
+                warningLetter.Date,
+                scenario.AlphaSnapshot.Owner.OwnerId,
+                scenario.AlphaSnapshot.Owner.Name,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                warningLetter.Body,
+                "Owner letters become part of the GM accountability trail.",
+                "Read the Owner workspace and adjust budget, roster, or development priorities before the next review.",
+                null,
+                null,
+                null));
+        }
+
+        if (ownerOffice.JobSecurity.Level is JobSecurityLevel.HotSeat or JobSecurityLevel.Critical or JobSecurityLevel.Questioned)
+        {
+            items.Add(new ActionCenterItem(
+                "action-center:owner:job-security",
+                $"Job security: {ownerOffice.JobSecurity.Level}",
+                ActionCenterCategory.Owner,
+                ownerOffice.JobSecurity.Level == JobSecurityLevel.Questioned ? ActionCenterPriority.Important : ActionCenterPriority.Urgent,
+                scenario.CurrentDate.AddDays(7),
+                scenario.AlphaSnapshot.Owner.OwnerId,
+                scenario.AlphaSnapshot.Owner.Name,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                ownerOffice.JobSecurity.Explanation,
+                "Alpha 4.8 creates warnings only; it does not fire the GM automatically.",
+                ownerOffice.PerformanceReview.Recommendation,
+                null,
+                null,
+                null));
+        }
+
+        var decision = ownerOffice.Decisions.FirstOrDefault(decision => decision.RequiresGmAttention);
+        if (decision is not null)
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:owner-decision:{decision.DecisionType}",
+                $"Owner direction: {decision.DecisionType}",
+                decision.DecisionType is OwnerDecisionType.FreezeHiring or OwnerDecisionType.ReduceBudget ? ActionCenterCategory.Budget : ActionCenterCategory.Owner,
+                ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(14),
+                scenario.AlphaSnapshot.Owner.OwnerId,
+                scenario.AlphaSnapshot.Owner.Name,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                decision.Reason,
+                decision.Impact,
+                "Review Owner expectations and adjust the hockey operations plan.",
                 null,
                 null,
                 null));

@@ -21,5 +21,8 @@ public enum CareerTimelineEntryType
     Retired,
     GMHired,
     GMFired,
-    GMExtended
+    GMExtended,
+    OwnerMeeting,
+    OwnerLetter,
+    OwnerPerformanceReview
 }

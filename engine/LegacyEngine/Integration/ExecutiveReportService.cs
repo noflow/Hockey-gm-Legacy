@@ -1,6 +1,7 @@
 using LegacyEngine.Events;
 using LegacyEngine.Injuries;
 using LegacyEngine.Rosters;
+using LegacyEngine.RuleEngine;
 using LegacyEngine.Seasons;
 
 namespace LegacyEngine.Integration;
@@ -167,6 +168,8 @@ public sealed class ExecutiveReportService
         var injuries = scenario.AlphaSnapshot.Injuries.ToArray();
         var remainingBudget = scenario.AlphaSnapshot.Owner.Budget.Total - scenario.AlphaSnapshot.Owner.Budget.PlayerPayroll;
         var ownerWouldRehire = scenario.AlphaSnapshot.Owner.Confidence >= 50 ? "Yes" : "Uncertain";
+        var budget = new BudgetOverviewService().Build(scenario, RulebookPresets.CreateJuniorMajor());
+        var ownerOffice = new OwnerOfficeService().BuildSummary(scenario, budget);
 
         var report = new ExecutiveReportRecord(
             ReportId: ReportId(ExecutiveReportKind.EndOfSeasonExecutiveReview, scenario),
@@ -198,6 +201,15 @@ public sealed class ExecutiveReportService
                     ["Biggest Success"] = "The organization completed a structured GM-led season cycle.",
                     ["Biggest Failure"] = "Competitive results are not available until game simulation is built.",
                     ["Letter from Owner"] = $"{scenario.AlphaSnapshot.Owner.Name}: We value the structure you brought to the organization. Next season will demand clearer competitive proof."
+                }),
+                Section("Owner & Job Security", "Owner v2 evaluates confidence, expectations, budget pressure, and job security without firing the GM automatically.", new Dictionary<string, string>
+                {
+                    ["Owner Grade"] = ownerOffice.Confidence.Support >= 70 ? "Strong support" : ownerOffice.Confidence.Support >= 50 ? "Conditional support" : "Low support",
+                    ["GM Grade"] = ownerOffice.PerformanceReview.OverallGrade.ToString(),
+                    ["Confidence"] = ownerOffice.Confidence.Confidence.ToString(),
+                    ["Job Security"] = ownerOffice.JobSecurity.Level.ToString(),
+                    ["Recommendation"] = ownerOffice.PerformanceReview.Recommendation,
+                    ["Future Expectations"] = string.Join("; ", ownerOffice.Expectations.Take(3).Select(expectation => expectation.Description))
                 }),
                 Section("Head Coach Review", "The coaching report identifies hockey needs without creating lines or game tactics.", new Dictionary<string, string>
                 {

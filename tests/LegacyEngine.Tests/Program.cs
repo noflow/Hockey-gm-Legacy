@@ -60,6 +60,7 @@ var alpha44ScoutingV2Tests = new Alpha44ScoutingV2Tests();
 var alpha45PlayerDevelopmentV2Tests = new Alpha45PlayerDevelopmentV2Tests();
 var alpha46StaffCoachingV3Tests = new Alpha46StaffCoachingV3Tests();
 var alpha47InjuryMedicalV2Tests = new Alpha47InjuryMedicalV2Tests();
+var alpha48OwnerJobSecurityV2Tests = new Alpha48OwnerJobSecurityV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -794,6 +795,18 @@ runner.Run("alpha 4.7 action center includes medical v2", alpha47InjuryMedicalV2
 runner.Run("alpha 4.7 executive report includes medical v2", alpha47InjuryMedicalV2Tests.ExecutiveMedicalReportIncludesV2Fields);
 runner.Run("alpha 4.7 AlphaDesktop exposes medical v2 UI", alpha47InjuryMedicalV2Tests.AlphaDesktopExposesMedicalV2Ui);
 runner.Run("alpha 4.7 no forbidden systems added", alpha47InjuryMedicalV2Tests.NoForbiddenSystemsAdded);
+runner.Run("alpha 4.8 owner personalities generated", alpha48OwnerJobSecurityV2Tests.OwnerPersonalityGenerated);
+runner.Run("alpha 4.8 season expectations generated", alpha48OwnerJobSecurityV2Tests.SeasonExpectationsGenerated);
+runner.Run("alpha 4.8 confidence changes with budget", alpha48OwnerJobSecurityV2Tests.ConfidenceChangesWithBudget);
+runner.Run("alpha 4.8 meetings generated", alpha48OwnerJobSecurityV2Tests.MeetingsGenerated);
+runner.Run("alpha 4.8 letters generated", alpha48OwnerJobSecurityV2Tests.LettersGenerated);
+runner.Run("alpha 4.8 performance review generated", alpha48OwnerJobSecurityV2Tests.PerformanceReviewGenerated);
+runner.Run("alpha 4.8 job security explained", alpha48OwnerJobSecurityV2Tests.JobSecurityExplained);
+runner.Run("alpha 4.8 action center includes owner items", alpha48OwnerJobSecurityV2Tests.ActionCenterIncludesOwnerItems);
+runner.Run("alpha 4.8 executive report includes owner job security", alpha48OwnerJobSecurityV2Tests.ExecutiveReportIncludesOwnerJobSecurity);
+runner.Run("alpha 4.8 career history stores owner items", alpha48OwnerJobSecurityV2Tests.CareerHistoryStoresOwnerItems);
+runner.Run("alpha 4.8 AlphaDesktop exposes owner v2 UI", alpha48OwnerJobSecurityV2Tests.AlphaDesktopExposesOwnerV2Ui);
+runner.Run("alpha 4.8 no forbidden systems added", alpha48OwnerJobSecurityV2Tests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

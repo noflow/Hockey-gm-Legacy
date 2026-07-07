@@ -68,6 +68,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 4.5 Player Development v2 (Development Plans & Progress)
 - Alpha 4.6 Staff & Coaching v3 (Philosophy & Development)
 - Alpha 4.7 Injury & Medical v2 (Health & Recovery)
+- Alpha 4.8 Owner & Job Security v2
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -124,6 +125,8 @@ Alpha 4.3 - Trade Engine v2 (Negotiation & Team Strategy) makes AI trade logic d
 Alpha 4.6 - Staff & Coaching v3 (Philosophy & Development) makes staff a living hockey operations layer. Coaches and staff now surface philosophy, specialties, personality, staff chemistry, player fit, monthly staff meetings, department grades, organization chart context, hiring fit, player dossier staff opinions, Action Center coaching items, and staff performance reviews without adding Godot, save/load changes, or game simulation changes.
 
 Alpha 4.7 - Injury & Medical v2 (Health & Recovery) turns injuries into a GM health-management system. Roster players now have health profiles with durability, fatigue, recovery rate, injury risk, wear and tear, recurring concerns, medical confidence, and conditioning. Medical reports explain return timing, risk, staff confidence, and recommended return-to-play choices, while dossiers, Action Center, organization health, and executive reports surface medical context without changing save/load or game simulation.
+
+Alpha 4.8 - Owner & Job Security v2 makes ownership a visible accountability layer. The owner now has a richer personality profile, season expectations, confidence/pressure/support state, scheduled meetings, letters, budget and strategy decisions, GM performance review, job security explanation, Action Center items, executive report context, and career-history hooks. Alpha 4.8 creates warnings and pressure only; it does not add automatic firing, job offers, save/load changes, or game simulation changes.
 
 Alpha 4.4 - Scouting v2 (Intelligence & Reports) turns scouting into an information system instead of a rating reveal. Scouts now have tendencies, known regions, specialties, workload effects, confidence stars, viewing samples, tournament context, budget coverage notes, report comparisons, and scout career/development summaries. Player dossiers show multiple report-card style opinions, evidence, disagreements, and confidence while keeping hidden ratings private.
 
