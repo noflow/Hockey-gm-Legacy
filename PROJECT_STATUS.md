@@ -86,14 +86,15 @@ The five foundation pillars remain:
 - Alpha 4.8 - Owner & Job Security v2
 - Alpha 4.9 - League AI & Team Identity v2
 - Alpha 5.0 - Playability & Polish
+- Alpha 5.1 - Multi-League Career Framework
 
 ## Current Milestone
 
-Alpha 5.0 - Playability & Polish
+Alpha 5.1 - Multi-League Career Framework
 
 ## Current Goal
 
-Make the existing Alpha career easier to play day to day. AlphaDesktop now emphasizes decision-focused inbox messages, routes routine simulation chatter to a searchable Journal, keeps League News separate, adds an active global search surface, cleans Action Center duplicates/resolved items, improves dashboard workflow cues, and adds a playtest checklist without adding new gameplay systems.
+Allow the player to begin an Alpha career in NHL-style, AHL-style, Junior, or Custom placeholder league setups while keeping one shared LegacyEngine path. League profiles now define rulebook, team choices, difficulty, gameplay focus, rules summaries, current champion/history, affiliate context, and save metadata so careers restore to the same league.
 
 ## Why Relationship Engine Was Next
 
@@ -103,11 +104,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.1 - TBD
+Alpha 5.2 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.1 - TBD
+1. Alpha 5.2 - TBD
 
 ## Build Rule
 

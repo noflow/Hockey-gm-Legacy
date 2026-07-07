@@ -26,6 +26,8 @@ public sealed class NewGmScenarioBootstrapper
         var scenarioSettings = settings ?? new NewGmScenarioSettings();
         scenarioSettings.Validate();
         var activeRulebook = rulebook ?? RulebookPresets.CreateJuniorMajor();
+        var leagueProfile = ResolveLeagueProfile(scenarioSettings, activeRulebook);
+        var teamSelection = ResolveTeamSelection(scenarioSettings);
 
         var seasonCalendar = SeasonCalendar.Build(scenarioSettings.SeasonYear, scenarioSettings.SeasonSettings);
         var draftDate = seasonCalendar.Milestones.Single(item => item.Type == SeasonMilestoneType.Draft).Date.Value;
@@ -179,9 +181,11 @@ public sealed class NewGmScenarioBootstrapper
             Contracts: contracts,
             GeneralManagerProfile: gmProfile with { Person = gm },
             ScoutingAssignments: Array.Empty<ScoutingAssignment>(),
+            LeagueProfile: leagueProfile,
+            TeamSelection: teamSelection,
             DraftDate: draftDate,
             FirstDayInbox: firstDayInbox,
-            ScenarioSummary: $"{gmProfile.PreferredName} takes over as GM of {organization.Name} two weeks before the junior draft.")
+            ScenarioSummary: ScenarioSummaryFor(leagueProfile, gmProfile.PreferredName, organization.Name))
         {
             CompletedScoutingReports = inheritedScoutingReports
         };
@@ -226,6 +230,52 @@ public sealed class NewGmScenarioBootstrapper
     public static NewGmScenarioResult CreateScenario(NewGmScenarioSettings? settings = null, Rulebook? rulebook = null) =>
         new NewGmScenarioBootstrapper().Bootstrap(settings, rulebook);
 
+    private static LeagueProfile ResolveLeagueProfile(NewGmScenarioSettings settings, Rulebook rulebook)
+    {
+        if (settings.LeagueProfile is not null)
+        {
+            return settings.LeagueProfile with { Rulebook = rulebook };
+        }
+
+        var service = new MultiLeagueCareerService();
+        var experience = rulebook.LeagueType switch
+        {
+            "nhl_style" => LeagueExperience.Nhl,
+            "ahl_style" => LeagueExperience.Ahl,
+            "custom" => LeagueExperience.Custom,
+            _ => settings.LeagueExperience
+        };
+        return service.GetProfile(experience) with { Rulebook = rulebook };
+    }
+
+    private static TeamSelectionOption ResolveTeamSelection(NewGmScenarioSettings settings) =>
+        settings.TeamSelection
+        ?? new TeamSelectionOption(
+            settings.OrganizationId,
+            settings.TeamName,
+            settings.TeamCity,
+            settings.TeamRegion,
+            settings.TeamCountry,
+            "crest placeholder",
+            settings.PreviousRecord,
+            settings.OwnerExpectations,
+            1_150_000m,
+            50,
+            "Balanced",
+            "Balanced",
+            "Balanced",
+            settings.ParentOrganizationId,
+            settings.AffiliateOrganizationId);
+
+    private static string ScenarioSummaryFor(LeagueProfile profile, string preferredName, string organizationName) =>
+        profile.Experience switch
+        {
+            LeagueExperience.Nhl => $"{preferredName} takes over as GM of {organizationName} two weeks before the pro draft.",
+            LeagueExperience.Ahl => $"{preferredName} takes over as GM of {organizationName} during affiliate roster planning.",
+            LeagueExperience.Custom => $"{preferredName} takes over as GM of {organizationName} in a custom league placeholder career.",
+            _ => $"{preferredName} takes over as GM of {organizationName} two weeks before the junior draft."
+        };
+
     private static Organization CreateOrganization(
         EngineRegistry registry,
         NewGmScenarioSettings settings,
@@ -234,7 +284,7 @@ public sealed class NewGmScenarioBootstrapper
         registry.OrganizationEngine.CreateOrganization(
             settings.OrganizationId,
             OrganizationType.Team,
-            new OrganizationIdentity("Prairie Falcons", "Moose Jaw", "SK", "Canada"),
+            new OrganizationIdentity(settings.TeamName, settings.TeamCity, settings.TeamRegion, settings.TeamCountry),
             new DateOnly(1989, 9, 1),
             ownerPersonId,
             settings.LeagueId,
@@ -263,7 +313,9 @@ public sealed class NewGmScenarioBootstrapper
                 new OrganizationDepartment("dept-scouting", "Scouting", StaffDepartment.Scouting),
                 new OrganizationDepartment("dept-medical", "Medical", StaffDepartment.Medical),
                 new OrganizationDepartment("dept-equipment", "Equipment", StaffDepartment.Equipment)
-            });
+            },
+            parentOrganizationId: settings.ParentOrganizationId,
+            affiliateOrganizationId: settings.AffiliateOrganizationId);
 
     private static IReadOnlyList<Contract> CreateContracts(
         EngineRegistry registry,

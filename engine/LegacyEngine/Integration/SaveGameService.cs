@@ -36,6 +36,9 @@ public sealed class SaveGameService
             now,
             scenario.GeneralManagerProfile.Person.Identity.DisplayName,
             scenario.Organization.Name,
+            scenario.LeagueProfile.Identity.LeagueId,
+            scenario.LeagueProfile.Identity.Name,
+            scenario.LeagueProfile.Rulebook.RulebookId,
             scenario.CurrentDate,
             scenario.Season.Year,
             string.IsNullOrWhiteSpace(fileDisplayName)
@@ -133,7 +136,7 @@ public sealed class SaveGameService
         ArgumentNullException.ThrowIfNull(scenario);
         scenario.Validate();
         var worldEngine = new WorldEngine(scenario.AlphaSnapshot.WorldState, new EventEngine());
-        return EngineRegistry.Create(worldEngine, rulebook ?? RulebookPresets.CreateJuniorMajor());
+        return EngineRegistry.Create(worldEngine, rulebook ?? scenario.LeagueProfile.Rulebook);
     }
 
     private static SaveLoadResult Ok(string message, string? filePath, SaveGame saveGame, EngineRegistry? registry = null)

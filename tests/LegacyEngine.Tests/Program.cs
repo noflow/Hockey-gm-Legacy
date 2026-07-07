@@ -63,6 +63,7 @@ var alpha47InjuryMedicalV2Tests = new Alpha47InjuryMedicalV2Tests();
 var alpha48OwnerJobSecurityV2Tests = new Alpha48OwnerJobSecurityV2Tests();
 var alpha49LeagueAiTeamIdentityTests = new Alpha49LeagueAiTeamIdentityTests();
 var alpha50PlayabilityPolishTests = new Alpha50PlayabilityPolishTests();
+var alpha51MultiLeagueCareerTests = new Alpha51MultiLeagueCareerTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -830,6 +831,14 @@ runner.Run("alpha 5.0 action center removes closed and duplicate items", alpha50
 runner.Run("alpha 5.0 global search finds people and history", alpha50PlayabilityPolishTests.GlobalSearchFindsPeopleAndHistory);
 runner.Run("alpha 5.0 playtest checklist generated", alpha50PlayabilityPolishTests.PlaytestChecklistGenerated);
 runner.Run("alpha 5.0 AlphaDesktop exposes polish surfaces", alpha50PlayabilityPolishTests.AlphaDesktopExposesPolishSurfaces);
+runner.Run("alpha 5.1 league selection provides required profiles", alpha51MultiLeagueCareerTests.LeagueSelectionProvidesRequiredProfiles);
+runner.Run("alpha 5.1 team selection creates scenario settings", alpha51MultiLeagueCareerTests.TeamSelectionCreatesScenarioSettings);
+runner.Run("alpha 5.1 NHL scenario uses NHL profile and rulebook", alpha51MultiLeagueCareerTests.NhlScenarioUsesNhlProfileAndRulebook);
+runner.Run("alpha 5.1 AHL scenario disables amateur draft and references parent", alpha51MultiLeagueCareerTests.AhlScenarioDisablesAmateurDraftAndReferencesParent);
+runner.Run("alpha 5.1 Junior scenario keeps junior focus", alpha51MultiLeagueCareerTests.JuniorScenarioKeepsJuniorFocus);
+runner.Run("alpha 5.1 player pipeline uses shared person ids", alpha51MultiLeagueCareerTests.PlayerPipelineUsesSharedPersonIds);
+runner.Run("alpha 5.1 save load preserves league and rulebook", alpha51MultiLeagueCareerTests.SaveLoadPreservesLeagueAndRulebook);
+runner.Run("alpha 5.1 AlphaDesktop exposes league selection flow", alpha51MultiLeagueCareerTests.AlphaDesktopExposesLeagueSelectionFlow);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

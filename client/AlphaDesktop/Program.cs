@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -79,6 +79,10 @@ internal sealed class MainWindow : Window
     private readonly TextBox _birthplaceInput = new() { Text = "Swift Current, SK" };
     private readonly TextBox _strengthsInput = new() { Text = "development planning, communication" };
     private readonly TextBox _weaknessesInput = new() { Text = "limited draft history" };
+    private readonly MultiLeagueCareerService _careerSetup = new();
+    private readonly ComboBox _leagueInput = new() { ItemsSource = Enum.GetValues<LeagueExperience>(), SelectedItem = LeagueExperience.Junior };
+    private readonly ComboBox _teamInput = new() { DisplayMemberPath = nameof(TeamSelectionOption.TeamName) };
+    private readonly TextBlock _leagueSummaryText = new();
     private readonly ComboBox _genderInput = new() { ItemsSource = Enum.GetValues<Gender>(), SelectedItem = Gender.NonBinary };
     private readonly ComboBox _backgroundInput = new() { ItemsSource = Enum.GetValues<GmBackground>(), SelectedItem = GmBackground.Operations };
     private readonly ComboBox _styleInput = new() { ItemsSource = Enum.GetValues<GmStyle>(), SelectedItem = GmStyle.Balanced };
@@ -100,25 +104,30 @@ internal sealed class MainWindow : Window
     {
         var root = new Grid { Margin = new Thickness(28) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         var title = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
         title.Children.Add(new TextBlock
         {
-            Text = "Create Your GM",
+            Text = "Start New Career",
             FontSize = 28,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64))
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 5.0 starts with your created GM inside the polished GM Office workspace.",
+            Text = "Choose a league, choose a team, create your GM, then enter the GM Office.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
         });
         Grid.SetRow(title, 0);
         root.Children.Add(title);
+
+        var selection = BuildLeagueSelectionPanel();
+        Grid.SetRow(selection, 1);
+        root.Children.Add(selection);
 
         var form = new Grid();
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -153,10 +162,64 @@ internal sealed class MainWindow : Window
         Grid.SetColumnSpan(buttons, 3);
         form.Children.Add(buttons);
 
-        Grid.SetRow(form, 1);
+        Grid.SetRow(form, 2);
         root.Children.Add(form);
+        RefreshTeamChoices();
         return root;
     }
+
+    private UIElement BuildLeagueSelectionPanel()
+    {
+        _leagueInput.SelectionChanged += (_, _) => RefreshTeamChoices();
+        _teamInput.SelectionChanged += (_, _) => RefreshLeagueSummary();
+        var panel = new Border
+        {
+            Background = Brushes.White,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(210, 219, 229)),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(16),
+            Margin = new Thickness(0, 0, 0, 16)
+        };
+        var content = new Grid();
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(260) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        content.Children.Add(LabeledControl("League", _leagueInput));
+        var teamField = LabeledControl("Team", _teamInput);
+        Grid.SetColumn(teamField, 1);
+        content.Children.Add(teamField);
+        _leagueSummaryText.TextWrapping = TextWrapping.Wrap;
+        _leagueSummaryText.Foreground = new SolidColorBrush(Color.FromRgb(44, 58, 74));
+        _leagueSummaryText.Margin = new Thickness(16, 20, 0, 0);
+        Grid.SetColumn(_leagueSummaryText, 2);
+        content.Children.Add(_leagueSummaryText);
+        panel.Child = content;
+        return panel;
+    }
+
+    private void RefreshTeamChoices()
+    {
+        var experience = SelectedLeagueExperience();
+        var teams = _careerSetup.TeamsFor(experience);
+        _teamInput.ItemsSource = teams;
+        _teamInput.SelectedItem = teams.FirstOrDefault();
+        RefreshLeagueSummary();
+    }
+
+    private void RefreshLeagueSummary()
+    {
+        var profile = _careerSetup.GetProfile(SelectedLeagueExperience());
+        var team = SelectedTeamOption();
+        _leagueSummaryText.Text = team is null
+            ? $"{profile.Identity.Name}: {profile.Identity.Description}"
+            : $"{profile.Identity.Name} | {profile.Identity.Difficulty}\nFocus: {string.Join(", ", profile.Identity.PrimaryGameplayFocus)}\n{team.TeamName}: {team.PreviousRecord}, budget {team.Budget:C0}, prospects {team.ProspectStrength}, roster {team.RosterQuality}.";
+    }
+
+    private LeagueExperience SelectedLeagueExperience() =>
+        _leagueInput.SelectedItem is LeagueExperience experience ? experience : LeagueExperience.Junior;
+
+    private TeamSelectionOption? SelectedTeamOption() =>
+        _teamInput.SelectedItem as TeamSelectionOption;
 
     private static void AddField(Grid grid, string label, Control input, int row, int column, int columnSpan = 1)
     {
@@ -200,7 +263,14 @@ internal sealed class MainWindow : Window
             Strengths: SplitList(_strengthsInput.Text),
             Weaknesses: SplitList(_weaknessesInput.Text));
 
-        _state = AlphaDesktopState.Create(settings);
+        var team = SelectedTeamOption();
+        if (team is null)
+        {
+            MessageBox.Show("Please choose a team.", "New Career", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _state = AlphaDesktopState.Create(settings, SelectedLeagueExperience(), team.OrganizationId);
         Content = BuildLayout();
         RefreshAll();
     }
@@ -344,6 +414,13 @@ internal sealed class MainWindow : Window
         {
             new WorkspaceScreen("GM Inbox", BuildInboxLayout()),
             new WorkspaceScreen("League News / Transaction Wire", CreateTextScreen("League News"))
+        });
+
+        AddWorkspaceTab(tabs, "League", new[]
+        {
+            new WorkspaceScreen("League Overview", CreateTextScreen("League Overview")),
+            new WorkspaceScreen("League Rules", CreateTextScreen("League Rules")),
+            new WorkspaceScreen("Teams", CreateTextScreen("Teams"))
         });
 
         AddWorkspaceTab(tabs, "Organization", new[]
@@ -1357,6 +1434,9 @@ internal sealed class MainWindow : Window
         RefreshInboxPanels();
         RefreshActionCenter();
         _tabs["Owner"].Text = BuildOwner();
+        _tabs["League Overview"].Text = BuildLeagueOverview();
+        _tabs["League Rules"].Text = BuildLeagueRules();
+        _tabs["Teams"].Text = BuildLeagueTeams();
         RefreshSelectableTab("Staff", BuildStaffRows());
         RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
         RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
@@ -4322,6 +4402,96 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildLeagueOverview()
+    {
+        var profile = State.ScenarioSnapshot.LeagueProfile;
+        var team = State.ScenarioSnapshot.TeamSelection;
+        var builder = new StringBuilder();
+        builder.AppendLine("League Overview");
+        builder.AppendLine("===============");
+        builder.AppendLine($"{profile.Identity.Name} ({profile.Identity.ShortName})");
+        builder.AppendLine(profile.Identity.Description);
+        builder.AppendLine();
+        builder.AppendLine($"Difficulty: {profile.Identity.Difficulty}");
+        builder.AppendLine($"Primary focus: {string.Join(", ", profile.Identity.PrimaryGameplayFocus)}");
+        builder.AppendLine($"Current champion: {profile.Identity.CurrentChampion}");
+        builder.AppendLine($"History: {profile.Identity.HistorySummary}");
+        builder.AppendLine();
+        builder.AppendLine("Your Team");
+        builder.AppendLine($"{team.LogoPlaceholder}: {team.TeamName}");
+        builder.AppendLine($"Previous record: {team.PreviousRecord}");
+        builder.AppendLine($"Owner expectations: {team.OwnerExpectations}");
+        builder.AppendLine($"Budget: {team.Budget:C0}");
+        builder.AppendLine($"Current GM reputation: {team.CurrentGmReputation}/100");
+        builder.AppendLine($"Prospect strength: {team.ProspectStrength}");
+        builder.AppendLine($"Difficulty: {team.Difficulty}");
+        builder.AppendLine($"Roster quality: {team.RosterQuality}");
+        if (!string.IsNullOrWhiteSpace(team.ParentOrganizationId))
+        {
+            builder.AppendLine($"Parent organization: {team.ParentOrganizationId}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(team.AffiliateOrganizationId))
+        {
+            builder.AppendLine($"Affiliate organization: {team.AffiliateOrganizationId}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildLeagueRules()
+    {
+        var profile = State.ScenarioSnapshot.LeagueProfile;
+        var rulebook = profile.Rulebook;
+        var builder = new StringBuilder();
+        builder.AppendLine("League Rules");
+        builder.AppendLine("============");
+        builder.AppendLine($"Rulebook: {rulebook.RulebookId} ({rulebook.LeagueType})");
+        builder.AppendLine($"Roster: {RuleList(profile.RosterRulesSummary)}");
+        builder.AppendLine($"Draft: {RuleList(profile.DraftRulesSummary)}");
+        builder.AppendLine($"Trades: {RuleList(profile.TradeRulesSummary)}");
+        builder.AppendLine($"Contracts: {RuleList(profile.ContractRulesSummary)}");
+        builder.AppendLine($"Budget: {RuleList(profile.BudgetRulesSummary)}");
+        builder.AppendLine($"Development: {RuleList(profile.DevelopmentRulesSummary)}");
+        builder.AppendLine($"Affiliate: {RuleList(profile.AffiliateRulesSummary)}");
+        builder.AppendLine($"Recruiting: {RuleList(profile.RecruitingRulesSummary)}");
+        builder.AppendLine();
+        builder.AppendLine($"Draft enabled: {rulebook.DraftRules?.DraftEnabled}");
+        builder.AppendLine($"Draft rounds: {rulebook.DraftRules?.Rounds ?? 0}");
+        builder.AppendLine($"Roster target: {rulebook.RosterRules?.ActiveRoster ?? 0}");
+        builder.AppendLine($"Max roster: {rulebook.RosterRules?.MaxRoster ?? 0}");
+        builder.AppendLine($"Current champion: {profile.Identity.CurrentChampion}");
+        return builder.ToString();
+    }
+
+    private string BuildLeagueTeams()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Teams");
+        builder.AppendLine("=====");
+        foreach (var team in State.ScenarioSnapshot.LeagueProfile.Teams)
+        {
+            builder.AppendLine($"{team.TeamName} ({team.City}, {team.Region})");
+            builder.AppendLine($"  Previous record: {team.PreviousRecord}");
+            builder.AppendLine($"  Owner: {team.OwnerExpectations}");
+            builder.AppendLine($"  Budget: {team.Budget:C0} | Prospects: {team.ProspectStrength} | Roster: {team.RosterQuality} | Difficulty: {team.Difficulty}");
+            if (!string.IsNullOrWhiteSpace(team.ParentOrganizationId))
+            {
+                builder.AppendLine($"  Parent: {team.ParentOrganizationId}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(team.AffiliateOrganizationId))
+            {
+                builder.AppendLine($"  Affiliate: {team.AffiliateOrganizationId}");
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string RuleList(IReadOnlyList<string> rules) =>
+        string.Join("; ", rules);
+
     private string BuildJournal()
     {
         var builder = new StringBuilder();
@@ -5783,30 +5953,35 @@ internal sealed class AlphaDesktopState
 
     public static AlphaDesktopState Create()
     {
-        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var selection = new MultiLeagueCareerService().SelectLeagueAndTeam(LeagueExperience.Junior, "org-prairie-falcons");
+        var scenario = new MultiLeagueCareerService().CreateScenario(selection);
         return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
     }
 
     public static AlphaDesktopState Create(GmProfileCreationSettings gmSettings)
     {
-        var scenario = NewGmScenarioBootstrapper.CreateScenario(new NewGmScenarioSettings
-        {
-            GmCreationSettings = gmSettings
-        });
+        return Create(gmSettings, LeagueExperience.Junior, "org-prairie-falcons");
+    }
+
+    public static AlphaDesktopState Create(GmProfileCreationSettings gmSettings, LeagueExperience leagueExperience, string organizationId)
+    {
+        var service = new MultiLeagueCareerService();
+        var selection = service.SelectLeagueAndTeam(leagueExperience, organizationId, gmSettings);
+        var scenario = service.CreateScenario(selection);
         return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
     }
 
     public static SaveLoadResult LoadCareer(string filePath, out AlphaDesktopState? state)
     {
         var service = new SaveGameService();
-        var result = service.LoadFromFile(filePath, RulebookPresets.CreateJuniorMajor());
+        var result = service.LoadFromFile(filePath);
         if (!result.Success || result.SaveGame is null)
         {
             state = null;
             return result;
         }
 
-        state = FromSaveGame(result.SaveGame, result.Registry ?? service.RestoreRegistry(result.SaveGame.ScenarioSnapshot, RulebookPresets.CreateJuniorMajor()), filePath);
+        state = FromSaveGame(result.SaveGame, result.Registry ?? service.RestoreRegistry(result.SaveGame.ScenarioSnapshot), filePath);
         state.LatestSummary = result.CompatibilityWarning is null
             ? result.Message
             : $"{result.Message} {result.CompatibilityWarning}";

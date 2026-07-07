@@ -14,6 +14,8 @@ public sealed record NewGmScenarioSnapshot(
     IReadOnlyList<Contract> Contracts,
     GmCreationResult GeneralManagerProfile,
     IReadOnlyList<ScoutingAssignment> ScoutingAssignments,
+    LeagueProfile LeagueProfile,
+    TeamSelectionOption TeamSelection,
     DateOnly DraftDate,
     IReadOnlyList<AlphaInboxItem> FirstDayInbox,
     string ScenarioSummary)
@@ -112,6 +114,8 @@ public sealed record NewGmScenarioSnapshot(
         Organization.Validate();
         Season.Validate();
         GeneralManagerProfile.Validate();
+        LeagueProfile.Validate();
+        TeamSelection.Validate();
 
         if (FirstDayInbox.Count == 0)
         {

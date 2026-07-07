@@ -71,6 +71,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 4.8 Owner & Job Security v2
 - Alpha 4.9 League AI & Team Identity v2
 - Alpha 5.0 Playability & Polish
+- Alpha 5.1 Multi-League Career Framework
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -133,6 +134,8 @@ Alpha 4.8 - Owner & Job Security v2 makes ownership a visible accountability lay
 Alpha 4.9 - League AI & Team Identity v2 makes organizations recognizable by how they build. Every league team now receives an identity, AI GM personality, owner influence, current strategy, monthly needs, budget style, draft style, scouting focus, development grade, trade/free-agency/draft/scouting behavior, occasional League News direction headlines, and organization-history hooks. These profiles are deterministic and in-memory for Alpha, with no media engine, save/load changes, or game simulation changes.
 
 Alpha 5.0 - Playability & Polish cleans up the day-to-day GM workflow without adding new simulation systems. The GM inbox now stays focused on decisions and important messages, routine updates move to a searchable Journal, League News remains separate, the dashboard explains inbox/journal/action counts, global search is active across core career data, and Reports / History includes a playtest checklist for quick first-month regression review.
+
+Alpha 5.1 - Multi-League Career Framework adds league and team selection before GM creation. The player can start NHL-style, AHL-style, Junior, or Custom placeholder careers, each with its own LeagueProfile, rulebook, team options, focus, difficulty, rules summaries, current champion/history, and save metadata. NHL-style enables the draft and pro roster context, AHL-style disables the amateur draft and references a parent club, and Junior keeps recruiting/scouting/draft/development as the main loop while all scenarios reuse the same LegacyEngine systems.
 
 Alpha 4.4 - Scouting v2 (Intelligence & Reports) turns scouting into an information system instead of a rating reveal. Scouts now have tendencies, known regions, specialties, workload effects, confidence stars, viewing samples, tournament context, budget coverage notes, report comparisons, and scout career/development summaries. Player dossiers show multiple report-card style opinions, evidence, disagreements, and confidence while keeping hidden ratings private.
 
