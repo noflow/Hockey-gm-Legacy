@@ -58,6 +58,7 @@ var alpha42FreeAgencyV2Tests = new Alpha42FreeAgencyV2Tests();
 var alpha43TradeEngineV2Tests = new Alpha43TradeEngineV2Tests();
 var alpha44ScoutingV2Tests = new Alpha44ScoutingV2Tests();
 var alpha45PlayerDevelopmentV2Tests = new Alpha45PlayerDevelopmentV2Tests();
+var alpha46StaffCoachingV3Tests = new Alpha46StaffCoachingV3Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -766,6 +767,19 @@ runner.Run("alpha 4.5 career timeline updated", alpha45PlayerDevelopmentV2Tests.
 runner.Run("alpha 4.5 dashboard action center includes development", alpha45PlayerDevelopmentV2Tests.DashboardActionCenterIncludesDevelopment);
 runner.Run("alpha 4.5 AlphaDesktop exposes development v2 UI", alpha45PlayerDevelopmentV2Tests.AlphaDesktopExposesDevelopmentV2Ui);
 runner.Run("alpha 4.5 no hidden ratings Godot or game simulation changes", alpha45PlayerDevelopmentV2Tests.Alpha45HasNoHiddenRatingsGodotOrGameSimulationChanges);
+runner.Run("alpha 4.6 coach philosophy generated", alpha46StaffCoachingV3Tests.CoachPhilosophyIsGenerated);
+runner.Run("alpha 4.6 coach specialties and personality generated", alpha46StaffCoachingV3Tests.CoachSpecialtiesAndPersonalityAreGenerated);
+runner.Run("alpha 4.6 staff chemistry uses relationships", alpha46StaffCoachingV3Tests.StaffChemistryUsesRelationships);
+runner.Run("alpha 4.6 player coach fit explainable", alpha46StaffCoachingV3Tests.PlayerCoachFitIsExplainable);
+runner.Run("alpha 4.6 monthly staff meeting recommendations", alpha46StaffCoachingV3Tests.MonthlyStaffMeetingProducesRecommendations);
+runner.Run("alpha 4.6 department grades generated", alpha46StaffCoachingV3Tests.DepartmentGradesAreGenerated);
+runner.Run("alpha 4.6 organization chart generated", alpha46StaffCoachingV3Tests.OrganizationChartIsGenerated);
+runner.Run("alpha 4.6 staff performance review generated", alpha46StaffCoachingV3Tests.StaffPerformanceReviewIsGenerated);
+runner.Run("alpha 4.6 hiring fit considers salary and chemistry", alpha46StaffCoachingV3Tests.HiringFitConsidersSalaryAndChemistry);
+runner.Run("alpha 4.6 player dossier includes staff opinions", alpha46StaffCoachingV3Tests.PlayerDossierIncludesStaffOpinions);
+runner.Run("alpha 4.6 action center includes staff coaching review", alpha46StaffCoachingV3Tests.ActionCenterIncludesStaffCoachingReview);
+runner.Run("alpha 4.6 AlphaDesktop exposes staff coaching UI", alpha46StaffCoachingV3Tests.AlphaDesktopExposesStaffCoachingUi);
+runner.Run("alpha 4.6 no Godot save or game simulation changes", alpha46StaffCoachingV3Tests.NoGodotSaveOrGameSimulationChanges);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

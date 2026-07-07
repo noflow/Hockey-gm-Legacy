@@ -28,6 +28,7 @@ public sealed class ActionCenterService
         AddBudgetWarnings(budget, items);
         AddScoutingCompletions(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
+        AddStaffCoachingItems(scenario, items);
         AddUpcomingGames(scenario, items);
         AddInjuryIssues(scenario, items);
         AddSeasonReadiness(readiness, items);
@@ -218,6 +219,52 @@ public sealed class ActionCenterService
                 offer.Explanation,
                 "The player is weighing your offer against market pressure and competing clubs.",
                 "Review Free Agents and be ready to approve, revise, or move on when the response arrives.",
+                null,
+                null,
+                null));
+        }
+    }
+
+    private static void AddStaffCoachingItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var service = new StaffCoachingService();
+        foreach (var warning in service.BuildStaffChemistry(scenario).Where(link => link.IsWarning).Take(2))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:staff-chemistry:{warning.FromPersonId}:{warning.ToPersonId}",
+                "Staff chemistry warning",
+                ActionCenterCategory.Staff,
+                ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(7),
+                warning.FromPersonId,
+                warning.FromName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                warning.Summary,
+                "Poor staff chemistry can reduce communication quality, delay recommendations, and weaken player-development follow-through.",
+                "Review the staff profile, clarify responsibilities, or consider a role/focus change.",
+                null,
+                null,
+                null));
+        }
+
+        var meeting = service.GenerateMonthlyMeetingReport(scenario);
+        var topRecommendation = meeting.Recommendations.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(topRecommendation))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:staff-meeting:{scenario.CurrentDate:yyyyMM}",
+                "Monthly staff meeting review",
+                ActionCenterCategory.Staff,
+                ActionCenterPriority.Normal,
+                new DateOnly(scenario.CurrentDate.Year, scenario.CurrentDate.Month, DateTime.DaysInMonth(scenario.CurrentDate.Year, scenario.CurrentDate.Month)),
+                null,
+                null,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                meeting.Summary,
+                "Staff recommendations help connect roster decisions, development plans, scouting information, and medical context.",
+                topRecommendation,
                 null,
                 null,
                 null));

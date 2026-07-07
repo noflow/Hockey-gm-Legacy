@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.5 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.6 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -2026,6 +2026,8 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Weaknesses", string.Join(", ", candidate.Weaknesses));
             AddLine(panel, "Chemistry risk", candidate.ChemistryRisk);
             AddLine(panel, "Recommendation", candidate.HiringRecommendation);
+            AddSubHeader(panel, "Hiring Fit");
+            AddParagraph(panel, State.CandidateHiringFitText(row.PersonId));
             AddParagraph(panel, candidate.HiringRecommendation);
             AddActions(panel,
                 CreateDetailButton("Hire Candidate", () => State.HireCandidateFor(row.PersonId)),
@@ -2053,13 +2055,23 @@ internal sealed class MainWindow : Window
         AddLine(detail, "Weaknesses", string.Join(", ", profile.Weaknesses));
         AddLine(detail, "Assignment", profile.CurrentAssignment);
         AddLine(detail, "Focus", profile.CurrentFocus);
+        AddSubHeader(detail, "Coaching Philosophy");
+        AddParagraph(detail, State.StaffCoachingProfileText(row.PersonId));
+        AddSubHeader(detail, "Staff Chemistry");
+        AddParagraph(detail, State.StaffChemistryText(row.PersonId));
+        AddSubHeader(detail, "Organization Chart");
+        AddParagraph(detail, State.OrganizationChartText());
+        AddSubHeader(detail, "Department Grades");
+        AddParagraph(detail, State.DepartmentGradesText());
         AddActions(detail,
             CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)),
             CreateDetailButton("View Dossier/Profile", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Reassign Role", () => State.ReassignStaffRoleFor(row.PersonId)),
             CreateDetailButton("Release Staff", () => State.ReleaseStaffFor(row.PersonId)),
             CreateDetailButton("Set Focus", () => SetStaffFocusFor(row.PersonId)),
-            CreateDetailButton("Generate Evaluation", () => State.GenerateStaffEvaluationFor(row.PersonId)));
+            CreateDetailButton("Generate Evaluation", () => State.GenerateStaffEvaluationFor(row.PersonId)),
+            CreateDetailButton("Performance Review", () => MessageBox.Show(State.StaffPerformanceReviewText(row.PersonId), "Staff Performance Review", MessageBoxButton.OK, MessageBoxImage.Information)),
+            CreateDetailButton("Staff Meeting", () => MessageBox.Show(State.MonthlyStaffMeetingText(), "Monthly Staff Meeting", MessageBoxButton.OK, MessageBoxImage.Information)));
         return detail;
     }
 
@@ -2273,6 +2285,9 @@ internal sealed class MainWindow : Window
                 AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
             }
         }
+
+        AddSubHeader(panel, "Coach Opinion");
+        AddParagraph(panel, State.PlayerCoachFitText(row.PersonId));
 
         AddActions(panel, BuildPlayerActionButtons(tab, row).ToArray());
         return panel;
@@ -3869,8 +3884,20 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  Relationship with GM: {selected.RelationshipWithGm}");
             builder.AppendLine($"  Chemistry: {selected.Chemistry.Summary}");
             builder.AppendLine($"  Current assignment/focus: {selected.CurrentAssignment}; {selected.CurrentFocus}");
+            builder.AppendLine("  Coaching Philosophy:");
+            builder.AppendLine($"    {State.StaffCoachingProfileText(selected.PersonId).Replace("\n", "\n    ", StringComparison.Ordinal)}");
             builder.AppendLine();
         }
+
+        builder.AppendLine("Organization Chart");
+        builder.AppendLine(State.OrganizationChartText());
+        builder.AppendLine();
+        builder.AppendLine("Department Grades");
+        builder.AppendLine(State.DepartmentGradesText());
+        builder.AppendLine();
+        builder.AppendLine("Monthly Staff Meeting");
+        builder.AppendLine(State.MonthlyStaffMeetingText());
+        builder.AppendLine();
 
         builder.AppendLine("Full Staff List");
         foreach (var member in State.StaffProfiles)
@@ -4917,6 +4944,7 @@ internal sealed class AlphaDesktopState
     private readonly DevelopmentPlanningService _developmentPlanning = new();
     private readonly PlayerDossierService _playerDossiers = new();
     private readonly StaffOfficeService _staffOffice = new();
+    private readonly StaffCoachingService _staffCoaching = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
@@ -5307,6 +5335,100 @@ internal sealed class AlphaDesktopState
             .ToArray();
 
     public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
+
+    public IReadOnlyList<CoachingStaffProfile> CoachingStaffProfiles => _staffCoaching.BuildCoachProfiles(ScenarioSnapshot);
+
+    public IReadOnlyList<DepartmentGradeReport> DepartmentGrades => _staffCoaching.BuildDepartmentGrades(ScenarioSnapshot);
+
+    public IReadOnlyList<OrganizationChartNode> OrganizationChart => _staffCoaching.BuildOrganizationChart(ScenarioSnapshot);
+
+    public StaffMeetingReport MonthlyStaffMeeting => _staffCoaching.GenerateMonthlyMeetingReport(ScenarioSnapshot);
+
+    public string StaffCoachingProfileText(string personId)
+    {
+        var profile = CoachingStaffProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        if (profile is null)
+        {
+            return "No coaching philosophy profile is available for this staff member.";
+        }
+
+        return $"Coaching Philosophy: {profile.Philosophy}\n"
+            + $"Coach Specialties: {string.Join(", ", profile.Specialties)}\n"
+            + $"Coach Personality: {profile.Personality}\n"
+            + $"{profile.PhilosophySummary}\n"
+            + $"Development impact: {profile.PlayerDevelopmentImpact}\n"
+            + $"Roster recommendations: {profile.RosterRecommendationStyle}\n"
+            + $"Responsibilities: {profile.CurrentResponsibilities}\n"
+            + $"Career: {profile.CareerSummary}";
+    }
+
+    public string StaffChemistryText(string personId)
+    {
+        var links = _staffCoaching.BuildStaffChemistry(ScenarioSnapshot)
+            .Where(link => link.FromPersonId == personId || link.ToPersonId == personId)
+            .Take(4)
+            .Select(link => $"{link.FromName} -> {link.ToName}: trust {link.Trust}, respect {link.Respect}, confidence {link.Confidence}. {link.Summary}");
+        var text = string.Join("\n", links);
+        return string.IsNullOrWhiteSpace(text) ? "Staff Chemistry: no direct relationship signal yet." : $"Staff Chemistry:\n{text}";
+    }
+
+    public string DepartmentGradesText() =>
+        string.Join("\n", DepartmentGrades.Select(report => $"{report.DepartmentName}: {report.Grade} ({report.Score}/100) - {report.Summary}"));
+
+    public string OrganizationChartText() =>
+        string.Join("\n", OrganizationChart.Select(node => $"{node.Name} - {node.Role} | reports to {FindPersonNameForDisplay(node.ReportsToPersonId)} | {node.Responsibilities} | {node.SalaryText}"));
+
+    public string MonthlyStaffMeetingText()
+    {
+        var meeting = MonthlyStaffMeeting;
+        return $"Staff Meeting - {meeting.MeetingDate:yyyy-MM-dd}\n"
+            + $"Head coach: {meeting.HeadCoachName}\n"
+            + $"{meeting.Summary}\n\n"
+            + "Recommendations:\n"
+            + string.Join("\n", meeting.Recommendations.Select(item => $"- {item}"))
+            + "\n\nDevelopment:\n"
+            + string.Join("\n", meeting.DevelopmentNotes.Select(item => $"- {item}"))
+            + "\n\nRoster:\n"
+            + string.Join("\n", meeting.RosterNotes.Select(item => $"- {item}"))
+            + "\n\nMedical:\n"
+            + string.Join("\n", meeting.MedicalNotes.Select(item => $"- {item}"));
+    }
+
+    public string StaffPerformanceReviewText(string personId)
+    {
+        var review = _staffCoaching.BuildPerformanceReview(ScenarioSnapshot, personId);
+        return $"Performance Review: {review.StaffName}\n"
+            + $"Outcome: {review.Outcome}\n"
+            + $"{review.Summary}\n\n"
+            + $"Strengths: {string.Join(", ", review.Strengths.DefaultIfEmpty("none"))}\n"
+            + $"Concerns: {string.Join(", ", review.Concerns.DefaultIfEmpty("none"))}\n"
+            + $"Recommendation: {review.Recommendation}";
+    }
+
+    public string CandidateHiringFitText(string personId)
+    {
+        var candidate = ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == personId);
+        if (candidate is null)
+        {
+            return "Candidate is no longer available.";
+        }
+
+        var fit = _staffCoaching.EvaluateHiringFit(ScenarioSnapshot, candidate);
+        return $"Hiring fit: {fit.FitScore}/100\n"
+            + $"{fit.SalaryImpact}\n"
+            + $"{fit.ChemistryRisk}\n"
+            + $"{fit.ExperienceSummary}\n"
+            + $"{fit.Recommendation}\n"
+            + string.Join("\n", fit.Reasons.Select(reason => $"- {reason}"));
+    }
+
+    public string PlayerCoachFitText(string personId)
+    {
+        var fit = _staffCoaching.EvaluatePlayerFit(ScenarioSnapshot, personId);
+        return $"Coach Opinion: {fit.FitGrade} fit with {fit.CoachName}.\n"
+            + $"{fit.Summary}\n"
+            + string.Join("\n", fit.Reasons.Select(reason => $"- {reason}"));
+    }
 
     public IReadOnlyList<StaffVacancy> StaffVacancies => _staffOffice.BuildVacancies(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 

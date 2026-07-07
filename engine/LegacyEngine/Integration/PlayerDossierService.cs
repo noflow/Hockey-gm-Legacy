@@ -294,6 +294,8 @@ public sealed class PlayerDossierService
     private static PlayerDossierSection BuildStaffOpinions(NewGmScenarioSnapshot scenario, string personId)
     {
         var lines = new List<string>();
+        lines.AddRange(new StaffCoachingService().BuildDossierStaffOpinions(scenario, personId));
+
         var evaluation = scenario.TrainingCamp?.FindEvaluation(personId);
         if (evaluation is not null)
         {

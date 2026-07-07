@@ -66,6 +66,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 4.3 Trade Engine v2 (Negotiation & Team Strategy)
 - Alpha 4.4 Scouting v2 (Intelligence & Reports)
 - Alpha 4.5 Player Development v2 (Development Plans & Progress)
+- Alpha 4.6 Staff & Coaching v3 (Philosophy & Development)
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -118,6 +119,8 @@ Alpha 4.1 - Contracts v2 adds explainable contract asks and offer evaluation wit
 Alpha 4.2 - Free Agency v2 turns unsigned player shopping into a calendar-driven market. Free agency now has opening, active, slow, late, and closed phases; players expose top motivations, competing offers, staff recommendations, budget impact, offer likelihood, response timing, and decision explanations. Accepted offers still become pending GM approvals first, while other-team signings flow to League News instead of cluttering the GM inbox.
 
 Alpha 4.3 - Trade Engine v2 (Negotiation & Team Strategy) makes AI trade logic depend on club direction, roster needs, prospect pipeline, budget pressure, owner/team context, and GM trade personality. Trade evaluations now explain asset fit, need matching, budget impact, simple counter requests, staff/player reactions, and estimated value without exposing hidden ratings. Multi-asset trades continue to require explicit GM approval before any roster or rights change.
+
+Alpha 4.6 - Staff & Coaching v3 (Philosophy & Development) makes staff a living hockey operations layer. Coaches and staff now surface philosophy, specialties, personality, staff chemistry, player fit, monthly staff meetings, department grades, organization chart context, hiring fit, player dossier staff opinions, Action Center coaching items, and staff performance reviews without adding Godot, save/load changes, or game simulation changes.
 
 Alpha 4.4 - Scouting v2 (Intelligence & Reports) turns scouting into an information system instead of a rating reveal. Scouts now have tendencies, known regions, specialties, workload effects, confidence stars, viewing samples, tournament context, budget coverage notes, report comparisons, and scout career/development summaries. Player dossiers show multiple report-card style opinions, evidence, disagreements, and confidence while keeping hidden ratings private.
 
