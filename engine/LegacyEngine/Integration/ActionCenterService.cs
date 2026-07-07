@@ -449,22 +449,47 @@ public sealed class ActionCenterService
 
     private static void AddInjuryIssues(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
+        var medical = new MedicalHealthService();
         foreach (var injury in scenario.AlphaSnapshot.Injuries.Where(injury => injury.IsActive).OrderByDescending(injury => injury.Severity).Take(3))
         {
-            var name = PersonName(scenario, injury.PersonId);
+            var report = medical.BuildMedicalReport(scenario, injury.PersonId);
+            var name = report.PlayerName;
+            var priority = injury.Severity is InjurySeverity.Major or InjurySeverity.Severe or InjurySeverity.CareerThreatening
+                ? ActionCenterPriority.Urgent
+                : report.ConditioningStatus == ConditioningStatus.NotGameReady ? ActionCenterPriority.Important : ActionCenterPriority.Normal;
             items.Add(new ActionCenterItem(
                 $"action-center:medical:{injury.InjuryId}",
-                $"Medical update: {name}",
+                report.ConditioningStatus == ConditioningStatus.GameReady ? $"Return decision required: {name}" : $"Medical review ready: {name}",
                 ActionCenterCategory.Medical,
-                injury.Severity is InjurySeverity.Major or InjurySeverity.Severe or InjurySeverity.CareerThreatening ? ActionCenterPriority.Urgent : ActionCenterPriority.Important,
+                priority,
                 injury.ExpectedReturnDate,
                 injury.PersonId,
                 name,
                 scenario.Organization.OrganizationId,
                 scenario.Organization.Name,
-                $"{injury.Severity} {injury.BodyPart} injury, status {injury.Status}.",
-                "Medical issues can affect availability and development.",
-                "Review medical notes before roster or lineup decisions.",
+                $"{report.PlayerName} ({report.Position}) - {report.WhyItMatters}",
+                "Medical issues can affect availability, conditioning, development, and reinjury risk.",
+                report.ReturnRecommendation,
+                null,
+                null,
+                null));
+        }
+
+        foreach (var profile in medical.BuildHealthProfiles(scenario).Where(profile => profile.CurrentHealth == HealthStatus.HighRisk || profile.InjuryRisk >= 75).Take(2))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:medical-risk:{profile.PersonId}",
+                $"High injury risk: {profile.PlayerName}",
+                ActionCenterCategory.Medical,
+                ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(7),
+                profile.PersonId,
+                profile.PlayerName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                $"{profile.PlayerName} ({profile.Position}) has injury risk {profile.InjuryRisk}/100 and wear {profile.WearAndTear}/100.",
+                "High-risk players may need rest, conditioning, or medical follow-up to avoid long-term damage.",
+                "Review the medical report before increasing workload.",
                 null,
                 null,
                 null));

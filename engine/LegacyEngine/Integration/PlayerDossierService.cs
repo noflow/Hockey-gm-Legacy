@@ -247,20 +247,23 @@ public sealed class PlayerDossierService
 
     private static PlayerDossierSection BuildMedical(NewGmScenarioSnapshot scenario, string personId)
     {
+        var medicalLines = new MedicalHealthService().BuildDossierMedicalLines(scenario, personId).ToList();
         var injuries = scenario.AlphaSnapshot.Injuries
             .Where(injury => injury.PersonId == personId)
             .OrderByDescending(injury => injury.InjuryDate)
             .ToArray();
         if (injuries.Length == 0)
         {
-            return new PlayerDossierSection("Injuries / Medical", new[] { "No injury record is currently tracked." });
+            return new PlayerDossierSection("Injuries / Medical", medicalLines);
         }
+
+        medicalLines.Add("Injury timeline:");
+        medicalLines.AddRange(injuries.Select(injury =>
+            $"{injury.InjuryDate:yyyy-MM-dd}: {injury.Severity} {injury.InjuryType} ({injury.BodyPart}), {injury.Status}; expected return {injury.ExpectedReturnDate:yyyy-MM-dd}, games missed {injury.GamesMissed}."));
 
         return new PlayerDossierSection(
             "Injuries / Medical",
-            injuries.Select(injury =>
-                $"{injury.InjuryDate:yyyy-MM-dd}: {injury.Severity} {injury.InjuryType} ({injury.BodyPart}), {injury.Status}; expected return {injury.ExpectedReturnDate:yyyy-MM-dd}, games missed {injury.GamesMissed}.")
-                .ToArray());
+            medicalLines);
     }
 
     private static PlayerDossierSection BuildContractRights(NewGmScenarioSnapshot scenario, string personId)

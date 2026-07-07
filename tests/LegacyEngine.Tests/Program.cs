@@ -59,6 +59,7 @@ var alpha43TradeEngineV2Tests = new Alpha43TradeEngineV2Tests();
 var alpha44ScoutingV2Tests = new Alpha44ScoutingV2Tests();
 var alpha45PlayerDevelopmentV2Tests = new Alpha45PlayerDevelopmentV2Tests();
 var alpha46StaffCoachingV3Tests = new Alpha46StaffCoachingV3Tests();
+var alpha47InjuryMedicalV2Tests = new Alpha47InjuryMedicalV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -780,6 +781,19 @@ runner.Run("alpha 4.6 player dossier includes staff opinions", alpha46StaffCoach
 runner.Run("alpha 4.6 action center includes staff coaching review", alpha46StaffCoachingV3Tests.ActionCenterIncludesStaffCoachingReview);
 runner.Run("alpha 4.6 AlphaDesktop exposes staff coaching UI", alpha46StaffCoachingV3Tests.AlphaDesktopExposesStaffCoachingUi);
 runner.Run("alpha 4.6 no Godot save or game simulation changes", alpha46StaffCoachingV3Tests.NoGodotSaveOrGameSimulationChanges);
+runner.Run("alpha 4.7 health profile generated", alpha47InjuryMedicalV2Tests.HealthProfileGenerated);
+runner.Run("alpha 4.7 recurring injuries increase risk", alpha47InjuryMedicalV2Tests.RecurringInjuriesIncreaseRisk);
+runner.Run("alpha 4.7 medical report explains why", alpha47InjuryMedicalV2Tests.MedicalReportExplainsWhy);
+runner.Run("alpha 4.7 return decision can clear player", alpha47InjuryMedicalV2Tests.ReturnDecisionCanClearPlayer);
+runner.Run("alpha 4.7 early return raises risk", alpha47InjuryMedicalV2Tests.EarlyReturnRaisesRisk);
+runner.Run("alpha 4.7 conditioning decision updates plan", alpha47InjuryMedicalV2Tests.ConditioningDecisionUpdatesPlan);
+runner.Run("alpha 4.7 medical staff influences confidence", alpha47InjuryMedicalV2Tests.MedicalStaffInfluencesConfidence);
+runner.Run("alpha 4.7 medical summary includes budget and grade", alpha47InjuryMedicalV2Tests.MedicalSummaryIncludesBudgetAndDepartmentGrade);
+runner.Run("alpha 4.7 player dossier includes medical v2", alpha47InjuryMedicalV2Tests.PlayerDossierIncludesMedicalV2);
+runner.Run("alpha 4.7 action center includes medical v2", alpha47InjuryMedicalV2Tests.ActionCenterIncludesMedicalV2Items);
+runner.Run("alpha 4.7 executive report includes medical v2", alpha47InjuryMedicalV2Tests.ExecutiveMedicalReportIncludesV2Fields);
+runner.Run("alpha 4.7 AlphaDesktop exposes medical v2 UI", alpha47InjuryMedicalV2Tests.AlphaDesktopExposesMedicalV2Ui);
+runner.Run("alpha 4.7 no forbidden systems added", alpha47InjuryMedicalV2Tests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

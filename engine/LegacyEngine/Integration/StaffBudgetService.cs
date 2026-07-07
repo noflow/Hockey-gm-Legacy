@@ -32,9 +32,10 @@ public sealed class StaffBudgetService
         var range = RangeFor(member.CurrentRole, rulebook);
         var contractSalary = SignedContractFor(member.PersonId, scenario)?.Money.SalaryOrStipend;
         var isObligation = member.EmploymentStatus != StaffEmploymentStatus.Employed;
+        var rawSalary = contractSalary ?? EstimateSalary(member.CurrentRole, member.Profile.Reputation, rulebook);
         var salary = isObligation
             ? EstimateReleaseObligation(member, scenario, rulebook)
-            : contractSalary ?? EstimateSalary(member.CurrentRole, member.Profile.Reputation, rulebook);
+            : Math.Clamp(rawSalary, range.Minimum, range.Maximum);
 
         var profile = new StaffCompensationProfile(
             member.PersonId,
@@ -45,7 +46,9 @@ public sealed class StaffBudgetService
             IsObligation: isObligation,
             Notes: isObligation
                 ? "Remaining salary obligation after release."
-                : contractSalary is null ? "Estimated from league salary range and reputation." : "Signed contract salary.");
+                : contractSalary is null
+                    ? "Estimated from league salary range and reputation."
+                    : rawSalary == salary ? "Signed contract salary." : "Signed contract salary normalized to active league range.");
         profile.Validate();
         return profile;
     }

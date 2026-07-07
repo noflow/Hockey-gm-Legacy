@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.6 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.7 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -2158,6 +2158,8 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Contract / rights status", State.ContractRightsStatus(row.PersonId));
             AddLine(panel, "Development trend", State.DevelopmentTrend(row.PersonId));
             AddLine(panel, "Injury status", State.InjuryStatus(row.PersonId));
+            AddSubHeader(panel, "Health & Medical");
+            AddParagraph(panel, State.HealthProfileText(row.PersonId));
             AddSubHeader(panel, "Development Plan");
             AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
         }
@@ -2288,6 +2290,8 @@ internal sealed class MainWindow : Window
 
         AddSubHeader(panel, "Coach Opinion");
         AddParagraph(panel, State.PlayerCoachFitText(row.PersonId));
+        AddSubHeader(panel, "Medical Report");
+        AddParagraph(panel, State.MedicalReportText(row.PersonId));
 
         AddActions(panel, BuildPlayerActionButtons(tab, row).ToArray());
         return panel;
@@ -2483,6 +2487,12 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Confidence Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Confidence));
             yield return CreateDetailButton("Increase Ice Time", () => State.SetDevelopmentRoleFor(row.PersonId, DevelopmentIceTimeRole.TopSix));
             yield return CreateDetailButton("Yearly Review", () => MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information));
+            yield return CreateDetailButton("Medical Report", () => MessageBox.Show(State.MedicalReportText(row.PersonId), "Medical Report", MessageBoxButton.OK, MessageBoxImage.Information));
+            yield return CreateDetailButton("Return Now", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.ReturnImmediately), State.HasActiveInjury(row.PersonId));
+            yield return CreateDetailButton("Limited Minutes", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.LimitedMinutes), State.HasActiveInjury(row.PersonId));
+            yield return CreateDetailButton("More Recovery", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.AdditionalRecovery), State.HasActiveInjury(row.PersonId));
+            yield return CreateDetailButton("Conditioning", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.ConditioningAssignment), State.HasActiveInjury(row.PersonId));
+            yield return CreateDetailButton("Medical Clearance", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.MedicalClearance), State.HasActiveInjury(row.PersonId));
         }
 
         var available = State.AvailableProspectActions(row.PersonId);
@@ -3519,6 +3529,10 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Roster status: {readiness.RosterStatus}");
         builder.AppendLine($"Staff vacancies: {State.StaffVacancySummary}");
         builder.AppendLine($"Budget: {State.BudgetOverview.Status} ({State.BudgetOverview.RemainingBudget:C0} remaining)");
+        builder.AppendLine();
+        builder.AppendLine("Medical Summary");
+        builder.AppendLine(State.MedicalSummaryText());
+        builder.AppendLine();
         builder.AppendLine($"Pending GM decisions: {State.PendingDecisionCount}");
         builder.AppendLine($"Roster warnings: {State.RosterWarningCount}");
         builder.AppendLine($"Scouting reports: {State.ScoutingReportCount}");
@@ -4945,6 +4959,7 @@ internal sealed class AlphaDesktopState
     private readonly PlayerDossierService _playerDossiers = new();
     private readonly StaffOfficeService _staffOffice = new();
     private readonly StaffCoachingService _staffCoaching = new();
+    private readonly MedicalHealthService _medicalHealth = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
@@ -5429,6 +5444,49 @@ internal sealed class AlphaDesktopState
             + $"{fit.Summary}\n"
             + string.Join("\n", fit.Reasons.Select(reason => $"- {reason}"));
     }
+
+    public IReadOnlyList<PlayerHealthProfile> HealthProfiles => _medicalHealth.BuildHealthProfiles(ScenarioSnapshot);
+
+    public MedicalSummaryReport MedicalSummary => _medicalHealth.BuildMedicalSummary(ScenarioSnapshot);
+
+    public string HealthProfileText(string personId)
+    {
+        var profile = _medicalHealth.BuildHealthProfile(ScenarioSnapshot, personId);
+        return $"Current Health: {profile.CurrentHealth}\n"
+            + $"Durability {profile.Durability}/100 | Fatigue {profile.Fatigue}/100 | Recovery rate {profile.RecoveryRate}/100\n"
+            + $"Injury Risk {profile.InjuryRisk}/100 | Wear & tear {profile.WearAndTear}/100 | Recurring risk {profile.RecurringInjuryRisk}/100\n"
+            + $"Conditioning: {profile.Conditioning} | Medical confidence {profile.MedicalConfidence}/100\n"
+            + profile.Summary;
+    }
+
+    public string MedicalReportText(string personId)
+    {
+        var report = _medicalHealth.BuildMedicalReport(ScenarioSnapshot, personId);
+        return $"{report.PlayerName} ({report.Position})\n"
+            + $"Health: {report.HealthStatus} | Conditioning: {report.ConditioningStatus}\n"
+            + $"{report.ExpectedReturn}\n"
+            + $"Why: {report.WhyItMatters}\n"
+            + $"Staff: {report.StaffComment}\n"
+            + $"Recommendation: {report.ReturnRecommendation}\n"
+            + $"Options: {string.Join(", ", report.AvailableOptions)}";
+    }
+
+    public string MedicalSummaryText()
+    {
+        var summary = MedicalSummary;
+        return $"Current Injuries: {summary.ActiveInjuries}\n"
+            + $"Returning Soon: {summary.ReturningSoon}\n"
+            + $"High Risk: {summary.HighRiskPlayers}\n"
+            + $"Conditioning: {summary.ConditioningAssignments}\n"
+            + $"Games Lost to Injury: {summary.GamesLostToInjury}\n"
+            + $"Most Significant Injury: {summary.MostSignificantInjury}\n"
+            + $"Medical Staff Grade: {summary.MedicalDepartmentGrade}\n"
+            + $"Medical Budget: {summary.MedicalBudgetImpact}\n"
+            + string.Join("\n", summary.PlayerNotes.Select(note => $"- {note}"));
+    }
+
+    public bool HasActiveInjury(string personId) =>
+        ScenarioSnapshot.AlphaSnapshot.Injuries.Any(injury => injury.PersonId == personId && injury.IsActive);
 
     public IReadOnlyList<StaffVacancy> StaffVacancies => _staffOffice.BuildVacancies(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
@@ -6264,6 +6322,16 @@ internal sealed class AlphaDesktopState
         var focus = existing?.FocusAreas ?? new[] { DevelopmentPlanFocus.Balanced, DevelopmentPlanFocus.Confidence };
         var result = _developmentPlanning.SetPlan(_registry, ScenarioSnapshot, personId, focus, role, $"GM adjusted development role to {role}.");
         ApplyDevelopmentResult(result);
+    }
+
+    public void ApplyMedicalDecisionFor(string personId, ReturnToPlayOption option)
+    {
+        var result = _medicalHealth.ApplyReturnDecision(_registry, ScenarioSnapshot, personId, option);
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        InboxManager.AddRange(result.InboxItems);
+        LatestSummary = result.Message;
+        EnsureSelectedDossierStillExists();
     }
 
     private PlayerDevelopmentPlan? DevelopmentPlanFor(string personId)

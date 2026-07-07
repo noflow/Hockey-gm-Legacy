@@ -82,14 +82,15 @@ The five foundation pillars remain:
 - Alpha 4.4 - Scouting v2 (Intelligence & Reports)
 - Alpha 4.5 - Player Development v2 (Development Plans & Progress)
 - Alpha 4.6 - Staff & Coaching v3 (Philosophy & Development)
+- Alpha 4.7 - Injury & Medical v2 (Health & Recovery)
 
 ## Current Milestone
 
-Alpha 4.6 - Staff & Coaching v3 (Philosophy & Development)
+Alpha 4.7 - Injury & Medical v2 (Health & Recovery)
 
 ## Current Goal
 
-Make staff feel like a living hockey operations department. Coaches and staff now expose philosophy, specialties, personality, chemistry, player fit, department grades, monthly staff meeting recommendations, organization chart context, hiring fit, and performance reviews without changing save/load or game simulation.
+Make health management a meaningful GM decision layer. Players now expose health profiles, durability, fatigue, recovery rate, injury risk, wear and tear, recurring concerns, medical confidence, conditioning, return-to-play recommendations, Action Center medical items, dossier medical context, executive medical reporting, and medical budget influence without changing save/load or game simulation.
 
 ## Why Relationship Engine Was Next
 
@@ -99,11 +100,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 4.7 - TBD
+Alpha 4.8 - TBD
 
 ## Next Milestones
 
-1. Alpha 4.7 - TBD
+1. Alpha 4.8 - TBD
 
 ## Build Rule
 

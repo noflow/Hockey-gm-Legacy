@@ -221,12 +221,7 @@ public sealed class ExecutiveReportService
                     ["Breakout Player"] = breakout,
                     ["Prospect Pipeline"] = scenario.ProspectRights.Count >= 3 ? "Improving" : "Needs attention"
                 }),
-                Section("Medical Report", "Medical summary uses current injury records only.", new Dictionary<string, string>
-                {
-                    ["Games Lost to Injury"] = injuries.Sum(injury => injury.GamesMissed).ToString(),
-                    ["Most Significant Injury"] = injuries.OrderByDescending(injury => injury.LongTermImpact).Select(injury => PlayerName(scenario, injury.PersonId)).FirstOrDefault() ?? "None",
-                    ["Players Entering Offseason Healthy"] = (scenario.AlphaSnapshot.Roster.CurrentPlayers.Count - injuries.Count(injury => injury.IsActive)).ToString()
-                }),
+                Section("Medical Report", "Medical summary tracks games lost, recurring risk, returning players, department grade, and budget support.", BuildMedicalReportItems(scenario, injuries)),
                 Section("Team Leaders", "Stat leaders are reserved for the future game simulation layer.", new Dictionary<string, string>
                 {
                     ["Goals"] = "Not simulated",
@@ -347,6 +342,22 @@ public sealed class ExecutiveReportService
 
     private static ExecutiveReportSection Section(string title, string narrative, IReadOnlyDictionary<string, string> items) =>
         new(title, items, narrative);
+
+    private static IReadOnlyDictionary<string, string> BuildMedicalReportItems(NewGmScenarioSnapshot scenario, IReadOnlyList<Injury> injuries)
+    {
+        var summary = new MedicalHealthService().BuildMedicalSummary(scenario);
+        return new Dictionary<string, string>
+        {
+            ["Games Lost to Injury"] = summary.GamesLostToInjury.ToString(),
+            ["Most Significant Injury"] = summary.MostSignificantInjury,
+            ["Medical Department Grade"] = summary.MedicalDepartmentGrade,
+            ["Players Returning"] = summary.ReturningSoon.ToString(),
+            ["High Risk Players"] = summary.HighRiskPlayers.ToString(),
+            ["Conditioning Assignments"] = summary.ConditioningAssignments.ToString(),
+            ["Medical Budget"] = summary.MedicalBudgetImpact,
+            ["Players Entering Offseason Healthy"] = (scenario.AlphaSnapshot.Roster.CurrentPlayers.Count - injuries.Count(injury => injury.IsActive)).ToString()
+        };
+    }
 
     private static string TopProspectName(NewGmScenarioSnapshot scenario) =>
         scenario.ProspectRights.OrderBy(item => item.PickNumber).FirstOrDefault()?.ProspectName
