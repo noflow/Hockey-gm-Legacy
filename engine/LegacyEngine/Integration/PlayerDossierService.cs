@@ -343,6 +343,17 @@ public sealed class PlayerDossierService
             lines.AddRange(timeline.Entries.Select(entry => $"Timeline: {entry}"));
         }
 
+        foreach (var entry in scenario.CareerTimeline.ForPerson(personId).Take(6))
+        {
+            lines.Add($"Career timeline: {entry.Date:yyyy-MM-dd} - {entry.Title}. {entry.Description}");
+        }
+
+        var draft = scenario.DraftPickHistory.FirstOrDefault(pick => pick.PlayerPersonId == personId);
+        if (draft is not null)
+        {
+            lines.Add($"Draft history: {draft.Year} round {draft.Round}, pick {draft.OverallPick}; outcome so far {draft.Outcome}. {draft.OutcomeSummary}");
+        }
+
         if (lines.Count == 0)
         {
             lines.Add("No prior stats or career history are currently tracked.");

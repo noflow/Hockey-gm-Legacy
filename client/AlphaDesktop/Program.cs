@@ -23,7 +23,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -109,7 +109,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 3.3 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 3.4 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -275,6 +275,14 @@ internal sealed class MainWindow : Window
         AddWorkspaceTab(tabs, "Reports / History", new[]
         {
             new WorkspaceScreen("Executive Reports", CreateTextScreen("Executive Reports")),
+            new WorkspaceScreen("GM Career", CreateTextScreen("GM Career")),
+            new WorkspaceScreen("Organization History", CreateTextScreen("Organization History")),
+            new WorkspaceScreen("Draft History", CreateTextScreen("Draft History")),
+            new WorkspaceScreen("Drafted Players", CreateTextScreen("Drafted Players")),
+            new WorkspaceScreen("Where Are They Now", CreateTextScreen("Where Are They Now")),
+            new WorkspaceScreen("Player Career Timelines", CreateTextScreen("Player Career Timelines")),
+            new WorkspaceScreen("Staff History", CreateTextScreen("Staff History")),
+            new WorkspaceScreen("Transaction History", CreateTextScreen("Transaction History")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
             new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
             new WorkspaceScreen("Career History", CreateTextScreen("Career History"))
@@ -303,7 +311,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 3.3 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 3.4 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1237,6 +1245,14 @@ internal sealed class MainWindow : Window
         _tabs["Stats"].Text = BuildStats();
         _tabs["Monthly Summary"].Text = BuildMonthlySummary();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
+        _tabs["GM Career"].Text = BuildGmCareerHistory();
+        _tabs["Organization History"].Text = BuildOrganizationHistoryReport();
+        _tabs["Draft History"].Text = BuildDraftHistoryReport();
+        _tabs["Drafted Players"].Text = BuildDraftedPlayersReport();
+        _tabs["Where Are They Now"].Text = BuildWhereAreTheyNowReport();
+        _tabs["Player Career Timelines"].Text = BuildPlayerCareerTimelinesReport();
+        _tabs["Staff History"].Text = BuildStaffHistoryReport();
+        _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
         _tabs["Draft Recaps"].Text = BuildDraftRecaps();
         _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
         _tabs["Career History"].Text = BuildCareerHistory();
@@ -3298,6 +3314,230 @@ internal sealed class MainWindow : Window
 
     private string BuildMonthlySummaries() => BuildMonthlySummary();
 
+    private string BuildGmCareerHistory()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("GM Career");
+        builder.AppendLine("=========");
+        var history = State.ScenarioSnapshot.GmCareerHistory;
+        if (history is null)
+        {
+            builder.AppendLine("No GM career history has been recorded yet.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine($"{history.GmName} - {history.OrganizationName}");
+        builder.AppendLine($"Hire date: {history.HireDate:yyyy-MM-dd}");
+        builder.AppendLine($"Seasons completed: {history.SeasonsCompleted}");
+        builder.AppendLine($"Record: {history.Record}");
+        builder.AppendLine($"Playoff record: {history.PlayoffRecordPlaceholder}");
+        builder.AppendLine($"Draft picks made: {history.DraftPicksMade}");
+        builder.AppendLine($"Trades made: {history.TradesMade}");
+        builder.AppendLine($"Free agents signed: {history.FreeAgentsSigned}");
+        builder.AppendLine($"Staff hired: {history.StaffHired}");
+        builder.AppendLine();
+        builder.AppendLine("Owner confidence history");
+        foreach (var line in history.OwnerConfidenceHistory)
+        {
+            builder.AppendLine($"  {line}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Career notes");
+        foreach (var line in history.CareerNotes)
+        {
+            builder.AppendLine($"  {line}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildOrganizationHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Organization History");
+        builder.AppendLine("====================");
+        if (State.ScenarioSnapshot.OrganizationHistory is not null)
+        {
+            var previous = State.ScenarioSnapshot.OrganizationHistory;
+            builder.AppendLine("Existing World Snapshot");
+            builder.AppendLine($"{previous.OrganizationName} {previous.PriorSeasonYear}: {previous.RecordText}");
+            builder.AppendLine($"Playoffs: {previous.PlayoffResult}");
+            builder.AppendLine($"Previous champion: {previous.PreviousLeagueChampion}");
+            builder.AppendLine(previous.Summary);
+            builder.AppendLine();
+        }
+
+        foreach (var season in State.ScenarioSnapshot.OrganizationSeasonHistory.OrderByDescending(item => item.SeasonYear))
+        {
+            builder.AppendLine($"{season.SeasonYear} - {season.OrganizationName}");
+            builder.AppendLine($"  Record: {season.Record}");
+            builder.AppendLine($"  Playoffs: {season.PlayoffResult}");
+            builder.AppendLine($"  Draft class: {season.DraftClassSummary}");
+            builder.AppendLine($"  Notable players: {season.NotablePlayers}");
+            builder.AppendLine($"  Staff: {season.StaffHistorySummary}");
+            builder.AppendLine($"  Owner changes: {season.OwnerChanges}");
+            builder.AppendLine($"  Championships: {season.Championships}");
+            builder.AppendLine($"  Summary: {season.Summary}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildDraftHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Draft History");
+        builder.AppendLine("=============");
+        builder.AppendLine("Current GM Draft Classes");
+        foreach (var draftClass in State.ScenarioSnapshot.DraftClassHistory.OrderByDescending(item => item.Year))
+        {
+            builder.AppendLine($"{draftClass.Year}: {draftClass.Summary}");
+            foreach (var pick in draftClass.Picks)
+            {
+                builder.AppendLine($"  R{pick.Round} P{pick.OverallPick}: {pick.PlayerName} ({pick.Position}) - {pick.Outcome}");
+            }
+        }
+
+        if (State.ScenarioSnapshot.DraftClassHistory.Count == 0)
+        {
+            builder.AppendLine("No current-GM draft class has been completed yet.");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Prior Organization Draft History");
+        foreach (var record in State.ScenarioSnapshot.DraftHistory.Take(12))
+        {
+            builder.AppendLine($"  {record.SeasonYear} R{record.Round} P{record.Pick}: {record.ProspectName} - {record.OutcomeSummary}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildDraftedPlayersReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Drafted Players");
+        builder.AppendLine("===============");
+        if (State.ScenarioSnapshot.DraftPickHistory.Count == 0)
+        {
+            builder.AppendLine("No current-GM drafted players are tracked yet.");
+            return builder.ToString();
+        }
+
+        foreach (var pick in State.ScenarioSnapshot.DraftPickHistory.OrderByDescending(item => item.Year).ThenBy(item => item.Round).ThenBy(item => item.OverallPick))
+        {
+            builder.AppendLine($"{pick.PlayerName} | {pick.Position} | {pick.Year} R{pick.Round} P{pick.OverallPick}");
+            builder.AppendLine($"  Drafted from: {pick.TeamDraftedFrom}");
+            builder.AppendLine($"  Projection: {pick.ScoutingProjectionAtDraft}");
+            builder.AppendLine($"  Confidence: {pick.ScoutConfidenceAtDraft?.ToString() ?? "Unknown"}");
+            builder.AppendLine($"  GM notes at draft: {pick.GmNotesAtDraft}");
+            builder.AppendLine($"  Status: {pick.CurrentStatus}; outcome so far: {pick.Outcome}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildWhereAreTheyNowReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Where Are They Now");
+        builder.AppendLine("==================");
+        var records = State.WhereAreTheyNow;
+        if (records.Count == 0)
+        {
+            builder.AppendLine("No current-GM drafted players are tracked yet.");
+            return builder.ToString();
+        }
+
+        foreach (var record in records)
+        {
+            builder.AppendLine($"{record.PlayerName} | {record.Position} | {record.DraftYear} R{record.Round} P{record.Pick}");
+            builder.AppendLine($"  Current team/status: {record.CurrentTeamOrStatus}");
+            builder.AppendLine($"  Current role: {record.CurrentRole}");
+            builder.AppendLine($"  Latest stats: {record.LatestStats}");
+            builder.AppendLine($"  Development trend: {record.DevelopmentTrend}");
+            builder.AppendLine($"  Injury status: {record.InjuryStatus}");
+            builder.AppendLine($"  Staff opinion: {record.StaffOpinion}");
+            builder.AppendLine($"  Outcome so far: {record.OutcomeSoFar}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildPlayerCareerTimelinesReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Player Career Timelines");
+        builder.AppendLine("=======================");
+        foreach (var group in State.ScenarioSnapshot.CareerTimeline.Entries
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.PersonId))
+            .GroupBy(entry => entry.PersonId)
+            .Take(30))
+        {
+            var name = State.FindPersonNameForDisplay(group.Key!);
+            builder.AppendLine(name);
+            foreach (var entry in group.OrderByDescending(item => item.Date).Take(6))
+            {
+                builder.AppendLine($"  {entry.Date:yyyy-MM-dd} [{entry.EntryType}] {entry.Title} - {entry.Description}");
+            }
+        }
+
+        if (State.ScenarioSnapshot.CareerTimeline.Entries.Count == 0)
+        {
+            builder.AppendLine("No career timeline entries have been recorded yet.");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildStaffHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Staff History");
+        builder.AppendLine("=============");
+        foreach (var staff in State.ScenarioSnapshot.StaffCareerHistory.OrderBy(item => item.StaffName))
+        {
+            builder.AppendLine($"{staff.StaffName} - {staff.CurrentRole}");
+            builder.AppendLine($"  Current organization: {staff.CurrentOrganization}");
+            builder.AppendLine($"  GM relationship: {staff.RelationshipWithGm}");
+            builder.AppendLine($"  Evaluation: {staff.EvaluationSummary}");
+            builder.AppendLine("  Previous roles:");
+            foreach (var role in staff.PreviousRoles)
+            {
+                builder.AppendLine($"    {role}");
+            }
+
+            builder.AppendLine("  Notable history:");
+            foreach (var note in staff.NotableHistory)
+            {
+                builder.AppendLine($"    {note}");
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildTransactionHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Transaction History");
+        builder.AppendLine("===================");
+        if (State.ScenarioSnapshot.TransactionHistory.Count == 0)
+        {
+            builder.AppendLine("No current-GM transaction history has been recorded yet.");
+            return builder.ToString();
+        }
+
+        foreach (var transaction in State.ScenarioSnapshot.TransactionHistory.OrderByDescending(item => item.Date))
+        {
+            builder.AppendLine($"{transaction.Date:yyyy-MM-dd} [{transaction.TransactionType}] {transaction.PersonName}");
+            builder.AppendLine($"  {transaction.Summary}");
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildCareerHistory()
     {
         var builder = new StringBuilder();
@@ -4416,6 +4656,9 @@ internal sealed class AlphaDesktopState
     public string TradeDeadlineBlockSummary =>
         ScenarioSnapshot.TradeDeadlineState?.LastTradeBlockUpdate?.Summary
         ?? "No deadline expansion yet.";
+
+    public IReadOnlyList<WhereAreTheyNowRecord> WhereAreTheyNow =>
+        new CareerHistoryService().BuildWhereAreTheyNow(ScenarioSnapshot);
 
     public string LatestTradeResponseText =>
         ScenarioSnapshot.TradeOffers
@@ -6508,6 +6751,8 @@ internal sealed class AlphaDesktopState
             ?? ScenarioSnapshot.StaffCandidates.Select(candidate => candidate.Person).FirstOrDefault(person => person.PersonId == personId);
         return person?.Identity.DisplayName ?? ScenarioSnapshot.FreeAgentMarket?.Find(personId)?.Name ?? personId;
     }
+
+    public string FindPersonNameForDisplay(string personId) => FindPersonName(personId);
 
     private string? FirstDossierPersonId() => DossierPersonIds().FirstOrDefault();
 

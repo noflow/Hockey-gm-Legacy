@@ -4,6 +4,7 @@ using LegacyEngine.Names;
 using LegacyEngine.People;
 using LegacyEngine.RuleEngine;
 using LegacyEngine.Staff;
+using PeopleCareerTimelineEntry = LegacyEngine.People.CareerTimelineEntry;
 
 namespace LegacyEngine.Integration;
 
@@ -387,7 +388,7 @@ public sealed class StaffOfficeService
             Roles: Array.Empty<PersonRole>(),
             Reputation: new PersonReputation(reputation, Math.Max(20, reputation - 8), Math.Max(10, reputation - 20)),
             Personality: new PersonalityProfile(Ambition: 62, Loyalty: 66, Temperament: 58, Adaptability: 70, Professionalism: 72),
-            CareerTimeline: Array.Empty<CareerTimelineEntry>());
+            CareerTimeline: Array.Empty<PeopleCareerTimelineEntry>());
 
         var attributes = AttributesFor(role, roleFit, departmentFit);
         var member = registry.StaffEngine.CreateStaffMember(

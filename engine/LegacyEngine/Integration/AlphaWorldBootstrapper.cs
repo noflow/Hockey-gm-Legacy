@@ -10,6 +10,7 @@ using LegacyEngine.Rosters;
 using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
 using LegacyEngine.World;
+using PeopleCareerTimelineEntry = LegacyEngine.People.CareerTimelineEntry;
 
 namespace LegacyEngine.Integration;
 
@@ -163,7 +164,7 @@ public sealed class AlphaWorldBootstrapper
             Roles: Array.Empty<PersonRole>(),
             Reputation: new PersonReputation(40, 30, 10),
             Personality: new PersonalityProfile(60, 60, 55, 58, 65),
-            CareerTimeline: Array.Empty<CareerTimelineEntry>());
+            CareerTimeline: Array.Empty<PeopleCareerTimelineEntry>());
         person.Validate();
         return person;
     }

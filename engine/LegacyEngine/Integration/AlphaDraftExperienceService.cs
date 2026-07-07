@@ -348,6 +348,7 @@ public sealed class AlphaDraftExperienceService
             AlphaSnapshot = scenario.AlphaSnapshot with { DraftBoard = board },
             DraftExperience = completedState
         };
+        updatedScenario = new DraftTrackingService().RecordDraftCompleted(updatedScenario, selections);
 
         var inbox = new[]
         {

@@ -177,6 +177,7 @@ public sealed class PendingGmActionService
             Contracts = contracts,
             AlphaSnapshot = alphaSnapshot
         };
+        updatedScenario = new CareerHistoryService().RecordContractSigned(updatedScenario, signed, completed.PersonName, action.ActionType);
 
         var inbox = new[] { ToInboxItem(completed, "Pending action approved", $"{completed.PersonName} signed a {signed.ContractType} after GM approval.") };
         return BuildResult(true, updatedScenario, completed, inbox, $"{completed.PersonName} contract approved and signed.");

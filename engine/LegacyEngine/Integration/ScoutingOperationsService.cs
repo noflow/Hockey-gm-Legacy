@@ -5,6 +5,7 @@ using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
 using LegacyEngine.Scouting;
 using LegacyEngine.Staff;
+using PeopleCareerTimelineEntry = LegacyEngine.People.CareerTimelineEntry;
 
 namespace LegacyEngine.Integration;
 
@@ -286,7 +287,7 @@ public sealed class ScoutingOperationsService
             Roles: new[] { new PersonRole($"role-placeholder-staff-{sequence:000}", ToPersonRoleType(role), scenario.Organization.OrganizationId, scenario.CurrentDate, null, role.ToString()) },
             Reputation: new PersonReputation(32, 28, 10),
             Personality: new PersonalityProfile(58, 62, 54, 61, 70),
-            CareerTimeline: Array.Empty<CareerTimelineEntry>());
+            CareerTimeline: Array.Empty<PeopleCareerTimelineEntry>());
         person.Validate();
 
         var attributes = StaffRoles.DepartmentFor(role) == StaffDepartment.Scouting

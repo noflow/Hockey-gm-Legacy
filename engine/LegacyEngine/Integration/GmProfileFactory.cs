@@ -1,5 +1,7 @@
 using LegacyEngine.HumanIntelligence;
 using LegacyEngine.People;
+using PeopleCareerTimelineEntry = LegacyEngine.People.CareerTimelineEntry;
+using PeopleCareerTimelineEntryType = LegacyEngine.People.CareerTimelineEntryType;
 
 namespace LegacyEngine.Integration;
 
@@ -25,11 +27,11 @@ public sealed class GmProfileFactory
             Roles: Array.Empty<PersonRole>(),
             Reputation: reputation,
             Personality: personality,
-            CareerTimeline: Array.Empty<CareerTimelineEntry>())
-            .AddCareerTimelineEntry(new CareerTimelineEntry(
+            CareerTimeline: Array.Empty<PeopleCareerTimelineEntry>())
+            .AddCareerTimelineEntry(new PeopleCareerTimelineEntry(
                 EntryId: $"gm-profile-created:{settings.PersonId}",
                 Date: scenarioDate,
-                EntryType: CareerTimelineEntryType.StatusChanged,
+                EntryType: PeopleCareerTimelineEntryType.StatusChanged,
                 Summary: $"{settings.FirstName.Trim()} {settings.LastName.Trim()} began a GM career profile.",
                 Details: new Dictionary<string, object?>
                 {

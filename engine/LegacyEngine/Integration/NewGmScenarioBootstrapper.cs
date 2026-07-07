@@ -15,6 +15,7 @@ using LegacyEngine.Scouting;
 using LegacyEngine.Seasons;
 using LegacyEngine.Staff;
 using LegacyEngine.World;
+using PeopleCareerTimelineEntry = LegacyEngine.People.CareerTimelineEntry;
 
 namespace LegacyEngine.Integration;
 
@@ -197,6 +198,17 @@ public sealed class NewGmScenarioBootstrapper
             DraftHistory = history.DraftHistory,
             FreeAgentMarket = freeAgentMarket,
             TradeBlock = tradeBlock
+        };
+        var careerHistory = new CareerHistoryService().CreateInitialHistory(scenarioSnapshot);
+        scenarioSnapshot = scenarioSnapshot with
+        {
+            CareerTimeline = careerHistory.CareerTimeline,
+            DraftPickHistory = careerHistory.DraftPickHistory,
+            DraftClassHistory = careerHistory.DraftClassHistory,
+            StaffCareerHistory = careerHistory.StaffCareerHistory,
+            GmCareerHistory = careerHistory.GmCareerHistory,
+            OrganizationSeasonHistory = careerHistory.OrganizationSeasonHistory,
+            TransactionHistory = careerHistory.TransactionHistory
         };
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.TradeBlockUpdated, "League trade block updated", $"{tradeBlock.Entries.Count} players are available on the league trade block.");
@@ -786,7 +798,7 @@ public sealed class NewGmScenarioBootstrapper
             Roles: Array.Empty<PersonRole>(),
             Reputation: new PersonReputation(localReputation, leagueReputation, nationalReputation),
             Personality: new PersonalityProfile(62, 64, 57, 59, 68),
-            CareerTimeline: Array.Empty<CareerTimelineEntry>());
+            CareerTimeline: Array.Empty<PeopleCareerTimelineEntry>());
         person.Validate();
         return person;
     }

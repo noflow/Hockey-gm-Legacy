@@ -232,6 +232,7 @@ public sealed class TradeService
         var completed = offer with { Status = TradeOfferStatus.Completed };
         var alpha = scenario.AlphaSnapshot with { Roster = roster };
         var next = UpsertOffer(scenario with { AlphaSnapshot = alpha, ProspectRights = prospects.ToArray() }, completed);
+        next = new CareerHistoryService().RecordTradeCompleted(next, completed);
         QueueTradeEvent(registry, next, LegacyEventType.TradeCompleted, "Trade completed", TradeSummary(completed), completed);
         var transaction = new LeagueTransaction(
             $"transaction:trade:{Guid.NewGuid():N}",

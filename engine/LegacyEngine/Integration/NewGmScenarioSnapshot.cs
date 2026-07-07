@@ -82,6 +82,20 @@ public sealed record NewGmScenarioSnapshot(
 
     public TradeDeadlineState? TradeDeadlineState { get; init; }
 
+    public CareerTimeline CareerTimeline { get; init; } = CareerTimeline.Empty;
+
+    public IReadOnlyList<DraftPickHistory> DraftPickHistory { get; init; } = Array.Empty<DraftPickHistory>();
+
+    public IReadOnlyList<DraftClassHistory> DraftClassHistory { get; init; } = Array.Empty<DraftClassHistory>();
+
+    public IReadOnlyList<StaffCareerHistory> StaffCareerHistory { get; init; } = Array.Empty<StaffCareerHistory>();
+
+    public GmCareerHistory? GmCareerHistory { get; init; }
+
+    public IReadOnlyList<OrganizationSeasonHistory> OrganizationSeasonHistory { get; init; } = Array.Empty<OrganizationSeasonHistory>();
+
+    public IReadOnlyList<TransactionHistoryRecord> TransactionHistory { get; init; } = Array.Empty<TransactionHistoryRecord>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -229,5 +243,31 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         TradeDeadlineState?.Validate();
+        CareerTimeline.Validate();
+        foreach (var pick in DraftPickHistory)
+        {
+            pick.Validate();
+        }
+
+        foreach (var draftClass in DraftClassHistory)
+        {
+            draftClass.Validate();
+        }
+
+        foreach (var staff in StaffCareerHistory)
+        {
+            staff.Validate();
+        }
+
+        GmCareerHistory?.Validate();
+        foreach (var season in OrganizationSeasonHistory)
+        {
+            season.Validate();
+        }
+
+        foreach (var transaction in TransactionHistory)
+        {
+            transaction.Validate();
+        }
     }
 }

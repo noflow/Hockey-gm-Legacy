@@ -50,6 +50,7 @@ var alpha30ExistingWorldHistoryTests = new Alpha30ExistingWorldHistoryTests();
 var alpha31FreeAgentMarketTests = new Alpha31FreeAgentMarketTests();
 var alpha32TradeEngineTests = new Alpha32TradeEngineTests();
 var alpha33TradeDeadlineTests = new Alpha33TradeDeadlineTests();
+var alpha34CareerHistoryTests = new Alpha34CareerHistoryTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -639,6 +640,20 @@ runner.Run("alpha 3.3 trade UI shows closed state after deadline", alpha33TradeD
 runner.Run("alpha 3.3 league news posts deadline closed", alpha33TradeDeadlineTests.LeagueNewsPostsDeadlineClosed);
 runner.Run("alpha 3.3 no inbox spam", alpha33TradeDeadlineTests.DeadlineDoesNotSpamInbox);
 runner.Run("alpha 3.3 no Godot save realtime or full negotiation added", alpha33TradeDeadlineTests.Alpha33HasNoGodotSaveRealtimeOrFullNegotiation);
+runner.Run("alpha 3.4 career timeline entry created", alpha34CareerHistoryTests.CareerTimelineEntryCreated);
+runner.Run("alpha 3.4 player drafted creates draft history", alpha34CareerHistoryTests.PlayerDraftedCreatesDraftHistory);
+runner.Run("alpha 3.4 drafted player appears in Where Are They Now", alpha34CareerHistoryTests.DraftedPlayerAppearsInWhereAreTheyNow);
+runner.Run("alpha 3.4 draft outcome starts unknown or developing", alpha34CareerHistoryTests.DraftOutcomeStartsUnknownOrDeveloping);
+runner.Run("alpha 3.4 player dossier includes timeline", alpha34CareerHistoryTests.PlayerDossierIncludesTimeline);
+runner.Run("alpha 3.4 staff history is recorded", alpha34CareerHistoryTests.StaffHistoryIsRecorded);
+runner.Run("alpha 3.4 GM career history is recorded", alpha34CareerHistoryTests.GmCareerHistoryIsRecorded);
+runner.Run("alpha 3.4 organization season history is recorded", alpha34CareerHistoryTests.OrganizationSeasonHistoryIsRecorded);
+runner.Run("alpha 3.4 trade completed creates history entry", alpha34CareerHistoryTests.TradeCompletedCreatesHistoryEntry);
+runner.Run("alpha 3.4 free-agent signing creates history entry", alpha34CareerHistoryTests.FreeAgentSigningCreatesHistoryEntry);
+runner.Run("alpha 3.4 injury creates history entry", alpha34CareerHistoryTests.InjuryCreatesHistoryEntry);
+runner.Run("alpha 3.4 Reports History workspace exposes history views", alpha34CareerHistoryTests.ReportsHistoryWorkspaceExposesHistoryViews);
+runner.Run("alpha 3.4 hidden ratings are not exposed", alpha34CareerHistoryTests.HiddenRatingsAreNotExposed);
+runner.Run("alpha 3.4 no Godot save or deep database added", alpha34CareerHistoryTests.Alpha34HasNoGodotSaveOrDeepDatabase);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
