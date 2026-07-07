@@ -70,6 +70,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 4.7 Injury & Medical v2 (Health & Recovery)
 - Alpha 4.8 Owner & Job Security v2
 - Alpha 4.9 League AI & Team Identity v2
+- Alpha 5.0 Playability & Polish
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -130,6 +131,8 @@ Alpha 4.7 - Injury & Medical v2 (Health & Recovery) turns injuries into a GM hea
 Alpha 4.8 - Owner & Job Security v2 makes ownership a visible accountability layer. The owner now has a richer personality profile, season expectations, confidence/pressure/support state, scheduled meetings, letters, budget and strategy decisions, GM performance review, job security explanation, Action Center items, executive report context, and career-history hooks. Alpha 4.8 creates warnings and pressure only; it does not add automatic firing, job offers, save/load changes, or game simulation changes.
 
 Alpha 4.9 - League AI & Team Identity v2 makes organizations recognizable by how they build. Every league team now receives an identity, AI GM personality, owner influence, current strategy, monthly needs, budget style, draft style, scouting focus, development grade, trade/free-agency/draft/scouting behavior, occasional League News direction headlines, and organization-history hooks. These profiles are deterministic and in-memory for Alpha, with no media engine, save/load changes, or game simulation changes.
+
+Alpha 5.0 - Playability & Polish cleans up the day-to-day GM workflow without adding new simulation systems. The GM inbox now stays focused on decisions and important messages, routine updates move to a searchable Journal, League News remains separate, the dashboard explains inbox/journal/action counts, global search is active across core career data, and Reports / History includes a playtest checklist for quick first-month regression review.
 
 Alpha 4.4 - Scouting v2 (Intelligence & Reports) turns scouting into an information system instead of a rating reveal. Scouts now have tendencies, known regions, specialties, workload effects, confidence stars, viewing samples, tournament context, budget coverage notes, report comparisons, and scout career/development summaries. Player dossiers show multiple report-card style opinions, evidence, disagreements, and confidence while keeping hidden ratings private.
 

@@ -62,6 +62,7 @@ var alpha46StaffCoachingV3Tests = new Alpha46StaffCoachingV3Tests();
 var alpha47InjuryMedicalV2Tests = new Alpha47InjuryMedicalV2Tests();
 var alpha48OwnerJobSecurityV2Tests = new Alpha48OwnerJobSecurityV2Tests();
 var alpha49LeagueAiTeamIdentityTests = new Alpha49LeagueAiTeamIdentityTests();
+var alpha50PlayabilityPolishTests = new Alpha50PlayabilityPolishTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -822,6 +823,13 @@ runner.Run("alpha 4.9 league news generated without spam", alpha49LeagueAiTeamId
 runner.Run("alpha 4.9 history recorded", alpha49LeagueAiTeamIdentityTests.HistoryRecorded);
 runner.Run("alpha 4.9 AlphaDesktop exposes league AI UI", alpha49LeagueAiTeamIdentityTests.AlphaDesktopExposesLeagueAiUi);
 runner.Run("alpha 4.9 no forbidden systems added", alpha49LeagueAiTeamIdentityTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 5.0 routine messages route to journal not inbox", alpha50PlayabilityPolishTests.RoutineMessagesRouteToJournalNotInbox);
+runner.Run("alpha 5.0 important messages remain in inbox", alpha50PlayabilityPolishTests.ImportantMessagesRemainInInbox);
+runner.Run("alpha 5.0 inbox filter dedupes repeated messages", alpha50PlayabilityPolishTests.InboxFilterDedupesRepeatedMessages);
+runner.Run("alpha 5.0 action center removes closed and duplicate items", alpha50PlayabilityPolishTests.ActionCenterRemovesClosedAndDuplicateItems);
+runner.Run("alpha 5.0 global search finds people and history", alpha50PlayabilityPolishTests.GlobalSearchFindsPeopleAndHistory);
+runner.Run("alpha 5.0 playtest checklist generated", alpha50PlayabilityPolishTests.PlaytestChecklistGenerated);
+runner.Run("alpha 5.0 AlphaDesktop exposes polish surfaces", alpha50PlayabilityPolishTests.AlphaDesktopExposesPolishSurfaces);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

@@ -85,14 +85,15 @@ The five foundation pillars remain:
 - Alpha 4.7 - Injury & Medical v2 (Health & Recovery)
 - Alpha 4.8 - Owner & Job Security v2
 - Alpha 4.9 - League AI & Team Identity v2
+- Alpha 5.0 - Playability & Polish
 
 ## Current Milestone
 
-Alpha 4.9 - League AI & Team Identity v2
+Alpha 5.0 - Playability & Polish
 
 ## Current Goal
 
-Make organizations feel distinct by how they build teams. League teams now expose persistent identity, AI GM personality, owner influence, current strategy, monthly needs, budget style, draft style, scouting focus, development grade, behavior tendencies, occasional League News direction items, and career-history hooks without adding media, save/load, or game simulation changes.
+Make the existing Alpha career easier to play day to day. AlphaDesktop now emphasizes decision-focused inbox messages, routes routine simulation chatter to a searchable Journal, keeps League News separate, adds an active global search surface, cleans Action Center duplicates/resolved items, improves dashboard workflow cues, and adds a playtest checklist without adding new gameplay systems.
 
 ## Why Relationship Engine Was Next
 
@@ -102,11 +103,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.0 - TBD
+Alpha 5.1 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.0 - TBD
+1. Alpha 5.1 - TBD
 
 ## Build Rule
 

@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -55,6 +55,7 @@ internal sealed class MainWindow : Window
     private ComboBox? _rosterPlayerTypeFilter;
     private ComboBox? _rosterRoleFilter;
     private ComboBox? _rosterAgeFilter;
+    private TextBox? _globalSearchInput;
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
     private Border? _inboxReader;
@@ -111,7 +112,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.9 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 5.0 starts with your created GM inside the polished GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -398,7 +399,10 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Transaction History", CreateTextScreen("Transaction History")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
             new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
-            new WorkspaceScreen("Career History", CreateTextScreen("Career History"))
+            new WorkspaceScreen("Career History", CreateTextScreen("Career History")),
+            new WorkspaceScreen("Journal", CreateTextScreen("Journal")),
+            new WorkspaceScreen("Global Search", CreateTextScreen("Global Search")),
+            new WorkspaceScreen("Playtest Checklist", CreateTextScreen("Playtest Checklist"))
         });
 
         AddWorkspaceTab(tabs, "Settings placeholder", new[]
@@ -446,17 +450,35 @@ internal sealed class MainWindow : Window
 
         panel.Children.Add(textPanel);
 
-        var searchBox = new TextBox
+        var searchPanel = new StackPanel
         {
-            Text = "Quick search placeholder - players, staff, prospects, messages",
-            IsReadOnly = true,
+            Orientation = Orientation.Vertical,
+            MaxWidth = 560,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+        searchPanel.Children.Add(new TextBlock
+        {
+            Text = "Quick search placeholder - now active across players, staff, prospects, messages, and history",
+            Foreground = new SolidColorBrush(Color.FromRgb(210, 225, 240)),
+            Margin = new Thickness(0, 0, 0, 3)
+        });
+        _globalSearchInput = new TextBox
+        {
+            Text = string.Empty,
             MinHeight = 30,
             MaxWidth = 520,
-            Margin = new Thickness(0, 0, 0, 10),
             Background = new SolidColorBrush(Color.FromRgb(234, 241, 248)),
             Foreground = new SolidColorBrush(Color.FromRgb(78, 92, 108))
         };
-        panel.Children.Add(searchBox);
+        _globalSearchInput.TextChanged += (_, _) =>
+        {
+            if (_tabs.ContainsKey("Global Search"))
+            {
+                _tabs["Global Search"].Text = BuildGlobalSearch();
+            }
+        };
+        searchPanel.Children.Add(_globalSearchInput);
+        panel.Children.Add(searchPanel);
 
         panel.Children.Add(new TextBlock
         {
@@ -1378,6 +1400,9 @@ internal sealed class MainWindow : Window
         _tabs["Draft Recaps"].Text = BuildDraftRecaps();
         _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
         _tabs["Career History"].Text = BuildCareerHistory();
+        _tabs["Journal"].Text = BuildJournal();
+        _tabs["Global Search"].Text = BuildGlobalSearch();
+        _tabs["Playtest Checklist"].Text = BuildPlaytestChecklist();
         _tabs["Settings"].Text = BuildSettings();
         _tabs["Relationships"].Text = BuildRelationships();
         UpdateTabBadges();
@@ -1425,6 +1450,8 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
+        metrics.Children.Add(CreateDashboardMetric("League News", State.LeagueNewsCount.ToString(), "notable league items", false));
+        metrics.Children.Add(CreateDashboardMetric("Journal", State.JournalEntries.Count.ToString(), "routine updates archived", false));
         if (State.TradeDeadlineWindow.Status != TradeDeadlineStatus.NotStarted)
         {
             metrics.Children.Add(CreateDashboardMetric("Trade Deadline", State.TradeDeadlineCardTitle, State.TradeDeadlineWindow.Summary, State.TradeDeadlineWindow.Status is TradeDeadlineStatus.DeadlineWeek or TradeDeadlineStatus.DeadlineDay or TradeDeadlineStatus.Closed));
@@ -1480,6 +1507,9 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Standings rank", State.StandingsRankText);
         AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
         AddLine(summary, "Open actions", $"{State.OpenActionCount} open / {State.UrgentActionCount} urgent");
+        AddLine(summary, "Inbox focus", State.InboxFocusSummary);
+        AddLine(summary, "League news", $"{State.LeagueNewsCount} notable item(s)");
+        AddLine(summary, "Journal", $"{State.JournalEntries.Count} routine update(s) archived");
         AddLine(summary, "Trade deadline", State.TradeDeadlineWindow.Summary);
         AddLine(summary, "Last advance result", State.LastStopReason);
         AddLine(summary, "Next stop reason", State.LastStopReason);
@@ -4249,8 +4279,9 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("League News / Transaction Wire");
         builder.AppendLine();
-        builder.AppendLine("Filters: All | Signings | Roster Moves | Injuries | Draft | Staff");
+        builder.AppendLine("Filters: All | Signings | Roster Moves | Injuries | Draft | Staff | Trades | Free Agency | Rumors");
         builder.AppendLine("Other-team transactions appear here instead of crowding the GM inbox.");
+        builder.AppendLine("Routine league churn stays quiet unless it affects your team, the standings, or a major roster story.");
         builder.AppendLine();
         builder.AppendLine("League Direction");
         if (State.LeagueIdentityNews.Count == 0)
@@ -4285,6 +4316,89 @@ internal sealed class MainWindow : Window
                 builder.AppendLine($"    {transaction.Description}");
             }
 
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildJournal()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Journal");
+        builder.AppendLine("=======");
+        builder.AppendLine("Routine simulation updates live here for history and search without interrupting the GM inbox.");
+        builder.AppendLine();
+        if (State.JournalEntries.Count == 0)
+        {
+            builder.AppendLine("No routine journal entries yet.");
+            return builder.ToString();
+        }
+
+        foreach (var group in State.JournalEntries.GroupBy(entry => entry.Category).OrderBy(group => group.Key))
+        {
+            builder.AppendLine(group.Key.ToString());
+            foreach (var entry in group.Take(25))
+            {
+                builder.AppendLine($"  {entry.Date:yyyy-MM-dd HH:mm} | {entry.Title}");
+                builder.AppendLine($"    {entry.Summary}");
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildGlobalSearch()
+    {
+        var query = _globalSearchInput?.Text?.Trim() ?? string.Empty;
+        var builder = new StringBuilder();
+        builder.AppendLine("Global Search");
+        builder.AppendLine("=============");
+        builder.AppendLine("Search players, staff, prospects, recruits, free agents, messages, league news, and history.");
+        builder.AppendLine();
+        if (query.Length < 2)
+        {
+            builder.AppendLine("Type at least two characters in the top search box.");
+            return builder.ToString();
+        }
+
+        var results = State.Search(query);
+        builder.AppendLine($"Query: {query}");
+        builder.AppendLine($"Results: {results.Count}");
+        builder.AppendLine();
+        if (results.Count == 0)
+        {
+            builder.AppendLine("No matching career items found.");
+            return builder.ToString();
+        }
+
+        foreach (var result in results)
+        {
+            builder.AppendLine($"{result.ResultType}: {result.Title}");
+            builder.AppendLine($"  {result.Subtitle}");
+            builder.AppendLine($"  Open: {result.TargetWorkspace}");
+            builder.AppendLine($"  {result.Summary}");
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildPlaytestChecklist()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Playtest Checklist");
+        builder.AppendLine("==================");
+        builder.AppendLine("Quick regression pass for first-month GM flow. This is a checklist, not a new gameplay system.");
+        builder.AppendLine();
+        foreach (var item in State.PlaytestChecklist)
+        {
+            builder.AppendLine($"{(item.IsPassing ? "PASS" : "CHECK")} | {item.Area}");
+            builder.AppendLine($"  Question: {item.Question}");
+            builder.AppendLine($"  Expected: {item.ExpectedOutcome}");
+            builder.AppendLine($"  Notes: {item.Notes}");
             builder.AppendLine();
         }
 
@@ -5084,8 +5198,10 @@ internal sealed class AlphaDesktopState
     private readonly SaveGameService _saveGameService = new();
     private readonly SeasonRolloverService _seasonRollover = new();
     private readonly ContractManagementService _contracts = new();
+    private readonly PlayabilityPolishService _playability = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
+    private readonly List<JournalEntry> _journalEntries = [];
     private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
     private string? _currentSavePath;
     private SaveGameMetadata? _lastSaveMetadata;
@@ -5102,7 +5218,7 @@ internal sealed class AlphaDesktopState
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
         {
-            InboxManager.AddRange(scenarioSnapshot.FirstDayInbox);
+            AddInboxItems(scenarioSnapshot.FirstDayInbox);
         }
 
         LatestSummary = scenarioSnapshot.ScenarioSummary;
@@ -5119,6 +5235,12 @@ internal sealed class AlphaDesktopState
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
             .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
+            .ToArray();
+
+    public IReadOnlyList<JournalEntry> JournalEntries =>
+        _journalEntries
+            .OrderByDescending(entry => entry.Date)
+            .ThenBy(entry => entry.Title, StringComparer.Ordinal)
             .ToArray();
 
     public IReadOnlyList<FreeAgent> FreeAgents =>
@@ -5238,6 +5360,11 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
+    public int LeagueNewsCount => LeagueTransactions.Count + LeagueIdentityNews.Count;
+
+    public string InboxFocusSummary =>
+        $"{Inbox.Count} decision-focused inbox item(s), {JournalEntries.Count} routine item(s) journaled.";
+
     public ContractManagementSummary ContractManagement => _contracts.BuildSummary(ScenarioSnapshot, _registry.Rulebook);
 
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
@@ -5266,7 +5393,7 @@ internal sealed class AlphaDesktopState
     public int UrgentPendingDecisionCount => FirstMonthAdvanceService.UrgentPendingActions(ScenarioSnapshot).Count;
 
     public IReadOnlyList<ActionCenterItem> ActionCenterItems =>
-        _actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses);
+        _playability.CleanActionCenterItems(_actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses));
 
     public int OpenActionCount => ActionCenterItems.Count(item => item.Status == ActionCenterStatus.Open);
 
@@ -5277,6 +5404,17 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<string> AssistantGmRecommendations => _actionCenter.BuildAssistantGmRecommendations(ScenarioSnapshot, ActionCenterItems, BudgetOverview);
 
     public IReadOnlyList<string> UpcomingActionEvents => _actionCenter.BuildUpcomingEvents(ScenarioSnapshot);
+
+    public IReadOnlyList<GlobalSearchResult> Search(string query) =>
+        _playability.Search(
+            ScenarioSnapshot,
+            InboxManager.AllMessages,
+            LeagueTransactions.Concat(LeagueIdentityNews).ToArray(),
+            JournalEntries,
+            query);
+
+    public IReadOnlyList<PlaytestChecklistItem> PlaytestChecklist =>
+        _playability.BuildPlaytestChecklist(ScenarioSnapshot, ActionCenterItems);
 
     public string NextDecisionDeadlineText
     {
@@ -5988,7 +6126,7 @@ internal sealed class AlphaDesktopState
         {
             var generated = _staffOffice.GenerateCandidatePool(_registry, current);
             current = generated.ScenarioSnapshot;
-            InboxManager.AddRange(generated.InboxItems);
+            AddInboxItems(generated.InboxItems);
         }
 
         var candidate = current.StaffCandidates
@@ -6449,7 +6587,7 @@ internal sealed class AlphaDesktopState
         var result = _medicalHealth.ApplyReturnDecision(_registry, ScenarioSnapshot, personId, option);
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LatestSummary = result.Message;
         EnsureSelectedDossierStillExists();
     }
@@ -6465,7 +6603,7 @@ internal sealed class AlphaDesktopState
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LatestSummary = result.Message;
         EnsureSelectedDossierStillExists();
     }
@@ -7586,12 +7724,30 @@ internal sealed class AlphaDesktopState
             new TrainingCampDecision(player.PersonId, decisionType, Snapshot.CurrentDate)));
     }
 
+    private void AddInboxItems(IEnumerable<AlphaInboxItem> items)
+    {
+        var incoming = items.ToArray();
+        if (incoming.Length == 0)
+        {
+            return;
+        }
+
+        var journal = _playability.BuildJournalEntries(incoming);
+        if (journal.Count > 0)
+        {
+            _journalEntries.Clear();
+            _journalEntries.AddRange(_playability.MergeJournalEntries(_journalEntries, journal));
+        }
+
+        InboxManager.AddRange(_playability.FilterInboxItems(incoming));
+    }
+
     private void ApplyAction(GmActionResult result)
     {
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
     }
@@ -7601,14 +7757,14 @@ internal sealed class AlphaDesktopState
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         AddLeagueTransactions(result.LeagueTransactions);
         var freeAgency = _freeAgencyV2.ProgressMarket(_registry, ScenarioSnapshot);
         if (freeAgency.Success)
         {
             ScenarioSnapshot = freeAgency.ScenarioSnapshot;
             Snapshot = freeAgency.ScenarioSnapshot.AlphaSnapshot;
-            InboxManager.AddRange(freeAgency.InboxItems);
+            AddInboxItems(freeAgency.InboxItems);
             AddLeagueTransactions(freeAgency.LeagueTransactions);
         }
 
@@ -7629,7 +7785,7 @@ internal sealed class AlphaDesktopState
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
     }
@@ -7639,7 +7795,7 @@ internal sealed class AlphaDesktopState
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
     }
@@ -7686,7 +7842,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
         }
 
         LastProcessedEventCount = 0;
@@ -7698,7 +7854,7 @@ internal sealed class AlphaDesktopState
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
     }
@@ -7710,7 +7866,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
         }
 
         LastProcessedEventCount = 0;
@@ -7724,7 +7880,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions ?? Array.Empty<LeagueTransaction>());
         }
 
@@ -7737,7 +7893,7 @@ internal sealed class AlphaDesktopState
         ScenarioSnapshot = result.ScenarioSnapshot;
         Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
         EnsureSelectedDossierStillExists();
-        InboxManager.AddRange(result.InboxItems);
+        AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
     }
@@ -7749,7 +7905,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
         }
 
         LastProcessedEventCount = 0;
@@ -7763,7 +7919,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
         }
 
@@ -7778,7 +7934,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
         }
 
         LastProcessedEventCount = 0;
@@ -7792,7 +7948,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
         }
 
         LastProcessedEventCount = 0;
@@ -7806,7 +7962,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
         }
 
@@ -7821,7 +7977,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
         }
 
@@ -7836,7 +7992,7 @@ internal sealed class AlphaDesktopState
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
-            InboxManager.AddRange(result.InboxItems);
+            AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
         }
 
@@ -7958,3 +8114,4 @@ internal sealed class AlphaDesktopState
         }
     }
 }
+
