@@ -56,6 +56,7 @@ var alpha40MultiSeasonTests = new Alpha40MultiSeasonTests();
 var alpha41ContractsV2Tests = new Alpha41ContractsV2Tests();
 var alpha42FreeAgencyV2Tests = new Alpha42FreeAgencyV2Tests();
 var alpha43TradeEngineV2Tests = new Alpha43TradeEngineV2Tests();
+var alpha44ScoutingV2Tests = new Alpha44ScoutingV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -736,6 +737,20 @@ runner.Run("alpha 4.3 organization history updated", alpha43TradeEngineV2Tests.O
 runner.Run("alpha 4.3 league news updated", alpha43TradeEngineV2Tests.LeagueNewsUpdated);
 runner.Run("alpha 4.3 Trade UI exposes v2 strategy", alpha43TradeEngineV2Tests.TradeUiExposesV2Strategy);
 runner.Run("alpha 4.3 no forbidden trade systems", alpha43TradeEngineV2Tests.Alpha43HasNoForbiddenTradeSystems);
+runner.Run("alpha 4.4 multiple reports can exist for player", alpha44ScoutingV2Tests.MultipleReportsCanExistForPlayer);
+runner.Run("alpha 4.4 scout personalities generated", alpha44ScoutingV2Tests.ScoutPersonalitiesGenerated);
+runner.Run("alpha 4.4 confidence improves with viewings", alpha44ScoutingV2Tests.ConfidenceImprovesWithViewings);
+runner.Run("alpha 4.4 viewings improve report detail", alpha44ScoutingV2Tests.ViewingsImproveReportDetail);
+runner.Run("alpha 4.4 regional bonus improves confidence", alpha44ScoutingV2Tests.RegionalBonusImprovesConfidence);
+runner.Run("alpha 4.4 tournament scouting adds pressure context", alpha44ScoutingV2Tests.TournamentScoutingAddsPressureContext);
+runner.Run("alpha 4.4 scout history generated", alpha44ScoutingV2Tests.ScoutHistoryGenerated);
+runner.Run("alpha 4.4 scout experience generated", alpha44ScoutingV2Tests.ScoutExperienceGenerated);
+runner.Run("alpha 4.4 scout workload reduces confidence", alpha44ScoutingV2Tests.ScoutWorkloadReducesConfidence);
+runner.Run("alpha 4.4 report comparison generated", alpha44ScoutingV2Tests.ReportComparisonGenerated);
+runner.Run("alpha 4.4 player dossier uses scouting v2 language", alpha44ScoutingV2Tests.PlayerDossierUsesScoutingV2Language);
+runner.Run("alpha 4.4 budget effects generated", alpha44ScoutingV2Tests.BudgetEffectsGenerated);
+runner.Run("alpha 4.4 AlphaDesktop exposes scouting v2 UI", alpha44ScoutingV2Tests.AlphaDesktopExposesScoutingV2Ui);
+runner.Run("alpha 4.4 no hidden ratings Godot or game simulation", alpha44ScoutingV2Tests.Alpha44HasNoHiddenRatingsGodotOrGameSimulation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

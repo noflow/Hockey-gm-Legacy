@@ -5,6 +5,7 @@ using LegacyEngine.Injuries;
 using LegacyEngine.People;
 using LegacyEngine.Relationships;
 using LegacyEngine.Rosters;
+using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
 
 namespace LegacyEngine.Integration;
@@ -165,6 +166,7 @@ public sealed class PlayerDossierService
     private static PlayerDossierSection BuildScoutingReports(NewGmScenarioSnapshot scenario, string personId)
     {
         var lines = new List<string>();
+        var intelligence = new ScoutingIntelligenceService();
         var boardEntry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == personId);
         if (boardEntry is not null)
         {
@@ -183,13 +185,26 @@ public sealed class PlayerDossierService
             }
         }
 
-        foreach (var report in scenario.CompletedScoutingReports.Where(report => report.PlayerId == personId).OrderByDescending(report => report.CreatedOn))
+        var reports = intelligence.BuildReportCards(scenario, personId, RulebookPresets.CreateJuniorMajor());
+        foreach (var report in reports.OrderByDescending(report => report.CreatedOn))
         {
-            lines.Add($"Report {report.ReportId} ({report.CreatedOn:yyyy-MM-dd}) - {report.Confidence} confidence - {report.Recommendation}");
-            lines.AddRange(report.Facts.Select(fact => $"Fact: {fact}"));
-            lines.AddRange(report.Observations.Take(2).Select(observation => $"Observation: {observation}"));
-            lines.AddRange(report.Opinions.Take(2).Select(opinion => $"Opinion: {opinion}"));
-            lines.AddRange(report.Unknowns.Take(2).Select(unknown => $"Unknown: {unknown}"));
+            lines.Add($"{report.Source} - {report.ScoutName} ({report.CreatedOn:yyyy-MM-dd})");
+            lines.Add($"Report source: {report.Source} from {report.ScoutName}");
+            lines.Add($"Confidence: {report.ConfidenceStars}");
+            lines.Add($"Current picture: {report.CurrentPicture}");
+            lines.Add($"Future projection: {report.FutureProjection}");
+            lines.Add($"Recommendation: {report.Recommendation}");
+            lines.AddRange(report.Evidence.Take(3).Select(evidence => $"Evidence: {evidence}"));
+            lines.AddRange(report.Concerns.Take(2).Select(concern => $"Concern: {concern}"));
+            lines.Add($"Scout tendency: {string.Join(", ", report.ScoutTraits.Take(3))}");
+        }
+
+        if (reports.Count > 1)
+        {
+            var comparison = intelligence.CompareReports(scenario, personId, RulebookPresets.CreateJuniorMajor());
+            lines.Add($"Report comparison: {comparison.ConfidenceSummary}");
+            lines.Add($"Agreement: {string.Join(" ", comparison.Agreements)}");
+            lines.Add($"Disagreement: {string.Join(" ", comparison.Disagreements)}");
         }
 
         if (lines.Count == 0)
