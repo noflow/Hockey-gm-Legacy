@@ -57,6 +57,7 @@ var alpha41ContractsV2Tests = new Alpha41ContractsV2Tests();
 var alpha42FreeAgencyV2Tests = new Alpha42FreeAgencyV2Tests();
 var alpha43TradeEngineV2Tests = new Alpha43TradeEngineV2Tests();
 var alpha44ScoutingV2Tests = new Alpha44ScoutingV2Tests();
+var alpha45PlayerDevelopmentV2Tests = new Alpha45PlayerDevelopmentV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -751,6 +752,20 @@ runner.Run("alpha 4.4 player dossier uses scouting v2 language", alpha44Scouting
 runner.Run("alpha 4.4 budget effects generated", alpha44ScoutingV2Tests.BudgetEffectsGenerated);
 runner.Run("alpha 4.4 AlphaDesktop exposes scouting v2 UI", alpha44ScoutingV2Tests.AlphaDesktopExposesScoutingV2Ui);
 runner.Run("alpha 4.4 no hidden ratings Godot or game simulation", alpha44ScoutingV2Tests.Alpha44HasNoHiddenRatingsGodotOrGameSimulation);
+runner.Run("alpha 4.5 development plans created for players", alpha45PlayerDevelopmentV2Tests.DevelopmentPlansCreatedForPlayers);
+runner.Run("alpha 4.5 coach specialties generated", alpha45PlayerDevelopmentV2Tests.CoachSpecialtiesGenerated);
+runner.Run("alpha 4.5 ice time affects growth", alpha45PlayerDevelopmentV2Tests.IceTimeAffectsGrowth);
+runner.Run("alpha 4.5 confidence changes", alpha45PlayerDevelopmentV2Tests.ConfidenceChanges);
+runner.Run("alpha 4.5 morale changes", alpha45PlayerDevelopmentV2Tests.MoraleChanges);
+runner.Run("alpha 4.5 breakout generated", alpha45PlayerDevelopmentV2Tests.BreakoutGenerated);
+runner.Run("alpha 4.5 regression generated", alpha45PlayerDevelopmentV2Tests.RegressionGenerated);
+runner.Run("alpha 4.5 coach recommendations generated", alpha45PlayerDevelopmentV2Tests.CoachRecommendationsGenerated);
+runner.Run("alpha 4.5 yearly review generated", alpha45PlayerDevelopmentV2Tests.YearlyReviewGenerated);
+runner.Run("alpha 4.5 player dossier includes development plan", alpha45PlayerDevelopmentV2Tests.PlayerDossierIncludesDevelopmentPlan);
+runner.Run("alpha 4.5 career timeline updated", alpha45PlayerDevelopmentV2Tests.CareerTimelineUpdated);
+runner.Run("alpha 4.5 dashboard action center includes development", alpha45PlayerDevelopmentV2Tests.DashboardActionCenterIncludesDevelopment);
+runner.Run("alpha 4.5 AlphaDesktop exposes development v2 UI", alpha45PlayerDevelopmentV2Tests.AlphaDesktopExposesDevelopmentV2Ui);
+runner.Run("alpha 4.5 no hidden ratings Godot or game simulation changes", alpha45PlayerDevelopmentV2Tests.Alpha45HasNoHiddenRatingsGodotOrGameSimulationChanges);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

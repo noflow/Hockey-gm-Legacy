@@ -210,6 +210,7 @@ public sealed class NewGmScenarioBootstrapper
             OrganizationSeasonHistory = careerHistory.OrganizationSeasonHistory,
             TransactionHistory = careerHistory.TransactionHistory
         };
+        scenarioSnapshot = new DevelopmentPlanningService().EnsureScenarioPlans(scenarioSnapshot);
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.TradeBlockUpdated, "League trade block updated", $"{tradeBlock.Entries.Count} players are available on the league trade block.");
         scenarioSnapshot.Validate();

@@ -80,14 +80,15 @@ The five foundation pillars remain:
 - Alpha 4.2 - Free Agency v2
 - Alpha 4.3 - Trade Engine v2 (Negotiation & Team Strategy)
 - Alpha 4.4 - Scouting v2 (Intelligence & Reports)
+- Alpha 4.5 - Player Development v2 (Development Plans & Progress)
 
 ## Current Milestone
 
-Alpha 4.4 - Scouting v2 (Intelligence & Reports)
+Alpha 4.5 - Player Development v2 (Development Plans & Progress)
 
 ## Current Goal
 
-Make scouting a decision-support system based on information, not hidden ratings. Scouts now produce report-card style intelligence with tendencies, viewings, confidence, regional fit, tournament context, report comparison, workload, budget effects, and scout career history.
+Make development a long-term GM management system. Players now have development plans, focus areas, ice-time roles, confidence, morale, coach specialties, coach recommendations, yearly reviews, dossier context, Action Center items, and career timeline hooks without exposing hidden ratings.
 
 ## Why Relationship Engine Was Next
 
@@ -97,11 +98,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 4.5 - TBD
+Alpha 4.6 - TBD
 
 ## Next Milestones
 
-1. Alpha 4.5 - TBD
+1. Alpha 4.6 - TBD
 
 ## Build Rule
 

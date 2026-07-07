@@ -100,6 +100,12 @@ public sealed record NewGmScenarioSnapshot(
 
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
+    public IReadOnlyList<PlayerDevelopmentPlan> DevelopmentPlans { get; init; } = Array.Empty<PlayerDevelopmentPlan>();
+
+    public IReadOnlyList<DevelopmentReview> DevelopmentReviews { get; init; } = Array.Empty<DevelopmentReview>();
+
+    public IReadOnlyList<DevelopmentRecommendation> DevelopmentRecommendations { get; init; } = Array.Empty<DevelopmentRecommendation>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -276,5 +282,19 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         SeasonRollover.Validate();
+        foreach (var plan in DevelopmentPlans)
+        {
+            plan.Validate();
+        }
+
+        foreach (var review in DevelopmentReviews)
+        {
+            review.Validate();
+        }
+
+        foreach (var recommendation in DevelopmentRecommendations)
+        {
+            recommendation.Validate();
+        }
     }
 }

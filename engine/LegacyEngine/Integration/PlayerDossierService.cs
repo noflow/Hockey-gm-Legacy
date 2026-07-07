@@ -229,6 +229,9 @@ public sealed class PlayerDossierService
             .OrderByDescending(trait => trait.Value)
             .Select(trait => trait.Attribute.ToString())
             .FirstOrDefault() ?? strongest;
+        var planning = new DevelopmentPlanningService();
+        var planSummary = planning.BuildDossierSummary(scenario, personId)
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
         return new PlayerDossierSection(
             "Development",
@@ -239,7 +242,7 @@ public sealed class PlayerDossierService
                 $"Staff confidence theme: {focus}",
                 $"Last development review: {profile.LastUpdated:yyyy-MM-dd}",
                 "Player-facing summary only; internal development values remain private."
-            });
+            }.Concat(planSummary).ToArray());
     }
 
     private static PlayerDossierSection BuildMedical(NewGmScenarioSnapshot scenario, string personId)

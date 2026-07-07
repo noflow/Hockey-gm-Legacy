@@ -32,6 +32,20 @@ public sealed class DailySimulationCoordinator
             ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, games.ScenarioSnapshot)
             : null;
         var finalScenario = report?.Success == true ? report.ScenarioSnapshot : games.ScenarioSnapshot;
+        finalScenario = new DevelopmentPlanningService().EnsureScenarioPlans(finalScenario);
+        if (finalScenario.CurrentDate.Day == 1)
+        {
+            var recommendations = new DevelopmentPlanningService().BuildMonthlyRecommendations(finalScenario)
+                .Where(recommendation => finalScenario.DevelopmentRecommendations.All(existing => existing.RecommendationId != recommendation.RecommendationId))
+                .ToArray();
+            if (recommendations.Length > 0)
+            {
+                finalScenario = finalScenario with
+                {
+                    DevelopmentRecommendations = finalScenario.DevelopmentRecommendations.Concat(recommendations).ToArray()
+                };
+            }
+        }
         var inbox = simulation.InboxItems
             .Concat(camp.InboxItems)
             .Concat(scouting.InboxItems)

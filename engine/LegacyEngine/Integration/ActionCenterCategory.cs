@@ -6,6 +6,7 @@ public enum ActionCenterCategory
     Roster,
     Scouting,
     Recruiting,
+    PlayerDevelopment,
     Staff,
     Owner,
     Medical,

@@ -27,6 +27,7 @@ public sealed class ActionCenterService
         AddStaffVacancies(staffVacancies, items);
         AddBudgetWarnings(budget, items);
         AddScoutingCompletions(scenario, items);
+        AddDevelopmentRecommendations(scenario, items);
         AddUpcomingGames(scenario, items);
         AddInjuryIssues(scenario, items);
         AddSeasonReadiness(readiness, items);
@@ -74,6 +75,12 @@ public sealed class ActionCenterService
             lines.Add(scouting.Title);
         }
 
+        var development = items.FirstOrDefault(item => item.Status == ActionCenterStatus.Open && item.Category == ActionCenterCategory.PlayerDevelopment);
+        if (development is not null)
+        {
+            lines.Add(development.Title);
+        }
+
         lines.Add(items.Any(item => item.Status == ActionCenterStatus.Open && item.Category == ActionCenterCategory.Roster)
             ? "Roster needs attention."
             : "Roster is compliant.");
@@ -98,6 +105,12 @@ public sealed class ActionCenterService
         if (scenario.ScoutingOperations.All(assignment => !assignment.IsOpen))
         {
             recommendations.Add("Assign an available scout before advancing.");
+        }
+
+        var development = items.FirstOrDefault(item => item.Status == ActionCenterStatus.Open && item.Category == ActionCenterCategory.PlayerDevelopment);
+        if (development is not null)
+        {
+            recommendations.Add(development.RecommendedAction);
         }
 
         recommendations.Add(items.Any(item => item.Status == ActionCenterStatus.Open && item.Category == ActionCenterCategory.Roster)
@@ -332,6 +345,31 @@ public sealed class ActionCenterService
         }
     }
 
+    private static void AddDevelopmentRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        foreach (var recommendation in scenario.DevelopmentRecommendations.Where(item => item.IsActive).OrderByDescending(item => item.CreatedOn).Take(5))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:development:{recommendation.RecommendationId}",
+                $"Development review: {recommendation.PlayerName}",
+                ActionCenterCategory.PlayerDevelopment,
+                recommendation.RecommendationType is DevelopmentRecommendationType.ReadyForNextRole or DevelopmentRecommendationType.NeedsConfidence or DevelopmentRecommendationType.RecoveryPlan
+                    ? ActionCenterPriority.Important
+                    : ActionCenterPriority.Normal,
+                recommendation.CreatedOn.AddDays(7),
+                recommendation.PersonId,
+                recommendation.PlayerName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                recommendation.Reason,
+                "Development plans are affected by role, confidence, morale, coaching fit, injuries, and opportunity.",
+                recommendation.RecommendedAction,
+                null,
+                null,
+                null));
+        }
+    }
+
     private static void AddUpcomingGames(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
         var nextGame = scenario.Schedule?.NextGameFor(scenario.Organization.OrganizationId, scenario.CurrentDate);
@@ -514,6 +552,7 @@ public sealed class ActionCenterService
             InboxCategory.Staff => ActionCenterCategory.Staff,
             InboxCategory.Scouting => ActionCenterCategory.Scouting,
             InboxCategory.Recruiting => ActionCenterCategory.Recruiting,
+            InboxCategory.PlayerDevelopment => ActionCenterCategory.PlayerDevelopment,
             InboxCategory.Medical => ActionCenterCategory.Medical,
             InboxCategory.Contracts => ActionCenterCategory.Contracts,
             InboxCategory.League or InboxCategory.Draft => ActionCenterCategory.League,

@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 4.4 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.5 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -1618,7 +1618,7 @@ internal sealed class MainWindow : Window
         SetTabHeader("Dashboard", State.OpenActionCount > 0 ? $"Dashboard ({State.OpenActionCount})" : "Dashboard");
         SetTabHeader("Inbox", $"Inbox ({State.UnreadInboxCount})");
         SetTabHeader("Organization", State.StaffVacancies.Count > 0 ? $"Organization ({State.StaffVacancies.Count})" : "Organization");
-        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount + State.ContractDecisionCount;
+        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount + State.ContractDecisionCount + State.DevelopmentActionCount;
         SetTabHeader("Hockey Operations", operationsCount > 0 ? $"Hockey Operations ({operationsCount})" : "Hockey Operations");
         SetTabHeader("Season", "Season");
         SetTabHeader("Reports / History", "Reports / History");
@@ -2146,6 +2146,8 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Contract / rights status", State.ContractRightsStatus(row.PersonId));
             AddLine(panel, "Development trend", State.DevelopmentTrend(row.PersonId));
             AddLine(panel, "Injury status", State.InjuryStatus(row.PersonId));
+            AddSubHeader(panel, "Development Plan");
+            AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
         }
 
         if (tab == "Recruits")
@@ -2267,6 +2269,8 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Rights status", prospect.Status);
                 AddLine(panel, "Confidence", prospect.ScoutingConfidence?.ToString() ?? "Unknown");
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(prospect.GmNotes) ? "none" : prospect.GmNotes);
+                AddSubHeader(panel, "Development Plan");
+                AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
             }
         }
 
@@ -2455,6 +2459,15 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Scout Again", () => State.ScoutAgainFor(row.PersonId), State.AvailableScoutProfiles.Count > 0);
             yield return CreateDetailButton("Tournament", () => State.TournamentScoutFor(row.PersonId), State.AvailableScoutProfiles.Count > 0);
             yield return CreateDetailButton("Compare Reports", () => MessageBox.Show(State.ScoutingComparisonText(row.PersonId), "Compare Reports", MessageBoxButton.OK, MessageBoxImage.Information));
+        }
+
+        if (tab is "Roster" or "Prospect List" or "Training Camp")
+        {
+            yield return CreateDetailButton("Balanced Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Balanced));
+            yield return CreateDetailButton("Skating Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Skating));
+            yield return CreateDetailButton("Confidence Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Confidence));
+            yield return CreateDetailButton("Increase Ice Time", () => State.SetDevelopmentRoleFor(row.PersonId, DevelopmentIceTimeRole.TopSix));
+            yield return CreateDetailButton("Yearly Review", () => MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information));
         }
 
         var available = State.AvailableProspectActions(row.PersonId);
@@ -4901,6 +4914,7 @@ internal sealed class AlphaDesktopState
     private readonly ExecutiveReportService _executiveReports = new();
     private readonly ScoutingOperationsService _scoutingOperations = new();
     private readonly ScoutingIntelligenceService _scoutingIntelligence = new();
+    private readonly DevelopmentPlanningService _developmentPlanning = new();
     private readonly PlayerDossierService _playerDossiers = new();
     private readonly StaffOfficeService _staffOffice = new();
     private readonly BudgetOverviewService _budgetOverview = new();
@@ -4931,8 +4945,8 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = scenarioSnapshot;
-        Snapshot = scenarioSnapshot.AlphaSnapshot;
+        ScenarioSnapshot = _developmentPlanning.EnsureScenarioPlans(scenarioSnapshot);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
         {
@@ -6051,8 +6065,107 @@ internal sealed class AlphaDesktopState
             return "No development profile";
         }
 
-        return $"{profile.Stage}, last updated {profile.LastUpdated:yyyy-MM-dd}";
+        var plan = DevelopmentPlanFor(personId);
+        var planText = plan is null ? "no plan" : $"{string.Join("/", plan.FocusAreas)}; {plan.IceTimeRole}; morale {plan.Morale}";
+        return $"{profile.Stage}, last updated {profile.LastUpdated:yyyy-MM-dd}; {planText}";
     }
+
+    public int DevelopmentActionCount =>
+        ScenarioSnapshot.DevelopmentRecommendations.Count(recommendation => recommendation.IsActive);
+
+    public string DevelopmentPlanText(string personId)
+    {
+        var plan = DevelopmentPlanFor(personId);
+        if (plan is null)
+        {
+            return "No development plan is currently tracked.";
+        }
+
+        var review = ScenarioSnapshot.DevelopmentReviews
+            .Where(item => item.PersonId == personId)
+            .OrderByDescending(item => item.ReviewDate)
+            .FirstOrDefault();
+        var recommendation = ScenarioSnapshot.DevelopmentRecommendations
+            .Where(item => item.PersonId == personId && item.IsActive)
+            .OrderByDescending(item => item.CreatedOn)
+            .FirstOrDefault();
+        var builder = new StringBuilder();
+        builder.AppendLine($"Plan: {string.Join(", ", plan.FocusAreas)}");
+        builder.AppendLine($"Ice-time role: {plan.IceTimeRole}");
+        builder.AppendLine($"Confidence: {ConfidenceText(plan.Confidence)}");
+        builder.AppendLine($"Morale: {plan.Morale}");
+        builder.AppendLine($"Coach comments: {plan.CoachComment}");
+        builder.AppendLine($"Progress graph: placeholder for monthly development trend.");
+        if (review is not null)
+        {
+            builder.AppendLine($"Latest yearly review: {review.FutureProjection}");
+        }
+
+        if (recommendation is not null)
+        {
+            builder.AppendLine($"Coach recommendation: {recommendation.RecommendedAction}");
+        }
+
+        return builder.ToString().Trim();
+    }
+
+    public string DevelopmentReviewText(string personId)
+    {
+        var review = _developmentPlanning.GenerateYearlyReview(ScenarioSnapshot, personId);
+        ScenarioSnapshot = _developmentPlanning.StoreYearlyReview(ScenarioSnapshot, review);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        var builder = new StringBuilder();
+        builder.AppendLine($"{review.PlayerName} - {review.SeasonYear} Development Review");
+        builder.AppendLine($"Improved: {string.Join(", ", review.ImprovedThemes)}");
+        builder.AppendLine($"Regressions: {(review.RegressionThemes.Count == 0 ? "none" : string.Join(", ", review.RegressionThemes))}");
+        builder.AppendLine($"Strengths: {string.Join(", ", review.Strengths)}");
+        builder.AppendLine($"Weaknesses: {string.Join(", ", review.Weaknesses)}");
+        builder.AppendLine($"Coach: {review.CoachComment}");
+        builder.AppendLine($"Scout: {review.ScoutComment}");
+        builder.AppendLine($"GM: {review.GmComment}");
+        builder.AppendLine($"Future projection: {review.FutureProjection}");
+        LatestSummary = $"Development review generated for {review.PlayerName}.";
+        return builder.ToString();
+    }
+
+    public void SetDevelopmentPlanFor(string personId, DevelopmentPlanFocus focus)
+    {
+        var existing = DevelopmentPlanFor(personId);
+        var role = existing?.IceTimeRole ?? DevelopmentIceTimeRole.MiddleSix;
+        var result = _developmentPlanning.SetPlan(_registry, ScenarioSnapshot, personId, new[] { focus, DevelopmentPlanFocus.Confidence }, role, $"GM set {focus} development focus.");
+        ApplyDevelopmentResult(result);
+    }
+
+    public void SetDevelopmentRoleFor(string personId, DevelopmentIceTimeRole role)
+    {
+        var existing = DevelopmentPlanFor(personId);
+        var focus = existing?.FocusAreas ?? new[] { DevelopmentPlanFocus.Balanced, DevelopmentPlanFocus.Confidence };
+        var result = _developmentPlanning.SetPlan(_registry, ScenarioSnapshot, personId, focus, role, $"GM adjusted development role to {role}.");
+        ApplyDevelopmentResult(result);
+    }
+
+    private PlayerDevelopmentPlan? DevelopmentPlanFor(string personId)
+    {
+        ScenarioSnapshot = _developmentPlanning.EnsureScenarioPlans(ScenarioSnapshot);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        return ScenarioSnapshot.DevelopmentPlans.FirstOrDefault(plan => plan.PersonId == personId);
+    }
+
+    private void ApplyDevelopmentResult(DevelopmentV2Result result)
+    {
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        InboxManager.AddRange(result.InboxItems);
+        LatestSummary = result.Message;
+        EnsureSelectedDossierStillExists();
+    }
+
+    private static string ConfidenceText(int confidence) =>
+        confidence >= 80 ? "Excellent" :
+        confidence >= 65 ? "Good" :
+        confidence >= 45 ? "Average" :
+        confidence >= 30 ? "Poor" :
+        "Terrible";
 
     public string InjuryStatus(string personId)
     {
