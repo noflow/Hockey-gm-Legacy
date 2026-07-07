@@ -13,5 +13,6 @@ public enum LeagueTransactionType
     StaffHired,
     StaffReleased,
     TradeCompleted,
-    TradeDeadline
+    TradeDeadline,
+    SeasonCompleted
 }

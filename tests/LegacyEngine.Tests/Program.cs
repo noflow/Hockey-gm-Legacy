@@ -52,6 +52,7 @@ var alpha32TradeEngineTests = new Alpha32TradeEngineTests();
 var alpha33TradeDeadlineTests = new Alpha33TradeDeadlineTests();
 var alpha34CareerHistoryTests = new Alpha34CareerHistoryTests();
 var alpha35SaveLoadTests = new Alpha35SaveLoadTests();
+var alpha40MultiSeasonTests = new Alpha40MultiSeasonTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -671,6 +672,22 @@ runner.Run("alpha 3.5 load restores GM profile and team", alpha35SaveLoadTests.L
 runner.Run("alpha 3.5 version mismatch handled clearly", alpha35SaveLoadTests.VersionMismatchHandledClearly);
 runner.Run("alpha 3.5 AlphaDesktop exposes save/load controls", alpha35SaveLoadTests.AlphaDesktopExposesSaveLoadControls);
 runner.Run("alpha 3.5 no Godot database or cloud save added", alpha35SaveLoadTests.Alpha35HasNoGodotDatabaseOrCloudSave);
+runner.Run("alpha 4.0 season completes when schedule finished", alpha40MultiSeasonTests.SeasonCompletesWhenScheduleFinished);
+runner.Run("alpha 4.0 final standings archived", alpha40MultiSeasonTests.FinalStandingsArchived);
+runner.Run("alpha 4.0 player stats archived", alpha40MultiSeasonTests.PlayerStatsArchived);
+runner.Run("alpha 4.0 current season stats reset", alpha40MultiSeasonTests.CurrentSeasonStatsReset);
+runner.Run("alpha 4.0 organization history updated", alpha40MultiSeasonTests.OrganizationHistoryUpdated);
+runner.Run("alpha 4.0 end of season review generated", alpha40MultiSeasonTests.EndOfSeasonReviewGenerated);
+runner.Run("alpha 4.0 offseason phase begins", alpha40MultiSeasonTests.OffseasonPhaseBegins);
+runner.Run("alpha 4.0 expiring contracts identified", alpha40MultiSeasonTests.ExpiringContractsIdentified);
+runner.Run("alpha 4.0 pending actions created for contract decisions", alpha40MultiSeasonTests.PendingActionsCreatedForContractDecisions);
+runner.Run("alpha 4.0 player ages update naturally", alpha40MultiSeasonTests.PlayerAgesUpdateNaturally);
+runner.Run("alpha 4.0 new draft class generated", alpha40MultiSeasonTests.NewDraftClassGenerated);
+runner.Run("alpha 4.0 new draft class has unique clean names", alpha40MultiSeasonTests.NewDraftClassHasUniqueCleanNames);
+runner.Run("alpha 4.0 previous draft class not reused", alpha40MultiSeasonTests.PreviousDraftClassNotReused);
+runner.Run("alpha 4.0 save load works after rollover", alpha40MultiSeasonTests.SaveLoadWorksAfterRollover);
+runner.Run("alpha 4.0 AlphaDesktop exposes offseason history state", alpha40MultiSeasonTests.AlphaDesktopExposesOffseasonHistoryState);
+runner.Run("alpha 4.0 no Godot database cloud playoff awards or retirement", alpha40MultiSeasonTests.Alpha40HasNoGodotDatabaseCloudPlayoffAwardsOrRetirement);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

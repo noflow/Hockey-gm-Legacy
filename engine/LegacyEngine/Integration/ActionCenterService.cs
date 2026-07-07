@@ -30,6 +30,7 @@ public sealed class ActionCenterService
         AddInjuryIssues(scenario, items);
         AddSeasonReadiness(readiness, items);
         AddTradeDeadlineItems(scenario, items);
+        AddOffseasonChecklist(scenario, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -432,6 +433,36 @@ public sealed class ActionCenterService
         }
     }
 
+    private static void AddOffseasonChecklist(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        if (scenario.SeasonRollover.Checklist.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var checklistItem in scenario.SeasonRollover.Checklist.Take(5))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:offseason:{StableId(checklistItem)}",
+                checklistItem,
+                ActionCenterCategory.League,
+                checklistItem.Contains("contract", StringComparison.OrdinalIgnoreCase) ? ActionCenterPriority.Important : ActionCenterPriority.Normal,
+                null,
+                null,
+                null,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                scenario.SeasonRollover.DraftClassSummary,
+                "The season has rolled over. These items keep the club moving toward the next training camp.",
+                checklistItem.Contains("draft", StringComparison.OrdinalIgnoreCase)
+                    ? "Review Hockey Operations draft board and assign scouts."
+                    : "Review offseason planning before advancing too far.",
+                null,
+                null,
+                null));
+        }
+    }
+
     private static ActionCenterItem ApplyStatus(ActionCenterItem item, IReadOnlyDictionary<string, ActionCenterStatus>? statusOverrides) =>
         statusOverrides is not null && statusOverrides.TryGetValue(item.ActionCenterItemId, out var status)
             ? item with { Status = status }
@@ -489,4 +520,7 @@ public sealed class ActionCenterService
         scenario.AlphaSnapshot.People.FirstOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
         ?? scenario.AlphaSnapshot.Players.FirstOrDefault(person => person.PersonId == personId)?.Identity.DisplayName
         ?? personId;
+
+    private static string StableId(string text) =>
+        new string(text.ToLowerInvariant().Select(character => char.IsLetterOrDigit(character) ? character : '-').ToArray()).Trim('-');
 }

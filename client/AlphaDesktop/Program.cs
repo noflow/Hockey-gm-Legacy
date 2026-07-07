@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 4.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -111,7 +111,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 3.5 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 4.0 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -379,12 +379,14 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Standings", CreateTextScreen("Standings")),
             new WorkspaceScreen("Stats", CreateTextScreen("Stats")),
             new WorkspaceScreen("Monthly Summary", CreateTextScreen("Monthly Summary")),
+            new WorkspaceScreen("Season Archive", CreateTextScreen("Season Archive")),
             new WorkspaceScreen("Season Readiness", CreateTextScreen("Season Readiness"))
         });
 
         AddWorkspaceTab(tabs, "Reports / History", new[]
         {
             new WorkspaceScreen("Executive Reports", CreateTextScreen("Executive Reports")),
+            new WorkspaceScreen("Archived Seasons", CreateTextScreen("Archived Seasons")),
             new WorkspaceScreen("GM Career", CreateTextScreen("GM Career")),
             new WorkspaceScreen("Organization History", CreateTextScreen("Organization History")),
             new WorkspaceScreen("Draft History", CreateTextScreen("Draft History")),
@@ -421,7 +423,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 3.5 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 4.0 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -478,6 +480,7 @@ internal sealed class MainWindow : Window
         buttonPanel.Children.Add(CreateButton("Begin Season", BeginSeason));
         buttonPanel.Children.Add(CreateButton("Front Report", GenerateFrontOfficeReadinessReport));
         buttonPanel.Children.Add(CreateButton("Season Review", GenerateEndOfSeasonExecutiveReview));
+        buttonPanel.Children.Add(CreateButton("Finish Season", FinishSeason));
         buttonPanel.Children.Add(CreateButton("Save Career", SaveCareer));
         buttonPanel.Children.Add(CreateButton("Save As", SaveCareerAs));
         buttonPanel.Children.Add(CreateButton("Load Career", LoadCareer));
@@ -1120,6 +1123,8 @@ internal sealed class MainWindow : Window
 
     private void GenerateEndOfSeasonExecutiveReview() => State.GenerateEndOfSeasonExecutiveReview();
 
+    private void FinishSeason() => State.FinishSeasonAndEnterOffseason();
+
     private void MarkLatestInboxRead() => State.ManageLatestInboxMessage(InboxMessageAction.MarkRead);
 
     private void PinLatestInboxMessage() => State.ManageLatestInboxMessage(InboxMessageAction.Pin);
@@ -1357,7 +1362,9 @@ internal sealed class MainWindow : Window
         _tabs["Standings"].Text = BuildStandings();
         _tabs["Stats"].Text = BuildStats();
         _tabs["Monthly Summary"].Text = BuildMonthlySummary();
+        _tabs["Season Archive"].Text = BuildSeasonArchive();
         _tabs["Executive Reports"].Text = BuildExecutiveReports();
+        _tabs["Archived Seasons"].Text = BuildSeasonArchive();
         _tabs["GM Career"].Text = BuildGmCareerHistory();
         _tabs["Organization History"].Text = BuildOrganizationHistoryReport();
         _tabs["Draft History"].Text = BuildDraftHistoryReport();
@@ -4473,6 +4480,86 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildSeasonArchive()
+    {
+        var rollover = State.ScenarioSnapshot.SeasonRollover;
+        var builder = new StringBuilder();
+        builder.AppendLine("Season Archive / Offseason");
+        builder.AppendLine("==========================");
+        builder.AppendLine($"Current season: {State.ScenarioSnapshot.Season.Year}");
+        builder.AppendLine($"Current phase: {State.ScenarioSnapshot.Season.CurrentPhase}");
+        builder.AppendLine($"Schedule complete: {(State.CanCompleteSeason ? "Yes" : "No")}");
+        builder.AppendLine($"Archived seasons: {rollover.SeasonArchives.Count}");
+        builder.AppendLine();
+
+        if (rollover.LastTransition is not null)
+        {
+            builder.AppendLine("Last Season Transition");
+            builder.AppendLine($"  From: {rollover.LastTransition.FromSeasonYear} ({rollover.LastTransition.FromSeasonId})");
+            builder.AppendLine($"  To: {rollover.LastTransition.ToSeasonYear} ({rollover.LastTransition.ToSeasonId})");
+            builder.AppendLine($"  Transition date: {rollover.LastTransition.TransitionDate:yyyy-MM-dd}");
+            builder.AppendLine($"  Next draft date: {rollover.LastTransition.NextDraftDate:yyyy-MM-dd}");
+            builder.AppendLine($"  Summary: {rollover.LastTransition.Summary}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Offseason Checklist");
+        if (rollover.Checklist.Count == 0)
+        {
+            builder.AppendLine("  No rollover checklist yet. Finish the completed season to enter the offseason.");
+        }
+        else
+        {
+            foreach (var item in rollover.Checklist)
+            {
+                builder.AppendLine($"  [ ] {item}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Contract Decisions");
+        if (rollover.ExpiringContracts.Count == 0)
+        {
+            builder.AppendLine("  No rollover contract decisions recorded.");
+        }
+        else
+        {
+            foreach (var personId in rollover.ExpiringContracts)
+            {
+                builder.AppendLine($"  {FindPersonName(personId)}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Next Draft Class");
+        builder.AppendLine(string.IsNullOrWhiteSpace(rollover.DraftClassSummary) ? "  Not generated yet." : $"  {rollover.DraftClassSummary}");
+        builder.AppendLine($"  Current draft board entries: {State.Snapshot.DraftBoard.Entries.Count}");
+        builder.AppendLine();
+
+        builder.AppendLine("Archived Seasons");
+        if (rollover.SeasonArchives.Count == 0)
+        {
+            builder.AppendLine("  No seasons archived yet.");
+            return builder.ToString();
+        }
+
+        foreach (var archive in rollover.SeasonArchives.OrderByDescending(archive => archive.SeasonYear))
+        {
+            var standing = archive.PlayerTeamStanding;
+            builder.AppendLine($"{archive.SeasonYear} - {archive.OrganizationName}");
+            builder.AppendLine($"  Completed: {archive.CompletedOn:yyyy-MM-dd}");
+            builder.AppendLine($"  Record: {(standing is null ? "not available" : $"{standing.Wins}-{standing.Losses}-{standing.OvertimeLosses}, {standing.Points} pts")}");
+            builder.AppendLine($"  Champion placeholder: {archive.ChampionTeamName}");
+            builder.AppendLine($"  Games archived: {archive.GameResults.Count}");
+            builder.AppendLine($"  Player stat lines: {archive.PlayerStats.Count}");
+            builder.AppendLine($"  Goalie stat lines: {archive.GoalieStats.Count}");
+            builder.AppendLine($"  Summary: {archive.Summary}");
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
     private void AppendScheduleGames(StringBuilder builder, IReadOnlyList<ScheduledGame> games, bool includeResult)
     {
         if (games.Count == 0)
@@ -4717,6 +4804,7 @@ internal sealed class AlphaDesktopState
     private readonly TradeService _trades = new();
     private readonly TradeDeadlineService _tradeDeadline = new();
     private readonly SaveGameService _saveGameService = new();
+    private readonly SeasonRolloverService _seasonRollover = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
@@ -4832,6 +4920,8 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<ScheduledGame> TodaysGames => _gameRecaps.TodaysGames(ScenarioSnapshot);
 
     public SeasonStatLeaders StatLeaders => _statsPolish.BuildLeaders(ScenarioSnapshot);
+
+    public bool CanCompleteSeason => _seasonRollover.IsRegularSeasonComplete(ScenarioSnapshot);
 
     public string TeamRecordText
     {
@@ -6628,6 +6718,9 @@ internal sealed class AlphaDesktopState
     public void GenerateEndOfSeasonExecutiveReview() =>
         ApplyExecutiveReportResult(_executiveReports.GenerateEndOfSeasonExecutiveReview(_registry, ScenarioSnapshot));
 
+    public void FinishSeasonAndEnterOffseason() =>
+        ApplySeasonCompletionResult(_seasonRollover.CompleteSeasonAndEnterOffseason(_registry, ScenarioSnapshot));
+
     public int RelationshipWithGm(string personId) =>
         Snapshot.Relationships
             .Where(relationship => relationship.FromPersonId == Snapshot.GeneralManager.PersonId && relationship.ToPersonId == personId)
@@ -6829,6 +6922,21 @@ internal sealed class AlphaDesktopState
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
             InboxManager.AddRange(result.InboxItems);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplySeasonCompletionResult(SeasonCompletionResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+            InboxManager.AddRange(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
         }
 
         LastProcessedEventCount = 0;

@@ -96,6 +96,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<TransactionHistoryRecord> TransactionHistory { get; init; } = Array.Empty<TransactionHistoryRecord>();
 
+    public SeasonRolloverState SeasonRollover { get; init; } = new();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -269,5 +271,7 @@ public sealed record NewGmScenarioSnapshot(
         {
             transaction.Validate();
         }
+
+        SeasonRollover.Validate();
     }
 }
