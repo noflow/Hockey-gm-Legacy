@@ -49,6 +49,7 @@ var alpha29ActionCenterTests = new Alpha29ActionCenterTests();
 var alpha30ExistingWorldHistoryTests = new Alpha30ExistingWorldHistoryTests();
 var alpha31FreeAgentMarketTests = new Alpha31FreeAgentMarketTests();
 var alpha32TradeEngineTests = new Alpha32TradeEngineTests();
+var alpha33TradeDeadlineTests = new Alpha33TradeDeadlineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -624,6 +625,20 @@ runner.Run("alpha 3.2 inbox records player-team trade events", alpha32TradeEngin
 runner.Run("alpha 3.2 AlphaDesktop exposes trade UI actions", alpha32TradeEngineTests.AlphaDesktopExposesTradeUiActions);
 runner.Run("alpha 3.2 accepted trade does not auto-complete", alpha32TradeEngineTests.AcceptedTradeDoesNotAutoComplete);
 runner.Run("alpha 3.2 no Godot save or full trade negotiation added", alpha32TradeEngineTests.Alpha32HasNoGodotSaveOrFullTradeNegotiation);
+runner.Run("alpha 3.3 deadline date comes from season calendar", alpha33TradeDeadlineTests.DeadlineDateComesFromSeasonCalendar);
+runner.Run("alpha 3.3 status changes at deadline windows", alpha33TradeDeadlineTests.StatusChangesAtDeadlineWindows);
+runner.Run("alpha 3.3 buyer seller assessment generated", alpha33TradeDeadlineTests.BuyerSellerAssessmentGenerated);
+runner.Run("alpha 3.3 trade block expands near deadline", alpha33TradeDeadlineTests.TradeBlockExpandsNearDeadline);
+runner.Run("alpha 3.3 deadline rumors generated", alpha33TradeDeadlineTests.DeadlineRumorsGenerated);
+runner.Run("alpha 3.3 dashboard exposes deadline card", alpha33TradeDeadlineTests.DashboardExposesDeadlineCard);
+runner.Run("alpha 3.3 Action Center exposes deadline actions", alpha33TradeDeadlineTests.ActionCenterExposesDeadlineActions);
+runner.Run("alpha 3.3 owner coach assistant messages limited", alpha33TradeDeadlineTests.OwnerCoachAssistantMessagesGeneratedButLimited);
+runner.Run("alpha 3.3 trades allowed before deadline", alpha33TradeDeadlineTests.TradesAllowedBeforeDeadline);
+runner.Run("alpha 3.3 trades blocked after deadline", alpha33TradeDeadlineTests.TradesBlockedAfterDeadline);
+runner.Run("alpha 3.3 trade UI shows closed state after deadline", alpha33TradeDeadlineTests.TradeUiShowsClosedStateAfterDeadline);
+runner.Run("alpha 3.3 league news posts deadline closed", alpha33TradeDeadlineTests.LeagueNewsPostsDeadlineClosed);
+runner.Run("alpha 3.3 no inbox spam", alpha33TradeDeadlineTests.DeadlineDoesNotSpamInbox);
+runner.Run("alpha 3.3 no Godot save realtime or full negotiation added", alpha33TradeDeadlineTests.Alpha33HasNoGodotSaveRealtimeOrFullNegotiation);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

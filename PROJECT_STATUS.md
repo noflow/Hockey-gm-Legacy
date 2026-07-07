@@ -72,14 +72,15 @@ The five foundation pillars remain:
 - Alpha 3.0 - Existing World History v1
 - Alpha 3.1 - Free Agent Market v1
 - Alpha 3.2 - Trade Engine v1
+- Alpha 3.3 - Trade Deadline Event v1
 
 ## Current Milestone
 
-Alpha 3.2 - Trade Engine v1
+Alpha 3.3 - Trade Deadline Event v1
 
 ## Current Goal
 
-Add a player-controlled first trade system with trade block, trade offers, simple AI evaluation, pending GM approval, league news, inbox feedback, and desktop trade controls without adding full negotiation, trade deadline logic, retained salary, save/load, Godot, or tactical simulation.
+Make the trade deadline feel like a league event with calendar-driven status, buyer/seller assessment, deadline rumors, expanded trade block activity, Action Center pressure, League News updates, and post-deadline trade locking without adding real-time countdowns, full negotiation trees, retained salary, save/load, Godot, or tactical simulation.
 
 ## Why Relationship Engine Was Next
 
@@ -89,14 +90,14 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 3.3 - TBD
+Alpha 3.4 - TBD
 
 ## Next Milestones
 
-1. Alpha 3.3 - TBD
+1. Alpha 3.4 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, full trade negotiation trees, advanced gameplay simulation, save systems, or database persistence yet.
+Do not build Godot scenes, real-time deadline clocks, full trade negotiation trees, advanced gameplay simulation, save systems, or database persistence yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

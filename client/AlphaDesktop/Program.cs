@@ -23,7 +23,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 3.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -109,7 +109,7 @@ internal sealed class MainWindow : Window
         });
         title.Children.Add(new TextBlock
         {
-            Text = "Alpha 3.2 starts with your created GM inside the GM Office workspace.",
+            Text = "Alpha 3.3 starts with your created GM inside the GM Office workspace.",
             FontSize = 14,
             Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
             Margin = new Thickness(0, 6, 0, 0)
@@ -303,7 +303,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 3.2 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 3.3 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1287,6 +1287,11 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
+        if (State.TradeDeadlineWindow.Status != TradeDeadlineStatus.NotStarted)
+        {
+            metrics.Children.Add(CreateDashboardMetric("Trade Deadline", State.TradeDeadlineCardTitle, State.TradeDeadlineWindow.Summary, State.TradeDeadlineWindow.Status is TradeDeadlineStatus.DeadlineWeek or TradeDeadlineStatus.DeadlineDay or TradeDeadlineStatus.Closed));
+        }
+
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
         metrics.Children.Add(CreateDashboardMetric("Owner Mood", OwnerMoodText(), $"Trust {snapshot.Owner.Trust} | Confidence {snapshot.Owner.Confidence}", snapshot.Owner.Trust < 45 || snapshot.Owner.Confidence < 45));
         var nextGame = State.NextGame;
@@ -1335,6 +1340,7 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Standings rank", State.StandingsRankText);
         AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
         AddLine(summary, "Open actions", $"{State.OpenActionCount} open / {State.UrgentActionCount} urgent");
+        AddLine(summary, "Trade deadline", State.TradeDeadlineWindow.Summary);
         AddLine(summary, "Last advance result", State.LastStopReason);
         AddLine(summary, "Next stop reason", State.LastStopReason);
         var nextAction = State.ActionCenterItems.FirstOrDefault(item => item.Status == ActionCenterStatus.Open);
@@ -2114,7 +2120,20 @@ internal sealed class MainWindow : Window
     {
         if (row is null)
         {
-            return EmptyDetail("Trades", "Select a player on the league trade block to review the asking price and propose a basic offer.");
+            var empty = (StackPanel)EmptyDetail("Trades", "Select a player on the league trade block to review the asking price and propose a basic offer.");
+            AddSubHeader(empty, "Deadline Status");
+            AddLine(empty, "Status", State.TradeDeadlineWindow.Status);
+            AddLine(empty, "Deadline date", State.TradeDeadlineWindow.DeadlineDate.ToString("yyyy-MM-dd"));
+            AddLine(empty, "Days remaining", State.TradeDeadlineWindow.DaysRemaining);
+            AddLine(empty, "Buyer/seller read", State.TradeDeadlineAssessmentSummary);
+            AddLine(empty, "Trade block", State.TradeDeadlineBlockSummary);
+            AddSubHeader(empty, "Rumors");
+            foreach (var rumor in State.DeadlineRumors.Take(4))
+            {
+                AddParagraph(empty, $"{rumor.TeamName}: {rumor.Summary} ({rumor.Confidence})");
+            }
+
+            return empty;
         }
 
         var entry = State.TradeBlockEntryFor(row.PersonId);
@@ -2124,6 +2143,13 @@ internal sealed class MainWindow : Window
         }
 
         var panel = CreateDetailPanel(entry.Name, $"{entry.TeamName} | {State.PositionShortText(entry.Position)} | age {entry.Age}");
+        AddSubHeader(panel, "Deadline Status");
+        AddLine(panel, "Status", State.TradeDeadlineWindow.Status);
+        AddLine(panel, "Deadline date", State.TradeDeadlineWindow.DeadlineDate.ToString("yyyy-MM-dd"));
+        AddLine(panel, "Days remaining", State.TradeDeadlineWindow.DaysRemaining);
+        AddLine(panel, "Buyer/seller read", State.TradeDeadlineAssessmentSummary);
+        AddLine(panel, "Rumor count", State.DeadlineRumors.Count);
+        AddSubHeader(panel, "Target");
         AddLine(panel, "Player type", entry.PlayerType);
         AddLine(panel, "Current role", entry.CurrentRole);
         AddLine(panel, "Contract", entry.ContractStatus);
@@ -2139,7 +2165,7 @@ internal sealed class MainWindow : Window
             panel,
             CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)),
             CreateDetailButton("Add to Offer", () => State.SelectTradeTarget(entry.PersonId)),
-            CreateDetailButton("Propose Trade", () => State.ProposeTradeFor(entry.PersonId)),
+            CreateDetailButton("Propose Trade", () => State.ProposeTradeFor(entry.PersonId), State.TradeDeadlineWindow.TradesAllowed, "Trade deadline has passed"),
             CreateDetailButton("Withdraw Offer", () => State.WithdrawLatestTradeOffer(), State.CanWithdrawLatestTradeOffer),
             CreateDetailButton("Remove from Offer", () => State.ClearTradeBuilder(), State.HasTradeBuilderSelection));
         return panel;
@@ -2349,14 +2375,14 @@ internal sealed class MainWindow : Window
         panel.Children.Add(actions);
     }
 
-    private Button CreateDetailButton(string text, Action action, bool enabled = true)
+    private Button CreateDetailButton(string text, Action action, bool enabled = true, string? disabledTooltip = null)
     {
         var button = CreateButton(text, action);
         button.MinWidth = 118;
         button.IsEnabled = enabled;
         if (!enabled)
         {
-            button.ToolTip = "Coming soon";
+            button.ToolTip = disabledTooltip ?? "Coming soon";
         }
 
         return button;
@@ -4332,6 +4358,7 @@ internal sealed class AlphaDesktopState
     private readonly ActionCenterService _actionCenter = new();
     private readonly FreeAgentMarketService _freeAgents = new();
     private readonly TradeService _trades = new();
+    private readonly TradeDeadlineService _tradeDeadline = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly Dictionary<string, ActionCenterStatus> _actionCenterStatuses = [];
@@ -4368,6 +4395,27 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<TradeBlockEntry> TradeBlockEntries =>
         ScenarioSnapshot.TradeBlock?.Entries ?? Array.Empty<TradeBlockEntry>();
+
+    public TradeDeadlineWindow TradeDeadlineWindow => _tradeDeadline.GetWindow(ScenarioSnapshot, _registry.Rulebook);
+
+    public IReadOnlyList<DeadlineRumor> DeadlineRumors =>
+        ScenarioSnapshot.TradeDeadlineState?.Rumors ?? Array.Empty<DeadlineRumor>();
+
+    public string TradeDeadlineCardTitle =>
+        TradeDeadlineWindow.Status switch
+        {
+            TradeDeadlineStatus.DeadlineDay => "Today",
+            TradeDeadlineStatus.Closed => "Closed",
+            _ => $"{Math.Max(0, TradeDeadlineWindow.DaysRemaining)} day(s)"
+        };
+
+    public string TradeDeadlineAssessmentSummary =>
+        ScenarioSnapshot.TradeDeadlineState?.BuyerSellerAssessment?.Summary
+        ?? _tradeDeadline.AssessBuyerSeller(ScenarioSnapshot).Summary;
+
+    public string TradeDeadlineBlockSummary =>
+        ScenarioSnapshot.TradeDeadlineState?.LastTradeBlockUpdate?.Summary
+        ?? "No deadline expansion yet.";
 
     public string LatestTradeResponseText =>
         ScenarioSnapshot.TradeOffers
@@ -5636,6 +5684,12 @@ internal sealed class AlphaDesktopState
         if (entry is null)
         {
             LatestSummary = "Selected trade target is no longer on the trade block.";
+            return;
+        }
+
+        if (!TradeDeadlineWindow.TradesAllowed)
+        {
+            LatestSummary = "Trade deadline has passed. New trade proposals are locked.";
             return;
         }
 

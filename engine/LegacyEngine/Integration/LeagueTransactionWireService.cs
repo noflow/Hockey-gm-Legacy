@@ -112,6 +112,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.DraftPick => LeagueNewsCategory.Draft,
             LeagueTransactionType.StaffHired or LeagueTransactionType.StaffReleased => LeagueNewsCategory.Staff,
             LeagueTransactionType.TradeCompleted => LeagueNewsCategory.RosterMoves,
+            LeagueTransactionType.TradeDeadline => LeagueNewsCategory.Deadline,
             _ => LeagueNewsCategory.All
         };
 
@@ -130,6 +131,12 @@ public sealed class LeagueTransactionWireService
             LegacyEventType.StaffHired => LeagueTransactionType.StaffHired,
             LegacyEventType.StaffReleased => LeagueTransactionType.StaffReleased,
             LegacyEventType.TradeCompleted => LeagueTransactionType.TradeCompleted,
+            LegacyEventType.TradeDeadlineClosed
+                or LegacyEventType.DeadlineRumorCreated
+                or LegacyEventType.DeadlineTradeBlockExpanded
+                or LegacyEventType.TradeDeadlineApproaching
+                or LegacyEventType.TradeDeadlineWeekStarted
+                or LegacyEventType.TradeDeadlineDayStarted => LeagueTransactionType.TradeDeadline,
             _ => null
         };
 
@@ -149,6 +156,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.StaffHired => $"{teamName} hired {personName}.",
             LeagueTransactionType.StaffReleased => $"{teamName} released {personName}.",
             LeagueTransactionType.TradeCompleted => $"{teamName} completed a trade involving {personName}.",
+            LeagueTransactionType.TradeDeadline => $"{teamName} trade deadline update: {personName}.",
             _ => $"{teamName} updated {personName}."
         };
 

@@ -57,6 +57,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 3.0 Existing World History v1
 - Alpha 3.1 Free Agent Market v1
 - Alpha 3.2 Trade Engine v1
+- Alpha 3.3 Trade Deadline Event v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -108,6 +109,8 @@ Alpha 3.1 - Free Agent Market v1 adds unsigned player management to Hockey Opera
 
 Alpha 3.2 - Trade Engine v1 adds the first player-controlled trade flow. The GM can review a league trade block, inspect available players, build simple offers from roster players, prospect rights, or draft-pick placeholders, propose trades, receive AI accept/reject/counter feedback, and complete accepted trades only through explicit Pending GM Action approval. Completed trades create league news while the GM inbox stays focused on team-relevant trade decisions.
 
+Alpha 3.3 - Trade Deadline Event v1 makes the deadline a calendar-driven league event. The engine tracks approaching, deadline week, deadline day, and closed states from the SeasonEngine calendar, expands the trade block near the deadline, creates limited rumors and owner/coach/assistant pressure messages, adds deadline items to the Action Center and League News, and blocks new trade proposals after the deadline until the playoff/offseason window. Accepted trades created before the deadline remain valid pending GM approval.
+
 Inbox v2 organizes GM messages into category tabs, supports read/unread, archive, delete, and pin state, and keeps Event Engine history intact.
 
 Alpha 1.2 refines the desktop inbox into an email-style GM workspace with a category sidebar, message list, reading pane, row-level actions, and local filters.
@@ -126,7 +129,7 @@ Run the basic desktop UI:
 dotnet run --project client/AlphaDesktop
 ```
 
-The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, staff vacancies, Hockey Operations Budget, Recruiting v2, Free Agent Market v1, Trade Engine v1, Player Dossier windows, roster filters, selectable person-specific action panels, a League News transaction wire, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. The first-month flow adds smarter advance controls, priority inbox handling, monthly GM summaries, realistic draft prospect bios, a 26-player junior roster target, and a clearer three-column live draft experience. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
+The desktop playtest harness starts with GM creation and draft preparation, supports Staff & Scouting Operations, Staff Control, Staff Candidate hiring with salary asks, staff vacancies, Hockey Operations Budget, Recruiting v2, Free Agent Market v1, Trade Engine v1, Trade Deadline Event v1, Player Dossier windows, roster filters, selectable person-specific action panels, a League News transaction wire, and a card-based dashboard with notification counts, then unlocks training camp after draft/offseason setup, Season Readiness before Opening Night, Executive Reports for the career archive, and a basic Schedule/Standings/Stats season loop with readable game recaps after Begin Season. The first-month flow adds smarter advance controls, priority inbox handling, monthly GM summaries, realistic draft prospect bios, a 26-player junior roster target, and a clearer three-column live draft experience. Smoke tests and the console harness keep a Jordan Hayes fallback when no custom GM is supplied.
 
 Available commands:
 

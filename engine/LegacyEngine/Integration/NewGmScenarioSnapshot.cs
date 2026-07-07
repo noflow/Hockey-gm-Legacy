@@ -80,6 +80,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<TradeOffer> TradeOffers { get; init; } = Array.Empty<TradeOffer>();
 
+    public TradeDeadlineState? TradeDeadlineState { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -225,5 +227,7 @@ public sealed record NewGmScenarioSnapshot(
         {
             offer.Validate();
         }
+
+        TradeDeadlineState?.Validate();
     }
 }

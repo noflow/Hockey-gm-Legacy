@@ -150,7 +150,28 @@ public sealed class InboxManager
                 or LegacyEventType.TradeFailedValidation
                 or LegacyEventType.TradeBlockUpdated => InboxCategory.Contracts,
             LegacyEventType.DraftStarted or LegacyEventType.PlayerDrafted or LegacyEventType.DraftCompleted or LegacyEventType.DraftRecapCreated or LegacyEventType.DraftBoardChanged or LegacyEventType.OwnerDraftReaction or LegacyEventType.DraftOpened or LegacyEventType.DraftClosed or LegacyEventType.ProspectDecisionMade or LegacyEventType.ProspectContractOffered or LegacyEventType.ProspectSigned or LegacyEventType.ProspectInvitedToCamp or LegacyEventType.ProspectReturned or LegacyEventType.ProspectAssignedToAffiliate or LegacyEventType.ProspectRightsReleased => InboxCategory.Draft,
-            LegacyEventType.SeasonCreated or LegacyEventType.PhaseChanged or LegacyEventType.MilestoneReached or LegacyEventType.FreeAgencyOpened or LegacyEventType.FreeAgencyClosed or LegacyEventType.OpeningRosterValidated or LegacyEventType.OpeningRosterRejected or LegacyEventType.SeasonReady or LegacyEventType.FrontOfficeReadinessReportCreated or LegacyEventType.EndOfSeasonExecutiveReviewCreated or LegacyEventType.SeasonStarted or LegacyEventType.SeasonEnded or LegacyEventType.MonthlyGmSummaryCreated => InboxCategory.League,
+            LegacyEventType.SeasonCreated
+                or LegacyEventType.PhaseChanged
+                or LegacyEventType.MilestoneReached
+                or LegacyEventType.FreeAgencyOpened
+                or LegacyEventType.FreeAgencyClosed
+                or LegacyEventType.OpeningRosterValidated
+                or LegacyEventType.OpeningRosterRejected
+                or LegacyEventType.SeasonReady
+                or LegacyEventType.FrontOfficeReadinessReportCreated
+                or LegacyEventType.EndOfSeasonExecutiveReviewCreated
+                or LegacyEventType.SeasonStarted
+                or LegacyEventType.SeasonEnded
+                or LegacyEventType.MonthlyGmSummaryCreated
+                or LegacyEventType.TradeDeadlineApproaching
+                or LegacyEventType.TradeDeadlineWeekStarted
+                or LegacyEventType.TradeDeadlineDayStarted
+                or LegacyEventType.TradeDeadlineClosed
+                or LegacyEventType.DeadlineRumorCreated
+                or LegacyEventType.DeadlineTradeBlockExpanded
+                or LegacyEventType.DeadlineBuyerSellerAssessmentCreated
+                or LegacyEventType.DeadlineOwnerExpectationCreated
+                or LegacyEventType.DeadlineAssistantRecommendationCreated => InboxCategory.League,
             _ => CategorizeByText(item)
         };
 

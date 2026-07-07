@@ -120,6 +120,19 @@ public sealed class TradeService
         ArgumentNullException.ThrowIfNull(scenario);
         offer.Validate();
 
+        var window = new TradeDeadlineService().GetWindow(scenario, registry.Rulebook);
+        if (!window.TradesAllowed)
+        {
+            var failed = offer with
+            {
+                Status = TradeOfferStatus.FailedValidation,
+                Evaluation = new TradeEvaluation(TradeOfferStatus.FailedValidation, -100, "Trade deadline has passed.", new[] { "Trade deadline has passed." }, 0m, 0)
+            };
+            var failedScenario = UpsertOffer(scenario, failed);
+            QueueTradeEvent(registry, failedScenario, LegacyEventType.TradeFailedValidation, "Trade failed validation", "Trade deadline has passed.", failed);
+            return Result(false, failedScenario, failed, failed.Evaluation, new[] { Inbox(failedScenario, LegacyEventType.TradeFailedValidation, "Trade deadline has passed", "New trade proposals are closed after the deadline.", LegacyEventSeverity.Warning) }, Array.Empty<LeagueTransaction>(), "Trade deadline has passed.");
+        }
+
         var validation = ValidateOffer(scenario, offer);
         if (validation is not null)
         {

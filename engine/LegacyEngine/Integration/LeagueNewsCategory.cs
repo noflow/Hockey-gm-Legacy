@@ -7,5 +7,6 @@ public enum LeagueNewsCategory
     RosterMoves,
     Injuries,
     Draft,
-    Staff
+    Staff,
+    Deadline
 }

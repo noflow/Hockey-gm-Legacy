@@ -29,6 +29,7 @@ public sealed class ActionCenterService
         AddUpcomingGames(scenario, items);
         AddInjuryIssues(scenario, items);
         AddSeasonReadiness(readiness, items);
+        AddTradeDeadlineItems(scenario, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -141,6 +142,12 @@ public sealed class ActionCenterService
         if (scenario.TrainingCamp is not null)
         {
             events.Add($"Training camp: opened {scenario.TrainingCamp.OpenedOn:yyyy-MM-dd}; roster deadline {scenario.Season.Calendar.SeasonStart.Value:yyyy-MM-dd}.");
+        }
+
+        var deadline = new TradeDeadlineService().GetWindow(scenario);
+        if (deadline.Status != TradeDeadlineStatus.NotStarted)
+        {
+            events.Add($"Trade deadline: {deadline.Summary}");
         }
 
         events.Add($"Month-end report: {new DateOnly(scenario.CurrentDate.Year, scenario.CurrentDate.Month, DateTime.DaysInMonth(scenario.CurrentDate.Year, scenario.CurrentDate.Month)):yyyy-MM-dd}.");
@@ -373,6 +380,55 @@ public sealed class ActionCenterService
                 null,
                 null,
                 null));
+        }
+    }
+
+    private static void AddTradeDeadlineItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var window = new TradeDeadlineService().GetWindow(scenario);
+        if (window.Status == TradeDeadlineStatus.NotStarted)
+        {
+            return;
+        }
+
+        var priority = window.Status is TradeDeadlineStatus.DeadlineDay or TradeDeadlineStatus.Closed
+            ? ActionCenterPriority.Urgent
+            : window.Status == TradeDeadlineStatus.DeadlineWeek ? ActionCenterPriority.Important : ActionCenterPriority.Normal;
+        items.Add(new ActionCenterItem(
+            "action-center:trade-deadline:review",
+            window.Status == TradeDeadlineStatus.Closed ? "Trade deadline closed" : "Review trade deadline plan",
+            ActionCenterCategory.League,
+            priority,
+            window.DeadlineDate,
+            null,
+            null,
+            scenario.Organization.OrganizationId,
+            scenario.Organization.Name,
+            window.Summary,
+            window.Status == TradeDeadlineStatus.Closed ? "New trade proposals are locked." : "Deadline pressure can change the trade block, owner expectations, and budget decisions.",
+            window.Status == TradeDeadlineStatus.Closed ? "Review completed trades and unresolved pending actions." : "Review Hockey Operations trades and resolve pending trade decisions.",
+            null,
+            null,
+            null));
+
+        if (scenario.PendingActions.Any(action => action.IsOpen && action.ActionType == PendingGmActionType.ApproveTrade))
+        {
+            items.Add(new ActionCenterItem(
+                "action-center:trade-deadline:pending-trade",
+                "Resolve pending accepted trade",
+                ActionCenterCategory.Contracts,
+                ActionCenterPriority.Urgent,
+                window.DeadlineDate,
+                null,
+                null,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                "An accepted trade is waiting for GM approval.",
+                "Accepted pre-deadline trades remain valid, but the roster plan is unclear until the GM decides.",
+                "Approve or decline the pending trade in the Action Center.",
+                null,
+                null,
+                scenario.PendingActions.First(action => action.IsOpen && action.ActionType == PendingGmActionType.ApproveTrade).ActionId));
         }
     }
 
