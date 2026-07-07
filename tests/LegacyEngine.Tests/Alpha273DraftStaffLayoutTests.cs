@@ -102,7 +102,7 @@ internal sealed class Alpha273DraftStaffLayoutTests
     {
         var source = AlphaDesktopSource();
 
-        Assert.True(source.Contains("Hire Staff / Staff Candidates", StringComparison.Ordinal), "Staff UI should separate candidates.");
+        Assert.True(source.Contains("Hire Staff / Staff Market", StringComparison.Ordinal), "Staff UI should separate staff market candidates.");
         Assert.True(source.Contains("Current Staff", StringComparison.Ordinal), "Staff UI should expose current staff section.");
         Assert.True(source.Contains("Vacancies", StringComparison.Ordinal), "Staff UI should expose vacancies section.");
         Assert.True(source.Contains("CreateDetailButton(\"Hire Candidate\"", StringComparison.Ordinal), "Hire button should exist for candidates.");

@@ -1,25 +1,21 @@
-using LegacyEngine.Staff;
-
 namespace LegacyEngine.Integration;
 
-public sealed record StaffOfficeResult(
+public sealed record StaffMarketResult(
     bool Success,
     NewGmScenarioSnapshot ScenarioSnapshot,
-    StaffCandidate? Candidate,
-    StaffFocusAssignment? FocusAssignment,
-    StaffEvaluation? Evaluation,
-    StaffChemistryReport? Chemistry,
-    IReadOnlyList<AlphaInboxItem> InboxItems,
+    StaffMarket? StaffMarket,
+    StaffMarketCandidate? Candidate,
+    StaffMovementRecord? Movement,
     IReadOnlyList<LeagueTransaction> LeagueTransactions,
+    IReadOnlyList<AlphaInboxItem> InboxItems,
     string Message)
 {
     public void Validate()
     {
         ScenarioSnapshot.Validate();
+        StaffMarket?.Validate();
         Candidate?.Validate();
-        FocusAssignment?.Validate();
-        Evaluation?.Validate();
-        Chemistry?.Validate();
+        Movement?.Validate();
         foreach (var transaction in LeagueTransactions)
         {
             transaction.Validate();
@@ -27,7 +23,7 @@ public sealed record StaffOfficeResult(
 
         if (string.IsNullOrWhiteSpace(Message))
         {
-            throw new ArgumentException("Staff control result message is required.", nameof(Message));
+            throw new ArgumentException("Staff market result message is required.", nameof(Message));
         }
     }
 }

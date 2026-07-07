@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.3.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -90,6 +90,9 @@ internal sealed class MainWindow : Window
     private readonly ComboBox _backgroundInput = new() { ItemsSource = Enum.GetValues<GmBackground>(), SelectedItem = GmBackground.Operations };
     private readonly ComboBox _styleInput = new() { ItemsSource = Enum.GetValues<GmStyle>(), SelectedItem = GmStyle.Balanced };
     private Border? _draftModalOverlay;
+    private ListBox? _tradeYourAssetsList;
+    private ListBox? _tradeOtherAssetsList;
+    private ListBox? _tradeProposalList;
 
     public MainWindow()
     {
@@ -583,7 +586,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 4.0 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 5.3.1 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2135,14 +2138,14 @@ internal sealed class MainWindow : Window
     private IReadOnlyList<SelectablePersonRow> BuildStaffCandidateRows()
     {
         var rows = new List<SelectablePersonRow>();
-        rows.Add(new SelectablePersonRow("staff-section:candidates", "Hire Staff / Staff Candidates", "StaffSection", "Available candidates only", "Hire button appears only for candidate rows.", "Generate candidates, select one, then hire from the candidate detail panel."));
-        rows.AddRange(State.ScenarioSnapshot.StaffCandidates.Select(candidate => new SelectablePersonRow(
-            candidate.Person.PersonId,
-            candidate.Person.Identity.DisplayName,
+        rows.Add(new SelectablePersonRow("staff-section:candidates", "Hire Staff / Staff Market", "StaffSection", "Living market candidates", "Hire button appears only for available/interested candidates.", "Select a market candidate, review status and interest, then hire or approach from the candidate detail panel."));
+        rows.AddRange(State.StaffMarketCandidates.Select(market => new SelectablePersonRow(
+            market.PersonId,
+            market.Name,
             "Candidate",
-            $"Staff Candidate - {candidate.StaffMember.CurrentRole} - ask {candidate.ExpectedSalary.AnnualAmount:C0}",
-            $"{candidate.StaffMember.Department} | reputation {candidate.Reputation} | role fit {candidate.RoleFit} | salary ask {candidate.ExpectedSalary.AnnualAmount:C0}",
-            $"{candidate.HiringRecommendation} Strengths: {string.Join(", ", candidate.Strengths)}. Risk: {candidate.ChemistryRisk}")));
+            $"Staff Candidate - {market.DesiredRole} - {market.Status} - ask {market.SalaryAsk.AnnualAmount:C0}",
+            $"{market.Department} | reputation {market.Reputation} | interest {market.HiringInterest}/100 | {market.CurrentEmployer}",
+            $"{market.AvailabilitySummary} Strengths: {string.Join(", ", market.Candidate.Strengths)}. Risk: {market.Candidate.ChemistryRisk}")));
         return rows;
     }
 
@@ -2376,16 +2379,14 @@ internal sealed class MainWindow : Window
     {
         if (row is null)
         {
-            var empty = EmptyDetail("Staff", "Current Staff are listed with active roles. Staff Candidates appear below once generated. Use Hire Staff to open the candidate pool.");
+            var empty = EmptyDetail("Staff", "Current Staff are listed with active roles. Staff Market candidates appear in Hire Staff.");
             AddSubHeader(empty, "Current Staff");
             AddParagraph(empty, "Select an employed staff member to view profile, focus, chemistry, and staff actions.");
             AddSubHeader(empty, "Vacant Positions");
             AddParagraph(empty, State.StaffVacancySummary);
-            AddSubHeader(empty, "Available Candidates");
-            AddParagraph(empty, "Candidate rows show role fit, department, reputation, strengths, weaknesses, chemistry risk, and recommendation.");
-            AddSubHeader(empty, "Hire Staff");
-            AddParagraph(empty, "Generate candidates, select a candidate row, then use Hire Candidate in the detail panel.");
-            AddActions(empty, CreateDetailButton("Hire Staff", GenerateStaffCandidates), CreateDetailButton("Generate Candidates", GenerateStaffCandidates), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
+            AddSubHeader(empty, "Living Staff Market");
+            AddParagraph(empty, "Market rows show availability, current employer, interest, salary ask, strengths, weaknesses, chemistry risk, and recommendation.");
+            AddActions(empty, CreateDetailButton("Review Staff Market", () => State.RefreshStaffMarket()), CreateDetailButton("Staff Warning", GenerateStaffConflictWarning));
             return empty;
         }
 
@@ -2397,11 +2398,11 @@ internal sealed class MainWindow : Window
             AddParagraph(panel, row.Summary);
             if (row.PersonId == "staff-section:candidates")
             {
-                AddActions(panel, CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
+                AddActions(panel, CreateDetailButton("Refresh Market", () => State.RefreshStaffMarket()));
             }
             else if (row.PersonId == "staff-section:vacancies")
             {
-                AddActions(panel, CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
+                AddActions(panel, CreateDetailButton("Review Staff Market", () => State.RefreshStaffMarket()));
             }
 
             return panel;
@@ -2421,43 +2422,51 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Filled", $"{vacancy.Current}/{vacancy.Required}");
             AddLine(panel, "Maximum", vacancy.Maximum);
             AddLine(panel, "Warning", vacancy.Warning);
-            AddParagraph(panel, "Generate candidates, compare fit and salary, then hire a candidate for this role.");
+            AddParagraph(panel, "Review the staff market, compare fit and salary, then hire a candidate for this role.");
             AddActions(panel,
-                CreateDetailButton("Generate Candidates", GenerateStaffCandidates),
-                CreateDetailButton("Hire Staff", GenerateStaffCandidates));
+                CreateDetailButton("Review Staff Market", () => State.RefreshStaffMarket()));
             return panel;
         }
 
         if (row.Kind == "Candidate")
         {
-            var candidate = State.ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == row.PersonId);
-            if (candidate is null)
+            var market = State.StaffMarketCandidateFor(row.PersonId);
+            if (market is null)
             {
                 return EmptyDetail("Staff Candidate", "This candidate is no longer available.");
             }
 
+            var candidate = market.Candidate;
             var panel = CreateDetailPanel(candidate.Person.Identity.DisplayName, "Staff candidate");
             AddLine(panel, "Role", candidate.StaffMember.CurrentRole);
             AddLine(panel, "Department", candidate.StaffMember.Department);
+            AddLine(panel, "Market status", market.Status);
+            AddLine(panel, "Hiring interest", $"{market.HiringInterest}/100");
+            AddLine(panel, "Reason available", market.ReasonAvailable);
             AddLine(panel, "Role fit", candidate.RoleFit);
             AddLine(panel, "Department fit", candidate.DepartmentFit);
             AddLine(panel, "Reputation", candidate.Reputation);
             AddLine(panel, "Salary ask", $"{candidate.ExpectedSalary.AnnualAmount:C0}");
-            AddLine(panel, "Current employer", candidate.CurrentEmployer);
+            AddLine(panel, "Current employer", market.CurrentEmployer);
             AddLine(panel, "Years experience", candidate.YearsExperience);
             AddLine(panel, "Strengths", string.Join(", ", candidate.Strengths));
             AddLine(panel, "Weaknesses", string.Join(", ", candidate.Weaknesses));
             AddLine(panel, "Chemistry risk", candidate.ChemistryRisk);
             AddLine(panel, "Recommendation", candidate.HiringRecommendation);
+            AddSubHeader(panel, "Career History");
+            foreach (var line in market.CareerHistory.Take(4))
+            {
+                AddParagraph(panel, line);
+            }
+
             AddSubHeader(panel, "Hiring Fit");
             AddParagraph(panel, State.CandidateHiringFitText(row.PersonId));
             AddParagraph(panel, candidate.HiringRecommendation);
             AddActions(panel,
-                CreateDetailButton("Hire Candidate", () => State.HireCandidateFor(row.PersonId)),
-                CreateDetailButton("Replace", () => State.HireCandidateFor(row.PersonId)),
+                CreateDetailButton("Hire Candidate", () => State.HireCandidateFor(row.PersonId), market.CanBeHired, market.Status == StaffMarketStatus.Hired ? "Already hired" : "Candidate is employed elsewhere"),
+                CreateDetailButton("Approach Candidate", () => ShowConfirmationPopup("Approach Candidate", "Approach Candidate is a placeholder for employed staff interest."), !market.CanBeHired, "Available candidates can be hired directly"),
                 CreateDetailButton("Compare", () => MessageBox.Show(State.CompareCandidateText(row.PersonId), "Compare Candidate", MessageBoxButton.OK, MessageBoxImage.Information)),
-                CreateDetailButton("Salary Offer", () => MessageBox.Show("Salary offer is a placeholder for now. Hiring uses the listed salary ask.", "Salary Offer", MessageBoxButton.OK, MessageBoxImage.Information)),
-                CreateDetailButton("Generate Candidates", GenerateStaffCandidates));
+                CreateDetailButton("Salary Offer", () => MessageBox.Show("Salary offer is a placeholder for now. Hiring uses the listed salary ask.", "Salary Offer", MessageBoxButton.OK, MessageBoxImage.Information)));
             return panel;
         }
 
@@ -2821,35 +2830,62 @@ internal sealed class MainWindow : Window
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.05, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
+        void Reopen()
+        {
+            Window.GetWindow(root)?.Close();
+            ShowTradeBuilderPopup(entry.PersonId);
+        }
+
         var yourAssets = CreateDetailPanel("Your assets", State.ScenarioSnapshot.Organization.Name);
-        AddSubHeader(yourAssets, "Roster players");
-        foreach (var player in State.Snapshot.Roster.ActivePlayers.Take(10))
+        AddParagraph(yourAssets, "Select an asset, then add it to You Give.");
+        _tradeYourAssetsList = new ListBox
         {
-            AddParagraph(yourAssets, $"{FindPersonName(player.PersonId)} | {player.Position} | age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} | {State.ContractRightsStatus(player.PersonId)}");
-        }
-
-        AddSubHeader(yourAssets, "Prospects / rights");
-        foreach (var prospect in State.ScenarioSnapshot.ProspectRights.Take(8))
+            ItemsSource = State.YourTradeAssetRows(),
+            MinHeight = 330
+        };
+        _tradeYourAssetsList.SelectionChanged += (_, _) =>
         {
-            AddParagraph(yourAssets, $"{prospect.ProspectName} | {prospect.Position} | age {prospect.Age} | {prospect.Status}");
-        }
-
-        AddSubHeader(yourAssets, "Draft picks");
-        AddParagraph(yourAssets, $"{State.ScenarioSnapshot.Season.Year + 1} draft pick placeholders");
+            if (_tradeYourAssetsList.SelectedItem is TradeAssetRow row)
+            {
+                State.SelectYourTradeAsset(row.Asset.AssetId);
+            }
+        };
+        _tradeYourAssetsList.MouseDoubleClick += (_, _) =>
+        {
+            if (_tradeYourAssetsList.SelectedItem is TradeAssetRow row)
+            {
+                State.AddYourAssetToTradeProposal(row.Asset);
+                Reopen();
+            }
+        };
+        yourAssets.Children.Add(_tradeYourAssetsList);
+        AddActions(yourAssets, CreateDetailButton("Add Selected From Your Team", () =>
+        {
+            if (_tradeYourAssetsList.SelectedItem is TradeAssetRow row)
+            {
+                State.AddYourAssetToTradeProposal(row.Asset);
+                Reopen();
+            }
+        }));
         Grid.SetColumn(yourAssets, 0);
         root.Children.Add(yourAssets);
 
         var proposal = CreateDetailPanel("Trade proposal", $"{entry.Name} from {entry.TeamName}");
-        AddLine(proposal, "You give", State.TradeProjectedOfferText(entry.PersonId));
-        AddLine(proposal, "You receive", $"{entry.Name} | {State.PositionShortText(entry.Position)} | {entry.CurrentRole}");
-        AddLine(proposal, "Roster impact", State.TradeProjectedRosterImpact(entry.PersonId));
-        AddLine(proposal, "Budget impact", State.TradeProjectedBudgetImpact(entry.PersonId));
-        AddLine(proposal, "AI evaluation", State.LatestTradeResponseText);
+        AddSubHeader(proposal, "You Give / You Receive");
+        _tradeProposalList = new ListBox
+        {
+            ItemsSource = State.CurrentTradeProposalRows(),
+            MinHeight = 170
+        };
+        proposal.Children.Add(_tradeProposalList);
+        AddLine(proposal, "Roster impact", State.CurrentTradeRosterImpact);
+        AddLine(proposal, "Budget impact", State.CurrentTradeBudgetImpact);
+        AddLine(proposal, "AI evaluation", State.CurrentTradeEvaluationText);
         AddSubHeader(proposal, "Reasons");
-        var reasons = State.LatestTradeReasons.Take(5).ToArray();
+        var reasons = State.CurrentTradeEvaluationReasons.Take(5).ToArray();
         if (reasons.Length == 0)
         {
-            AddParagraph(proposal, "No response yet. Propose the trade to get the other team's answer.");
+            AddParagraph(proposal, "Add assets from both sides to preview the other team's evaluation.");
         }
         else
         {
@@ -2860,21 +2896,55 @@ internal sealed class MainWindow : Window
         }
 
         AddSubHeader(proposal, "Counter");
-        AddParagraph(proposal, State.LatestTradeCounterText);
+        AddParagraph(proposal, State.CurrentTradeCounterText);
+        AddActions(proposal,
+            CreateDetailButton("Remove Selected From Offer", () =>
+            {
+                if (_tradeProposalList.SelectedItem is TradeAssetRow row)
+                {
+                    State.RemoveAssetFromTradeProposal(row.Asset);
+                    Reopen();
+                }
+            }, State.HasTradeProposalAssets),
+            CreateDetailButton("Clear Offer", () =>
+            {
+                State.ClearTradeBuilder();
+                Reopen();
+            }, State.HasTradeProposalAssets));
         Grid.SetColumn(proposal, 1);
         root.Children.Add(proposal);
 
         var otherAssets = CreateDetailPanel("Other team assets", entry.TeamName);
-        AddSubHeader(otherAssets, "Roster");
-        foreach (var player in State.OtherTeamTradeRoster(entry.OrganizationId).Take(12))
+        AddParagraph(otherAssets, "Select an asset, then add it to You Receive.");
+        _tradeOtherAssetsList = new ListBox
         {
-            AddParagraph(otherAssets, $"{player.Name} | {State.PositionShortText(player.Position)} | age {player.Age} | {player.CurrentRole} | {player.InterestLevel}");
-        }
-
-        AddSubHeader(otherAssets, "Prospects / rights");
-        AddParagraph(otherAssets, "Team prospect list placeholder; trade-available rights appear on the roster list when exposed by the engine.");
-        AddSubHeader(otherAssets, "Draft picks");
-        AddParagraph(otherAssets, $"{entry.TeamName} draft pick placeholders");
+            ItemsSource = State.OtherTradeAssetRows(entry.OrganizationId, entry.TeamName),
+            MinHeight = 330
+        };
+        _tradeOtherAssetsList.SelectionChanged += (_, _) =>
+        {
+            if (_tradeOtherAssetsList.SelectedItem is TradeAssetRow row)
+            {
+                State.SelectOtherTradeAsset(row.Asset.AssetId);
+            }
+        };
+        _tradeOtherAssetsList.MouseDoubleClick += (_, _) =>
+        {
+            if (_tradeOtherAssetsList.SelectedItem is TradeAssetRow row)
+            {
+                State.AddOtherAssetToTradeProposal(row.Asset);
+                Reopen();
+            }
+        };
+        otherAssets.Children.Add(_tradeOtherAssetsList);
+        AddActions(otherAssets, CreateDetailButton("Add Selected From Other Team", () =>
+        {
+            if (_tradeOtherAssetsList.SelectedItem is TradeAssetRow row)
+            {
+                State.AddOtherAssetToTradeProposal(row.Asset);
+                Reopen();
+            }
+        }));
         Grid.SetColumn(otherAssets, 2);
         root.Children.Add(otherAssets);
 
@@ -2883,14 +2953,20 @@ internal sealed class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 14, 0, 0)
         };
-        actions.Children.Add(CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)));
+        actions.Children.Add(CreateDetailButton("View Dossier", () =>
+        {
+            var selected = (_tradeOtherAssetsList?.SelectedItem as TradeAssetRow)?.Asset
+                ?? (_tradeYourAssetsList?.SelectedItem as TradeAssetRow)?.Asset
+                ?? State.CurrentTradeProposalAssets.FirstOrDefault();
+            OpenDossierFor(selected?.AssetId ?? entry.PersonId);
+        }));
         actions.Children.Add(CreateDetailButton("Contract Offer", () => ShowContractOfferPlaceholder(entry.PersonId), false, "Coming soon"));
         actions.Children.Add(CreateDetailButton("Propose Trade", () =>
         {
-            State.ProposeTradeFor(entry.PersonId);
+            State.ProposeCurrentTrade(entry.OrganizationId, entry.TeamName);
             RefreshAll();
             Window.GetWindow(root)?.Close();
-        }, State.TradeDeadlineWindow.TradesAllowed, "Trade deadline has passed"));
+        }, State.CanProposeCurrentTrade && State.TradeDeadlineWindow.TradesAllowed, State.TradeDeadlineWindow.TradesAllowed ? "Trade must include assets on both sides" : "Trade deadline has passed"));
         actions.Children.Add(CreateDetailButton("Withdraw", () =>
         {
             State.WithdrawLatestTradeOffer();
@@ -2900,9 +2976,8 @@ internal sealed class MainWindow : Window
         actions.Children.Add(CreateDetailButton("Clear", () =>
         {
             State.ClearTradeBuilder();
-            RefreshAll();
-            Window.GetWindow(root)?.Close();
-        }, State.HasTradeBuilderSelection));
+            Reopen();
+        }, State.HasTradeProposalAssets));
         Grid.SetRow(actions, 1);
         Grid.SetColumnSpan(actions, 3);
         root.Children.Add(actions);
@@ -4568,18 +4643,20 @@ internal sealed class MainWindow : Window
         }
 
         builder.AppendLine();
-        builder.AppendLine("Candidate Pool / Available Candidates");
-        if (State.ScenarioSnapshot.StaffCandidates.Count == 0)
+        builder.AppendLine("Living Staff Market");
+        if (State.StaffMarketCandidates.Count == 0)
         {
-            builder.AppendLine("  No candidates generated yet. Use Candidates to create the first pool.");
+            builder.AppendLine("  No staff market candidates are available yet.");
         }
 
-        foreach (var candidate in State.ScenarioSnapshot.StaffCandidates)
+        foreach (var market in State.StaffMarketCandidates)
         {
+            var candidate = market.Candidate;
             builder.AppendLine($"{candidate.Person.Identity.DisplayName} - {candidate.StaffMember.CurrentRole}");
+            builder.AppendLine($"  Market status: {market.Status}  Interest: {market.HiringInterest}/100  Reason: {market.ReasonAvailable}");
             builder.AppendLine($"  Role fit: {candidate.RoleFit}  Department fit: {candidate.DepartmentFit}  Reputation: {candidate.Reputation}");
             builder.AppendLine($"  Salary ask: {candidate.ExpectedSalary.AnnualAmount:C0}");
-            builder.AppendLine($"  Current employer: {candidate.CurrentEmployer}");
+            builder.AppendLine($"  Current employer: {market.CurrentEmployer}");
             builder.AppendLine($"  Years experience: {candidate.YearsExperience}");
             builder.AppendLine($"  Strengths: {string.Join(", ", candidate.Strengths)}");
             builder.AppendLine($"  Weaknesses: {string.Join(", ", candidate.Weaknesses)}");
@@ -5758,6 +5835,11 @@ internal sealed record SelectablePersonRow(
     public override string ToString() => $"{Name}\n{Primary}\n{Secondary}";
 }
 
+internal sealed record TradeAssetRow(TradeAsset Asset, string Label)
+{
+    public override string ToString() => Label;
+}
+
 internal sealed class AlphaDesktopState
 {
     private readonly DailySimulationCoordinator _coordinator = new();
@@ -5802,6 +5884,10 @@ internal sealed class AlphaDesktopState
     private bool _draftModalDismissed;
     private string? _selectedDossierPersonId;
     private string? _selectedTradeTargetPersonId;
+    private string? _selectedYourTradeAssetId;
+    private string? _selectedOtherTradeAssetId;
+    private readonly List<TradeAsset> _tradePlayerGives = [];
+    private readonly List<TradeAsset> _tradePlayerReceives = [];
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
@@ -6203,6 +6289,27 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<StaffOfficeProfile> StaffProfiles => _staffOffice.BuildStaffProfiles(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
+    public StaffMarket StaffMarket
+    {
+        get
+        {
+            var next = new StaffMarketService().EnsureMarket(_registry, ScenarioSnapshot);
+            ScenarioSnapshot = next;
+            Snapshot = next.AlphaSnapshot;
+            return next.StaffMarket!;
+        }
+    }
+
+    public IReadOnlyList<StaffMarketCandidate> StaffMarketCandidates =>
+        StaffMarket.Candidates
+            .OrderBy(candidate => candidate.Status)
+            .ThenByDescending(candidate => candidate.HiringInterest)
+            .ThenBy(candidate => candidate.Name, StringComparer.Ordinal)
+            .ToArray();
+
+    public StaffMarketCandidate? StaffMarketCandidateFor(string personId) =>
+        StaffMarket.FindByPersonId(personId);
+
     public IReadOnlyList<CoachingStaffProfile> CoachingStaffProfiles => _staffCoaching.BuildCoachProfiles(ScenarioSnapshot);
 
     public IReadOnlyList<DepartmentGradeReport> DepartmentGrades => _staffCoaching.BuildDepartmentGrades(ScenarioSnapshot);
@@ -6274,14 +6381,16 @@ internal sealed class AlphaDesktopState
 
     public string CandidateHiringFitText(string personId)
     {
-        var candidate = ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == personId);
-        if (candidate is null)
+        var market = StaffMarketCandidateFor(personId);
+        if (market is null)
         {
             return "Candidate is no longer available.";
         }
 
+        var candidate = market.Candidate;
         var fit = _staffCoaching.EvaluateHiringFit(ScenarioSnapshot, candidate);
         return $"Hiring fit: {fit.FitScore}/100\n"
+            + $"Market status: {market.Status}; interest {market.HiringInterest}/100; current employer {market.CurrentEmployer}\n"
             + $"{fit.SalaryImpact}\n"
             + $"{fit.ChemistryRisk}\n"
             + $"{fit.ExperienceSummary}\n"
@@ -6720,16 +6829,8 @@ internal sealed class AlphaDesktopState
 
     public void HirePlaceholderStaff()
     {
-        var current = ScenarioSnapshot;
-        if (current.StaffCandidates.Count == 0)
-        {
-            var generated = _staffOffice.GenerateCandidatePool(_registry, current);
-            current = generated.ScenarioSnapshot;
-            AddInboxItems(generated.InboxItems);
-        }
-
-        var candidate = current.StaffCandidates
-            .OrderByDescending(candidate => candidate.RoleFit + candidate.DepartmentFit + candidate.Reputation)
+        var candidate = StaffMarket.AvailableCandidates
+            .OrderByDescending(candidate => candidate.Candidate.RoleFit + candidate.Candidate.DepartmentFit + candidate.Reputation)
             .FirstOrDefault();
         if (candidate is null)
         {
@@ -6737,11 +6838,19 @@ internal sealed class AlphaDesktopState
             return;
         }
 
-        ApplyStaffOfficeResult(_staffOffice.HireCandidate(_registry, current, candidate.CandidateId));
+        ApplyStaffOfficeResult(_staffOffice.HireCandidate(_registry, ScenarioSnapshot, candidate.CandidateId));
     }
 
     public void GenerateStaffCandidates() =>
-        ApplyStaffOfficeResult(_staffOffice.GenerateCandidatePool(_registry, ScenarioSnapshot));
+        RefreshStaffMarket();
+
+    public void RefreshStaffMarket()
+    {
+        var next = new StaffMarketService().EnsureMarket(_registry, ScenarioSnapshot);
+        ScenarioSnapshot = next;
+        Snapshot = next.AlphaSnapshot;
+        LatestSummary = $"Staff market available: {StaffMarket.AvailableCandidates.Count} candidate(s), {StaffMarket.MovementHistory.Count} movement record(s).";
+    }
 
     public void SetDevelopmentCoachFocus()
     {
@@ -6760,7 +6869,7 @@ internal sealed class AlphaDesktopState
         var medical = Snapshot.StaffMembers.FirstOrDefault(member => member.Department == LegacyEngine.Staff.StaffDepartment.Medical && member.EmploymentStatus == LegacyEngine.Staff.StaffEmploymentStatus.Employed);
         if (medical is null)
         {
-            LatestSummary = "No medical staff member is employed yet. Generate candidates and hire a medical candidate first.";
+            LatestSummary = "No medical staff member is employed yet. Review the staff market and hire a medical candidate first.";
             return;
         }
 
@@ -6832,22 +6941,24 @@ internal sealed class AlphaDesktopState
 
     public string CompareCandidateText(string personId)
     {
-        var candidate = ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == personId);
-        if (candidate is null)
+        var market = StaffMarketCandidateFor(personId);
+        if (market is null)
         {
             return "Candidate is no longer available.";
         }
 
-        var peers = ScenarioSnapshot.StaffCandidates
-            .Where(peer => peer.StaffMember.CurrentRole == candidate.StaffMember.CurrentRole)
-            .OrderByDescending(peer => peer.RoleFit + peer.DepartmentFit + peer.Reputation)
+        var candidate = market.Candidate;
+        var peers = StaffMarketCandidates
+            .Where(peer => peer.DesiredRole == candidate.StaffMember.CurrentRole)
+            .OrderByDescending(peer => peer.Candidate.RoleFit + peer.Candidate.DepartmentFit + peer.Reputation)
             .Take(3)
-            .Select(peer => $"{peer.Person.Identity.DisplayName}: fit {peer.RoleFit}/{peer.DepartmentFit}, rep {peer.Reputation}, salary {peer.ExpectedSalary.AnnualAmount:C0}")
+            .Select(peer => $"{peer.Name}: {peer.Status}, fit {peer.Candidate.RoleFit}/{peer.Candidate.DepartmentFit}, rep {peer.Reputation}, salary {peer.SalaryAsk.AnnualAmount:C0}")
             .ToArray();
 
         return $"{candidate.Person.Identity.DisplayName} - {candidate.StaffMember.CurrentRole}\n"
             + $"Expected salary: {candidate.ExpectedSalary.AnnualAmount:C0}\n"
-            + $"Current employer: {candidate.CurrentEmployer}\n"
+            + $"Current employer: {market.CurrentEmployer}\n"
+            + $"Market status: {market.Status}; reason {market.ReasonAvailable}\n"
             + $"Experience: {candidate.YearsExperience} years\n"
             + $"Chemistry risk: {candidate.ChemistryRisk}\n\n"
             + $"Comparable candidates:\n{string.Join(Environment.NewLine, peers)}";
@@ -6894,14 +7005,20 @@ internal sealed class AlphaDesktopState
 
     public void HireCandidateFor(string candidatePersonId)
     {
-        var candidate = ScenarioSnapshot.StaffCandidates.FirstOrDefault(candidate => candidate.Person.PersonId == candidatePersonId);
-        if (candidate is null)
+        var market = StaffMarketCandidateFor(candidatePersonId);
+        if (market is null)
         {
             LatestSummary = "Selected staff candidate is no longer available.";
             return;
         }
 
-        ApplyStaffOfficeResult(_staffOffice.HireCandidate(_registry, ScenarioSnapshot, candidate.CandidateId));
+        if (!market.CanBeHired)
+        {
+            LatestSummary = $"{market.Name} is {market.Status} with {market.CurrentEmployer}. Approach Candidate is a placeholder for this alpha pass.";
+            return;
+        }
+
+        ApplyStaffOfficeResult(_staffOffice.HireCandidate(_registry, ScenarioSnapshot, market.CandidateId));
     }
 
     public void SetStaffFocusFor(string personId)
@@ -7784,6 +7901,161 @@ internal sealed class AlphaDesktopState
         return builder.ToString().Trim();
     }
 
+    public IReadOnlyList<TradeAssetRow> YourTradeAssetRows()
+    {
+        var rows = new List<TradeAssetRow>();
+        rows.AddRange(Snapshot.Roster.ActivePlayers
+            .Select(player => _trades.CreateRosterPlayerAsset(ScenarioSnapshot, player.PersonId))
+            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset))));
+        rows.AddRange(ScenarioSnapshot.ProspectRights
+            .Select(prospect => _trades.CreateProspectRightsAsset(ScenarioSnapshot, prospect.ProspectPersonId))
+            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset))));
+        rows.Add(new TradeAssetRow(
+            _trades.CreateDraftPickAsset(ScenarioSnapshot, TradeSide.PlayerOrganization, ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name, 3, ScenarioSnapshot.Season.Year + 1),
+            $"{ScenarioSnapshot.Season.Year + 1} Round 3 pick | draft pick placeholder"));
+        return rows
+            .GroupBy(row => row.Asset.AssetId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    public IReadOnlyList<TradeAssetRow> OtherTradeAssetRows(string organizationId, string teamName)
+    {
+        var rows = OtherTeamTradeRoster(organizationId)
+            .Select(entry => _trades.CreateRosterPlayerAsset(ScenarioSnapshot, entry.PersonId, TradeSide.OtherOrganization))
+            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset)))
+            .ToList();
+        rows.Add(new TradeAssetRow(
+            _trades.CreateDraftPickAsset(ScenarioSnapshot, TradeSide.OtherOrganization, organizationId, teamName, 3, ScenarioSnapshot.Season.Year + 1),
+            $"{teamName} {ScenarioSnapshot.Season.Year + 1} Round 3 pick | draft pick placeholder"));
+        return rows
+            .GroupBy(row => row.Asset.AssetId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    public IReadOnlyList<TradeAssetRow> CurrentTradeProposalRows() =>
+        _tradePlayerGives
+            .Select(asset => new TradeAssetRow(asset, $"You Give: {AssetLabel(asset)}"))
+            .Concat(_tradePlayerReceives.Select(asset => new TradeAssetRow(asset, $"You Receive: {AssetLabel(asset)}")))
+            .ToArray();
+
+    public IReadOnlyList<TradeAsset> CurrentTradeProposalAssets =>
+        _tradePlayerGives.Concat(_tradePlayerReceives).ToArray();
+
+    public bool HasTradeProposalAssets => _tradePlayerGives.Count > 0 || _tradePlayerReceives.Count > 0;
+
+    public bool CanProposeCurrentTrade => _tradePlayerGives.Count > 0 && _tradePlayerReceives.Count > 0;
+
+    public IReadOnlyList<string> CurrentTradeEvaluationReasons => CurrentTradeEvaluation?.Reasons ?? Array.Empty<string>();
+
+    public string CurrentTradeEvaluationText => CurrentTradeEvaluation?.Explanation ?? "Trade must include assets on both sides before evaluation.";
+
+    public string CurrentTradeCounterText => CurrentTradeEvaluation?.CounterSuggestion ?? "No counter request yet.";
+
+    public string CurrentTradeRosterImpact =>
+        !CanProposeCurrentTrade
+            ? "Add assets from both teams to preview roster impact."
+            : $"You give {_tradePlayerGives.Count} asset(s) and receive {_tradePlayerReceives.Count} asset(s). Active roster changes only after pending GM approval.";
+
+    public string CurrentTradeBudgetImpact
+    {
+        get
+        {
+            if (!CanProposeCurrentTrade)
+            {
+                return "Add assets from both teams to preview budget impact.";
+            }
+
+            var impact = _tradePlayerReceives.Sum(asset => asset.SalaryImpact) - _tradePlayerGives.Sum(asset => asset.SalaryImpact);
+            return impact >= 0 ? $"Adds about {impact:C0}." : $"Saves about {Math.Abs(impact):C0}.";
+        }
+    }
+
+    private TradeEvaluation? CurrentTradeEvaluation
+    {
+        get
+        {
+            if (!CanProposeCurrentTrade)
+            {
+                return null;
+            }
+
+            var primaryOther = _tradePlayerReceives.First();
+            var offer = _trades.CreateOffer(
+                ScenarioSnapshot,
+                primaryOther.OrganizationId,
+                primaryOther.OrganizationName,
+                _tradePlayerGives.ToArray(),
+                _tradePlayerReceives.ToArray());
+            return _trades.EvaluateTrade(ScenarioSnapshot, offer);
+        }
+    }
+
+    public void SelectYourTradeAsset(string assetId)
+    {
+        _selectedYourTradeAssetId = assetId;
+        LatestSummary = $"Selected your trade asset: {assetId}.";
+    }
+
+    public void SelectOtherTradeAsset(string assetId)
+    {
+        _selectedOtherTradeAssetId = assetId;
+        LatestSummary = $"Selected other-team trade asset: {assetId}.";
+    }
+
+    public void AddYourAssetToTradeProposal(TradeAsset asset)
+    {
+        if (_tradePlayerGives.All(existing => existing.AssetId != asset.AssetId))
+        {
+            _tradePlayerGives.Add(asset);
+        }
+
+        LatestSummary = $"{asset.DisplayName} added to You Give.";
+    }
+
+    public void AddOtherAssetToTradeProposal(TradeAsset asset)
+    {
+        if (_tradePlayerReceives.All(existing => existing.AssetId != asset.AssetId))
+        {
+            _tradePlayerReceives.Add(asset);
+        }
+
+        _selectedTradeTargetPersonId = asset.AssetId;
+        LatestSummary = $"{asset.DisplayName} added to You Receive.";
+    }
+
+    public void RemoveAssetFromTradeProposal(TradeAsset asset)
+    {
+        _tradePlayerGives.RemoveAll(existing => existing.AssetId == asset.AssetId);
+        _tradePlayerReceives.RemoveAll(existing => existing.AssetId == asset.AssetId);
+        LatestSummary = $"{asset.DisplayName} removed from trade offer.";
+    }
+
+    public void ProposeCurrentTrade(string fallbackOrganizationId, string fallbackTeamName)
+    {
+        if (!TradeDeadlineWindow.TradesAllowed)
+        {
+            LatestSummary = "Trade deadline has passed. New trade proposals are locked.";
+            return;
+        }
+
+        if (!CanProposeCurrentTrade)
+        {
+            LatestSummary = "Trade must include assets on both sides.";
+            return;
+        }
+
+        var primaryOther = _tradePlayerReceives.FirstOrDefault(asset => asset.Side == TradeSide.OtherOrganization);
+        var offer = _trades.CreateOffer(
+            ScenarioSnapshot,
+            primaryOther?.OrganizationId ?? fallbackOrganizationId,
+            primaryOther?.OrganizationName ?? fallbackTeamName,
+            _tradePlayerGives.ToArray(),
+            _tradePlayerReceives.ToArray());
+        ApplyTradeResult(_trades.ProposeTrade(_registry, ScenarioSnapshot, offer));
+    }
+
     public void SelectTradeTarget(string personId)
     {
         var entry = TradeBlockEntryFor(personId);
@@ -7794,12 +8066,21 @@ internal sealed class AlphaDesktopState
         }
 
         _selectedTradeTargetPersonId = personId;
+        if (_tradePlayerReceives.All(asset => asset.AssetId != personId))
+        {
+            _tradePlayerReceives.Add(_trades.CreateRosterPlayerAsset(ScenarioSnapshot, personId, TradeSide.OtherOrganization));
+        }
+
         LatestSummary = $"{entry.Name} added to the trade builder. Review projected impact, then propose trade.";
     }
 
     public void ClearTradeBuilder()
     {
         _selectedTradeTargetPersonId = null;
+        _selectedYourTradeAssetId = null;
+        _selectedOtherTradeAssetId = null;
+        _tradePlayerGives.Clear();
+        _tradePlayerReceives.Clear();
         LatestSummary = "Trade builder cleared.";
     }
 
@@ -7843,6 +8124,14 @@ internal sealed class AlphaDesktopState
             .FirstOrDefault();
         var impact = entry.SalaryImpact - outgoingSalary;
         return impact >= 0 ? $"Adds about {impact:C0}." : $"Saves about {Math.Abs(impact):C0}.";
+    }
+
+    private static string AssetLabel(TradeAsset asset)
+    {
+        var bio = asset.Position is null
+            ? asset.AssetType.ToString()
+            : $"{asset.Position} | age {asset.Age?.ToString() ?? "unknown"}";
+        return $"{asset.DisplayName} | {bio} | {asset.Summary} | value {asset.Value}";
     }
 
     public void ProposeTradeFor(string personId)
@@ -8635,6 +8924,7 @@ internal sealed class AlphaDesktopState
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
         }
 
         LastProcessedEventCount = 0;

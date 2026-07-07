@@ -48,7 +48,7 @@ internal sealed class Alpha51FunctionalUiTradeWindowTests
         Assert.True(source.Contains("\"Roster impact\"", StringComparison.Ordinal), "Trade builder should show roster impact.");
         Assert.True(source.Contains("\"Budget impact\"", StringComparison.Ordinal), "Trade builder should show budget impact.");
         Assert.True(source.Contains("\"AI evaluation\"", StringComparison.Ordinal), "Trade builder should show AI evaluation.");
-        Assert.True(source.Contains("State.ProposeTradeFor(entry.PersonId)", StringComparison.Ordinal), "Trade builder should propose through existing state/trade service path.");
+        Assert.True(source.Contains("State.ProposeCurrentTrade(entry.OrganizationId, entry.TeamName)", StringComparison.Ordinal), "Trade builder should propose the selected asset package through the trade service path.");
     }
 
     public void NoPopupTopLevelTabDuplication()

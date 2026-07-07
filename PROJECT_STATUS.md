@@ -88,14 +88,15 @@ The five foundation pillars remain:
 - Alpha 5.0 - Playability & Polish
 - Alpha 5.1 - Multi-League Career Framework
 - Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1
+- Alpha 5.3.1 - Trade Window Interactions + Living Staff Market
 
 ## Current Milestone
 
-Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1
+Alpha 5.3.1 - Trade Window Interactions + Living Staff Market
 
 ## Current Goal
 
-Represent full fictional NHL-style, AHL-style, WHL, OHL, and QMJHL team universes while keeping the Alpha play loop stable. League profiles now expose full team selection, parent/affiliate relationships, organization identity, budget/quality/difficulty context, and a first-pass player pipeline for NHL roster, AHL assignment, junior return, prospect rights, and draft-rights tracking.
+Make the trade popup usable with selectable asset lists, explicit proposal building, live trade evaluation, and pending-GM approval for accepted deals. Staff hiring now uses a living staff market with candidate status, employer, salary ask, career history, movement records, and limited league-news staff movement instead of a fake generate-candidates button.
 
 ## Why Relationship Engine Was Next
 

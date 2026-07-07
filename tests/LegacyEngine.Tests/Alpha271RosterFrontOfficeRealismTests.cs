@@ -246,7 +246,7 @@ internal sealed class Alpha271RosterFrontOfficeRealismTests
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 
         Assert.True(source.Contains("Vacant Positions", StringComparison.Ordinal), "Desktop should expose vacant positions.");
-        Assert.True(source.Contains("Available Candidates", StringComparison.Ordinal), "Desktop should expose available candidates.");
+        Assert.True(source.Contains("Staff Market", StringComparison.Ordinal), "Desktop should expose the living staff market.");
         Assert.True(source.Contains("Hire Candidate", StringComparison.Ordinal), "Desktop should expose hire workflow.");
         Assert.True(source.Contains("Salary Offer", StringComparison.Ordinal), "Desktop should expose salary offer placeholder.");
     }

@@ -154,6 +154,34 @@ public sealed class StaffOfficeService
                 StaffMembers = UpsertStaff(scenario.AlphaSnapshot.StaffMembers, hired)
             }
         };
+        var marketCandidate = updated.StaffMarket?.FindByCandidateId(candidateId);
+        var transactions = new List<LeagueTransaction>();
+        if (updated.StaffMarket is not null && marketCandidate is not null)
+        {
+            var hiredMarketCandidate = StaffMarketService.MarkHired(marketCandidate, updated);
+            var movement = StaffMarketService.Movement(
+                updated,
+                hiredMarketCandidate,
+                marketCandidate.CurrentEmployerOrganizationId,
+                marketCandidate.CurrentEmployer,
+                updated.Organization.OrganizationId,
+                updated.Organization.Name,
+                StaffMarketStatus.Hired,
+                $"{candidate.Person.Identity.DisplayName} was hired by {updated.Organization.Name} as {StaffRoles.Title(role)}.");
+            updated = updated with
+            {
+                StaffMarket = updated.StaffMarket.Replace(hiredMarketCandidate).AddMovement(movement),
+                StaffMovementHistory = updated.StaffMovementHistory.Append(movement).ToArray()
+            };
+            transactions.Add(StaffMarketService.Transaction(
+                updated,
+                updated.Organization.OrganizationId,
+                updated.Organization.Name,
+                candidate.Person.PersonId,
+                candidate.Person.Identity.DisplayName,
+                LeagueTransactionType.StaffHired,
+                movement.Summary));
+        }
 
         QueueEvent(registry, updated, LegacyEventType.StaffHired, "Staff hired", $"{candidate.Person.Identity.DisplayName} was hired as {StaffRoles.Title(role)}.", candidate.Person.PersonId);
         var inbox = new List<AlphaInboxItem>
@@ -167,7 +195,7 @@ public sealed class StaffOfficeService
             inbox.Add(Inbox(updated, LegacyEventType.BudgetApproved, "Owner budget warning", budget.Warnings.FirstOrDefault() ?? "Hockey operations budget is over limit.", candidate.Person.PersonId, LegacyEventSeverity.Warning));
         }
 
-        return Result(true, updated, candidate, null, null, null, inbox, $"{candidate.Person.Identity.DisplayName} hired as {StaffRoles.Title(role)}.");
+        return Result(true, updated, candidate, null, null, null, inbox, transactions, $"{candidate.Person.Identity.DisplayName} hired as {StaffRoles.Title(role)}.");
     }
 
     public StaffOfficeResult ReassignStaffRole(EngineRegistry registry, NewGmScenarioSnapshot scenario, string personId, StaffRole newRole)
@@ -188,10 +216,43 @@ public sealed class StaffOfficeService
         var member = FindStaff(scenario, personId);
         var released = registry.StaffEngine.RemoveStaffMember(member, scenario.CurrentDate, reason);
         var updated = ReplaceStaff(scenario, released);
+        var person = updated.AlphaSnapshot.People.FirstOrDefault(person => person.PersonId == personId);
+        var transactions = new List<LeagueTransaction>();
+        if (person is not null)
+        {
+            var rulebook = registry.Rulebook ?? RulebookPresets.CreateJuniorMajor();
+            var salary = new StaffBudgetService().CompensationFor(member, updated, rulebook).Salary;
+            var marketCandidate = new StaffMarketService().CandidateReturnedToMarket(updated, person, released, salary, reason);
+            var movement = StaffMarketService.Movement(
+                updated,
+                marketCandidate,
+                updated.Organization.OrganizationId,
+                updated.Organization.Name,
+                null,
+                null,
+                StaffMarketStatus.Available,
+                $"{person.Identity.DisplayName} was released by {updated.Organization.Name} and returned to the staff market.");
+            var market = (updated.StaffMarket ?? new StaffMarket($"staff-market:{updated.Season.SeasonId}", updated.CurrentDate, Array.Empty<StaffMarketCandidate>(), Array.Empty<StaffMovementRecord>()))
+                .AddOrReplace(marketCandidate)
+                .AddMovement(movement);
+            updated = updated with
+            {
+                StaffMarket = market,
+                StaffMovementHistory = updated.StaffMovementHistory.Append(movement).ToArray()
+            };
+            transactions.Add(StaffMarketService.Transaction(
+                updated,
+                updated.Organization.OrganizationId,
+                updated.Organization.Name,
+                person.PersonId,
+                person.Identity.DisplayName,
+                LeagueTransactionType.StaffReleased,
+                movement.Summary));
+        }
 
         QueueEvent(registry, updated, LegacyEventType.StaffReleased, "Staff released", $"{Name(updated, personId)} was released. Reason: {reason}", personId);
         var inbox = new[] { Inbox(updated, LegacyEventType.StaffReleased, "Staff released", $"{Name(updated, personId)} was released. {reason}", personId) };
-        return Result(true, updated, null, null, null, null, inbox, $"{Name(updated, personId)} released.");
+        return Result(true, updated, null, null, null, null, inbox, transactions, $"{Name(updated, personId)} released.");
     }
 
     public StaffOfficeResult SetDevelopmentCoachFocus(EngineRegistry registry, NewGmScenarioSnapshot scenario, string personId, DevelopmentCoachFocus focus)
@@ -677,7 +738,21 @@ public sealed class StaffOfficeService
         IReadOnlyList<AlphaInboxItem> inbox,
         string message)
     {
-        var result = new StaffOfficeResult(success, scenario, candidate, focus, evaluation, chemistry, inbox, message);
+        return Result(success, scenario, candidate, focus, evaluation, chemistry, inbox, Array.Empty<LeagueTransaction>(), message);
+    }
+
+    private static StaffOfficeResult Result(
+        bool success,
+        NewGmScenarioSnapshot scenario,
+        StaffCandidate? candidate,
+        StaffFocusAssignment? focus,
+        StaffEvaluation? evaluation,
+        StaffChemistryReport? chemistry,
+        IReadOnlyList<AlphaInboxItem> inbox,
+        IReadOnlyList<LeagueTransaction> transactions,
+        string message)
+    {
+        var result = new StaffOfficeResult(success, scenario, candidate, focus, evaluation, chemistry, inbox, transactions, message);
         result.Validate();
         return result;
     }

@@ -192,6 +192,7 @@ public sealed class NewGmScenarioBootstrapper
         var history = new ExistingWorldHistoryService().CreateHistory(scenarioSnapshot);
         var freeAgentMarket = new FreeAgentMarketService().GenerateMarket(scenarioSnapshot, freeAgentPeople);
         var tradeBlock = new TradeService().GenerateTradeBlock(scenarioSnapshot, tradeBlockPeople);
+        scenarioSnapshot = new StaffMarketService().EnsureMarket(registry, scenarioSnapshot);
         scenarioSnapshot = scenarioSnapshot with
         {
             PriorSeasonStats = history.PriorSeasonStats.Concat(freeAgentMarket.FreeAgents.Select(agent => agent.LastSeasonStats)).ToArray(),

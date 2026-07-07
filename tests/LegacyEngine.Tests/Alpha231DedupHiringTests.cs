@@ -128,7 +128,7 @@ internal sealed class Alpha231DedupHiringTests
         var source = ReadAlphaDesktopSource();
 
         Assert.True(source.Contains("Current Staff", StringComparison.Ordinal), "Staff tab should label current staff.");
-        Assert.True(source.Contains("Staff Candidates", StringComparison.Ordinal), "Staff tab should label staff candidates.");
+        Assert.True(source.Contains("Staff Market", StringComparison.Ordinal), "Staff tab should label the living staff market.");
         Assert.True(source.Contains("Hire Staff", StringComparison.Ordinal), "Staff tab should expose a hire staff section/action.");
     }
 

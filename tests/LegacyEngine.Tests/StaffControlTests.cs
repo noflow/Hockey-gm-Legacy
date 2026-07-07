@@ -171,7 +171,7 @@ internal sealed class StaffControlTests
         var focused = service.SetDevelopmentCoachFocus(scenario.Registry, generated.ScenarioSnapshot, coach.PersonId, DevelopmentCoachFocus.WorkEthic);
         var evaluated = service.GenerateStaffEvaluation(scenario.Registry, focused.ScenarioSnapshot, coach.PersonId);
 
-        Assert.True(generated.InboxItems.Count > 0, "Candidate generation should create inbox.");
+        Assert.Equal(0, generated.InboxItems.Count);
         Assert.True(focused.InboxItems.Count > 0, "Focus change should create inbox.");
         Assert.True(evaluated.InboxItems.Count > 0, "Evaluation should create inbox.");
         Assert.Equal(InboxCategory.Staff, InboxManager.Categorize(evaluated.InboxItems.First()));
@@ -181,7 +181,7 @@ internal sealed class StaffControlTests
     {
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 
-        Assert.True(source.Contains("Candidate Pool", StringComparison.Ordinal), "Desktop should expose candidate list.");
+        Assert.True(source.Contains("Staff Market", StringComparison.Ordinal), "Desktop should expose living staff market list.");
         Assert.True(source.Contains("Development Focus", StringComparison.Ordinal), "Desktop should expose development focus action.");
         Assert.True(source.Contains("Medical Focus", StringComparison.Ordinal), "Desktop should expose medical focus action.");
         Assert.True(source.Contains("Staff Evaluation", StringComparison.Ordinal), "Desktop should expose evaluation action.");

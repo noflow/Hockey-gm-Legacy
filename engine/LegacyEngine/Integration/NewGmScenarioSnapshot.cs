@@ -46,6 +46,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<StaffCandidate> StaffCandidates { get; init; } = Array.Empty<StaffCandidate>();
 
+    public StaffMarket? StaffMarket { get; init; }
+
+    public IReadOnlyList<StaffMovementRecord> StaffMovementHistory { get; init; } = Array.Empty<StaffMovementRecord>();
+
     public IReadOnlyList<StaffFocusAssignment> StaffFocusAssignments { get; init; } = Array.Empty<StaffFocusAssignment>();
 
     public IReadOnlyList<StaffEvaluation> StaffEvaluations { get; init; } = Array.Empty<StaffEvaluation>();
@@ -172,6 +176,12 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var candidate in StaffCandidates)
         {
             candidate.Validate();
+        }
+
+        StaffMarket?.Validate();
+        foreach (var movement in StaffMovementHistory)
+        {
+            movement.Validate();
         }
 
         foreach (var focus in StaffFocusAssignments)

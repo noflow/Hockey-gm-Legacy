@@ -66,6 +66,7 @@ var alpha50PlayabilityPolishTests = new Alpha50PlayabilityPolishTests();
 var alpha51MultiLeagueCareerTests = new Alpha51MultiLeagueCareerTests();
 var alpha51FunctionalUiTradeWindowTests = new Alpha51FunctionalUiTradeWindowTests();
 var alpha53FullLeaguePipelineTests = new Alpha53FullLeaguePipelineTests();
+var alpha531TradeStaffMarketTests = new Alpha531TradeStaffMarketTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -861,6 +862,28 @@ runner.Run("alpha 5.3 player dossier shows pipeline status", alpha53FullLeaguePi
 runner.Run("alpha 5.3 save load preserves full league and affiliate setup", alpha53FullLeaguePipelineTests.SaveLoadPreservesFullLeagueAndAffiliateSetup);
 runner.Run("alpha 5.3 AlphaDesktop exposes full team browser", alpha53FullLeaguePipelineTests.AlphaDesktopExposesFullTeamBrowser);
 runner.Run("alpha 5.3 generated people do not use real star player names", alpha53FullLeaguePipelineTests.GeneratedPeopleDoNotUseRealStarPlayerNames);
+runner.Run("alpha 5.3.1 your asset can be selected", alpha531TradeStaffMarketTests.YourAssetCanBeSelected);
+runner.Run("alpha 5.3.1 other team asset can be selected", alpha531TradeStaffMarketTests.OtherTeamAssetCanBeSelected);
+runner.Run("alpha 5.3.1 selected asset can be added to proposal", alpha531TradeStaffMarketTests.SelectedAssetCanBeAddedToProposal);
+runner.Run("alpha 5.3.1 proposal updates evaluation", alpha531TradeStaffMarketTests.ProposalUpdatesEvaluation);
+runner.Run("alpha 5.3.1 invalid empty proposal rejected", alpha531TradeStaffMarketTests.InvalidEmptyProposalRejected);
+runner.Run("alpha 5.3.1 propose trade disabled until valid", alpha531TradeStaffMarketTests.ProposeTradeDisabledUntilBothSidesHaveAssets);
+runner.Run("alpha 5.3.1 view dossier works from trade popup", alpha531TradeStaffMarketTests.ViewDossierWorksFromTradePopup);
+runner.Run("alpha 5.3.1 accepted trade creates pending approval", alpha531TradeStaffMarketTests.AcceptedTradeCreatesPendingApproval);
+runner.Run("alpha 5.3.1 staff market exists at scenario start", alpha531TradeStaffMarketTests.StaffMarketExistsAtScenarioStart);
+runner.Run("alpha 5.3.1 staff market has available candidates", alpha531TradeStaffMarketTests.StaffMarketHasAvailableCandidates);
+runner.Run("alpha 5.3.1 candidate has salary ask and career history", alpha531TradeStaffMarketTests.CandidateHasSalaryAskAndCareerHistory);
+runner.Run("alpha 5.3.1 hiring candidate moves them to organization", alpha531TradeStaffMarketTests.HiringCandidateMovesThemToOrganization);
+runner.Run("alpha 5.3.1 candidate marked hired after hiring", alpha531TradeStaffMarketTests.CandidateMarkedHiredAfterHiring);
+runner.Run("alpha 5.3.1 candidate cannot be hired twice", alpha531TradeStaffMarketTests.CandidateCannotBeHiredTwice);
+runner.Run("alpha 5.3.1 other team vacancy can hire staff from market", alpha531TradeStaffMarketTests.OtherTeamVacancyCanHireStaffFromMarket);
+runner.Run("alpha 5.3.1 released staff returns to market", alpha531TradeStaffMarketTests.ReleasedStaffReturnsToMarket);
+runner.Run("alpha 5.3.1 league news records notable staff movement", alpha531TradeStaffMarketTests.LeagueNewsRecordsNotableStaffMovement);
+runner.Run("alpha 5.3.1 player inbox avoids other-team staff spam", alpha531TradeStaffMarketTests.PlayerInboxDoesNotReceiveOtherTeamRoutineStaffSpam);
+runner.Run("alpha 5.3.1 save load preserves staff market", alpha531TradeStaffMarketTests.SaveLoadPreservesStaffMarket);
+runner.Run("alpha 5.3.1 AlphaDesktop exposes staff market filters actions", alpha531TradeStaffMarketTests.AlphaDesktopExposesStaffMarketFiltersActions);
+runner.Run("alpha 5.3.1 no Generate Candidate workflow remains", alpha531TradeStaffMarketTests.NoGenerateCandidateWorkflowRemains);
+runner.Run("alpha 5.3.1 no forbidden systems added", alpha531TradeStaffMarketTests.Alpha531HasNoForbiddenSystems);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
