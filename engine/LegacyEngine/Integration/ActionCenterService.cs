@@ -30,6 +30,7 @@ public sealed class ActionCenterService
         AddDevelopmentRecommendations(scenario, items);
         AddLineupRecommendations(scenario, items);
         AddGameUsageRecommendations(scenario, items);
+        AddTacticalRecommendations(scenario, items);
         AddStaffCoachingItems(scenario, items);
         AddOwnerOfficeItems(scenario, budget, items);
         AddUpcomingGames(scenario, items);
@@ -586,6 +587,37 @@ public sealed class ActionCenterService
                 scenario.Organization.Name,
                 recommendation.Reason,
                 "Special teams and goalie usage can affect development, confidence, fatigue, and role satisfaction.",
+                recommendation.SuggestedAction,
+                null,
+                null,
+                null));
+        }
+    }
+
+    private static void AddTacticalRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var tactics = scenario.CurrentTactics ?? new TacticsService().BuildDefaultTactics(scenario);
+        foreach (var recommendation in tactics.Recommendations.Where(item => item.IsImportant).Take(3))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:tactics:{recommendation.RecommendationId}",
+                recommendation.RecommendationType switch
+                {
+                    TacticalRecommendationType.ReduceRisk => "High-risk tactics need review",
+                    TacticalRecommendationType.MatchCoachPhilosophy => "Coach recommends system change",
+                    TacticalRecommendationType.AdjustPowerPlayStyle => "Special teams tactic mismatch",
+                    TacticalRecommendationType.AdjustPenaltyKillStyle => "PK tactic mismatch",
+                    _ => recommendation.Title
+                },
+                ActionCenterCategory.GameDay,
+                tactics.FitReport.Grade == TacticalFitGrade.Problem ? ActionCenterPriority.Urgent : ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(5),
+                null,
+                null,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                recommendation.Reason,
+                $"Tactical fit is {tactics.FitReport.Grade}; mismatches can affect morale, role satisfaction, and development environment.",
                 recommendation.SuggestedAction,
                 null,
                 null,

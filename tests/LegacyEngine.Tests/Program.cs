@@ -81,6 +81,7 @@ var alpha63RelationshipExpansionTests = new Alpha63RelationshipExpansionTests();
 var alpha64RosterLineupTests = new Alpha64RosterLineupTests();
 var alpha65LineChemistryTests = new Alpha65LineChemistryTests();
 var alpha66SpecialTeamsGameUsageTests = new Alpha66SpecialTeamsGameUsageTests();
+var alpha67TacticsCoachingStyleTests = new Alpha67TacticsCoachingStyleTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1094,6 +1095,19 @@ runner.Run("alpha 6.6 dashboard exposes game usage", alpha66SpecialTeamsGameUsag
 runner.Run("alpha 6.6 Action Center includes important game usage", alpha66SpecialTeamsGameUsageTests.ActionCenterIncludesImportantGameUsage);
 runner.Run("alpha 6.6 no hidden ratings exposed", alpha66SpecialTeamsGameUsageTests.NoHiddenRatingsExposed);
 runner.Run("alpha 6.6 no tactics game simulation or Godot added", alpha66SpecialTeamsGameUsageTests.NoTacticsGameSimulationOrGodotAdded);
+runner.Run("alpha 6.7 tactics profile created", alpha67TacticsCoachingStyleTests.TacticsProfileCreated);
+runner.Run("alpha 6.7 coach philosophy sets default tactics", alpha67TacticsCoachingStyleTests.CoachPhilosophySetsDefaultTactics);
+runner.Run("alpha 6.7 even-strength settings can change", alpha67TacticsCoachingStyleTests.EvenStrengthSettingsCanChange);
+runner.Run("alpha 6.7 PP and PK tactical styles can change", alpha67TacticsCoachingStyleTests.PowerPlayAndPenaltyKillStylesCanChange);
+runner.Run("alpha 6.7 tactical fit report generated", alpha67TacticsCoachingStyleTests.TacticalFitReportGenerated);
+runner.Run("alpha 6.7 roster mismatch warning generated", alpha67TacticsCoachingStyleTests.RosterMismatchWarningGenerated);
+runner.Run("alpha 6.7 tactical recommendation generated", alpha67TacticsCoachingStyleTests.TacticalRecommendationGenerated);
+runner.Run("alpha 6.7 player role/development notes reference tactics", alpha67TacticsCoachingStyleTests.PlayerRoleDevelopmentNotesCanReferenceTactics);
+runner.Run("alpha 6.7 player dossier includes tactics", alpha67TacticsCoachingStyleTests.PlayerDossierIncludesTactics);
+runner.Run("alpha 6.7 Action Center only shows major tactic issues", alpha67TacticsCoachingStyleTests.ActionCenterOnlyShowsMajorTacticIssues);
+runner.Run("alpha 6.7 AlphaDesktop exposes Tactics view", alpha67TacticsCoachingStyleTests.AlphaDesktopExposesTacticsView);
+runner.Run("alpha 6.7 save load preserves tactics", alpha67TacticsCoachingStyleTests.SaveLoadPreservesTactics);
+runner.Run("alpha 6.7 no full tactics engine play-by-play or Godot added", alpha67TacticsCoachingStyleTests.NoFullTacticsEnginePlayByPlayOrGodotAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

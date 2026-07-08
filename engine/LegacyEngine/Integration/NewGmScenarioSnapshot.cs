@@ -178,6 +178,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public GameUsage? CurrentGameUsage { get; init; }
 
+    public TeamTactics? CurrentTactics { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -511,5 +513,6 @@ public sealed record NewGmScenarioSnapshot(
         CurrentLineup?.Validate();
         CurrentLineChemistry?.Validate();
         CurrentGameUsage?.Validate();
+        CurrentTactics?.Validate();
     }
 }

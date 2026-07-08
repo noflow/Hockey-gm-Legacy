@@ -1,6 +1,48 @@
 # Changelog
 
-## Current - Alpha 6.6
+## Current - Alpha 6.7
+
+### Added
+
+- Team tactics model covering tactical style, system, intensity, risk level, even-strength settings, PP/PK tactical style, fit report, recommendations, player impacts, and small future simulator tendency modifiers.
+- Tactical styles: Balanced, Offensive, Defensive, Physical, Speed, Possession, Counterattack, Youth Development, and Veteran Shelter.
+- Even-strength settings for forecheck, neutral zone, defensive zone, breakout, shot preference, physicality, and risk.
+- Special-teams tactical settings for power play style and penalty kill style while reusing Alpha 6.6 personnel units.
+- TacticsService with coach-derived defaults from head coach philosophy.
+- Tactical fit report that compares roster composition, line chemistry, coach philosophy, player types, age/experience, and special-teams usage.
+- Tactical recommendations for major mismatches such as high-risk tactics on a young roster, coach/style mismatch, and PP/PK tactic mismatch.
+- Per-player tactical impact notes with modest role satisfaction, development, and confidence modifiers.
+- Player dossier Tactics section.
+- Hockey Operations Tactics view in AlphaDesktop with selectable rows for Tactical Identity, Even Strength System, Special Teams Tactics, Tactical Fit Report, Future Simulator Modifiers, and recommendations.
+- Dashboard Tactical Fit metric and Action Center routing for important tactic issues only.
+- Save/load preservation of team tactics through the scenario snapshot.
+- Alpha 6.7 tests covering tactics creation, coach defaults, settings changes, PP/PK style changes, fit reports, mismatch warnings, recommendations, player impact notes, dossier section, Action Center filtering, UI exposure, save/load preservation, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.7.
+- Lineup report now includes the team tactical identity and coaching-style summary.
+- Legacy Alpha 2.7 architecture guard now blocks actual matchup/full tactical simulator markers instead of the now-valid word "Tactical".
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No play-by-play engine.
+- No line matching.
+- No matchup engine.
+- No full tactical simulator.
+- No video/2D/3D game view.
+- No advanced fatigue engine.
+- No advanced injury model.
+- No game simulation overhaul.
+
+## Previous - Alpha 6.6
 
 ### Added
 
@@ -146,4 +188,4 @@
 
 ## Next
 
-- Alpha 6.7 - TBD.
+- Alpha 6.8 - TBD.

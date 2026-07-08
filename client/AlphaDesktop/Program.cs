@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -522,6 +522,7 @@ internal sealed class MainWindow : Window
         {
             new("Roster", CreateSelectablePeopleContent("Roster")),
             new("Lineup", CreateSelectablePeopleContent("Lineup")),
+            new("Tactics", CreateSelectablePeopleContent("Tactics")),
             new("Prospects", CreateSelectablePeopleContent("Prospect List")),
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
@@ -600,7 +601,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.6 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.7 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1601,6 +1602,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
         RefreshSelectableTab("Roster", BuildRosterRows());
         RefreshSelectableTab("Lineup", BuildLineupRows());
+        RefreshSelectableTab("Tactics", BuildTacticsRows());
         RefreshSelectableTab("Recruits", BuildRecruitRows());
         RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
         _tabs["Contracts"].Text = BuildContractsWorkspace();
@@ -1700,6 +1702,7 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Urgent Decisions", State.UrgentPendingDecisionCount.ToString(), State.NextDecisionDeadlineText, State.UrgentPendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Game Usage", State.GameUsageWarningCount.ToString(), State.GameUsageDashboardSummary, State.GameUsageWarningCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Tactical Fit", State.CurrentTactics.FitReport.Grade.ToString(), State.TacticsDashboardSummary, State.TacticsWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("League News", State.LeagueNewsCount.ToString(), "notable league items", false));
@@ -1906,7 +1909,7 @@ internal sealed class MainWindow : Window
         SetTabHeader("Dashboard", State.OpenActionCount > 0 ? $"Dashboard ({State.OpenActionCount})" : "Dashboard");
         SetTabHeader("Inbox", $"Inbox ({State.UnreadInboxCount})");
         SetTabHeader("Organization", State.StaffVacancies.Count > 0 ? $"Organization ({State.StaffVacancies.Count})" : "Organization");
-        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount + State.ContractDecisionCount + State.DevelopmentActionCount;
+        var operationsCount = State.RosterWarningCount + State.ScoutingReportCount + State.ContractDecisionCount + State.DevelopmentActionCount + State.TacticsWarningCount;
         SetTabHeader("Hockey Operations", operationsCount > 0 ? $"Hockey Operations ({operationsCount})" : "Hockey Operations");
         SetTabHeader("Season", "Season");
         SetTabHeader("Reports / History", "Reports / History");
@@ -1992,6 +1995,7 @@ internal sealed class MainWindow : Window
             "Vacancies" => BuildStaffDetail(row),
             "Roster" => BuildPlayerDetail(title, row),
             "Lineup" => BuildLineupDetail(row),
+            "Tactics" => BuildTacticsDetail(row),
             "Recruits" => BuildPlayerDetail(title, row),
             "Free Agents" => BuildPlayerDetail(title, row),
             "League Free Agents" => BuildPlayerDetail("Free Agents", row),
@@ -2352,6 +2356,59 @@ internal sealed class MainWindow : Window
         return rows;
     }
 
+    private IReadOnlyList<SelectablePersonRow> BuildTacticsRows()
+    {
+        var tactics = State.CurrentTactics;
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "tactics-summary",
+                "Tactical Identity",
+                "TacticsSummary",
+                $"{TacticsService.Display(tactics.Style)} | Fit {tactics.FitReport.Grade} ({tactics.FitReport.Score})",
+                $"Coach: {tactics.CoachName} | Philosophy: {tactics.CoachPhilosophy}",
+                tactics.Summary),
+            new(
+                "even-strength",
+                "Even Strength System",
+                "TacticsSettings",
+                $"Forecheck {TacticsService.Display(tactics.Settings.Forecheck)} | NZ {TacticsService.Display(tactics.Settings.NeutralZone)} | DZ {TacticsService.Display(tactics.Settings.DefensiveZone)}",
+                $"Breakout {TacticsService.Display(tactics.Settings.Breakout)} | Shots {TacticsService.Display(tactics.Settings.ShotPreference)} | Risk {tactics.Settings.RiskLevel}",
+                "Set forecheck, neutral-zone pressure, defensive-zone structure, breakout, shot preference, physicality, and risk."),
+            new(
+                "special-teams-tactics",
+                "Special Teams Tactics",
+                "TacticsSettings",
+                $"PP {TacticsService.Display(tactics.Settings.PowerPlayStyle)} | PK {TacticsService.Display(tactics.Settings.PenaltyKillStyle)}",
+                "Uses Alpha 6.6 units; this changes style only, not assignments.",
+                "Set PP/PK tactical preference without rebuilding special teams personnel."),
+            new(
+                "tactical-fit",
+                "Tactical Fit Report",
+                "TacticsReport",
+                $"{tactics.FitReport.Grade} ({tactics.FitReport.Score}/100)",
+                tactics.FitReport.Summary,
+                tactics.FitReport.CoachRecommendation),
+            new(
+                "tactical-modifiers",
+                "Future Simulator Modifiers",
+                "TacticsReport",
+                $"Off {tactics.ModifierProfile.OffenseTendency:+#;-#;0} | Def {tactics.ModifierProfile.DefenseTendency:+#;-#;0} | Pace {tactics.ModifierProfile.PaceTendency:+#;-#;0}",
+                $"Physical {tactics.ModifierProfile.PhysicalityTendency:+#;-#;0} | Risk {tactics.ModifierProfile.RiskTendency:+#;-#;0} | ST {tactics.ModifierProfile.SpecialTeamsTendency:+#;-#;0}",
+                tactics.ModifierProfile.Summary)
+        };
+
+        rows.AddRange(tactics.Recommendations.Select(recommendation => new SelectablePersonRow(
+            recommendation.RecommendationId,
+            recommendation.Title,
+            "TacticsRecommendation",
+            recommendation.IsImportant ? "Important" : "Note",
+            recommendation.Reason,
+            recommendation.SuggestedAction)));
+
+        return rows;
+    }
+
     private UIElement BuildLineupDetail(SelectablePersonRow? row)
     {
         if (row is null)
@@ -2428,6 +2485,100 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Swap", () => ShowLineupSwapPopup(slot), assignment is not null, "No player assigned"),
             CreateDetailButton("View Dossier", () => OpenDossierFor(assignment!.PersonId), assignment is not null, "No player assigned"),
             CreateDetailButton("Auto-fill", () => State.AutoFillLineup()));
+        return panel;
+    }
+
+    private UIElement BuildTacticsDetail(SelectablePersonRow? row)
+    {
+        if (row is null)
+        {
+            return EmptyDetail("Tactics", "Select a tactical area to review or adjust.");
+        }
+
+        var tactics = State.CurrentTactics;
+        var panel = CreateDetailPanel(row.Name, row.Summary);
+        if (row.Kind == "TacticsSummary")
+        {
+            AddLine(panel, "Style", TacticsService.Display(tactics.Style));
+            AddLine(panel, "System", TacticsService.Display(tactics.System));
+            AddLine(panel, "Coach philosophy", $"{tactics.CoachName} - {tactics.CoachPhilosophy}");
+            AddLine(panel, "Tactical fit", $"{tactics.FitReport.Grade} ({tactics.FitReport.Score}/100)");
+            AddLine(panel, "Coach recommendation", tactics.FitReport.CoachRecommendation);
+            AddSubHeader(panel, "Style Actions");
+            AddActions(panel,
+                CreateDetailButton("Set Balanced", () => State.SetTacticalStyle(TacticalStyle.Balanced)),
+                CreateDetailButton("Set Offensive", () => State.SetTacticalStyle(TacticalStyle.Offensive)),
+                CreateDetailButton("Set Defensive", () => State.SetTacticalStyle(TacticalStyle.Defensive)),
+                CreateDetailButton("Set Speed", () => State.SetTacticalStyle(TacticalStyle.Speed)),
+                CreateDetailButton("Set Development", () => State.SetTacticalStyle(TacticalStyle.YouthDevelopment)),
+                CreateDetailButton("Auto Set From Coach", () => State.AutoSetTacticsFromCoach()));
+        }
+        else if (row.PersonId == "even-strength")
+        {
+            AddLine(panel, "Forecheck", TacticsService.Display(tactics.Settings.Forecheck));
+            AddLine(panel, "Neutral zone", TacticsService.Display(tactics.Settings.NeutralZone));
+            AddLine(panel, "Defensive zone", TacticsService.Display(tactics.Settings.DefensiveZone));
+            AddLine(panel, "Breakout", TacticsService.Display(tactics.Settings.Breakout));
+            AddLine(panel, "Shot preference", TacticsService.Display(tactics.Settings.ShotPreference));
+            AddLine(panel, "Physicality", tactics.Settings.Physicality.ToString());
+            AddLine(panel, "Risk", tactics.Settings.RiskLevel.ToString());
+            AddActions(panel,
+                CreateDetailButton("Set Forecheck", State.CycleForecheck),
+                CreateDetailButton("Set Neutral Zone", State.CycleNeutralZone),
+                CreateDetailButton("Set Defensive Zone", State.CycleDefensiveZone),
+                CreateDetailButton("Set Breakout", State.CycleBreakout),
+                CreateDetailButton("Set Shot Preference", State.CycleShotPreference),
+                CreateDetailButton("Set Physicality", State.CyclePhysicality),
+                CreateDetailButton("Set Risk", State.CycleRisk));
+        }
+        else if (row.PersonId == "special-teams-tactics")
+        {
+            AddLine(panel, "Power play style", TacticsService.Display(tactics.Settings.PowerPlayStyle));
+            AddLine(panel, "Penalty kill style", TacticsService.Display(tactics.Settings.PenaltyKillStyle));
+            AddLine(panel, "PP units", string.Join(" | ", State.CurrentGameUsage.SpecialTeams.PowerPlayUnits.Select(unit => $"PP{unit.UnitNumber} {unit.Players.Count} players")));
+            AddLine(panel, "PK units", string.Join(" | ", State.CurrentGameUsage.SpecialTeams.PenaltyKillUnits.Select(unit => $"PK{unit.UnitNumber} {unit.Players.Count} players")));
+            AddActions(panel,
+                CreateDetailButton("Set PP Style", State.CyclePowerPlayTactic),
+                CreateDetailButton("Set PK Style", State.CyclePenaltyKillTactic),
+                CreateDetailButton("Review Game Usage", () => SelectWorkspaceScreen("Hockey Operations", "Lineup")));
+        }
+        else if (row.Kind == "TacticsReport")
+        {
+            AddSubHeader(panel, "Strengths");
+            foreach (var strength in tactics.FitReport.Strengths)
+            {
+                AddParagraph(panel, $"- {strength}");
+            }
+
+            AddSubHeader(panel, "Weaknesses");
+            foreach (var weakness in tactics.FitReport.Weaknesses)
+            {
+                AddParagraph(panel, $"- {weakness}");
+            }
+
+            AddSubHeader(panel, "Risk Warnings");
+            foreach (var warning in tactics.FitReport.RiskWarnings.DefaultIfEmpty("No major tactical risk warning."))
+            {
+                AddParagraph(panel, $"- {warning}");
+            }
+        }
+        else if (row.Kind == "TacticsRecommendation")
+        {
+            var recommendation = tactics.Recommendations.FirstOrDefault(item => item.RecommendationId == row.PersonId);
+            if (recommendation is not null)
+            {
+                AddLine(panel, "Priority", recommendation.IsImportant ? "Important" : "Normal");
+                AddLine(panel, "Reason", recommendation.Reason);
+                AddLine(panel, "Suggested action", recommendation.SuggestedAction);
+            }
+        }
+
+        AddSubHeader(panel, "Player Impact Preview");
+        foreach (var impact in tactics.PlayerImpacts.Take(8))
+        {
+            AddParagraph(panel, $"{impact.PlayerName}: role {impact.RoleSatisfactionModifier:+#;-#;0}, development {impact.DevelopmentModifier:+#;-#;0}, confidence {impact.ConfidenceModifier:+#;-#;0}. {impact.Summary}");
+        }
+
         return panel;
     }
 
@@ -4182,6 +4333,15 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"{goalie.UsageRole} goalie usage: {goalie.PlayerName}, starts {goalie.GamesStarted}/{goalie.ExpectedStarts}, {goalie.Workload}. {goalie.RestRecommendation}");
         }
+
+        builder.AppendLine();
+        builder.AppendLine("Tactics");
+        var tactics = State.CurrentTactics;
+        builder.AppendLine($"Style: {TacticsService.Display(tactics.Style)} | System: {TacticsService.Display(tactics.System)} | Fit: {tactics.FitReport.Grade} ({tactics.FitReport.Score}/100)");
+        builder.AppendLine($"Forecheck: {TacticsService.Display(tactics.Settings.Forecheck)} | Neutral zone: {TacticsService.Display(tactics.Settings.NeutralZone)} | Defensive zone: {TacticsService.Display(tactics.Settings.DefensiveZone)}");
+        builder.AppendLine($"Breakout: {TacticsService.Display(tactics.Settings.Breakout)} | Shots: {TacticsService.Display(tactics.Settings.ShotPreference)} | Physicality: {tactics.Settings.Physicality} | Risk: {tactics.Settings.RiskLevel}");
+        builder.AppendLine($"PP tactic: {TacticsService.Display(tactics.Settings.PowerPlayStyle)} | PK tactic: {TacticsService.Display(tactics.Settings.PenaltyKillStyle)}");
+        builder.AppendLine($"Coach: {tactics.CoachName} ({tactics.CoachPhilosophy}) - {tactics.FitReport.CoachRecommendation}");
         builder.AppendLine();
         builder.AppendLine("Coach Recommendations");
         if (lineup.CoachRecommendations.Count == 0)
@@ -6914,6 +7074,7 @@ internal sealed class AlphaDesktopState
     private readonly LineupService _lineups = new();
     private readonly LineChemistryService _lineChemistry = new();
     private readonly GameUsageService _gameUsage = new();
+    private readonly TacticsService _tactics = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6932,7 +7093,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry))));
+        ScenarioSnapshot = _tactics.EnsureTactics(_gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry)))));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -7158,6 +7319,12 @@ internal sealed class AlphaDesktopState
     public string GameUsageDashboardSummary =>
         CurrentGameUsage.CoachRecommendations.FirstOrDefault(recommendation => recommendation.IsImportant)?.SuggestedAction
         ?? "PP, PK, goalie, extra-attacker, three-on-three, and shootout usage are set.";
+
+    public int TacticsWarningCount => CurrentTactics.Recommendations.Count(recommendation => recommendation.IsImportant);
+
+    public string TacticsDashboardSummary =>
+        CurrentTactics.Recommendations.FirstOrDefault(recommendation => recommendation.IsImportant)?.SuggestedAction
+        ?? CurrentTactics.FitReport.CoachRecommendation;
 
     public IReadOnlyList<string> UpcomingActionEvents => _actionCenter.BuildUpcomingEvents(ScenarioSnapshot);
 
@@ -8379,6 +8546,22 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public TeamTactics CurrentTactics
+    {
+        get
+        {
+            if (ScenarioSnapshot.CurrentTactics is not null)
+            {
+                return ScenarioSnapshot.CurrentTactics;
+            }
+
+            var updated = _tactics.EnsureTactics(ScenarioSnapshot);
+            ScenarioSnapshot = updated;
+            Snapshot = updated.AlphaSnapshot;
+            return updated.CurrentTactics!;
+        }
+    }
+
     public LineChemistry? LineChemistryUnit(string unitId) =>
         LineChemistryReport.Units.FirstOrDefault(unit => unit.UnitId == unitId);
 
@@ -8446,10 +8629,13 @@ internal sealed class AlphaDesktopState
     }
 
     public string LineupDevelopmentImpactText(string personId) =>
-        $"{_lineups.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary} {GameUsageDevelopmentImpactText(personId)}";
+        $"{_lineups.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary} {GameUsageDevelopmentImpactText(personId)} {TacticsDevelopmentImpactText(personId)}";
 
     public string GameUsageDevelopmentImpactText(string personId) =>
         _gameUsage.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary;
+
+    public string TacticsDevelopmentImpactText(string personId) =>
+        _tactics.BuildPlayerImpact(ScenarioSnapshot, personId).Summary;
 
     public string LineupCoachNote(string personId) =>
         LineupAssignment(personId)?.CoachNote ?? "No coach lineup note yet.";
@@ -8524,6 +8710,37 @@ internal sealed class AlphaDesktopState
 
     public void AutoFillGameUsage() => ApplyGameUsageResult(_gameUsage.AutoFillGameUsage(ScenarioSnapshot));
 
+    public void AutoSetTacticsFromCoach() => ApplyTacticsResult(_tactics.AutoSetFromCoach(ScenarioSnapshot));
+
+    public void SetTacticalStyle(TacticalStyle style) => ApplyTacticsResult(_tactics.SetStyle(ScenarioSnapshot, style));
+
+    public void CycleForecheck() =>
+        ApplyTacticsResult(_tactics.SetForecheck(ScenarioSnapshot, Next(CurrentTactics.Settings.Forecheck)));
+
+    public void CycleNeutralZone() =>
+        ApplyTacticsResult(_tactics.SetNeutralZone(ScenarioSnapshot, Next(CurrentTactics.Settings.NeutralZone)));
+
+    public void CycleDefensiveZone() =>
+        ApplyTacticsResult(_tactics.SetDefensiveZone(ScenarioSnapshot, Next(CurrentTactics.Settings.DefensiveZone)));
+
+    public void CycleBreakout() =>
+        ApplyTacticsResult(_tactics.SetBreakout(ScenarioSnapshot, Next(CurrentTactics.Settings.Breakout)));
+
+    public void CycleShotPreference() =>
+        ApplyTacticsResult(_tactics.SetShotPreference(ScenarioSnapshot, Next(CurrentTactics.Settings.ShotPreference)));
+
+    public void CyclePhysicality() =>
+        ApplyTacticsResult(_tactics.SetPhysicality(ScenarioSnapshot, Next(CurrentTactics.Settings.Physicality)));
+
+    public void CycleRisk() =>
+        ApplyTacticsResult(_tactics.SetRisk(ScenarioSnapshot, Next(CurrentTactics.Settings.RiskLevel)));
+
+    public void CyclePowerPlayTactic() =>
+        ApplyTacticsResult(_tactics.SetPowerPlayStyle(ScenarioSnapshot, Next(CurrentTactics.Settings.PowerPlayStyle)));
+
+    public void CyclePenaltyKillTactic() =>
+        ApplyTacticsResult(_tactics.SetPenaltyKillStyle(ScenarioSnapshot, Next(CurrentTactics.Settings.PenaltyKillStyle)));
+
     public void AssignNextGameUsage(string unitId)
     {
         try
@@ -8583,7 +8800,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = _gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(result.ScenarioSnapshot));
+            ScenarioSnapshot = _tactics.EnsureTactics(_gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(result.ScenarioSnapshot)));
             Snapshot = ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
         }
@@ -8596,6 +8813,19 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
+            ScenarioSnapshot = _tactics.EnsureTactics(result.ScenarioSnapshot with { CurrentTactics = null });
+            Snapshot = ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyTacticsResult(TacticsManagementResult result)
+    {
+        if (result.Success)
+        {
             ScenarioSnapshot = result.ScenarioSnapshot;
             Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
@@ -8603,6 +8833,14 @@ internal sealed class AlphaDesktopState
 
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
+    }
+
+    private static TEnum Next<TEnum>(TEnum current)
+        where TEnum : struct, Enum
+    {
+        var values = Enum.GetValues<TEnum>();
+        var index = Array.IndexOf(values, current);
+        return values[(index + 1) % values.Length];
     }
 
     private LineupRoleAssignment NextForwardForUsage(int skip = 0) =>

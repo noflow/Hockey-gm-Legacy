@@ -103,26 +103,27 @@ The five foundation pillars remain:
 - Alpha 6.4 - Lineup & Role Management v1
 - Alpha 6.5 - Line Chemistry v1
 - Alpha 6.6 - Special Teams & Game Usage v1
+- Alpha 6.7 - Tactics & Coaching Style v1
 
 ## Current Milestone
 
-Alpha 6.6 - Special Teams & Game Usage v1
+Alpha 6.7 - Tactics & Coaching Style v1
 
 ## Current Goal
 
-Expand lineup management into complete personnel deployment: even-strength lines, power play, penalty kill, goalie workload, extra attacker, three-on-three placeholder, and shootout order without building a tactics engine or overhauling game simulation.
+Add team tactical identity and coaching style: forecheck, neutral zone, defensive zone, breakout, shot preference, physicality, risk, PP/PK tactical style, coach-derived defaults, fit reports, player impact notes, and Action Center warnings without building play-by-play, line matching, or a full tactical simulator.
 
-## Why Game Usage Was Next
+## Why Tactics Was Next
 
-Lineup Management and Line Chemistry made even-strength roles understandable. The next playable layer is deciding when players are used: PP, PK, goalie starts/rest, extra attacker, three-on-three, and shootout order now feed coach recommendations, player dossier usage, modest development context, and Action Center warnings.
+Lineup Management decided who plays, Line Chemistry explained who fits together, and Game Usage decided when players are deployed. The next GM layer is defining how the team plays: system identity, risk profile, special-teams style, coach philosophy fit, and modest player/development context.
 
 ## Next Build Target
 
-Alpha 6.7 - TBD
+Alpha 6.8 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.7 - TBD
+1. Alpha 6.8 - TBD
 
 ## Build Rule
 

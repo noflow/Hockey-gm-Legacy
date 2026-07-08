@@ -151,7 +151,8 @@ internal sealed class Alpha27FirstMonthPlayabilityTests
         Assert.False(text.Contains("SaveSystem", StringComparison.Ordinal), "Alpha 2.7 should not add save/load.");
         Assert.False(text.Contains("PlayByPlay", StringComparison.Ordinal), "Alpha 2.7 should not add play-by-play.");
         Assert.False(text.Contains("LineMatching", StringComparison.Ordinal), "Alpha 2.7 should not add line matching.");
-        Assert.False(text.Contains("Tactical", StringComparison.Ordinal), "Alpha 2.7 should not add full tactical simulation.");
+        Assert.False(text.Contains("MatchupEngine", StringComparison.Ordinal), "Alpha 2.7 should not add a matchup engine.");
+        Assert.False(text.Contains("FullTacticalSimulator", StringComparison.Ordinal), "Alpha 2.7 should not add full tactical simulation.");
     }
 
     private static (EngineRegistry Registry, NewGmScenarioSnapshot ScenarioSnapshot) ScenarioWithPlayerTeamGameTomorrow(string gameId)
