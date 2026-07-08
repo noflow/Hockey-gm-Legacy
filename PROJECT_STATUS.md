@@ -95,14 +95,15 @@ The five foundation pillars remain:
 - Alpha 5.8 - Dynamic Draft Classes v1
 - Alpha 5.9 - League AI v2
 - Alpha 6.0 - Player Life Cycle v1
+- Alpha 6.1 - Staff Life Cycle v1
 
 ## Current Milestone
 
-Alpha 6.0 - Player Life Cycle v1
+Alpha 6.1 - Staff Life Cycle v1
 
 ## Current Goal
 
-Make every player feel like a living long-term career by tracking life stage, career phase, reputation, milestones, achievements, career story, legacy score, influential staff, dossier career context, Action Center story items, report highlights, and limited league-news milestones.
+Make every staff member feel like a living long-term career by tracking life stage, career phase, reputation, milestones, organizations, roles, salary history, coaching trees, scout discoveries, player development influence, promotion readiness, Action Center staff items, report highlights, and limited league-news milestones.
 
 ## Why Relationship Engine Was Next
 
@@ -112,11 +113,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 6.1 - TBD
+Alpha 6.2 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.1 - TBD
+1. Alpha 6.2 - TBD
 
 ## Build Rule
 

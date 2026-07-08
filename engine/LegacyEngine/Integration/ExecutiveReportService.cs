@@ -100,6 +100,7 @@ public sealed class ExecutiveReportService
                 }),
                 Section("Player Life Cycle", "Career-stage tracking highlights long-term player stories without exposing hidden ratings.", BuildPlayerLifeCycleItems(scenario)),
                 Section("Career Highlights", "Recent milestones and storylines for the GM to remember.", BuildCareerHighlightItems(scenario)),
+                Section("Staff Life Cycle", "Staff career tracking highlights coaches, scouts, medical staff, and promotion planning.", BuildStaffLifeCycleItems(scenario)),
                 Section("Medical Department", "Medical staff reviewed current availability and recovery risk.", new Dictionary<string, string>
                 {
                     ["Current Injuries"] = injuries.Length.ToString(),
@@ -237,6 +238,7 @@ public sealed class ExecutiveReportService
                 }),
                 Section("Player Life Cycle", "Player stories connect development, injuries, contracts, milestones, and reputation.", BuildPlayerLifeCycleItems(scenario)),
                 Section("Career Highlights", "Most notable career moments from the current archive.", BuildCareerHighlightItems(scenario)),
+                Section("Staff Life Cycle", "Staff career stories connect reputation, departments, promotion candidates, and organizational continuity.", BuildStaffLifeCycleItems(scenario)),
                 Section("Medical Report", "Medical summary tracks games lost, recurring risk, returning players, department grade, and budget support.", BuildMedicalReportItems(scenario, injuries)),
                 Section("Team Leaders", "Stat leaders are reserved for the future game simulation layer.", new Dictionary<string, string>
                 {
@@ -412,6 +414,25 @@ public sealed class ExecutiveReportService
             items["Highlight"] = "No player career highlights have been tracked yet.";
         }
 
+        return items;
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildStaffLifeCycleItems(NewGmScenarioSnapshot scenario)
+    {
+        var lifecycle = scenario.StaffCareerSummaries.Count == 0
+            ? new StaffLifeCycleService().EnsureLifeCycle(scenario)
+            : scenario;
+        var service = new StaffLifeCycleService();
+        var highlights = service.BuildReportHighlights(lifecycle).Take(6).ToArray();
+        var items = new Dictionary<string, string>();
+        for (var index = 0; index < highlights.Length; index++)
+        {
+            items[$"Staff Highlight {index + 1}"] = highlights[index];
+        }
+
+        var topLegacy = lifecycle.StaffCareerSummaries.OrderByDescending(item => item.LegacyScore).FirstOrDefault();
+        items["Top Staff Legacy"] = topLegacy is null ? "No staff legacy score yet." : $"{topLegacy.StaffName} ({topLegacy.LegacyScore})";
+        items["Staff Milestones"] = lifecycle.StaffMilestones.Count.ToString();
         return items;
     }
 

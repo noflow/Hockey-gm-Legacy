@@ -136,6 +136,14 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<LeagueTransaction> PlayerLifeCycleNews { get; init; } = Array.Empty<LeagueTransaction>();
 
+    public IReadOnlyList<StaffCareerState> StaffCareerStates { get; init; } = Array.Empty<StaffCareerState>();
+
+    public IReadOnlyList<StaffCareerSummary> StaffCareerSummaries { get; init; } = Array.Empty<StaffCareerSummary>();
+
+    public IReadOnlyList<StaffMilestone> StaffMilestones { get; init; } = Array.Empty<StaffMilestone>();
+
+    public IReadOnlyList<LeagueTransaction> StaffLifeCycleNews { get; init; } = Array.Empty<LeagueTransaction>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -387,6 +395,26 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         foreach (var transaction in PlayerLifeCycleNews)
+        {
+            transaction.Validate();
+        }
+
+        foreach (var state in StaffCareerStates)
+        {
+            state.Validate();
+        }
+
+        foreach (var summary in StaffCareerSummaries)
+        {
+            summary.Validate();
+        }
+
+        foreach (var milestone in StaffMilestones)
+        {
+            milestone.Validate();
+        }
+
+        foreach (var transaction in StaffLifeCycleNews)
         {
             transaction.Validate();
         }

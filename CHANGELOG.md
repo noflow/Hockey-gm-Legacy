@@ -1,27 +1,27 @@
 # Changelog
 
-## Current - Alpha 6.0
+## Current - Alpha 6.1
 
 ### Added
 
-- Player life-cycle models for life stage, career phase, reputation category, milestones, achievements, career story, staff influence, and legacy score.
-- PlayerLifeCycleService to evaluate tracked roster players, prospects, draft board players, recruits, free agents, and trade-block players.
-- Player milestones now feed career timelines and limited notable League News items.
-- Player dossiers now show life stage, career phase, reputation, legacy score, story lines, milestones, achievements, influential staff, and coach/scout/medical career notes.
-- Reports / History now includes Career Milestones and Player Stories views.
-- Executive reports and Action Center now include meaningful player career highlights.
-- Tests covering life-stage generation, career progression, milestones, reputation, legacy score, career stories, timeline history, achievements, staff influence, reports, League News, dossiers, and Action Center exposure.
+- Staff life-cycle models for life stage, career phase, reputation category, milestones, career story, organizations, roles, salary history, personal legacy, promotion readiness, and concern summaries.
+- StaffLifeCycleService to evaluate current staff and staff-market candidates across coaching, scouting, medical, and front-office departments.
+- Staff milestones now feed career timelines and limited notable Staff-category League News items.
+- Staff profiles now show life stage, career phase, reputation, legacy score, organizations, roles, players developed, prospects discovered, coaching tree links, promotion readiness, and career concerns.
+- Reports / History now includes Staff Careers, Coaching Trees, Scout History, and Development Staff History views.
+- Executive reports and Action Center now include staff life-cycle highlights for promotion review, succession planning, staff performance review, top scout, development staff, and staff concerns.
+- Tests covering life stages, career history, reputation, scouting careers, coaching careers, coaching trees, promotion, staff movement, relationships, mentorship, timeline, history, reports, Action Center, save/load, and UI exposure.
 
 ### Changed
 
-- New GM scenario bootstrap now seeds player life-cycle records for the existing world.
-- AlphaDesktop backfills player life-cycle records for current scenario state.
-- League News counts and feeds now include notable player milestones.
-- AlphaDesktop version label updated to Alpha 6.0.
+- New GM scenario bootstrap now seeds staff life-cycle records for the existing staff room.
+- AlphaDesktop backfills staff life-cycle records for current and loaded scenario state.
+- League News counts and feeds now include notable staff milestones.
+- AlphaDesktop version label updated to Alpha 6.1.
 
 ### Fixed
 
-- Player career context no longer lives only in scattered stat/history records; dossiers and reports now show one coherent career read.
+- Staff career context no longer lives only in scattered staff history and market records; staff profiles and reports now show one coherent career read.
 
 ### Verified
 
@@ -41,6 +41,7 @@
 
 ## Recently Completed
 
+- Alpha 6.0 - Player Life Cycle v1.
 - Alpha 5.9 - League AI v2.
 - Alpha 5.8 - Dynamic Draft Classes v1.
 - Alpha 5.7 - Agent Engine v1.
@@ -58,4 +59,4 @@
 
 ## Next
 
-- Alpha 6.1 - TBD.
+- Alpha 6.2 - TBD.

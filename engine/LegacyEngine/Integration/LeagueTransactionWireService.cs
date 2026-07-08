@@ -116,6 +116,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.SeasonCompleted => LeagueNewsCategory.League,
             LeagueTransactionType.TeamIdentityUpdate => LeagueNewsCategory.League,
             LeagueTransactionType.PlayerMilestone => LeagueNewsCategory.League,
+            LeagueTransactionType.StaffMilestone => LeagueNewsCategory.Staff,
             _ => LeagueNewsCategory.All
         };
 
@@ -166,6 +167,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.TradeDeadline => $"{teamName} trade deadline update: {personName}.",
             LeagueTransactionType.SeasonCompleted => $"{teamName} completed the season. Standings leader: {personName}.",
             LeagueTransactionType.TeamIdentityUpdate => $"{teamName} direction update: {personName}.",
+            LeagueTransactionType.StaffMilestone => $"{teamName} staff milestone for {personName}.",
             _ => $"{teamName} updated {personName}."
         };
 

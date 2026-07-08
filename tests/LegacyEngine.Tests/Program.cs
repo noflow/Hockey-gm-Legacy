@@ -74,6 +74,7 @@ var alpha58DynamicDraftClassTests = new Alpha58DynamicDraftClassTests();
 var alpha59LeagueAiV2Tests = new Alpha59LeagueAiV2Tests();
 var nhlScenarioRealismTests = new NhlScenarioRealismTests();
 var alpha60PlayerLifeCycleTests = new Alpha60PlayerLifeCycleTests();
+var alpha61StaffLifeCycleTests = new Alpha61StaffLifeCycleTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -978,6 +979,23 @@ runner.Run("alpha 6.0 action center includes career stories", alpha60PlayerLifeC
 runner.Run("alpha 6.0 history stores life-cycle records", alpha60PlayerLifeCycleTests.HistoryStoresLifeCycleRecords);
 runner.Run("alpha 6.0 AlphaDesktop exposes life-cycle UI", alpha60PlayerLifeCycleTests.AlphaDesktopExposesLifeCycleUi);
 runner.Run("alpha 6.0 no forbidden systems added", alpha60PlayerLifeCycleTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 6.1 staff life stages generated", alpha61StaffLifeCycleTests.LifeStagesGenerated);
+runner.Run("alpha 6.1 staff career history generated", alpha61StaffLifeCycleTests.CareerHistoryGenerated);
+runner.Run("alpha 6.1 staff reputation generated", alpha61StaffLifeCycleTests.ReputationGenerated);
+runner.Run("alpha 6.1 scouting careers generated", alpha61StaffLifeCycleTests.ScoutingCareersGenerated);
+runner.Run("alpha 6.1 coaching careers generated", alpha61StaffLifeCycleTests.CoachingCareersGenerated);
+runner.Run("alpha 6.1 coaching tree generated", alpha61StaffLifeCycleTests.CoachingTreeGenerated);
+runner.Run("alpha 6.1 promotion recommendation generated", alpha61StaffLifeCycleTests.PromotionRecommendationGenerated);
+runner.Run("alpha 6.1 staff movement included", alpha61StaffLifeCycleTests.StaffMovementIncluded);
+runner.Run("alpha 6.1 relationships included", alpha61StaffLifeCycleTests.RelationshipsIncluded);
+runner.Run("alpha 6.1 player mentorship included", alpha61StaffLifeCycleTests.PlayerMentorshipIncluded);
+runner.Run("alpha 6.1 timeline updated", alpha61StaffLifeCycleTests.TimelineUpdated);
+runner.Run("alpha 6.1 history stored", alpha61StaffLifeCycleTests.HistoryStored);
+runner.Run("alpha 6.1 reports generated", alpha61StaffLifeCycleTests.ReportsGenerated);
+runner.Run("alpha 6.1 action center items generated", alpha61StaffLifeCycleTests.ActionCenterItemsGenerated);
+runner.Run("alpha 6.1 save load preserves staff life cycle", alpha61StaffLifeCycleTests.SaveLoadPreservesStaffLifeCycle);
+runner.Run("alpha 6.1 AlphaDesktop exposes staff life-cycle UI", alpha61StaffLifeCycleTests.AlphaDesktopExposesStaffLifeCycleUi);
+runner.Run("alpha 6.1 no forbidden systems added", alpha61StaffLifeCycleTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

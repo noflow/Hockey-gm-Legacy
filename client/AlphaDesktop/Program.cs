@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -558,6 +558,10 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Career Milestones", CreateTextScreen("Career Milestones")),
             new WorkspaceScreen("Player Stories", CreateTextScreen("Player Stories")),
             new WorkspaceScreen("Staff History", CreateTextScreen("Staff History")),
+            new WorkspaceScreen("Staff Careers", CreateTextScreen("Staff Careers")),
+            new WorkspaceScreen("Coaching Trees", CreateTextScreen("Coaching Trees")),
+            new WorkspaceScreen("Scout History", CreateTextScreen("Scout History")),
+            new WorkspaceScreen("Development Staff History", CreateTextScreen("Development Staff History")),
             new WorkspaceScreen("Transaction History", CreateTextScreen("Transaction History")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
             new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
@@ -590,7 +594,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.0 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.1 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1627,6 +1631,10 @@ internal sealed class MainWindow : Window
         _tabs["Career Milestones"].Text = BuildCareerMilestonesReport();
         _tabs["Player Stories"].Text = BuildPlayerStoriesReport();
         _tabs["Staff History"].Text = BuildStaffHistoryReport();
+        _tabs["Staff Careers"].Text = BuildStaffCareersReport();
+        _tabs["Coaching Trees"].Text = BuildCoachingTreesReport();
+        _tabs["Scout History"].Text = BuildScoutHistoryReport();
+        _tabs["Development Staff History"].Text = BuildDevelopmentStaffHistoryReport();
         _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
         _tabs["Draft Recaps"].Text = BuildDraftRecaps();
         _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
@@ -4664,6 +4672,136 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildStaffCareersReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Staff Careers");
+        builder.AppendLine("=============");
+        var summaries = State.ScenarioSnapshot.StaffCareerSummaries;
+        if (summaries.Count == 0)
+        {
+            builder.AppendLine("No staff career summaries have been built yet.");
+            return builder.ToString();
+        }
+
+        foreach (var summary in summaries.OrderByDescending(item => item.LegacyScore).ThenBy(item => item.StaffName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"{summary.StaffName} - {summary.CurrentRole} / {summary.LifeStage} / {summary.Reputation}");
+            builder.AppendLine($"  Department: {summary.Department}");
+            builder.AppendLine($"  Career phase: {summary.CareerPhase}");
+            builder.AppendLine($"  Legacy score: {summary.LegacyScore}");
+            builder.AppendLine($"  {summary.CareerSummaryText}");
+            builder.AppendLine($"  Personal legacy: {summary.PersonalLegacy}");
+            builder.AppendLine($"  Promotion: {summary.PromotionReadiness}");
+            builder.AppendLine($"  Concern: {summary.ConcernSummary}");
+            foreach (var story in summary.CareerStory.Take(5))
+            {
+                builder.AppendLine($"  Story: {story}");
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildCoachingTreesReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Coaching Trees");
+        builder.AppendLine("==============");
+        var coaches = State.ScenarioSnapshot.StaffCareerSummaries
+            .Where(item => item.Department == StaffDepartment.Coaching || item.CurrentRole is StaffRole.GeneralManager or StaffRole.AssistantGM)
+            .OrderByDescending(item => item.CoachingTree.Count)
+            .ThenBy(item => item.StaffName, StringComparer.Ordinal)
+            .ToArray();
+        if (coaches.Length == 0)
+        {
+            builder.AppendLine("No coaching tree data has been recorded yet.");
+            return builder.ToString();
+        }
+
+        foreach (var coach in coaches)
+        {
+            builder.AppendLine($"{coach.StaffName} - {coach.CurrentRole}");
+            if (coach.CoachingTree.Count == 0)
+            {
+                builder.AppendLine("  No tree links yet.");
+            }
+            else
+            {
+                foreach (var link in coach.CoachingTree)
+                {
+                    builder.AppendLine($"  {link}");
+                }
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildScoutHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Scout History");
+        builder.AppendLine("=============");
+        var scouts = State.ScenarioSnapshot.StaffCareerSummaries
+            .Where(item => item.Department == StaffDepartment.Scouting)
+            .OrderByDescending(item => item.LegacyScore)
+            .ThenBy(item => item.StaffName, StringComparer.Ordinal)
+            .ToArray();
+        if (scouts.Length == 0)
+        {
+            builder.AppendLine("No scout career data has been recorded yet.");
+            return builder.ToString();
+        }
+
+        foreach (var scout in scouts)
+        {
+            builder.AppendLine($"{scout.StaffName} - {scout.CurrentRole}");
+            builder.AppendLine($"  Reputation: {scout.Reputation}; legacy {scout.LegacyScore}");
+            builder.AppendLine($"  {scout.PersonalLegacy}");
+            builder.AppendLine("  Players discovered / recommended:");
+            foreach (var player in scout.PlayersDiscovered.DefaultIfEmpty("No credited discoveries yet.").Take(8))
+            {
+                builder.AppendLine($"    {player}");
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildDevelopmentStaffHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Development Staff History");
+        builder.AppendLine("=========================");
+        var developmentStaff = State.ScenarioSnapshot.StaffCareerSummaries
+            .Where(item => item.Department == StaffDepartment.Coaching || item.CurrentRole is StaffRole.DevelopmentCoach or StaffRole.SkillsCoach or StaffRole.GoalieCoach or StaffRole.GoaltendingCoach)
+            .OrderByDescending(item => item.PlayersDeveloped.Count)
+            .ThenByDescending(item => item.LegacyScore)
+            .ThenBy(item => item.StaffName, StringComparer.Ordinal)
+            .ToArray();
+        if (developmentStaff.Length == 0)
+        {
+            builder.AppendLine("No development staff history has been recorded yet.");
+            return builder.ToString();
+        }
+
+        foreach (var staff in developmentStaff)
+        {
+            builder.AppendLine($"{staff.StaffName} - {staff.CurrentRole}");
+            builder.AppendLine($"  Phase: {staff.CareerPhase}; reputation {staff.Reputation}; legacy {staff.LegacyScore}");
+            builder.AppendLine("  Players developed:");
+            foreach (var player in staff.PlayersDeveloped.DefaultIfEmpty("No credited development influence yet.").Take(8))
+            {
+                builder.AppendLine($"    {player}");
+            }
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildTransactionHistoryReport()
     {
         var builder = new StringBuilder();
@@ -6077,6 +6215,7 @@ internal sealed class AlphaDesktopState
     private readonly PlayabilityPolishService _playability = new();
     private readonly AgentEngine _agents = new();
     private readonly PlayerLifeCycleService _lifeCycle = new();
+    private readonly StaffLifeCycleService _staffLifeCycle = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6095,7 +6234,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry);
+        ScenarioSnapshot = _staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry);
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -6115,6 +6254,7 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<LeagueTransaction> LeagueTransactions =>
         _leagueTransactions
             .Concat(ScenarioSnapshot.PlayerLifeCycleNews)
+            .Concat(ScenarioSnapshot.StaffLifeCycleNews)
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
             .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
@@ -7226,6 +7366,39 @@ internal sealed class AlphaDesktopState
         builder.AppendLine($"Current assignment: {profile.CurrentAssignment}");
         builder.AppendLine($"Current focus: {profile.CurrentFocus}");
         builder.AppendLine();
+        var lifeCycle = ScenarioSnapshot.StaffCareerSummaries.FirstOrDefault(summary => summary.PersonId == personId)
+            ?? _staffLifeCycle.FindSummary(_staffLifeCycle.EnsureLifeCycle(ScenarioSnapshot), personId);
+        if (lifeCycle is not null)
+        {
+            builder.AppendLine("Career");
+            builder.AppendLine($"Life stage: {lifeCycle.LifeStage}");
+            builder.AppendLine($"Career phase: {lifeCycle.CareerPhase}");
+            builder.AppendLine($"Career reputation: {lifeCycle.Reputation}");
+            builder.AppendLine($"Legacy score: {lifeCycle.LegacyScore}");
+            builder.AppendLine($"Summary: {lifeCycle.CareerSummaryText}");
+            builder.AppendLine($"Personal legacy: {lifeCycle.PersonalLegacy}");
+            builder.AppendLine($"Promotion readiness: {lifeCycle.PromotionReadiness}");
+            builder.AppendLine($"Career concern: {lifeCycle.ConcernSummary}");
+            builder.AppendLine($"Organizations: {string.Join(", ", lifeCycle.Organizations.Take(4))}");
+            builder.AppendLine($"Roles: {string.Join(", ", lifeCycle.Roles.Take(5))}");
+            if (lifeCycle.PlayersDeveloped.Count > 0)
+            {
+                builder.AppendLine($"Players developed: {string.Join(", ", lifeCycle.PlayersDeveloped.Take(4))}");
+            }
+
+            if (lifeCycle.PlayersDiscovered.Count > 0)
+            {
+                builder.AppendLine($"Players discovered: {string.Join(", ", lifeCycle.PlayersDiscovered.Take(4))}");
+            }
+
+            if (lifeCycle.CoachingTree.Count > 0)
+            {
+                builder.AppendLine($"Coaching tree: {string.Join(", ", lifeCycle.CoachingTree.Take(4))}");
+            }
+
+            builder.AppendLine();
+        }
+
         builder.AppendLine($"Strengths: {string.Join(", ", profile.Strengths)}");
         builder.AppendLine($"Weaknesses: {string.Join(", ", profile.Weaknesses)}");
         builder.AppendLine();
@@ -9516,7 +9689,7 @@ internal sealed class AlphaDesktopState
 
     private void EnsureLifeCycleState()
     {
-        var updated = _lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry);
+        var updated = _staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;
