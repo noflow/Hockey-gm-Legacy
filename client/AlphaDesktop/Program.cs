@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -555,6 +555,8 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Drafted Players", CreateTextScreen("Drafted Players")),
             new WorkspaceScreen("Where Are They Now", CreateTextScreen("Where Are They Now")),
             new WorkspaceScreen("Player Career Timelines", CreateTextScreen("Player Career Timelines")),
+            new WorkspaceScreen("Career Milestones", CreateTextScreen("Career Milestones")),
+            new WorkspaceScreen("Player Stories", CreateTextScreen("Player Stories")),
             new WorkspaceScreen("Staff History", CreateTextScreen("Staff History")),
             new WorkspaceScreen("Transaction History", CreateTextScreen("Transaction History")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
@@ -588,7 +590,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 5.9 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.0 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1622,6 +1624,8 @@ internal sealed class MainWindow : Window
         _tabs["Drafted Players"].Text = BuildDraftedPlayersReport();
         _tabs["Where Are They Now"].Text = BuildWhereAreTheyNowReport();
         _tabs["Player Career Timelines"].Text = BuildPlayerCareerTimelinesReport();
+        _tabs["Career Milestones"].Text = BuildCareerMilestonesReport();
+        _tabs["Player Stories"].Text = BuildPlayerStoriesReport();
         _tabs["Staff History"].Text = BuildStaffHistoryReport();
         _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
         _tabs["Draft Recaps"].Text = BuildDraftRecaps();
@@ -4574,6 +4578,65 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildCareerMilestonesReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Career Milestones");
+        builder.AppendLine("=================");
+        if (State.ScenarioSnapshot.PlayerMilestones.Count == 0)
+        {
+            builder.AppendLine("No player milestones have been tracked yet.");
+            return builder.ToString();
+        }
+
+        foreach (var group in State.ScenarioSnapshot.PlayerMilestones
+            .OrderByDescending(item => item.Date)
+            .GroupBy(item => item.PlayerName)
+            .Take(40))
+        {
+            builder.AppendLine(group.Key);
+            foreach (var milestone in group.Take(8))
+            {
+                builder.AppendLine($"  {milestone.Date:yyyy-MM-dd} [{milestone.MilestoneType}] {milestone.Summary}");
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildPlayerStoriesReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Player Stories");
+        builder.AppendLine("==============");
+        if (State.ScenarioSnapshot.PlayerCareerSummaries.Count == 0)
+        {
+            builder.AppendLine("No player stories have been built yet.");
+            return builder.ToString();
+        }
+
+        foreach (var summary in State.ScenarioSnapshot.PlayerCareerSummaries
+            .OrderByDescending(item => item.LegacyScore)
+            .ThenBy(item => item.PlayerName, StringComparer.Ordinal)
+            .Take(40))
+        {
+            builder.AppendLine($"{summary.PlayerName} - {summary.LifeStage} / {summary.CareerPhase} / {summary.Reputation}");
+            builder.AppendLine($"  Legacy score: {summary.LegacyScore}");
+            builder.AppendLine($"  {summary.CareerSummaryText}");
+            foreach (var story in summary.CareerStory.Take(5))
+            {
+                builder.AppendLine($"  Story: {story}");
+            }
+
+            if (summary.InfluentialStaff.Count > 0)
+            {
+                builder.AppendLine($"  Influential staff: {string.Join(", ", summary.InfluentialStaff)}");
+            }
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildStaffHistoryReport()
     {
         var builder = new StringBuilder();
@@ -6013,6 +6076,7 @@ internal sealed class AlphaDesktopState
     private readonly ContractManagementService _contracts = new();
     private readonly PlayabilityPolishService _playability = new();
     private readonly AgentEngine _agents = new();
+    private readonly PlayerLifeCycleService _lifeCycle = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6031,7 +6095,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot)));
+        ScenarioSnapshot = _lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry);
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -6050,6 +6114,7 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<LeagueTransaction> LeagueTransactions =>
         _leagueTransactions
+            .Concat(ScenarioSnapshot.PlayerLifeCycleNews)
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
             .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
@@ -6218,8 +6283,14 @@ internal sealed class AlphaDesktopState
 
     public int UrgentPendingDecisionCount => FirstMonthAdvanceService.UrgentPendingActions(ScenarioSnapshot).Count;
 
-    public IReadOnlyList<ActionCenterItem> ActionCenterItems =>
-        _playability.CleanActionCenterItems(_actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses));
+    public IReadOnlyList<ActionCenterItem> ActionCenterItems
+    {
+        get
+        {
+            EnsureLifeCycleState();
+            return _playability.CleanActionCenterItems(_actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses));
+        }
+    }
 
     public int OpenActionCount => ActionCenterItems.Count(item => item.Status == ActionCenterStatus.Open);
 
@@ -6678,10 +6749,16 @@ internal sealed class AlphaDesktopState
             ? "All required hockey operations positions are covered."
             : string.Join(" ", StaffVacancies.Take(3).Select(vacancy => vacancy.Warning));
 
-    public PlayerDossierView? CurrentDossier =>
-        _selectedDossierPersonId is null
-            ? null
-            : _playerDossiers.CreateDossier(ScenarioSnapshot, _selectedDossierPersonId);
+    public PlayerDossierView? CurrentDossier
+    {
+        get
+        {
+            EnsureLifeCycleState();
+            return _selectedDossierPersonId is null
+                ? null
+                : _playerDossiers.CreateDossier(ScenarioSnapshot, _selectedDossierPersonId);
+        }
+    }
 
     public string TrainingCampStatusText =>
         ScenarioSnapshot.TrainingCamp switch
@@ -9434,6 +9511,16 @@ internal sealed class AlphaDesktopState
         if (_selectedDossierPersonId is null || !ids.Contains(_selectedDossierPersonId, StringComparer.Ordinal))
         {
             _selectedDossierPersonId = ids.FirstOrDefault();
+        }
+    }
+
+    private void EnsureLifeCycleState()
+    {
+        var updated = _lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry);
+        if (!ReferenceEquals(updated, ScenarioSnapshot))
+        {
+            ScenarioSnapshot = updated;
+            Snapshot = updated.AlphaSnapshot;
         }
     }
 

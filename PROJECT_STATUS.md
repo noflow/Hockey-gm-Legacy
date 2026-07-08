@@ -94,14 +94,15 @@ The five foundation pillars remain:
 - Alpha 5.7 - Agent Engine v1
 - Alpha 5.8 - Dynamic Draft Classes v1
 - Alpha 5.9 - League AI v2
+- Alpha 6.0 - Player Life Cycle v1
 
 ## Current Milestone
 
-Alpha 5.9 - League AI v2
+Alpha 6.0 - Player Life Cycle v1
 
 ## Current Goal
 
-Make AI organizations feel distinct by giving every team an explicit strategy, personality, current needs, budget behavior, draft philosophy, trade/free-agency behavior, staff hiring posture, strategy history, limited league-news strategy updates, and save/load-preserved organization AI profiles.
+Make every player feel like a living long-term career by tracking life stage, career phase, reputation, milestones, achievements, career story, legacy score, influential staff, dossier career context, Action Center story items, report highlights, and limited league-news milestones.
 
 ## Why Relationship Engine Was Next
 
@@ -111,11 +112,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 6.0 - TBD
+Alpha 6.1 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.0 - TBD
+1. Alpha 6.1 - TBD
 
 ## Build Rule
 

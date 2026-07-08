@@ -98,6 +98,8 @@ public sealed class ExecutiveReportService
                     ["Player Ready to Break Out"] = breakOut,
                     ["Player Needing More Time"] = needsTime
                 }),
+                Section("Player Life Cycle", "Career-stage tracking highlights long-term player stories without exposing hidden ratings.", BuildPlayerLifeCycleItems(scenario)),
+                Section("Career Highlights", "Recent milestones and storylines for the GM to remember.", BuildCareerHighlightItems(scenario)),
                 Section("Medical Department", "Medical staff reviewed current availability and recovery risk.", new Dictionary<string, string>
                 {
                     ["Current Injuries"] = injuries.Length.ToString(),
@@ -233,6 +235,8 @@ public sealed class ExecutiveReportService
                     ["Breakout Player"] = breakout,
                     ["Prospect Pipeline"] = scenario.ProspectRights.Count >= 3 ? "Improving" : "Needs attention"
                 }),
+                Section("Player Life Cycle", "Player stories connect development, injuries, contracts, milestones, and reputation.", BuildPlayerLifeCycleItems(scenario)),
+                Section("Career Highlights", "Most notable career moments from the current archive.", BuildCareerHighlightItems(scenario)),
                 Section("Medical Report", "Medical summary tracks games lost, recurring risk, returning players, department grade, and budget support.", BuildMedicalReportItems(scenario, injuries)),
                 Section("Team Leaders", "Stat leaders are reserved for the future game simulation layer.", new Dictionary<string, string>
                 {
@@ -369,6 +373,46 @@ public sealed class ExecutiveReportService
             ["Medical Budget"] = summary.MedicalBudgetImpact,
             ["Players Entering Offseason Healthy"] = (scenario.AlphaSnapshot.Roster.CurrentPlayers.Count - injuries.Count(injury => injury.IsActive)).ToString()
         };
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildPlayerLifeCycleItems(NewGmScenarioSnapshot scenario)
+    {
+        var lifecycle = scenario.PlayerCareerSummaries.Count == 0
+            ? new PlayerLifeCycleService().EnsureLifeCycle(scenario)
+            : scenario;
+        var summaries = lifecycle.PlayerCareerSummaries;
+        var breakout = summaries.FirstOrDefault(item => item.CareerPhase is PlayerCareerPhase.Breakout or PlayerCareerPhase.LateBloomer);
+        var decline = summaries.FirstOrDefault(item => item.CareerPhase is PlayerCareerPhase.CareerDecline or PlayerCareerPhase.BustRisk);
+        var legacy = summaries.OrderByDescending(item => item.LegacyScore).FirstOrDefault();
+        return new Dictionary<string, string>
+        {
+            ["Biggest Breakout"] = breakout?.PlayerName ?? "No breakout story yet.",
+            ["Most Improved"] = summaries.FirstOrDefault(item => item.Achievements.Any(achievement => achievement.AchievementType == PlayerAchievementType.BreakoutSeason))?.PlayerName ?? breakout?.PlayerName ?? "No most-improved story yet.",
+            ["Biggest Decline"] = decline?.PlayerName ?? "No decline story yet.",
+            ["Top Legacy Score"] = legacy is null ? "No legacy score yet." : $"{legacy.PlayerName} ({legacy.LegacyScore})",
+            ["Milestones Reached"] = lifecycle.PlayerMilestones.Count.ToString(),
+            ["Recent Story"] = lifecycle.PlayerMilestones.OrderByDescending(item => item.Date).FirstOrDefault()?.Summary ?? "No recent milestone."
+        };
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildCareerHighlightItems(NewGmScenarioSnapshot scenario)
+    {
+        var lifecycle = scenario.PlayerCareerSummaries.Count == 0
+            ? new PlayerLifeCycleService().EnsureLifeCycle(scenario)
+            : scenario;
+        var highlights = new PlayerLifeCycleService().BuildMonthlyHighlights(lifecycle).Take(5).ToArray();
+        var items = new Dictionary<string, string>();
+        for (var index = 0; index < highlights.Length; index++)
+        {
+            items[$"Highlight {index + 1}"] = highlights[index];
+        }
+
+        if (items.Count == 0)
+        {
+            items["Highlight"] = "No player career highlights have been tracked yet.";
+        }
+
+        return items;
     }
 
     private static string TopProspectName(NewGmScenarioSnapshot scenario) =>

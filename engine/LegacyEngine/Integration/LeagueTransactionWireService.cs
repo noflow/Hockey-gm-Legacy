@@ -115,6 +115,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.TradeDeadline => LeagueNewsCategory.Deadline,
             LeagueTransactionType.SeasonCompleted => LeagueNewsCategory.League,
             LeagueTransactionType.TeamIdentityUpdate => LeagueNewsCategory.League,
+            LeagueTransactionType.PlayerMilestone => LeagueNewsCategory.League,
             _ => LeagueNewsCategory.All
         };
 

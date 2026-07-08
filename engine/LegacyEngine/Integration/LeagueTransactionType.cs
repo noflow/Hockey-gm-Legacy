@@ -15,5 +15,6 @@ public enum LeagueTransactionType
     TradeCompleted,
     TradeDeadline,
     SeasonCompleted,
-    TeamIdentityUpdate
+    TeamIdentityUpdate,
+    PlayerMilestone
 }

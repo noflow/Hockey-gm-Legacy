@@ -126,6 +126,16 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<OrganizationAiProfile> OrganizationAiProfiles { get; init; } = Array.Empty<OrganizationAiProfile>();
 
+    public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
+
+    public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
+
+    public IReadOnlyList<PlayerMilestone> PlayerMilestones { get; init; } = Array.Empty<PlayerMilestone>();
+
+    public IReadOnlyList<PlayerAchievement> PlayerAchievements { get; init; } = Array.Empty<PlayerAchievement>();
+
+    public IReadOnlyList<LeagueTransaction> PlayerLifeCycleNews { get; init; } = Array.Empty<LeagueTransaction>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -354,6 +364,31 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var profile in OrganizationAiProfiles)
         {
             profile.Validate();
+        }
+
+        foreach (var state in PlayerCareerStates)
+        {
+            state.Validate();
+        }
+
+        foreach (var summary in PlayerCareerSummaries)
+        {
+            summary.Validate();
+        }
+
+        foreach (var milestone in PlayerMilestones)
+        {
+            milestone.Validate();
+        }
+
+        foreach (var achievement in PlayerAchievements)
+        {
+            achievement.Validate();
+        }
+
+        foreach (var transaction in PlayerLifeCycleNews)
+        {
+            transaction.Validate();
         }
     }
 }

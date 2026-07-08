@@ -440,6 +440,27 @@ public sealed class PlayerDossierService
     private static PlayerDossierSection BuildCareerHistory(NewGmScenarioSnapshot scenario, string personId)
     {
         var lines = new List<string>();
+        var lifeCycle = scenario.PlayerCareerSummaries.FirstOrDefault(summary => summary.PersonId == personId)
+            ?? new PlayerLifeCycleService().FindSummary(new PlayerLifeCycleService().EnsureLifeCycle(scenario), personId);
+        if (lifeCycle is not null)
+        {
+            lines.Add($"Life stage: {lifeCycle.LifeStage}");
+            lines.Add($"Career phase: {lifeCycle.CareerPhase}");
+            lines.Add($"Reputation: {lifeCycle.Reputation}");
+            lines.Add($"Legacy score: {lifeCycle.LegacyScore}");
+            lines.Add($"Career summary: {lifeCycle.CareerSummaryText}");
+            lines.Add("Career story:");
+            lines.AddRange(lifeCycle.CareerStory.Take(8).Select(item => $"  {item}"));
+            lines.Add("Milestones:");
+            lines.AddRange(lifeCycle.Milestones.OrderByDescending(item => item.Date).Take(8).Select(item => $"  {item.Date:yyyy-MM-dd}: {item.MilestoneType} - {item.Summary}"));
+            lines.Add("Achievements:");
+            lines.AddRange(lifeCycle.Achievements.OrderByDescending(item => item.Date).Take(6).Select(item => $"  {item.Date:yyyy-MM-dd}: {item.AchievementType} - {item.Summary}"));
+            lines.Add($"Key influential staff: {string.Join(", ", lifeCycle.InfluentialStaff)}");
+            lines.Add($"Coach comment: {lifeCycle.CoachComment}");
+            lines.Add($"Scout comment: {lifeCycle.ScoutComment}");
+            lines.Add($"Medical history: {lifeCycle.MedicalSummary}");
+        }
+
         foreach (var stat in scenario.PriorSeasonStats.Where(stat => stat.PersonId == personId).OrderByDescending(stat => stat.SeasonYear))
         {
             lines.Add($"Last-season stats: {stat.SummaryText}");

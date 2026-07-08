@@ -35,6 +35,7 @@ public sealed class ActionCenterService
         AddSeasonReadiness(readiness, items);
         AddTradeDeadlineItems(scenario, items);
         AddOffseasonChecklist(scenario, items);
+        AddPlayerLifeCycleItems(scenario, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -692,6 +693,11 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+    }
+
+    private static void AddPlayerLifeCycleItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new PlayerLifeCycleService().BuildActionItems(scenario));
     }
 
     private static ActionCenterItem ApplyStatus(ActionCenterItem item, IReadOnlyDictionary<string, ActionCenterStatus>? statusOverrides) =>

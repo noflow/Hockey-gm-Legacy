@@ -73,6 +73,7 @@ var alpha57AgentEngineTests = new Alpha57AgentEngineTests();
 var alpha58DynamicDraftClassTests = new Alpha58DynamicDraftClassTests();
 var alpha59LeagueAiV2Tests = new Alpha59LeagueAiV2Tests();
 var nhlScenarioRealismTests = new NhlScenarioRealismTests();
+var alpha60PlayerLifeCycleTests = new Alpha60PlayerLifeCycleTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -961,6 +962,22 @@ runner.Run("NHL realism scenario starts with prospects", nhlScenarioRealismTests
 runner.Run("NHL realism draft ages are 17-20 weighted to 18-19", nhlScenarioRealismTests.NhlDraftAgeDistributionUsesSeventeenToTwenty);
 runner.Run("NHL realism roster contracts use professional scale", nhlScenarioRealismTests.NhlRosterContractsUseProfessionalScale);
 runner.Run("NHL realism prospect ask uses entry-level scale", nhlScenarioRealismTests.NhlProspectAskUsesEntryLevelScale);
+runner.Run("alpha 6.0 life stage generation", alpha60PlayerLifeCycleTests.LifeStageGeneration);
+runner.Run("alpha 6.0 career progression generated", alpha60PlayerLifeCycleTests.CareerProgressionGenerated);
+runner.Run("alpha 6.0 milestones generated", alpha60PlayerLifeCycleTests.MilestonesGenerated);
+runner.Run("alpha 6.0 reputation generated", alpha60PlayerLifeCycleTests.ReputationGenerated);
+runner.Run("alpha 6.0 legacy score generated", alpha60PlayerLifeCycleTests.LegacyScoreGenerated);
+runner.Run("alpha 6.0 career story generated", alpha60PlayerLifeCycleTests.CareerStoryGenerated);
+runner.Run("alpha 6.0 timeline updated from milestones", alpha60PlayerLifeCycleTests.TimelineUpdatedFromMilestones);
+runner.Run("alpha 6.0 achievements generated", alpha60PlayerLifeCycleTests.AchievementsGenerated);
+runner.Run("alpha 6.0 staff influence generated", alpha60PlayerLifeCycleTests.StaffInfluenceGenerated);
+runner.Run("alpha 6.0 reports include life-cycle highlights", alpha60PlayerLifeCycleTests.ReportsIncludeLifeCycleHighlights);
+runner.Run("alpha 6.0 league news generated for notable stories", alpha60PlayerLifeCycleTests.LeagueNewsGeneratedForNotableStories);
+runner.Run("alpha 6.0 player dossier includes career life cycle", alpha60PlayerLifeCycleTests.PlayerDossierIncludesCareerLifeCycle);
+runner.Run("alpha 6.0 action center includes career stories", alpha60PlayerLifeCycleTests.ActionCenterIncludesCareerStories);
+runner.Run("alpha 6.0 history stores life-cycle records", alpha60PlayerLifeCycleTests.HistoryStoresLifeCycleRecords);
+runner.Run("alpha 6.0 AlphaDesktop exposes life-cycle UI", alpha60PlayerLifeCycleTests.AlphaDesktopExposesLifeCycleUi);
+runner.Run("alpha 6.0 no forbidden systems added", alpha60PlayerLifeCycleTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

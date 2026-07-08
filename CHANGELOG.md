@@ -1,27 +1,27 @@
 # Changelog
 
-## Current - Alpha 5.9
+## Current - Alpha 6.0
 
 ### Added
 
-- OrganizationAiProfile with explicit team personality, strategy phase, current needs, urgency, suggested asset target, strategy history, and behavior summaries.
-- OrganizationAiService for AI draft, trade, free-agency, staff-hiring, and strategy-evolution decision scoring.
-- Organization AI profiles are stored on NewGmScenarioSnapshot so save/load preserves AI personality, strategy, needs, and strategy history.
-- Limited strategic league-news headlines for team direction changes without adding inbox spam.
-- AlphaDesktop organization/team/trade surfaces now show AI personality, strategy phase, needs, draft/trade/free-agency/budget/scouting/staff behavior, and future league AI filter placeholders.
-- Tests covering AI profile generation, needs, strategy-driven draft/trade/free-agency/staff behavior, strategy evolution/history, league news, UI exposure, save/load preservation, and hidden-rating safety.
+- Player life-cycle models for life stage, career phase, reputation category, milestones, achievements, career story, staff influence, and legacy score.
+- PlayerLifeCycleService to evaluate tracked roster players, prospects, draft board players, recruits, free agents, and trade-block players.
+- Player milestones now feed career timelines and limited notable League News items.
+- Player dossiers now show life stage, career phase, reputation, legacy score, story lines, milestones, achievements, influential staff, and coach/scout/medical career notes.
+- Reports / History now includes Career Milestones and Player Stories views.
+- Executive reports and Action Center now include meaningful player career highlights.
+- Tests covering life-stage generation, career progression, milestones, reputation, legacy score, career stories, timeline history, achievements, staff influence, reports, League News, dossiers, and Action Center exposure.
 
 ### Changed
 
-- League AI reports now expose both the existing team identity profile and the richer Alpha 5.9 organization AI profile.
-- Trade evaluations now include the other team's AI strategy, top needs, personality, and AI decision read in the explanation/reasons.
-- New GM scenario bootstrap now seeds organization AI profiles for all league teams.
-- AlphaDesktop backfills organization AI profiles for older loaded saves.
-- AlphaDesktop version label updated to Alpha 5.9.
+- New GM scenario bootstrap now seeds player life-cycle records for the existing world.
+- AlphaDesktop backfills player life-cycle records for current scenario state.
+- League News counts and feeds now include notable player milestones.
+- AlphaDesktop version label updated to Alpha 6.0.
 
 ### Fixed
 
-- AI team behavior no longer relies only on generic identity text; decision explanations now identify strategic motive and need fit.
+- Player career context no longer lives only in scattered stat/history records; dossiers and reports now show one coherent career read.
 
 ### Verified
 
@@ -32,15 +32,16 @@
 ### Not Added
 
 - No Godot.
+- No Hall of Fame logic.
+- No retirement decision system.
+- No awards voting.
+- No jersey retirement.
 - No media engine.
-- No expansion/relocation.
-- No owner replacement.
-- No full playoff engine.
-- No new game simulation.
 - No game simulation changes.
 
 ## Recently Completed
 
+- Alpha 5.9 - League AI v2.
 - Alpha 5.8 - Dynamic Draft Classes v1.
 - Alpha 5.7 - Agent Engine v1.
 - Alpha 5.6 - Salary Cap & Roster Compliance v1.
@@ -57,4 +58,4 @@
 
 ## Next
 
-- Alpha 6.0 - TBD.
+- Alpha 6.1 - TBD.
