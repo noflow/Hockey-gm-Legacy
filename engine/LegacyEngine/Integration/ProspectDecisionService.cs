@@ -54,7 +54,16 @@ public sealed class ProspectDecisionService
 
         if (SupportsAffiliateAssignment(scenario, rulebook))
         {
-            decisions.Add(ProspectDecisionType.AssignToAffiliate);
+            var eligibility = new PlayerPipelineService().EvaluateAssignment(scenario, prospect, rulebook);
+            if (eligibility.IsAhlEligible)
+            {
+                decisions.Add(ProspectDecisionType.AssignToAffiliate);
+            }
+
+            if (eligibility.IsSigned && scenario.LeagueProfile.Experience == LeagueExperience.Nhl)
+            {
+                decisions.Add(ProspectDecisionType.KeepOnNhlRoster);
+            }
         }
 
         decisions.Add(ProspectDecisionType.ReleaseRights);
@@ -87,9 +96,28 @@ public sealed class ProspectDecisionService
             ProspectDecisionType.ReturnToJunior => UpdateStatus(registry, scenario, prospect, decision, ProspectStatus.ReturnedToJunior),
             ProspectDecisionType.ReturnToYouthTeam => UpdateStatus(registry, scenario, prospect, decision, ProspectStatus.ReturnedToYouthTeam),
             ProspectDecisionType.AssignToAffiliate => UpdateStatus(registry, scenario, prospect, decision, ProspectStatus.AssignedToAffiliate),
+            ProspectDecisionType.KeepOnNhlRoster => KeepOnNhlRoster(registry, scenario, prospect, decision),
             ProspectDecisionType.ReleaseRights => UpdateStatus(registry, scenario, prospect, decision, ProspectStatus.Released),
             _ => BuildResult(false, scenario, prospect, Array.Empty<AlphaInboxItem>(), "Unsupported prospect decision.")
         };
+    }
+
+    private ProspectDecisionResult KeepOnNhlRoster(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        DraftRightsRecord prospect,
+        ProspectDecision decision)
+    {
+        var updatedProspect = prospect with { Status = ProspectStatus.Signed };
+        var updatedScenario = ReplaceProspect(scenario, updatedProspect);
+        updatedScenario = new PlayerPipelineService().ApplyAssignmentDecision(
+            registry,
+            updatedScenario,
+            new ProspectAssignmentDecision(prospect.ProspectPersonId, ProspectDecisionType.KeepOnNhlRoster, decision.DecisionDate)).ScenarioSnapshot;
+
+        QueueProspectEvent(registry, updatedScenario, LegacyEventType.ProspectDecisionMade, decision, prospect, $"{prospect.ProspectName} was kept on the NHL roster path.");
+        var inbox = CreateDecisionInbox(updatedScenario, LegacyEventType.ProspectDecisionMade, updatedProspect, $"Prospect kept on NHL roster path: {prospect.ProspectName}", $"{prospect.ProspectName} is being kept on the NHL roster path. This does not bypass roster compliance.");
+        return BuildResult(true, updatedScenario, updatedProspect, inbox, $"{prospect.ProspectName} kept on NHL roster path.");
     }
 
     private ProspectDecisionResult OfferContract(
@@ -199,6 +227,22 @@ public sealed class ProspectDecisionService
             && !SupportsAffiliateAssignment(scenario, rulebook))
         {
             return "Assign to affiliate is unavailable for this organization/rulebook.";
+        }
+
+        if (decisionType == ProspectDecisionType.AssignToAffiliate)
+        {
+            var eligibility = new PlayerPipelineService().EvaluateAssignment(scenario, prospect, rulebook);
+            if (!eligibility.IsAhlEligible)
+            {
+                return eligibility.InvalidReasons.FirstOrDefault(reason => reason.Contains("AHL", StringComparison.OrdinalIgnoreCase))
+                    ?? "Cannot assign to AHL under the active rulebook.";
+            }
+        }
+
+        if (decisionType == ProspectDecisionType.KeepOnNhlRoster
+            && !new PlayerPipelineService().EvaluateAssignment(scenario, prospect, rulebook).IsSigned)
+        {
+            return "Cannot keep on NHL roster: player must be signed first.";
         }
 
         return null;

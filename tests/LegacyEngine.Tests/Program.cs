@@ -67,6 +67,7 @@ var alpha51MultiLeagueCareerTests = new Alpha51MultiLeagueCareerTests();
 var alpha51FunctionalUiTradeWindowTests = new Alpha51FunctionalUiTradeWindowTests();
 var alpha53FullLeaguePipelineTests = new Alpha53FullLeaguePipelineTests();
 var alpha531TradeStaffMarketTests = new Alpha531TradeStaffMarketTests();
+var alpha54PlayerPipelineTests = new Alpha54PlayerPipelineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -855,7 +856,7 @@ runner.Run("alpha 5.3 team selection lists all teams", alpha53FullLeaguePipeline
 runner.Run("alpha 5.3 NHL team has AHL affiliate", alpha53FullLeaguePipelineTests.NhlTeamHasAhlAffiliate);
 runner.Run("alpha 5.3 AHL team has NHL parent", alpha53FullLeaguePipelineTests.AhlTeamHasNhlParent);
 runner.Run("alpha 5.3 drafted NHL prospect can return to junior", alpha53FullLeaguePipelineTests.DraftedNhlProspectCanBeReturnedToJunior);
-runner.Run("alpha 5.3 drafted NHL prospect can be assigned to AHL", alpha53FullLeaguePipelineTests.DraftedNhlProspectCanBeAssignedToAhl);
+runner.Run("alpha 5.3 drafted NHL prospect can be assigned to AHL when eligible", alpha53FullLeaguePipelineTests.DraftedNhlProspectCanBeAssignedToAhlWhenEligible);
 runner.Run("alpha 5.3 AHL career starts with assigned players", alpha53FullLeaguePipelineTests.AhlCareerStartsWithAssignedPlayers);
 runner.Run("alpha 5.3 Junior career still supports recruiting and draft", alpha53FullLeaguePipelineTests.JuniorCareerStillSupportsRecruitingAndDraft);
 runner.Run("alpha 5.3 player dossier shows pipeline status", alpha53FullLeaguePipelineTests.PlayerDossierShowsPipelineStatus);
@@ -884,6 +885,21 @@ runner.Run("alpha 5.3.1 save load preserves staff market", alpha531TradeStaffMar
 runner.Run("alpha 5.3.1 AlphaDesktop exposes staff market filters actions", alpha531TradeStaffMarketTests.AlphaDesktopExposesStaffMarketFiltersActions);
 runner.Run("alpha 5.3.1 no Generate Candidate workflow remains", alpha531TradeStaffMarketTests.NoGenerateCandidateWorkflowRemains);
 runner.Run("alpha 5.3.1 no forbidden systems added", alpha531TradeStaffMarketTests.Alpha531HasNoForbiddenSystems);
+runner.Run("alpha 5.4 NHL draft creates junior youth prospects", alpha54PlayerPipelineTests.NhlDraftCreatesJuniorYouthProspects);
+runner.Run("alpha 5.4 18-year-old CHL prospect cannot be assigned to AHL", alpha54PlayerPipelineTests.EighteenYearOldChlProspectCannotBeAssignedToAhl);
+runner.Run("alpha 5.4 19-year-old CHL prospect requires exception for AHL", alpha54PlayerPipelineTests.NineteenYearOldChlProspectCannotBeAssignedToAhlUnlessExceptionEnabled);
+runner.Run("alpha 5.4 20-year-old signed prospect can be assigned to AHL", alpha54PlayerPipelineTests.TwentyYearOldProspectCanBeAssignedToAhlIfSigned);
+runner.Run("alpha 5.4 European college placeholder prospect can be assigned by rulebook", alpha54PlayerPipelineTests.EuropeanCollegePlaceholderProspectCanBeAssignedBasedOnRulebook);
+runner.Run("alpha 5.4 signed 18 or 19 year old has ELC slide eligibility", alpha54PlayerPipelineTests.SignedEighteenNineteenYearOldHasElcSlideEligibility);
+runner.Run("alpha 5.4 10 NHL games prevents slide", alpha54PlayerPipelineTests.TenNhlGamesPreventsSlide);
+runner.Run("alpha 5.4 fewer than 10 NHL games allows slide", alpha54PlayerPipelineTests.FewerThanTenNhlGamesAllowsSlide);
+runner.Run("alpha 5.4 invalid assignment gives clear reason", alpha54PlayerPipelineTests.InvalidAssignmentGivesClearReason);
+runner.Run("alpha 5.4 NHL team shows AHL affiliate roster", alpha54PlayerPipelineTests.NhlTeamShowsAhlAffiliateRoster);
+runner.Run("alpha 5.4 AHL team shows assigned prospects", alpha54PlayerPipelineTests.AhlTeamShowsAssignedProspects);
+runner.Run("alpha 5.4 dossier shows pipeline status", alpha54PlayerPipelineTests.DossierShowsPipelineStatus);
+runner.Run("alpha 5.4 save load preserves pipeline status", alpha54PlayerPipelineTests.SaveLoadPreservesPipelineStatus);
+runner.Run("alpha 5.4 AlphaDesktop exposes pipeline filters", alpha54PlayerPipelineTests.AlphaDesktopExposesPipelineFilters);
+runner.Run("alpha 5.4 no salary cap or waivers added", alpha54PlayerPipelineTests.NoSalaryCapOrWaiversAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

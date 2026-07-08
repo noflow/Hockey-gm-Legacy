@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.3.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -586,7 +586,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 5.3.1 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 5.4 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2342,9 +2342,9 @@ internal sealed class MainWindow : Window
                 prospect.ProspectPersonId,
                 prospect.ProspectName,
                 "Prospect",
-                $"{prospect.Position} - {prospect.Status}",
-                $"Age {prospect.Age} | R{prospect.RoundNumber} P{prospect.PickNumber} | Confidence {prospect.ScoutingConfidence?.ToString() ?? "Unknown"}",
-                $"Projection: {prospect.ProjectionText}"))
+                $"{prospect.Position} - {prospect.Status} | {State.PipelineText(prospect.ProspectPersonId)}",
+                $"Age {prospect.Age} | {prospect.CurrentTeam} {prospect.CurrentLeague} | Signed? {State.PipelineSignedText(prospect.ProspectPersonId)} | AHL eligible? {State.PipelineAhlEligibleText(prospect.ProspectPersonId)}",
+                $"Recommended assignment: {State.PipelineRecommendationText(prospect.ProspectPersonId)} | Projection: {prospect.ProjectionText}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildTrainingCampRows() =>
@@ -2714,6 +2714,13 @@ internal sealed class MainWindow : Window
             {
                 AddLine(panel, "Draft", $"Round {prospect.RoundNumber}, pick {prospect.PickNumber}");
                 AddLine(panel, "Rights status", prospect.Status);
+                AddLine(panel, "Current team", string.IsNullOrWhiteSpace(prospect.CurrentTeam) ? "unknown" : prospect.CurrentTeam);
+                AddLine(panel, "Current level", State.PipelineDevelopmentLevelText(row.PersonId));
+                AddLine(panel, "Signed?", State.PipelineSignedText(row.PersonId));
+                AddLine(panel, "AHL eligible?", State.PipelineAhlEligibleText(row.PersonId));
+                AddLine(panel, "Junior eligible?", State.PipelineJuniorEligibleText(row.PersonId));
+                AddLine(panel, "Contract slide", State.PipelineSlideText(row.PersonId));
+                AddLine(panel, "Recommended assignment", State.PipelineRecommendationText(row.PersonId));
                 AddLine(panel, "Confidence", prospect.ScoutingConfidence?.ToString() ?? "Unknown");
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(prospect.GmNotes) ? "none" : prospect.GmNotes);
                 AddSubHeader(panel, "Development Plan");
@@ -5210,6 +5217,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Returned: {summary.Returned}");
         builder.AppendLine($"Assigned to affiliate: {summary.AssignedToAffiliate}");
         builder.AppendLine($"Released/declined: {summary.ReleasedOrDeclined}");
+        builder.AppendLine("Filters: AHL eligible | Junior return candidates | Unsigned rights | Slide eligible | NHL-ready");
         builder.AppendLine();
 
         if (State.ScenarioSnapshot.ProspectRights.Count == 0)
@@ -5223,6 +5231,12 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"{prospect.ProspectName} - {prospect.Position} - age {prospect.Age}");
             builder.AppendLine($"  Draft: round {prospect.RoundNumber}, pick {prospect.PickNumber}");
             builder.AppendLine($"  Rights status: {prospect.Status}");
+            builder.AppendLine($"  Current team/level: {(string.IsNullOrWhiteSpace(prospect.CurrentTeam) ? "unknown" : prospect.CurrentTeam)} / {State.PipelineDevelopmentLevelText(prospect.ProspectPersonId)}");
+            builder.AppendLine($"  Signed: {State.PipelineSignedText(prospect.ProspectPersonId)}");
+            builder.AppendLine($"  AHL eligible: {State.PipelineAhlEligibleText(prospect.ProspectPersonId)}");
+            builder.AppendLine($"  Junior eligible: {State.PipelineJuniorEligibleText(prospect.ProspectPersonId)}");
+            builder.AppendLine($"  Contract slide: {State.PipelineSlideText(prospect.ProspectPersonId)}");
+            builder.AppendLine($"  Recommended assignment: {State.PipelineRecommendationText(prospect.ProspectPersonId)}");
             builder.AppendLine($"  Projection: {prospect.ProjectionText}");
             builder.AppendLine($"  Confidence: {prospect.ScoutingConfidence?.ToString() ?? "Unknown"}");
             builder.AppendLine($"  GM notes: {(string.IsNullOrWhiteSpace(prospect.GmNotes) ? "none" : prospect.GmNotes)}");
@@ -7858,6 +7872,27 @@ internal sealed class AlphaDesktopState
 
         return $"{record.CurrentLevel} | {record.PipelineStatus} | rights {record.RightsHolderTeamName ?? "none"} | parent {record.ParentOrganization?.TeamName ?? "none"} | affiliate {record.AffiliateOrganization?.TeamName ?? "none"}";
     }
+
+    public string PipelineSignedText(string personId) =>
+        PipelineRecord(personId)?.IsSigned == true ? "Yes" : "No";
+
+    public string PipelineAhlEligibleText(string personId) =>
+        PipelineRecord(personId)?.IsAhlEligible == true ? "Yes" : "No";
+
+    public string PipelineJuniorEligibleText(string personId) =>
+        PipelineRecord(personId)?.IsJuniorEligible == true ? "Yes" : "No";
+
+    public string PipelineDevelopmentLevelText(string personId) =>
+        PipelineRecord(personId)?.DevelopmentLevel.ToString() ?? "Unknown";
+
+    public string PipelineSlideText(string personId) =>
+        PipelineRecord(personId)?.ContractSlideSummary ?? "No slide status tracked.";
+
+    public string PipelineRecommendationText(string personId) =>
+        PipelineRecord(personId)?.RecommendedAssignment ?? "Review development path.";
+
+    private PlayerPipelineRecord? PipelineRecord(string personId) =>
+        ScenarioSnapshot.PlayerPipeline.FirstOrDefault(record => record.PersonId == personId);
 
     public string TradeTeamNeedsShortText(TradeBlockEntry entry)
     {

@@ -183,6 +183,14 @@ public sealed class PendingGmActionService
             AlphaSnapshot = alphaSnapshot
         };
         updatedScenario = new CareerHistoryService().RecordContractSigned(updatedScenario, signed, completed.PersonName, action.ActionType);
+        if (action.ActionType == PendingGmActionType.SignDraftPick)
+        {
+            var prospect = updatedScenario.ProspectRights.FirstOrDefault(record => record.ProspectPersonId == action.PersonId);
+            if (prospect is not null)
+            {
+                updatedScenario = new PlayerPipelineService().UpsertProspect(updatedScenario, prospect, $"{completed.PersonName} signed an entry-level contract.");
+            }
+        }
 
         QueueContractDecisionEvent(registry, completed, scenario.CurrentDate, LegacyEventType.ContractApprovedByGM, "Contract approved by GM", $"{completed.PersonName}'s contract was approved and signed by the GM.");
         var inbox = new[] { ToInboxItem(completed, "Pending action approved", $"{completed.PersonName} signed a {signed.ContractType} after GM approval.") };

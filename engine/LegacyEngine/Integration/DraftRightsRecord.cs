@@ -13,7 +13,11 @@ public sealed record DraftRightsRecord(
     ProspectStatus Status,
     string ProjectionText,
     ScoutingConfidenceLevel? ScoutingConfidence,
-    string GmNotes)
+    string GmNotes,
+    PlayerDevelopmentLevel DevelopmentLevel = PlayerDevelopmentLevel.Junior,
+    string CurrentTeam = "",
+    string CurrentLeague = "",
+    bool IsChlProtected = false)
 {
     public void Validate()
     {

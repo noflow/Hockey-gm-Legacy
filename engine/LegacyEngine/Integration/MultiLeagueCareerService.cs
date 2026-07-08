@@ -561,6 +561,7 @@ public sealed class MultiLeagueCareerService
             BudgetRules = source.BudgetRules,
             SeasonRules = source.SeasonRules,
             StaffRules = source.StaffRules,
+            PlayerAssignmentRules = source.PlayerAssignmentRules,
             AffiliateRules = source.AffiliateRules is null
                 ? null
                 : new AffiliateRules

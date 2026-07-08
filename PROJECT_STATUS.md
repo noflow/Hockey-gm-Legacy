@@ -89,14 +89,15 @@ The five foundation pillars remain:
 - Alpha 5.1 - Multi-League Career Framework
 - Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1
 - Alpha 5.3.1 - Trade Window Interactions + Living Staff Market
+- Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1
 
 ## Current Milestone
 
-Alpha 5.3.1 - Trade Window Interactions + Living Staff Market
+Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1
 
 ## Current Goal
 
-Make the trade popup usable with selectable asset lists, explicit proposal building, live trade evaluation, and pending-GM approval for accepted deals. Staff hiring now uses a living staff market with candidate status, employer, salary ask, career history, movement records, and limited league-news staff movement instead of a fake generate-candidates button.
+Make NHL, AHL, and junior prospect movement follow believable pipeline rules: drafted prospects keep rights instead of joining rosters automatically, CHL/junior-age players can be returned to junior, AHL assignment is gated by signing status and rulebook eligibility, ELC slide status is visible, and dossiers/prospect views explain the recommended development path.
 
 ## Why Relationship Engine Was Next
 
@@ -106,11 +107,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.4 - TBD
+Alpha 5.5 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.4 - TBD
+1. Alpha 5.5 - TBD
 
 ## Build Rule
 

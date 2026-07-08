@@ -145,9 +145,16 @@ public sealed class PlayerDossierService
         {
             lines.Add($"Current level: {pipeline.CurrentLevel}");
             lines.Add($"Pipeline status: {pipeline.PipelineStatus}");
+            lines.Add($"Development path: {pipeline.DevelopmentLevel}");
             lines.Add($"Rights holder: {pipeline.RightsHolderTeamName ?? "none"}");
+            lines.Add($"Signed/unsigned status: {(pipeline.IsSigned ? "Signed" : "Unsigned")}");
+            lines.Add($"AHL eligibility: {(pipeline.IsAhlEligible ? "Eligible" : "Not eligible")}");
+            lines.Add($"Junior eligibility: {(pipeline.IsJuniorEligible ? "Eligible" : "Not eligible")}");
+            lines.Add($"Contract slide status: {pipeline.ContractSlideSummary}");
             lines.Add($"Parent club: {pipeline.ParentOrganization?.TeamName ?? "none"}");
             lines.Add($"Affiliate club: {pipeline.AffiliateOrganization?.TeamName ?? "none"}");
+            lines.Add($"Recommended assignment: {pipeline.RecommendedAssignment}");
+            lines.Add($"Staff recommendation: {pipeline.StaffRecommendation}");
         }
 
         return new PlayerDossierSection("Overview", lines);
@@ -301,6 +308,12 @@ public sealed class PlayerDossierService
         {
             lines.Add($"Pipeline rights holder: {pipeline.RightsHolderTeamName ?? "none"}.");
             lines.Add($"Assignment status: {pipeline.AssignmentStatus}.");
+            lines.Add($"Signed status: {(pipeline.IsSigned ? "Signed" : "Unsigned")}.");
+            lines.Add($"Contract slide: {pipeline.ContractSlideSummary}");
+            lines.Add($"AHL eligible: {(pipeline.IsAhlEligible ? "yes" : "no")}.");
+            lines.Add($"Junior eligible: {(pipeline.IsJuniorEligible ? "yes" : "no")}.");
+            lines.Add($"Recommended assignment: {pipeline.RecommendedAssignment}");
+            lines.Add($"Staff recommendation: {pipeline.StaffRecommendation}");
         }
 
         if (lines.Count == 0)
@@ -398,6 +411,7 @@ public sealed class PlayerDossierService
         if (pipeline is not null)
         {
             lines.Add($"Pipeline: {pipeline.CurrentLevel}, {pipeline.PipelineStatus}, assignment {pipeline.AssignmentStatus}.");
+            lines.Add($"Development path: {pipeline.DevelopmentLevel}; rights {pipeline.RightsStatus}; slide {pipeline.ContractSlideSummary}");
             lines.AddRange(pipeline.AssignmentHistory.Take(5).Select(entry => $"Assignment history: {entry}"));
         }
 
