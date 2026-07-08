@@ -17,6 +17,8 @@ public sealed record WhereAreTheyNowRecord(
     string StaffOpinion,
     DraftPickOutcome OutcomeSoFar)
 {
+    public string DraftClassContext { get; init; } = "Draft class context not recorded.";
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(PersonId)
@@ -26,7 +28,8 @@ public sealed record WhereAreTheyNowRecord(
             || string.IsNullOrWhiteSpace(LatestStats)
             || string.IsNullOrWhiteSpace(DevelopmentTrend)
             || string.IsNullOrWhiteSpace(InjuryStatus)
-            || string.IsNullOrWhiteSpace(StaffOpinion))
+            || string.IsNullOrWhiteSpace(StaffOpinion)
+            || string.IsNullOrWhiteSpace(DraftClassContext))
         {
             throw new ArgumentException("Where Are They Now record requires readable player context.");
         }

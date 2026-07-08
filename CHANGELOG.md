@@ -7,7 +7,7 @@
 - Dynamic draft class profiles with theme, quality, strengths, weaknesses, storyline, positional depth, regional distribution, scout quote, and uncertainty.
 - DraftClassGenerator for annual fictional class creation using NameGenerator, public DraftProspectBio, realistic position/measurement/handedness/team context, class risk, and class-context notes.
 - Rulebook-aware class behavior: NHL-style classes use 17-18 year olds and broader geography, junior-style classes use younger regional prospects, and AHL-style rulebooks generate no amateur draft class when draft is disabled.
-- Draft class history preservation so completed drafts keep the original class profile/read.
+- Draft class history preservation so completed drafts keep the original class profile/read, original board rank, and Where Are They Now class context.
 - Draft Board and Live Draft class summaries, positional depth, best available by position, players to watch, risk/context notes, and future filter placeholders.
 - Dossier and scouting intelligence class context without exposing hidden ratings.
 - Tests covering class generation, themes, NHL/junior/AHL behavior, inherited scouting, clean generated names, UI exposure, dossiers, and history preservation.

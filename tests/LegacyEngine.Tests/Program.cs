@@ -933,6 +933,7 @@ runner.Run("alpha 5.8 scenario class context and ids", alpha58DynamicDraftClassT
 runner.Run("alpha 5.8 opening scenario mostly scouted", alpha58DynamicDraftClassTests.OpeningScenarioDraftClassIsMostlyScouted);
 runner.Run("alpha 5.8 dossier includes class context", alpha58DynamicDraftClassTests.PlayerDossierIncludesClassContextWithoutHiddenRatings);
 runner.Run("alpha 5.8 history preserves class profile", alpha58DynamicDraftClassTests.DraftClassHistoryPreservesProfile);
+runner.Run("alpha 5.8 Where Are They Now shows class context", alpha58DynamicDraftClassTests.WhereAreTheyNowShowsClassContext);
 runner.Run("alpha 5.8 AlphaDesktop exposes draft class UI", alpha58DynamicDraftClassTests.AlphaDesktopExposesDraftClassSummaryAndLiveDraftContext);
 runner.Run("alpha 5.8 generated names stay clean", alpha58DynamicDraftClassTests.GeneratedNamesStayCleanAcrossLargePool);
 

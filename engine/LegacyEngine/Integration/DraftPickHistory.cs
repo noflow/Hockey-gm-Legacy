@@ -21,6 +21,10 @@ public sealed record DraftPickHistory(
     DraftPickOutcome Outcome,
     string OutcomeSummary)
 {
+    public int OriginalBoardRank { get; init; }
+
+    public string DraftClassContext { get; init; } = "Draft class context not recorded.";
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(PlayerPersonId)
@@ -30,7 +34,8 @@ public sealed record DraftPickHistory(
             || string.IsNullOrWhiteSpace(GmNotesAtDraft)
             || string.IsNullOrWhiteSpace(CurrentStatus)
             || string.IsNullOrWhiteSpace(GoaltendingStats)
-            || string.IsNullOrWhiteSpace(OutcomeSummary))
+            || string.IsNullOrWhiteSpace(OutcomeSummary)
+            || string.IsNullOrWhiteSpace(DraftClassContext))
         {
             throw new ArgumentException("Draft pick history requires player identity and readable context.");
         }
@@ -38,6 +43,11 @@ public sealed record DraftPickHistory(
         if (Year < 1 || Round < 1 || OverallPick < 1 || Position == RosterPosition.Unknown)
         {
             throw new ArgumentOutOfRangeException(nameof(OverallPick), "Draft pick history requires valid year, pick, round, and known position.");
+        }
+
+        if (OriginalBoardRank < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(OriginalBoardRank), "Original board rank cannot be negative.");
         }
     }
 }

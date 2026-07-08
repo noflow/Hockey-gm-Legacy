@@ -132,6 +132,27 @@ internal sealed class Alpha58DynamicDraftClassTests
 
         Assert.True(history.ClassProfile is not null, "Draft class history should preserve the original class profile.");
         Assert.Equal(scenario.CurrentDraftClassProfile!.Theme, history.ClassProfile!.Theme);
+        Assert.Equal(entry.Rank, history.Picks[0].OriginalBoardRank);
+        Assert.True(history.Picks[0].DraftClassContext.Contains("class", StringComparison.OrdinalIgnoreCase), "Draft pick history should preserve class context.");
+    }
+
+    public void WhereAreTheyNowShowsClassContext()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario().ScenarioSnapshot;
+        var entry = scenario.AlphaSnapshot.DraftBoard.Entries.First();
+        var selection = new DraftPickSummary(
+            1,
+            1,
+            scenario.Organization.OrganizationId,
+            scenario.Organization.Name,
+            entry.ProspectPersonId,
+            scenario.AlphaSnapshot.People.First(person => person.PersonId == entry.ProspectPersonId).Identity.DisplayName,
+            true);
+
+        var updated = new CareerHistoryService().RecordDraftCompleted(scenario, new[] { selection });
+        var whereAreTheyNow = new CareerHistoryService().BuildWhereAreTheyNow(updated);
+
+        Assert.True(whereAreTheyNow.Any(record => record.DraftClassContext.Contains("class", StringComparison.OrdinalIgnoreCase)), "Where Are They Now should show draft class context.");
     }
 
     public void AlphaDesktopExposesDraftClassSummaryAndLiveDraftContext()

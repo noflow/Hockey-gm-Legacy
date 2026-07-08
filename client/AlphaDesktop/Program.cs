@@ -4429,7 +4429,8 @@ internal sealed class MainWindow : Window
 
             foreach (var pick in draftClass.Picks)
             {
-                builder.AppendLine($"  R{pick.Round} P{pick.OverallPick}: {pick.PlayerName} ({pick.Position}) - {pick.Outcome}");
+                builder.AppendLine($"  R{pick.Round} P{pick.OverallPick}: {pick.PlayerName} ({pick.Position}) - original board #{pick.OriginalBoardRank} - {pick.Outcome}");
+                builder.AppendLine($"    Class context: {pick.DraftClassContext}");
             }
         }
 
@@ -4493,6 +4494,7 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  Development trend: {record.DevelopmentTrend}");
             builder.AppendLine($"  Injury status: {record.InjuryStatus}");
             builder.AppendLine($"  Staff opinion: {record.StaffOpinion}");
+            builder.AppendLine($"  Draft class context: {record.DraftClassContext}");
             builder.AppendLine($"  Outcome so far: {record.OutcomeSoFar}");
         }
 

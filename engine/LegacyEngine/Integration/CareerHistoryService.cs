@@ -293,7 +293,13 @@ public sealed class CareerHistoryService
             stat?.Points ?? 0,
             stat?.IsGoalie == true ? $"{stat.Wins}-{stat.Losses}, {stat.Shutouts} SO" : "n/a",
             outcome,
-            outcome == DraftPickOutcome.Unknown ? "Too early to evaluate. Outcome remains Unknown/Developing." : "Developing in organization.");
+            outcome == DraftPickOutcome.Unknown ? "Too early to evaluate. Outcome remains Unknown/Developing." : "Developing in organization.")
+        {
+            OriginalBoardRank = boardEntry?.Rank ?? selection.PickNumber,
+            DraftClassContext = boardEntry?.ClassContextNote
+                ?? scenario.CurrentDraftClassProfile?.PreviewText
+                ?? "Draft class context not recorded."
+        };
     }
 
     private static WhereAreTheyNowRecord BuildWhereAreTheyNowRecord(NewGmScenarioSnapshot scenario, DraftPickHistory pick)
@@ -313,6 +319,10 @@ public sealed class CareerHistoryService
         var staff = pick.Outcome is DraftPickOutcome.Unknown or DraftPickOutcome.Developing
             ? "Staff says it is too early to judge the pick."
             : pick.OutcomeSummary;
+        var classContext = scenario.DraftClassHistory
+            .FirstOrDefault(history => history.Year == pick.Year)?
+            .ClassProfile?.PreviewText
+            ?? pick.DraftClassContext;
         var record = new WhereAreTheyNowRecord(
             pick.PlayerPersonId,
             pick.PlayerName,
@@ -326,7 +336,10 @@ public sealed class CareerHistoryService
             development,
             injury is null ? "No active injury." : $"{injury.Severity} {injury.BodyPart}, expected return {injury.ExpectedReturnDate:yyyy-MM-dd}",
             staff,
-            pick.Outcome);
+            pick.Outcome)
+        {
+            DraftClassContext = classContext
+        };
         record.Validate();
         return record;
     }
