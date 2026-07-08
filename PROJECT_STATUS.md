@@ -102,26 +102,27 @@ The five foundation pillars remain:
 - Alpha 6.4 - Roster V3 + Lineup Roles v1
 - Alpha 6.4 - Lineup & Role Management v1
 - Alpha 6.5 - Line Chemistry v1
+- Alpha 6.6 - Special Teams & Game Usage v1
 
 ## Current Milestone
 
-Alpha 6.5 - Line Chemistry v1
+Alpha 6.6 - Special Teams & Game Usage v1
 
 ## Current Goal
 
-Make line combinations matter by giving the GM explainable chemistry grades for forward lines, defense pairs, goalie depth, and the full team without exposing hidden ratings or adding a full tactics engine.
+Expand lineup management into complete personnel deployment: even-strength lines, power play, penalty kill, goalie workload, extra attacker, three-on-three placeholder, and shootout order without building a tactics engine or overhauling game simulation.
 
-## Why Line Chemistry Was Next
+## Why Game Usage Was Next
 
-Lineup Management made roles actionable. The next useful layer is helping the GM understand why a line works: player type blend, handedness, natural position fit, role pressure, age/experience mix, relationships, coach philosophy, morale/confidence, and role promises now feed small explainable chemistry modifiers.
+Lineup Management and Line Chemistry made even-strength roles understandable. The next playable layer is deciding when players are used: PP, PK, goalie starts/rest, extra attacker, three-on-three, and shootout order now feed coach recommendations, player dossier usage, modest development context, and Action Center warnings.
 
 ## Next Build Target
 
-Alpha 6.6 - TBD
+Alpha 6.7 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.6 - TBD
+1. Alpha 6.7 - TBD
 
 ## Build Rule
 

@@ -80,6 +80,7 @@ var alpha621TradesV3Tests = new Alpha621TradesV3Tests();
 var alpha63RelationshipExpansionTests = new Alpha63RelationshipExpansionTests();
 var alpha64RosterLineupTests = new Alpha64RosterLineupTests();
 var alpha65LineChemistryTests = new Alpha65LineChemistryTests();
+var alpha66SpecialTeamsGameUsageTests = new Alpha66SpecialTeamsGameUsageTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1081,6 +1082,18 @@ runner.Run("alpha 6.5 player dossier exposes chemistry note", alpha65LineChemist
 runner.Run("alpha 6.5 Action Center only creates major chemistry issues", alpha65LineChemistryTests.ActionCenterOnlyCreatesMajorChemistryIssues);
 runner.Run("alpha 6.5 no hidden ratings exposed", alpha65LineChemistryTests.NoHiddenRatingsExposed);
 runner.Run("alpha 6.5 no tactics engine added", alpha65LineChemistryTests.NoTacticsEngineAdded);
+runner.Run("alpha 6.6 power play assignments work", alpha66SpecialTeamsGameUsageTests.PowerPlayAssignmentsWork);
+runner.Run("alpha 6.6 penalty kill assignments work", alpha66SpecialTeamsGameUsageTests.PenaltyKillAssignmentsWork);
+runner.Run("alpha 6.6 goalie usage generated", alpha66SpecialTeamsGameUsageTests.GoalieUsageGenerated);
+runner.Run("alpha 6.6 shootout order can change", alpha66SpecialTeamsGameUsageTests.ShootoutOrderCanChange);
+runner.Run("alpha 6.6 usage summary generated", alpha66SpecialTeamsGameUsageTests.UsageSummaryGenerated);
+runner.Run("alpha 6.6 coach recommendations generated", alpha66SpecialTeamsGameUsageTests.CoachRecommendationsGenerated);
+runner.Run("alpha 6.6 player dossier includes game usage", alpha66SpecialTeamsGameUsageTests.PlayerDossierIncludesGameUsage);
+runner.Run("alpha 6.6 development modifier available", alpha66SpecialTeamsGameUsageTests.DevelopmentModifierAvailable);
+runner.Run("alpha 6.6 dashboard exposes game usage", alpha66SpecialTeamsGameUsageTests.DashboardExposesGameUsage);
+runner.Run("alpha 6.6 Action Center includes important game usage", alpha66SpecialTeamsGameUsageTests.ActionCenterIncludesImportantGameUsage);
+runner.Run("alpha 6.6 no hidden ratings exposed", alpha66SpecialTeamsGameUsageTests.NoHiddenRatingsExposed);
+runner.Run("alpha 6.6 no tactics game simulation or Godot added", alpha66SpecialTeamsGameUsageTests.NoTacticsGameSimulationOrGodotAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

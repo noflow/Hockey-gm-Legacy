@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -600,7 +600,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.5 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.6 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1699,6 +1699,7 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Urgent Decisions", State.UrgentPendingDecisionCount.ToString(), State.NextDecisionDeadlineText, State.UrgentPendingDecisionCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
+        metrics.Children.Add(CreateDashboardMetric("Game Usage", State.GameUsageWarningCount.ToString(), State.GameUsageDashboardSummary, State.GameUsageWarningCount > 0));
         metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("League News", State.LeagueNewsCount.ToString(), "notable league items", false));
@@ -2277,6 +2278,64 @@ internal sealed class MainWindow : Window
                 $"{unit.Recommendation}"));
         }
 
+        rows.Add(new SelectablePersonRow(
+            "game-usage-summary",
+            "Game Usage Summary",
+            "GameUsage",
+            State.CurrentGameUsage.Summary,
+            "Even Strength | Power Play | Penalty Kill | Goalies | Extra Attacker | Three-on-Three | Shootout",
+            "Personnel deployment only. No tactics engine."));
+        foreach (var unit in State.CurrentGameUsage.SpecialTeams.PowerPlayUnits)
+        {
+            rows.Add(new SelectablePersonRow(
+                $"power-play:{unit.UnitNumber}",
+                $"Power Play Unit {unit.UnitNumber}",
+                "GameUsage",
+                $"LW {unit.LeftWing?.PlayerName ?? "open"} | C {unit.Center?.PlayerName ?? "open"} | RW {unit.RightWing?.PlayerName ?? "open"}",
+                $"QB {unit.QuarterbackDefense?.PlayerName ?? "open"} | Net-front/2D {unit.NetFrontOrSecondDefense?.PlayerName ?? "open"}",
+                "Assign, remove, swap, or auto-fill special teams usage."));
+        }
+
+        foreach (var unit in State.CurrentGameUsage.SpecialTeams.PenaltyKillUnits)
+        {
+            rows.Add(new SelectablePersonRow(
+                $"penalty-kill:{unit.UnitNumber}",
+                $"Penalty Kill Unit {unit.UnitNumber}",
+                "GameUsage",
+                $"LW {unit.LeftWing?.PlayerName ?? "open"} | RW {unit.RightWing?.PlayerName ?? "open"}",
+                $"LD {unit.LeftDefense?.PlayerName ?? "open"} | RD {unit.RightDefense?.PlayerName ?? "open"}",
+                "Use responsible forwards, veteran support, and trusted defense pairs."));
+        }
+
+        rows.Add(new SelectablePersonRow(
+            "goalie-usage",
+            "Goalies",
+            "GameUsage",
+            string.Join(" | ", State.CurrentGameUsage.GoalieUsage.Select(goalie => $"{goalie.UsageRole}: {goalie.PlayerName}")),
+            string.Join(" | ", State.CurrentGameUsage.GoalieUsage.Select(goalie => $"{goalie.GamesStarted}/{goalie.ExpectedStarts} starts, {goalie.Workload}")),
+            "Track starter, backup, expected starts, and rest recommendations."));
+        rows.Add(new SelectablePersonRow(
+            "extra-attacker",
+            "Extra Attacker",
+            "GameUsage",
+            string.Join(" | ", State.CurrentGameUsage.SpecialTeams.ExtraAttacker.Players.Select(player => player.PlayerName)),
+            State.CurrentGameUsage.SpecialTeams.ExtraAttacker.Summary,
+            "Six-on-five personnel group."));
+        rows.Add(new SelectablePersonRow(
+            "three-on-three",
+            "Three-on-Three",
+            "GameUsage",
+            $"{State.CurrentGameUsage.SpecialTeams.ThreeOnThree.Combination}: {string.Join(" | ", State.CurrentGameUsage.SpecialTeams.ThreeOnThree.Players.Select(player => player.PlayerName))}",
+            State.CurrentGameUsage.SpecialTeams.ThreeOnThree.Summary,
+            "Placeholder personnel deployment only."));
+        rows.Add(new SelectablePersonRow(
+            "shootout",
+            "Shootout Order",
+            "GameUsage",
+            string.Join(" | ", State.CurrentGameUsage.SpecialTeams.ShootoutOrder.Shooters.Select((player, index) => $"{index + 1}. {player.PlayerName}")),
+            State.CurrentGameUsage.SpecialTeams.ShootoutOrder.Summary,
+            "Order can be adjusted without adding a shootout tactics engine."));
+
         foreach (var slot in State.LineupSlots)
         {
             var assignment = lineup.Assignments.FirstOrDefault(assignment => assignment.Slot == slot);
@@ -2311,6 +2370,11 @@ internal sealed class MainWindow : Window
         if (row.Kind == "LineChemistry")
         {
             return BuildLineChemistryDetail(row.PersonId);
+        }
+
+        if (row.Kind == "GameUsage")
+        {
+            return BuildGameUsageDetail(row.PersonId);
         }
 
         if (!TryLineupSlot(row.PersonId, out var slot))
@@ -2364,6 +2428,80 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Swap", () => ShowLineupSwapPopup(slot), assignment is not null, "No player assigned"),
             CreateDetailButton("View Dossier", () => OpenDossierFor(assignment!.PersonId), assignment is not null, "No player assigned"),
             CreateDetailButton("Auto-fill", () => State.AutoFillLineup()));
+        return panel;
+    }
+
+    private UIElement BuildGameUsageDetail(string unitId)
+    {
+        var usage = State.CurrentGameUsage;
+        var panel = CreateDetailPanel("Game Usage", unitId);
+        if (unitId == "game-usage-summary")
+        {
+            AddParagraph(panel, usage.Summary);
+            AddSubHeader(panel, "Coach Recommendations");
+            foreach (var recommendation in usage.CoachRecommendations)
+            {
+                AddParagraph(panel, $"{(recommendation.IsImportant ? "Important" : "Note")}: {recommendation.PlayerName} - {recommendation.Reason} Recommended: {recommendation.SuggestedAction}");
+            }
+        }
+        else if (unitId.StartsWith("power-play:", StringComparison.Ordinal) && int.TryParse(unitId["power-play:".Length..], out var ppUnit))
+        {
+            var unit = usage.SpecialTeams.PowerPlayUnits.FirstOrDefault(unit => unit.UnitNumber == ppUnit);
+            if (unit is not null)
+            {
+                AddLine(panel, "LW", unit.LeftWing?.PlayerName ?? "open");
+                AddLine(panel, "C", unit.Center?.PlayerName ?? "open");
+                AddLine(panel, "RW", unit.RightWing?.PlayerName ?? "open");
+                AddLine(panel, "QB Defense", unit.QuarterbackDefense?.PlayerName ?? "open");
+                AddLine(panel, "Net Front / Second Defense", unit.NetFrontOrSecondDefense?.PlayerName ?? "open");
+            }
+        }
+        else if (unitId.StartsWith("penalty-kill:", StringComparison.Ordinal) && int.TryParse(unitId["penalty-kill:".Length..], out var pkUnit))
+        {
+            var unit = usage.SpecialTeams.PenaltyKillUnits.FirstOrDefault(unit => unit.UnitNumber == pkUnit);
+            if (unit is not null)
+            {
+                AddLine(panel, "LW", unit.LeftWing?.PlayerName ?? "open");
+                AddLine(panel, "RW", unit.RightWing?.PlayerName ?? "open");
+                AddLine(panel, "LD", unit.LeftDefense?.PlayerName ?? "open");
+                AddLine(panel, "RD", unit.RightDefense?.PlayerName ?? "open");
+            }
+        }
+        else if (unitId == "goalie-usage")
+        {
+            foreach (var goalie in usage.GoalieUsage)
+            {
+                AddParagraph(panel, $"{goalie.UsageRole}: {goalie.PlayerName} | Starts {goalie.GamesStarted}/{goalie.ExpectedStarts} | {goalie.Workload}. {goalie.RestRecommendation}");
+            }
+        }
+        else if (unitId == "extra-attacker")
+        {
+            AddParagraph(panel, string.Join(Environment.NewLine, usage.SpecialTeams.ExtraAttacker.Players.Select(player => $"- {player.PlayerName} | {player.Position} | {LineupDisplay.Role(player.CurrentRole)}")));
+        }
+        else if (unitId == "three-on-three")
+        {
+            AddLine(panel, "Combination", usage.SpecialTeams.ThreeOnThree.Combination);
+            AddParagraph(panel, string.Join(Environment.NewLine, usage.SpecialTeams.ThreeOnThree.Players.Select(player => $"- {player.PlayerName} | {player.Position} | {LineupDisplay.Role(player.CurrentRole)}")));
+        }
+        else if (unitId == "shootout")
+        {
+            foreach (var shooter in usage.SpecialTeams.ShootoutOrder.Shooters.Select((player, index) => new { player, index }))
+            {
+                AddParagraph(panel, $"{shooter.index + 1}. {shooter.player.PlayerName} | {shooter.player.Position} | {LineupDisplay.Role(shooter.player.CurrentRole)}");
+            }
+        }
+
+        AddSubHeader(panel, "Player Usage Summary");
+        foreach (var profile in usage.PlayerProfiles.Take(8))
+        {
+            AddParagraph(panel, $"{profile.PlayerName}: {profile.CurrentLine} | {profile.PowerPlayUsage} | {profile.PenaltyKillUsage} | {profile.ShootoutUsage}. {profile.CoachComment}");
+        }
+
+        AddActions(panel,
+            CreateDetailButton("Assign", () => State.AssignNextGameUsage(unitId)),
+            CreateDetailButton("Remove", () => State.RemoveGameUsage(unitId)),
+            CreateDetailButton("Swap", () => State.SwapGameUsage(unitId)),
+            CreateDetailButton("Auto Fill", () => State.AutoFillGameUsage()));
         return panel;
     }
 
@@ -4025,6 +4163,26 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Starter: {LineupPlayerText(lineup.Goalies.Starter)}");
         builder.AppendLine($"Backup:  {LineupPlayerText(lineup.Goalies.Backup)}");
         builder.AppendLine();
+        builder.AppendLine("Game Usage");
+        var gameUsage = State.CurrentGameUsage;
+        foreach (var unit in gameUsage.SpecialTeams.PowerPlayUnits)
+        {
+            builder.AppendLine($"Power Play Unit {unit.UnitNumber}: LW {LineupPlayerText(unit.LeftWing)} | C {LineupPlayerText(unit.Center)} | RW {LineupPlayerText(unit.RightWing)} | QB {LineupPlayerText(unit.QuarterbackDefense)} | NF/2D {LineupPlayerText(unit.NetFrontOrSecondDefense)}");
+        }
+
+        foreach (var unit in gameUsage.SpecialTeams.PenaltyKillUnits)
+        {
+            builder.AppendLine($"Penalty Kill Unit {unit.UnitNumber}: LW {LineupPlayerText(unit.LeftWing)} | RW {LineupPlayerText(unit.RightWing)} | LD {LineupPlayerText(unit.LeftDefense)} | RD {LineupPlayerText(unit.RightDefense)}");
+        }
+
+        builder.AppendLine($"Extra Attacker: {string.Join(" | ", gameUsage.SpecialTeams.ExtraAttacker.Players.Select(player => player.PlayerName))}");
+        builder.AppendLine($"Three-on-Three: {gameUsage.SpecialTeams.ThreeOnThree.Combination} - {string.Join(" | ", gameUsage.SpecialTeams.ThreeOnThree.Players.Select(player => player.PlayerName))}");
+        builder.AppendLine($"Shootout: {string.Join(" | ", gameUsage.SpecialTeams.ShootoutOrder.Shooters.Select((player, index) => $"{index + 1}. {player.PlayerName}"))}");
+        foreach (var goalie in gameUsage.GoalieUsage)
+        {
+            builder.AppendLine($"{goalie.UsageRole} goalie usage: {goalie.PlayerName}, starts {goalie.GamesStarted}/{goalie.ExpectedStarts}, {goalie.Workload}. {goalie.RestRecommendation}");
+        }
+        builder.AppendLine();
         builder.AppendLine("Coach Recommendations");
         if (lineup.CoachRecommendations.Count == 0)
         {
@@ -4037,6 +4195,13 @@ internal sealed class MainWindow : Window
                 builder.AppendLine($"- {(recommendation.IsImportant ? "Important" : "Note")}: {recommendation.PlayerName} - {recommendation.Reason}");
                 builder.AppendLine($"  Recommended action: {recommendation.SuggestedAction}");
             }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Game Usage Recommendations");
+        foreach (var recommendation in gameUsage.CoachRecommendations)
+        {
+            builder.AppendLine($"- {(recommendation.IsImportant ? "Important" : "Note")}: {recommendation.PlayerName} - {recommendation.SuggestedAction}");
         }
 
         builder.AppendLine();
@@ -6748,6 +6913,7 @@ internal sealed class AlphaDesktopState
     private readonly RelationshipExpansionService _relationships = new();
     private readonly LineupService _lineups = new();
     private readonly LineChemistryService _lineChemistry = new();
+    private readonly GameUsageService _gameUsage = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6766,7 +6932,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry)));
+        ScenarioSnapshot = _gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry))));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -6986,6 +7152,12 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<string> DailyAgenda => _actionCenter.BuildDailyAgenda(ScenarioSnapshot, ActionCenterItems, BudgetOverview);
 
     public IReadOnlyList<string> AssistantGmRecommendations => _actionCenter.BuildAssistantGmRecommendations(ScenarioSnapshot, ActionCenterItems, BudgetOverview);
+
+    public int GameUsageWarningCount => CurrentGameUsage.CoachRecommendations.Count(recommendation => recommendation.IsImportant);
+
+    public string GameUsageDashboardSummary =>
+        CurrentGameUsage.CoachRecommendations.FirstOrDefault(recommendation => recommendation.IsImportant)?.SuggestedAction
+        ?? "PP, PK, goalie, extra-attacker, three-on-three, and shootout usage are set.";
 
     public IReadOnlyList<string> UpcomingActionEvents => _actionCenter.BuildUpcomingEvents(ScenarioSnapshot);
 
@@ -8191,6 +8363,22 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public GameUsage CurrentGameUsage
+    {
+        get
+        {
+            if (ScenarioSnapshot.CurrentGameUsage is not null)
+            {
+                return ScenarioSnapshot.CurrentGameUsage;
+            }
+
+            var updated = _gameUsage.EnsureGameUsage(ScenarioSnapshot);
+            ScenarioSnapshot = updated;
+            Snapshot = updated.AlphaSnapshot;
+            return updated.CurrentGameUsage!;
+        }
+    }
+
     public LineChemistry? LineChemistryUnit(string unitId) =>
         LineChemistryReport.Units.FirstOrDefault(unit => unit.UnitId == unitId);
 
@@ -8258,7 +8446,10 @@ internal sealed class AlphaDesktopState
     }
 
     public string LineupDevelopmentImpactText(string personId) =>
-        _lineups.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary;
+        $"{_lineups.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary} {GameUsageDevelopmentImpactText(personId)}";
+
+    public string GameUsageDevelopmentImpactText(string personId) =>
+        _gameUsage.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary;
 
     public string LineupCoachNote(string personId) =>
         LineupAssignment(personId)?.CoachNote ?? "No coach lineup note yet.";
@@ -8331,6 +8522,54 @@ internal sealed class AlphaDesktopState
 
     public void AutoFillLineup() => ApplyLineupResult(_lineups.AutoFillLineup(ScenarioSnapshot));
 
+    public void AutoFillGameUsage() => ApplyGameUsageResult(_gameUsage.AutoFillGameUsage(ScenarioSnapshot));
+
+    public void AssignNextGameUsage(string unitId)
+    {
+        try
+        {
+            ApplyGameUsageResult(unitId switch
+            {
+                "power-play:1" => _gameUsage.AssignPowerPlaySlot(ScenarioSnapshot, 1, PowerPlaySlot.Center, NextForwardForUsage().PersonId),
+                "power-play:2" => _gameUsage.AssignPowerPlaySlot(ScenarioSnapshot, 2, PowerPlaySlot.RightWing, NextForwardForUsage(skip: 1).PersonId),
+                "penalty-kill:1" => _gameUsage.AssignPenaltyKillSlot(ScenarioSnapshot, 1, PenaltyKillSlot.LeftWing, NextCheckingForwardForUsage().PersonId),
+                "penalty-kill:2" => _gameUsage.AssignPenaltyKillSlot(ScenarioSnapshot, 2, PenaltyKillSlot.RightWing, NextCheckingForwardForUsage(skip: 1).PersonId),
+                "shootout" => _gameUsage.MoveShootoutPlayer(ScenarioSnapshot, NextForwardForUsage(skip: 2).PersonId, -1),
+                _ => _gameUsage.AutoFillGameUsage(ScenarioSnapshot)
+            });
+        }
+        catch (Exception ex)
+        {
+            LatestSummary = ex.Message;
+        }
+    }
+
+    public void RemoveGameUsage(string unitId)
+    {
+        ApplyGameUsageResult(_gameUsage.AutoFillGameUsage(ScenarioSnapshot));
+        LatestSummary = $"Reset {unitId} from current lineup.";
+    }
+
+    public void SwapGameUsage(string unitId)
+    {
+        try
+        {
+            ApplyGameUsageResult(unitId switch
+            {
+                "shootout" => _gameUsage.MoveShootoutPlayer(ScenarioSnapshot, CurrentGameUsage.SpecialTeams.ShootoutOrder.Shooters.Skip(1).FirstOrDefault()?.PersonId ?? NextForwardForUsage().PersonId, -1),
+                "power-play:1" => _gameUsage.AssignPowerPlaySlot(ScenarioSnapshot, 1, PowerPlaySlot.LeftWing, NextForwardForUsage(skip: 2).PersonId),
+                "power-play:2" => _gameUsage.AssignPowerPlaySlot(ScenarioSnapshot, 2, PowerPlaySlot.LeftWing, NextForwardForUsage(skip: 3).PersonId),
+                "penalty-kill:1" => _gameUsage.AssignPenaltyKillSlot(ScenarioSnapshot, 1, PenaltyKillSlot.LeftWing, NextCheckingForwardForUsage(skip: 2).PersonId),
+                "penalty-kill:2" => _gameUsage.AssignPenaltyKillSlot(ScenarioSnapshot, 2, PenaltyKillSlot.LeftWing, NextCheckingForwardForUsage(skip: 3).PersonId),
+                _ => _gameUsage.AutoFillGameUsage(ScenarioSnapshot)
+            });
+        }
+        catch (Exception ex)
+        {
+            LatestSummary = ex.Message;
+        }
+    }
+
     public void AssignLineupSlot(LineupSlot slot, string personId) =>
         ApplyLineupResult(_lineups.AssignPlayerToSlot(ScenarioSnapshot, slot, personId));
 
@@ -8344,7 +8583,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = _lineChemistry.EnsureChemistry(result.ScenarioSnapshot);
+            ScenarioSnapshot = _gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(result.ScenarioSnapshot));
             Snapshot = ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
         }
@@ -8352,6 +8591,34 @@ internal sealed class AlphaDesktopState
         LastProcessedEventCount = 0;
         LatestSummary = result.Validation.IsValid ? result.Message : $"{result.Message} {result.Validation.Message}";
     }
+
+    private void ApplyGameUsageResult(GameUsageManagementResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private LineupRoleAssignment NextForwardForUsage(int skip = 0) =>
+        CurrentLineup.Assignments
+            .Where(assignment => assignment.Slot != LineupSlot.HealthyScratch && assignment.Position is LegacyEngine.Rosters.RosterPosition.Center or LegacyEngine.Rosters.RosterPosition.LeftWing or LegacyEngine.Rosters.RosterPosition.RightWing)
+            .OrderBy(assignment => assignment.Slot)
+            .Skip(skip)
+            .First();
+
+    private LineupRoleAssignment NextCheckingForwardForUsage(int skip = 0) =>
+        CurrentLineup.Assignments
+            .Where(assignment => assignment.Slot != LineupSlot.HealthyScratch && assignment.Position is LegacyEngine.Rosters.RosterPosition.Center or LegacyEngine.Rosters.RosterPosition.LeftWing or LegacyEngine.Rosters.RosterPosition.RightWing)
+            .OrderByDescending(assignment => assignment.PlayerType.Contains("Checking", StringComparison.OrdinalIgnoreCase) || assignment.PlayerType.Contains("Defensive", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(assignment => assignment.Age ?? 0)
+            .Skip(skip)
+            .First();
 
     public string LineupRoleTradeText(string personId)
     {

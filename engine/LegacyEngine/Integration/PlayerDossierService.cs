@@ -39,6 +39,7 @@ public sealed class PlayerDossierService
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
             BuildRoleUsage(scenario, personId),
+            BuildGameUsage(scenario, personId),
             BuildMedical(scenario, personId),
             BuildContractRights(scenario, personId),
             BuildAgentRepresentation(scenario, personId),
@@ -291,6 +292,12 @@ public sealed class PlayerDossierService
         }
 
         return new PlayerDossierSection("Role / Usage", lines);
+    }
+
+    private static PlayerDossierSection BuildGameUsage(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new GameUsageService().BuildDossierUsageLines(scenario, personId);
+        return new PlayerDossierSection("Game Usage", lines);
     }
 
     private static PlayerDossierSection BuildDevelopment(NewGmScenarioSnapshot scenario, string personId)

@@ -29,6 +29,7 @@ public sealed class ActionCenterService
         AddScoutingCompletions(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
         AddLineupRecommendations(scenario, items);
+        AddGameUsageRecommendations(scenario, items);
         AddStaffCoachingItems(scenario, items);
         AddOwnerOfficeItems(scenario, budget, items);
         AddUpcomingGames(scenario, items);
@@ -555,6 +556,37 @@ public sealed class ActionCenterService
                 issue.Weaknesses.FirstOrDefault() ?? issue.RelationshipNote,
                 "Chemistry should be a small modifier, but a poor fit can hurt confidence, role satisfaction, and development environment.",
                 issue.Recommendation,
+                null,
+                null,
+                null));
+        }
+    }
+
+    private static void AddGameUsageRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var usage = scenario.CurrentGameUsage ?? new GameUsageService().BuildDefaultGameUsage(scenario);
+        foreach (var recommendation in usage.CoachRecommendations.Where(item => item.IsImportant).Take(3))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:game-usage:{recommendation.RecommendationId}",
+                recommendation.RecommendationType switch
+                {
+                    GameUsageRecommendationType.ReduceGoalieWorkload => $"Goalie tired: {recommendation.PlayerName}",
+                    GameUsageRecommendationType.ImprovePowerPlayBalance => "PP needs adjustment",
+                    GameUsageRecommendationType.ImprovePenaltyKillBalance or GameUsageRecommendationType.UseVeteranOnPenaltyKill => "PK unit needs review",
+                    GameUsageRecommendationType.PromoteYoungPlayerToPowerPlayTwo => $"Prospect deserves PP time: {recommendation.PlayerName}",
+                    _ => $"Game usage review: {recommendation.PlayerName}"
+                },
+                ActionCenterCategory.Roster,
+                recommendation.RecommendationType == GameUsageRecommendationType.ReduceGoalieWorkload ? ActionCenterPriority.Urgent : ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(3),
+                recommendation.PersonId,
+                recommendation.PersonId is null ? null : recommendation.PlayerName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                recommendation.Reason,
+                "Special teams and goalie usage can affect development, confidence, fatigue, and role satisfaction.",
+                recommendation.SuggestedAction,
                 null,
                 null,
                 null));

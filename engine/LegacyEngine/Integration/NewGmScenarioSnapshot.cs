@@ -176,6 +176,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public LineChemistryReport? CurrentLineChemistry { get; init; }
 
+    public GameUsage? CurrentGameUsage { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -508,5 +510,6 @@ public sealed record NewGmScenarioSnapshot(
         RelationshipChemistry?.Validate();
         CurrentLineup?.Validate();
         CurrentLineChemistry?.Validate();
+        CurrentGameUsage?.Validate();
     }
 }

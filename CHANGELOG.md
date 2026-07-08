@@ -1,6 +1,47 @@
 # Changelog
 
-## Current - Alpha 6.5
+## Current - Alpha 6.6
+
+### Added
+
+- Game usage model covering power play units, penalty kill units, goalie workload, extra attacker, three-on-three placeholder, shootout order, per-player usage profiles, and coach recommendations.
+- Power Play Unit 1 and Unit 2 personnel slots for LW, C, RW, QB Defense, and Net Front / Second Defense.
+- Penalty Kill Unit 1 and Unit 2 personnel slots for LW, RW, LD, and RD.
+- Goalie usage profiles with starter/backup role, games started, expected starts, workload, and rest recommendation.
+- Extra attacker, three-on-three, and shootout-order personnel structures.
+- GameUsageService default deployment generation from the current lineup.
+- Assignment methods for PP and PK slots plus shootout order movement.
+- Per-player Game Usage profiles showing current line, PP, PK, extra attacker, three-on-three, shootout, role, usage summary, coach comment, and modest development modifier.
+- Player dossier Game Usage section.
+- Lineup workspace rows for Game Usage Summary, Power Play, Penalty Kill, Goalies, Extra Attacker, Three-on-Three, and Shootout Order.
+- Dashboard Game Usage metric for important usage recommendations.
+- Action Center routing for important game-usage issues such as goalie workload, PP balance, PK review, and prospect PP opportunity.
+- Alpha 6.6 tests covering PP assignment, PK assignment, goalie usage, shootout order, usage summaries, coach recommendations, dossier usage, development modifier, dashboard exposure, Action Center exposure, hidden-rating boundaries, and no tactics/game-sim/Godot expansion.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.6.
+- Lineup summary now includes readable game-usage deployment and recommendations.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No power play tactics.
+- No penalty kill tactics.
+- No forecheck.
+- No neutral-zone system.
+- No faceoff strategy.
+- No line matching.
+- No matchup engine.
+- No game simulation overhaul.
+
+## Previous - Alpha 6.5
 
 ### Added
 
@@ -105,4 +146,4 @@
 
 ## Next
 
-- Alpha 6.6 - TBD.
+- Alpha 6.7 - TBD.
