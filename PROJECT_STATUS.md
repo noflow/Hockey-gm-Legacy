@@ -97,14 +97,15 @@ The five foundation pillars remain:
 - Alpha 6.0 - Player Life Cycle v1
 - Alpha 6.1 - Staff Life Cycle v1
 - Alpha 6.2 - Owner Life Cycle v1
+- Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers
 
 ## Current Milestone
 
-Alpha 6.2 - Owner Life Cycle v1
+Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers
 
 ## Current Goal
 
-Make owners feel like long-term organization stewards by tracking owner life stage, expectation history, confidence history, meeting history, permanent owner letters, budget relationship, job-security history, organization era context, Action Center owner items, report highlights, and limited league-news milestones.
+Make trading usable for alpha testing by showing both teams' roster players, prospect rights, draft picks, and future-consideration placeholders; separating You Give and You Receive proposal buckets; adding concrete counter-offer packages; and keeping accepted trades behind explicit Pending GM approval.
 
 ## Why Relationship Engine Was Next
 

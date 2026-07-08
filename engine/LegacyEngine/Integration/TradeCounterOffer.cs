@@ -6,6 +6,10 @@ public sealed record TradeCounterOffer(
     IReadOnlyList<TradeAsset> RequestedAssets,
     string Reason)
 {
+    public IReadOnlyList<TradeAsset> RevisedPlayerGives { get; init; } = Array.Empty<TradeAsset>();
+
+    public IReadOnlyList<TradeAsset> RevisedPlayerReceives { get; init; } = Array.Empty<TradeAsset>();
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(TradeOfferId)
@@ -16,6 +20,11 @@ public sealed record TradeCounterOffer(
         }
 
         foreach (var asset in RequestedAssets)
+        {
+            asset.Validate();
+        }
+
+        foreach (var asset in RevisedPlayerGives.Concat(RevisedPlayerReceives))
         {
             asset.Validate();
         }

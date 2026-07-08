@@ -76,6 +76,7 @@ var nhlScenarioRealismTests = new NhlScenarioRealismTests();
 var alpha60PlayerLifeCycleTests = new Alpha60PlayerLifeCycleTests();
 var alpha61StaffLifeCycleTests = new Alpha61StaffLifeCycleTests();
 var alpha62OwnerLifeCycleTests = new Alpha62OwnerLifeCycleTests();
+var alpha621TradesV3Tests = new Alpha621TradesV3Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1010,6 +1011,22 @@ runner.Run("alpha 6.2 budget relationship reflects budget pressure", alpha62Owne
 runner.Run("alpha 6.2 save load preserves owner life cycle", alpha62OwnerLifeCycleTests.SaveLoadPreservesOwnerLifeCycle);
 runner.Run("alpha 6.2 AlphaDesktop exposes owner life-cycle UI", alpha62OwnerLifeCycleTests.AlphaDesktopExposesOwnerLifeCycleUi);
 runner.Run("alpha 6.2 no forbidden systems added", alpha62OwnerLifeCycleTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 6.2.1 other team roster players appear in trade builder", alpha621TradesV3Tests.OtherTeamRosterPlayersAppearInTradeBuilder);
+runner.Run("alpha 6.2.1 your roster players appear in trade builder", alpha621TradesV3Tests.YourRosterPlayersAppearInTradeBuilder);
+runner.Run("alpha 6.2.1 prospects appear for both teams", alpha621TradesV3Tests.ProspectsAppearForBothTeams);
+runner.Run("alpha 6.2.1 draft picks appear as trade assets", alpha621TradesV3Tests.DraftPicksAppearAsTradeAssets);
+runner.Run("alpha 6.2.1 draft pick can be added to You Give", alpha621TradesV3Tests.DraftPickCanBeAddedToYouGive);
+runner.Run("alpha 6.2.1 draft pick can be added to You Receive", alpha621TradesV3Tests.DraftPickCanBeAddedToYouReceive);
+runner.Run("alpha 6.2.1 proposal buckets are separate in UI", alpha621TradesV3Tests.ProposalBucketsAreSeparateInUi);
+runner.Run("alpha 6.2.1 AI returns counter for close offer", alpha621TradesV3Tests.AiReturnsCounterForCloseOffer);
+runner.Run("alpha 6.2.1 counter can add pick", alpha621TradesV3Tests.CounterCanAddPick);
+runner.Run("alpha 6.2.1 counter can request different asset type", alpha621TradesV3Tests.CounterCanRequestDifferentAssetType);
+runner.Run("alpha 6.2.1 accepting counter updates proposal but does not complete trade", alpha621TradesV3Tests.AcceptingCounterUpdatesProposalButDoesNotCompleteTrade);
+runner.Run("alpha 6.2.1 proposed accepted trade creates pending GM action", alpha621TradesV3Tests.ProposeAcceptedTradeCreatesPendingGmAction);
+runner.Run("alpha 6.2.1 approved trade moves players prospects and records picks", alpha621TradesV3Tests.ApprovedTradeMovesPlayersProspectsAndRecordsPicks);
+runner.Run("alpha 6.2.1 declined trade leaves assets unchanged", alpha621TradesV3Tests.DeclinedTradeLeavesAssetsUnchanged);
+runner.Run("alpha 6.2.1 league news records draft picks in trade summary", alpha621TradesV3Tests.LeagueNewsRecordsDraftPicksInTradeSummary);
+runner.Run("alpha 6.2.1 no forbidden systems added", alpha621TradesV3Tests.Alpha621HasNoForbiddenSystems);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

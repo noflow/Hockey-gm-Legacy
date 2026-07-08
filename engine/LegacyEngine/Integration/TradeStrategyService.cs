@@ -104,7 +104,9 @@ public sealed class TradeStrategyService
             TradeGmPersonality.Conservative => 6,
             _ => 0
         };
-        var decision = score >= threshold
+        var decision = valueGap <= -50
+            ? TradeOfferStatus.Rejected
+            : score >= threshold
             ? TradeOfferStatus.Accepted
             : score >= threshold - 20
                 ? TradeOfferStatus.Countered
@@ -150,16 +152,20 @@ public sealed class TradeStrategyService
     public TradeCounterOffer BuildCounterOffer(NewGmScenarioSnapshot scenario, TradeOffer offer, TradeEvaluation evaluation)
     {
         var profile = BuildTeamNeedsProfile(scenario, offer.OtherOrganizationId, offer.OtherOrganizationName);
-        var requested = profile.AssetPreferences.Contains(AssetPreference.DraftPick)
-            ? new[]
-            {
-                new TradeService().CreateDraftPickAsset(scenario, TradeSide.PlayerOrganization, scenario.Organization.OrganizationId, scenario.Organization.Name, 3, scenario.Season.Year + 1)
-            }
-            : Array.Empty<TradeAsset>();
+        var requested = RequestedCounterAssets(scenario, offer, profile);
         var message = string.IsNullOrWhiteSpace(evaluation.CounterSuggestion)
             ? BuildCounterSuggestion(profile, offer)
             : evaluation.CounterSuggestion;
-        var counter = new TradeCounterOffer(offer.TradeOfferId, message, requested, $"Counter reflects {offer.OtherOrganizationName}'s {Readable(profile.Direction).ToLowerInvariant()} needs.");
+        var revisedGives = offer.PlayerGives
+            .Concat(requested)
+            .GroupBy(asset => asset.AssetId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+        var counter = new TradeCounterOffer(offer.TradeOfferId, message, requested, $"Counter reflects {offer.OtherOrganizationName}'s {Readable(profile.Direction).ToLowerInvariant()} needs.")
+        {
+            RevisedPlayerGives = revisedGives,
+            RevisedPlayerReceives = offer.PlayerReceives.ToArray()
+        };
         counter.Validate();
         return counter;
     }
@@ -488,7 +494,7 @@ public sealed class TradeStrategyService
     {
         if (profile.AssetPreferences.Contains(AssetPreference.DraftPick))
         {
-            return "They like the framework but need another draft pick included.";
+            return "They like the framework but need another draft pick included to close the value gap.";
         }
 
         if (profile.Needs.Any(need => need.Need == PositionNeed.DefensiveDefenseman))
@@ -502,6 +508,60 @@ public sealed class TradeStrategyService
         }
 
         return $"They are not opposed, but {offer.OtherOrganizationName} wants a better roster fit or prospect added.";
+    }
+
+    private static IReadOnlyList<TradeAsset> RequestedCounterAssets(NewGmScenarioSnapshot scenario, TradeOffer offer, TeamNeedsProfile profile)
+    {
+        var service = new TradeService();
+        var currentIds = offer.PlayerGives.Select(asset => asset.AssetId).ToHashSet(StringComparer.Ordinal);
+
+        if (profile.AssetPreferences.Contains(AssetPreference.DraftPick))
+        {
+            return new[]
+            {
+                service.CreateDraftPickAsset(scenario, TradeSide.PlayerOrganization, scenario.Organization.OrganizationId, scenario.Organization.Name, 3, scenario.Season.Year + 1)
+            };
+        }
+
+        if (profile.Needs.Any(need => need.Need == PositionNeed.DefensiveDefenseman))
+        {
+            var defense = service.BuildPlayerOrganizationAssets(scenario)
+                .Where(asset => asset.Position == RosterPosition.Defense && !currentIds.Contains(asset.AssetId))
+                .OrderBy(asset => asset.AssetType == TradeAssetType.ProspectRights ? 0 : 1)
+                .ThenByDescending(asset => asset.Value)
+                .FirstOrDefault();
+            if (defense is not null)
+            {
+                return new[] { defense };
+            }
+        }
+
+        if (profile.Needs.Any(need => need.Need == PositionNeed.StartingGoalie))
+        {
+            var goalie = service.BuildPlayerOrganizationAssets(scenario)
+                .Where(asset => asset.Position == RosterPosition.Goalie && !currentIds.Contains(asset.AssetId))
+                .OrderByDescending(asset => asset.Value)
+                .FirstOrDefault();
+            if (goalie is not null)
+            {
+                return new[] { goalie };
+            }
+        }
+
+        var prospect = service.BuildPlayerOrganizationAssets(scenario)
+            .Where(asset => asset.AssetType == TradeAssetType.ProspectRights && !currentIds.Contains(asset.AssetId))
+            .OrderByDescending(asset => asset.Value)
+            .FirstOrDefault();
+        if (prospect is not null)
+        {
+            return new[] { prospect };
+        }
+
+        var rosterPlayer = service.BuildPlayerOrganizationAssets(scenario)
+            .Where(asset => asset.AssetType == TradeAssetType.Player && !currentIds.Contains(asset.AssetId))
+            .OrderByDescending(asset => asset.Value)
+            .FirstOrDefault();
+        return rosterPlayer is null ? Array.Empty<TradeAsset>() : new[] { rosterPlayer };
     }
 
     private static string ContractText(NewGmScenarioSnapshot scenario, string personId, out int yearsRemaining, out decimal salary)

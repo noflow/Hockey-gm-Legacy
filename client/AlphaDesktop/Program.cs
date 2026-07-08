@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.2.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -93,7 +93,8 @@ internal sealed class MainWindow : Window
     private Border? _draftModalOverlay;
     private ListBox? _tradeYourAssetsList;
     private ListBox? _tradeOtherAssetsList;
-    private ListBox? _tradeProposalList;
+    private ListBox? _tradeYouGiveList;
+    private ListBox? _tradeYouReceiveList;
 
     public MainWindow()
     {
@@ -598,7 +599,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.2 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.2.1 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2887,9 +2888,10 @@ internal sealed class MainWindow : Window
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.05, GridUnitType.Star) });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.85, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.85, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.05, GridUnitType.Star) });
 
         void Reopen()
         {
@@ -2931,49 +2933,74 @@ internal sealed class MainWindow : Window
         Grid.SetColumn(yourAssets, 0);
         root.Children.Add(yourAssets);
 
-        var proposal = CreateDetailPanel("Trade proposal", $"{entry.Name} from {entry.TeamName}");
-        AddSubHeader(proposal, "You Give / You Receive");
-        _tradeProposalList = new ListBox
+        var youGive = CreateDetailPanel("You Give", "Assets leaving your organization");
+        _tradeYouGiveList = new ListBox
         {
-            ItemsSource = State.CurrentTradeProposalRows(),
-            MinHeight = 170
+            ItemsSource = State.CurrentTradeYouGiveRows(),
+            MinHeight = 190
         };
-        proposal.Children.Add(_tradeProposalList);
-        AddLine(proposal, "Roster impact", State.CurrentTradeRosterImpact);
-        AddLine(proposal, "Budget impact", State.CurrentTradeBudgetImpact);
-        AddLine(proposal, "AI evaluation", State.CurrentTradeEvaluationText);
-        AddSubHeader(proposal, "Reasons");
+        youGive.Children.Add(_tradeYouGiveList);
+        AddActions(youGive,
+            CreateDetailButton("Remove From You Give", () =>
+            {
+                if (_tradeYouGiveList.SelectedItem is TradeAssetRow row)
+                {
+                    State.RemoveYourAssetFromTradeProposal(row.Asset);
+                    Reopen();
+                }
+            }, State.HasTradePlayerGives, "Remove Selected From Offer - You Give"));
+        Grid.SetColumn(youGive, 1);
+        root.Children.Add(youGive);
+
+        var youReceive = CreateDetailPanel("Trade proposal", $"You Receive - {entry.TeamName} assets coming back");
+        _tradeYouReceiveList = new ListBox
+        {
+            ItemsSource = State.CurrentTradeYouReceiveRows(),
+            MinHeight = 190
+        };
+        youReceive.Children.Add(_tradeYouReceiveList);
+        AddActions(youReceive,
+            CreateDetailButton("Remove From You Receive", () =>
+            {
+                if (_tradeYouReceiveList.SelectedItem is TradeAssetRow row)
+                {
+                    State.RemoveOtherAssetFromTradeProposal(row.Asset);
+                    Reopen();
+                }
+            }, State.HasTradePlayerReceives, "Remove Selected From Offer - You Receive"));
+        AddSubHeader(youReceive, "Live Evaluation");
+        AddLine(youReceive, "Roster impact", State.CurrentTradeRosterImpact);
+        AddLine(youReceive, "Budget / cap impact", State.CurrentTradeBudgetImpact);
+        AddLine(youReceive, "AI evaluation", State.CurrentTradeEvaluationText);
+        AddSubHeader(youReceive, "Reasons");
         var reasons = State.CurrentTradeEvaluationReasons.Take(5).ToArray();
         if (reasons.Length == 0)
         {
-            AddParagraph(proposal, "Add assets from both sides to preview the other team's evaluation.");
+            AddParagraph(youReceive, "Add assets from both sides to preview the other team's evaluation.");
         }
         else
         {
             foreach (var reason in reasons)
             {
-                AddParagraph(proposal, reason);
+                AddParagraph(youReceive, reason);
             }
         }
 
-        AddSubHeader(proposal, "Counter");
-        AddParagraph(proposal, State.CurrentTradeCounterText);
-        AddActions(proposal,
-            CreateDetailButton("Remove Selected From Offer", () =>
+        AddSubHeader(youReceive, "Counter");
+        AddParagraph(youReceive, State.CurrentTradeCounterText);
+        AddActions(youReceive,
+            CreateDetailButton("Accept Counter Into Offer", () =>
             {
-                if (_tradeProposalList.SelectedItem is TradeAssetRow row)
-                {
-                    State.RemoveAssetFromTradeProposal(row.Asset);
-                    Reopen();
-                }
-            }, State.HasTradeProposalAssets),
+                State.AcceptCurrentTradeCounter();
+                Reopen();
+            }, State.HasCurrentTradeCounter),
             CreateDetailButton("Clear Offer", () =>
             {
                 State.ClearTradeBuilder();
                 Reopen();
             }, State.HasTradeProposalAssets));
-        Grid.SetColumn(proposal, 1);
-        root.Children.Add(proposal);
+        Grid.SetColumn(youReceive, 2);
+        root.Children.Add(youReceive);
 
         var otherAssets = CreateDetailPanel("Other team assets", entry.TeamName);
         AddParagraph(otherAssets, "Select an asset, then add it to You Receive.");
@@ -3006,7 +3033,7 @@ internal sealed class MainWindow : Window
                 Reopen();
             }
         }));
-        Grid.SetColumn(otherAssets, 2);
+        Grid.SetColumn(otherAssets, 3);
         root.Children.Add(otherAssets);
 
         var actions = new WrapPanel
@@ -3040,7 +3067,7 @@ internal sealed class MainWindow : Window
             Reopen();
         }, State.HasTradeProposalAssets));
         Grid.SetRow(actions, 1);
-        Grid.SetColumnSpan(actions, 3);
+        Grid.SetColumnSpan(actions, 4);
         root.Children.Add(actions);
         return root;
     }
@@ -8658,17 +8685,8 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<TradeAssetRow> YourTradeAssetRows()
     {
-        var rows = new List<TradeAssetRow>();
-        rows.AddRange(Snapshot.Roster.ActivePlayers
-            .Select(player => _trades.CreateRosterPlayerAsset(ScenarioSnapshot, player.PersonId))
-            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset))));
-        rows.AddRange(ScenarioSnapshot.ProspectRights
-            .Select(prospect => _trades.CreateProspectRightsAsset(ScenarioSnapshot, prospect.ProspectPersonId))
-            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset))));
-        rows.Add(new TradeAssetRow(
-            _trades.CreateDraftPickAsset(ScenarioSnapshot, TradeSide.PlayerOrganization, ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name, 3, ScenarioSnapshot.Season.Year + 1),
-            $"{ScenarioSnapshot.Season.Year + 1} Round 3 pick | draft pick placeholder"));
-        return rows
+        return _trades.BuildPlayerOrganizationAssets(ScenarioSnapshot)
+            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset)))
             .GroupBy(row => row.Asset.AssetId, StringComparer.Ordinal)
             .Select(group => group.First())
             .ToArray();
@@ -8676,14 +8694,8 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<TradeAssetRow> OtherTradeAssetRows(string organizationId, string teamName)
     {
-        var rows = OtherTeamTradeRoster(organizationId)
-            .Select(entry => _trades.CreateRosterPlayerAsset(ScenarioSnapshot, entry.PersonId, TradeSide.OtherOrganization))
+        return _trades.BuildOtherOrganizationAssets(ScenarioSnapshot, organizationId, teamName)
             .Select(asset => new TradeAssetRow(asset, AssetLabel(asset)))
-            .ToList();
-        rows.Add(new TradeAssetRow(
-            _trades.CreateDraftPickAsset(ScenarioSnapshot, TradeSide.OtherOrganization, organizationId, teamName, 3, ScenarioSnapshot.Season.Year + 1),
-            $"{teamName} {ScenarioSnapshot.Season.Year + 1} Round 3 pick | draft pick placeholder"));
-        return rows
             .GroupBy(row => row.Asset.AssetId, StringComparer.Ordinal)
             .Select(group => group.First())
             .ToArray();
@@ -8695,10 +8707,24 @@ internal sealed class AlphaDesktopState
             .Concat(_tradePlayerReceives.Select(asset => new TradeAssetRow(asset, $"You Receive: {AssetLabel(asset)}")))
             .ToArray();
 
+    public IReadOnlyList<TradeAssetRow> CurrentTradeYouGiveRows() =>
+        _tradePlayerGives
+            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset)))
+            .ToArray();
+
+    public IReadOnlyList<TradeAssetRow> CurrentTradeYouReceiveRows() =>
+        _tradePlayerReceives
+            .Select(asset => new TradeAssetRow(asset, AssetLabel(asset)))
+            .ToArray();
+
     public IReadOnlyList<TradeAsset> CurrentTradeProposalAssets =>
         _tradePlayerGives.Concat(_tradePlayerReceives).ToArray();
 
     public bool HasTradeProposalAssets => _tradePlayerGives.Count > 0 || _tradePlayerReceives.Count > 0;
+
+    public bool HasTradePlayerGives => _tradePlayerGives.Count > 0;
+
+    public bool HasTradePlayerReceives => _tradePlayerReceives.Count > 0;
 
     public bool CanProposeCurrentTrade => _tradePlayerGives.Count > 0 && _tradePlayerReceives.Count > 0;
 
@@ -8707,6 +8733,29 @@ internal sealed class AlphaDesktopState
     public string CurrentTradeEvaluationText => CurrentTradeEvaluation?.Explanation ?? "Trade must include assets on both sides before evaluation.";
 
     public string CurrentTradeCounterText => CurrentTradeEvaluation?.CounterSuggestion ?? "No counter request yet.";
+
+    public bool HasCurrentTradeCounter => CurrentTradeCounterOffer is not null && CurrentTradeCounterOffer.RequestedAssets.Count > 0;
+
+    private TradeCounterOffer? CurrentTradeCounterOffer
+    {
+        get
+        {
+            var evaluation = CurrentTradeEvaluation;
+            if (evaluation is null || evaluation.Decision != TradeOfferStatus.Countered)
+            {
+                return null;
+            }
+
+            var primaryOther = _tradePlayerReceives.First();
+            var offer = _trades.CreateOffer(
+                ScenarioSnapshot,
+                primaryOther.OrganizationId,
+                primaryOther.OrganizationName,
+                _tradePlayerGives.ToArray(),
+                _tradePlayerReceives.ToArray());
+            return _tradeStrategy.BuildCounterOffer(ScenarioSnapshot, offer, evaluation);
+        }
+    }
 
     public string CurrentTradeRosterImpact =>
         !CanProposeCurrentTrade
@@ -8800,6 +8849,34 @@ internal sealed class AlphaDesktopState
         _tradePlayerGives.RemoveAll(existing => existing.AssetId == asset.AssetId);
         _tradePlayerReceives.RemoveAll(existing => existing.AssetId == asset.AssetId);
         LatestSummary = $"{asset.DisplayName} removed from trade offer.";
+    }
+
+    public void RemoveYourAssetFromTradeProposal(TradeAsset asset)
+    {
+        _tradePlayerGives.RemoveAll(existing => existing.AssetId == asset.AssetId);
+        LatestSummary = $"{asset.DisplayName} removed from You Give.";
+    }
+
+    public void RemoveOtherAssetFromTradeProposal(TradeAsset asset)
+    {
+        _tradePlayerReceives.RemoveAll(existing => existing.AssetId == asset.AssetId);
+        LatestSummary = $"{asset.DisplayName} removed from You Receive.";
+    }
+
+    public void AcceptCurrentTradeCounter()
+    {
+        var counter = CurrentTradeCounterOffer;
+        if (counter is null)
+        {
+            LatestSummary = "No active counter offer is available.";
+            return;
+        }
+
+        _tradePlayerGives.Clear();
+        _tradePlayerGives.AddRange(counter.RevisedPlayerGives);
+        _tradePlayerReceives.Clear();
+        _tradePlayerReceives.AddRange(counter.RevisedPlayerReceives);
+        LatestSummary = $"Counter added to proposal: {counter.Message}";
     }
 
     public void ProposeCurrentTrade(string fallbackOrganizationId, string fallbackTeamName)

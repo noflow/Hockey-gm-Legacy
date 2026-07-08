@@ -99,21 +99,78 @@ public sealed class TradeService
             $"Rights held, round {prospect.RoundNumber}, pick {prospect.PickNumber}");
     }
 
+    public IReadOnlyList<TradeAsset> BuildPlayerOrganizationAssets(NewGmScenarioSnapshot scenario)
+    {
+        ArgumentNullException.ThrowIfNull(scenario);
+        var assets = new List<TradeAsset>();
+        assets.AddRange(scenario.AlphaSnapshot.Roster.ActivePlayers
+            .Select(player => CreateRosterPlayerAsset(scenario, player.PersonId)));
+        assets.AddRange(scenario.ProspectRights
+            .Select(prospect => CreateProspectRightsAsset(scenario, prospect.ProspectPersonId)));
+        assets.AddRange(CreateDraftPickAssets(scenario, TradeSide.PlayerOrganization, scenario.Organization.OrganizationId, scenario.Organization.Name));
+        assets.Add(CreateFutureConsiderationAsset(scenario, TradeSide.PlayerOrganization, scenario.Organization.OrganizationId, scenario.Organization.Name));
+        return assets
+            .GroupBy(asset => asset.AssetId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    public IReadOnlyList<TradeAsset> BuildOtherOrganizationAssets(NewGmScenarioSnapshot scenario, string organizationId, string organizationName)
+    {
+        ArgumentNullException.ThrowIfNull(scenario);
+        if (string.IsNullOrWhiteSpace(organizationId) || string.IsNullOrWhiteSpace(organizationName))
+        {
+            throw new ArgumentException("Other organization identity is required.");
+        }
+
+        var assets = new List<TradeAsset>();
+        var blockEntries = scenario.TradeBlock?.Entries
+            .Where(entry => entry.OrganizationId == organizationId || string.Equals(entry.TeamName, organizationName, StringComparison.Ordinal))
+            .OrderByDescending(entry => entry.AssetValue)
+            .ToArray() ?? Array.Empty<TradeBlockEntry>();
+        assets.AddRange(blockEntries
+            .Take(6)
+            .Select(entry => AssetFromBlockEntry(entry, TradeAssetType.Player, TradeSide.OtherOrganization)));
+        assets.AddRange(SyntheticOtherRosterAssets(scenario, organizationId, organizationName, assets.Count, 18 - assets.Count));
+        assets.AddRange(blockEntries
+            .Skip(6)
+            .Take(4)
+            .Select(entry => AssetFromBlockEntry(entry, TradeAssetType.ProspectRights, TradeSide.OtherOrganization)));
+        assets.AddRange(SyntheticOtherProspectAssets(scenario, organizationId, organizationName, assets.Count(asset => asset.AssetType == TradeAssetType.ProspectRights), 4 - assets.Count(asset => asset.AssetType == TradeAssetType.ProspectRights)));
+        assets.AddRange(CreateDraftPickAssets(scenario, TradeSide.OtherOrganization, organizationId, organizationName));
+        assets.Add(CreateFutureConsiderationAsset(scenario, TradeSide.OtherOrganization, organizationId, organizationName));
+        return assets
+            .GroupBy(asset => asset.AssetId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private IReadOnlyList<TradeAsset> CreateDraftPickAssets(NewGmScenarioSnapshot scenario, TradeSide side, string organizationId, string organizationName)
+    {
+        var rounds = scenario.LeagueProfile.Rulebook.DraftRules?.Rounds > 0
+            ? Math.Min(7, scenario.LeagueProfile.Rulebook.DraftRules.Rounds)
+            : 7;
+        return Enumerable.Range(1, 3)
+            .SelectMany(yearOffset => Enumerable.Range(1, rounds).Select(round =>
+                CreateDraftPickAsset(scenario, side, organizationId, organizationName, round, scenario.Season.Year + yearOffset)))
+            .ToArray();
+    }
+
     public TradeAsset CreateDraftPickAsset(NewGmScenarioSnapshot scenario, TradeSide side, string organizationId, string organizationName, int round, int year)
     {
-        var value = Math.Clamp(48 - round * 4, 10, 55);
+        var value = Math.Clamp(60 - round * 5 - Math.Max(0, year - scenario.Season.Year - 1) * 3, 10, 60);
         return new TradeAsset(
             TradeAssetType.DraftPick,
             side,
             organizationId,
             organizationName,
             $"draft-pick:{organizationId}:{year}:R{round}",
-            $"{year} Round {round} pick",
+            $"{year} {Ordinal(round)} Round Pick (Round {round})",
             null,
             null,
             0m,
             value,
-            "Draft pick placeholder");
+            $"Original owner: {organizationName}; current owner: {organizationName}; protected: no placeholder protection; estimated value {value}.");
     }
 
     public TradeAsset CreateFutureConsiderationAsset(NewGmScenarioSnapshot scenario, TradeSide side, string organizationId, string organizationName)
@@ -330,12 +387,25 @@ public sealed class TradeService
             }
         }
 
-        foreach (var asset in offer.PlayerReceives.Where(asset => asset.AssetType is TradeAssetType.Player or TradeAssetType.ProspectRights))
+        foreach (var asset in offer.PlayerReceives)
         {
-            var block = scenario.TradeBlock?.Find(asset.AssetId);
-            if (block is null || block.OrganizationId != offer.OtherOrganizationId)
+            if (asset.Side != TradeSide.OtherOrganization)
             {
-                return $"{asset.DisplayName} is not available from {offer.OtherOrganizationName}.";
+                return "Incoming assets must belong to the other organization.";
+            }
+
+            if (!string.Equals(asset.OrganizationId, offer.OtherOrganizationId, StringComparison.Ordinal))
+            {
+                return $"{asset.DisplayName} is not controlled by {offer.OtherOrganizationName}.";
+            }
+
+            if (asset.AssetType is TradeAssetType.Player or TradeAssetType.ProspectRights)
+            {
+                var block = scenario.TradeBlock?.Find(asset.AssetId);
+                if (block is not null && block.OrganizationId != offer.OtherOrganizationId)
+                {
+                    return $"{asset.DisplayName} is not available from {offer.OtherOrganizationName}.";
+                }
             }
         }
 
@@ -397,6 +467,63 @@ public sealed class TradeService
             entry.SalaryImpact,
             entry.AssetValue,
             $"{entry.PlayerType}; {entry.CurrentRole}; asking price: {entry.AskingPriceSummary}");
+
+    private static IReadOnlyList<TradeAsset> SyntheticOtherRosterAssets(NewGmScenarioSnapshot scenario, string organizationId, string organizationName, int startIndex, int count)
+    {
+        if (count <= 0)
+        {
+            return Array.Empty<TradeAsset>();
+        }
+
+        return Enumerable.Range(startIndex, count)
+            .Select(index =>
+            {
+                var position = PositionFor(index);
+                var age = index % 5 == 0 ? 21 : index % 4 == 0 ? 20 : 18 + index % 3;
+                var value = Math.Clamp(34 + StableHash($"{organizationId}:roster:{index}") % 42, 24, 76);
+                return new TradeAsset(
+                    TradeAssetType.Player,
+                    TradeSide.OtherOrganization,
+                    organizationId,
+                    organizationName,
+                    $"trade-roster:{organizationId}:{index + 1:00}",
+                    SyntheticName(organizationId, index),
+                    position,
+                    age,
+                    1_600m + index % 9 * 300m,
+                    value,
+                    $"{PlayerTypeFor(position, index)}; {RoleFor(position, index)}; active roster player");
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<TradeAsset> SyntheticOtherProspectAssets(NewGmScenarioSnapshot scenario, string organizationId, string organizationName, int startIndex, int count)
+    {
+        if (count <= 0)
+        {
+            return Array.Empty<TradeAsset>();
+        }
+
+        return Enumerable.Range(startIndex, count)
+            .Select(index =>
+            {
+                var position = PositionFor(index + 3);
+                var value = Math.Clamp(30 + StableHash($"{organizationId}:prospect:{index}") % 36, 22, 66);
+                return new TradeAsset(
+                    TradeAssetType.ProspectRights,
+                    TradeSide.OtherOrganization,
+                    organizationId,
+                    organizationName,
+                    $"trade-prospect:{organizationId}:{index + 1:00}",
+                    SyntheticName(organizationId, index + 37),
+                    position,
+                    17 + index % 3,
+                    0m,
+                    value,
+                    $"{position} prospect rights; development path still forming");
+            })
+            .ToArray();
+    }
 
     private static NewGmScenarioSnapshot UpsertOffer(NewGmScenarioSnapshot scenario, TradeOffer offer) =>
         scenario with
@@ -527,6 +654,47 @@ public sealed class TradeService
         position == RosterPosition.Goalie
             ? "comparable goalie or second-round pick placeholder"
             : index % 4 == 0 ? "defense help or high pick placeholder" : "similar roster player or prospect rights";
+
+    private static string Ordinal(int value) =>
+        (value % 100) is 11 or 12 or 13
+            ? $"{value}th"
+            : (value % 10) switch
+            {
+                1 => $"{value}st",
+                2 => $"{value}nd",
+                3 => $"{value}rd",
+                _ => $"{value}th"
+            };
+
+    private static string SyntheticName(string organizationId, int index)
+    {
+        var first = new[]
+        {
+            "Mason", "Ethan", "Caleb", "Noah", "Owen", "Lukas", "Adam", "Karel", "Felix", "Tomas",
+            "Nolan", "Elias", "Cole", "Connor", "Julian", "Marek", "Simon", "Anton", "Peter", "Oscar"
+        };
+        var last = new[]
+        {
+            "Reid", "Clark", "Hayes", "Bishop", "Kovacs", "Lindholm", "Roy", "Stewart", "Novak", "Sullivan",
+            "Berg", "Price", "Mercier", "Foster", "Larsson", "Morgan", "Fraser", "Havel", "Grant", "Nilsson"
+        };
+        var seed = StableHash($"{organizationId}:{index}");
+        return $"{first[seed % first.Length]} {last[(seed / first.Length + index) % last.Length]}";
+    }
+
+    private static int StableHash(string text)
+    {
+        unchecked
+        {
+            var hash = 23;
+            foreach (var character in text)
+            {
+                hash = hash * 31 + character;
+            }
+
+            return Math.Abs(hash);
+        }
+    }
 
     public static IReadOnlyList<Person> CreateTradeBlockPeople(DateOnly startDate, int seasonYear, NameGenerator nameGenerator, NameUniquenessRegistry nameRegistry)
     {

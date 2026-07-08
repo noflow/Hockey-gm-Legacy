@@ -1,27 +1,28 @@
 # Changelog
 
-## Current - Alpha 6.2
+## Current - Alpha 6.2.1
 
 ### Added
 
-- Owner life-cycle models for life stage, career state, expectation history, confidence history, meeting history, job-security history, milestones, and legacy profiles.
-- OwnerLifeCycleService to evaluate owner personality evolution, budget relationship, confidence trends, permanent owner letters, ownership-era summaries, and organization-history context.
-- Owner milestones now feed career timelines and limited notable Owner-category League News items.
-- Owner workspace now shows life stage, confidence trend, current personality, owner career summary, personality evolution, budget relationship, legacy, and organization-era context.
-- Reports / History now includes Owner History, Owner Letters, Job Security History, and Expectation Results views.
-- Executive reports and Action Center now include owner life-cycle highlights for meetings, budget review, confidence pressure, letters, job-security warnings, and legacy context.
-- Tests covering life stage generation, expectations, confidence, meetings, letters, job security, legacy, milestones, Action Center, reports, budget pressure, save/load, UI exposure, and forbidden-system checks.
+- Trade asset builders for both organizations, including roster players, prospect rights, draft picks, and future-consideration placeholders.
+- Draft pick trade assets with year, round, original owner, current owner, protected-placeholder, estimated value, and readable display text.
+- Trade counter offers now carry revised proposal packages so the GM can accept the counter into the builder before proposing again.
+- AlphaDesktop trade builder now separates assets into Your Assets, You Give, You Receive, and Other Team Assets.
+- Tests covering both-team roster assets, prospect assets, draft-pick assets, separated proposal buckets, counter offers, pending approvals, approved/declined trades, League News summaries, and forbidden-system checks.
 
 ### Changed
 
-- New GM scenario bootstrap now seeds owner life-cycle records for the existing ownership era.
-- AlphaDesktop backfills owner life-cycle records for current and loaded scenario state.
-- League News counts and feeds now include notable owner milestones.
-- AlphaDesktop version label updated to Alpha 6.2.
+- Other-team trade assets now include active-roster style players instead of only a thin prospect/trade-block view.
+- Trade validation accepts correctly owned other-team roster/prospect/pick assets without requiring every other-team asset to exist in the small trade-block list.
+- AI trade evaluation rejects truly lopsided offers while returning Countered for close-but-incomplete packages.
+- Completed trade League News summaries include players, prospects, and draft picks moved.
+- AlphaDesktop version label updated to Alpha 6.2.1.
 
 ### Fixed
 
-- Owner context no longer lives only in current expectation/job-security snapshots; owner screens and reports now show a coherent long-term ownership read.
+- Trade proposal area no longer mixes both sides' selected assets in one shared list.
+- Draft picks are now selectable on both the You Give and You Receive sides.
+- Counter offers no longer only say no; they can request concrete added assets.
 
 ### Verified
 
@@ -32,16 +33,16 @@
 ### Not Added
 
 - No Godot.
-- No actual firing system.
-- No owner replacement system.
-- No job offers.
-- No board of directors.
-- No media pressure engine.
-- No full finance engine.
+- No retained salary.
+- No conditional picks.
+- No no-trade clauses.
+- No three-team trades.
+- No salary cap expansion.
 - No game simulation changes.
 
 ## Recently Completed
 
+- Alpha 6.2 - Owner Life Cycle v1.
 - Alpha 6.1 - Staff Life Cycle v1.
 - Alpha 6.0 - Player Life Cycle v1.
 - Alpha 5.9 - League AI v2.
