@@ -494,11 +494,49 @@ public sealed class AlphaDraftExperienceService
             Status: ProspectStatus.DraftRightsHeld,
             ProjectionText: boardEntry?.ProjectionText ?? "Drafted prospect with incomplete projection.",
             ScoutingConfidence: boardEntry?.ScoutingConfidence,
-            GmNotes: boardEntry?.PersonalNotes ?? string.Empty);
+            GmNotes: boardEntry?.PersonalNotes ?? string.Empty,
+            DevelopmentLevel: DevelopmentLevelFor(boardEntry?.Bio?.League),
+            CurrentTeam: boardEntry?.Bio?.CurrentTeam ?? string.Empty,
+            CurrentLeague: boardEntry?.Bio?.League ?? string.Empty,
+            IsChlProtected: IsChlProtected(boardEntry?.Bio?.League, boardEntry?.Bio?.Country));
         record.Validate();
 
         return scenario.ProspectRights.Append(record).ToArray();
     }
+
+    private static PlayerDevelopmentLevel DevelopmentLevelFor(string? league)
+    {
+        if (string.IsNullOrWhiteSpace(league))
+        {
+            return PlayerDevelopmentLevel.Junior;
+        }
+
+        if (league.Contains("NCAA", StringComparison.OrdinalIgnoreCase) || league.Contains("College", StringComparison.OrdinalIgnoreCase))
+        {
+            return PlayerDevelopmentLevel.College;
+        }
+
+        if (league.Contains("SM-sarja", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("Nationell", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("Czech", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("U20-Elit", StringComparison.OrdinalIgnoreCase))
+        {
+            return PlayerDevelopmentLevel.Europe;
+        }
+
+        return PlayerDevelopmentLevel.Junior;
+    }
+
+    private static bool IsChlProtected(string? league, string? country) =>
+        !string.IsNullOrWhiteSpace(league)
+        && (league.Contains("CHL", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("WHL", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("OHL", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("QMJHL", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("CSSHL", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("SMAAAHL", StringComparison.OrdinalIgnoreCase)
+            || league.Contains("AEHL", StringComparison.OrdinalIgnoreCase)
+            || (string.Equals(country, "Canada", StringComparison.OrdinalIgnoreCase) && league.Contains("U18", StringComparison.OrdinalIgnoreCase)));
 
     private static RosterPosition GuessPosition(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Position

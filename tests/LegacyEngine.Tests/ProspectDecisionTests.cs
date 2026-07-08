@@ -119,10 +119,23 @@ internal sealed class ProspectDecisionTests
 
         var nhl = ReadyWithDraftedProspects(RulebookPresets.Create(DraftLeaguePreset.NhlStyle), affiliateOrganizationId: "org-ahl-affiliate");
         var nhlProspect = nhl.ScenarioSnapshot.ProspectRights.First();
+        nhlProspect = nhlProspect with
+        {
+            Age = 20,
+            Status = ProspectStatus.Signed,
+            DevelopmentLevel = PlayerDevelopmentLevel.Junior
+        };
+        var nhlScenario = nhl.ScenarioSnapshot with
+        {
+            ProspectRights = nhl.ScenarioSnapshot.ProspectRights
+                .Select(item => item.ProspectPersonId == nhlProspect.ProspectPersonId ? nhlProspect : item)
+                .ToArray()
+        };
+        nhlScenario = new PlayerPipelineService().UpsertProspect(nhlScenario, nhlProspect, "Test prospect signed before affiliate assignment.");
         var assigned = new ProspectDecisionService().ApplyDecision(
             nhl.Registry,
-            nhl.ScenarioSnapshot,
-            new ProspectDecision(nhlProspect.ProspectPersonId, ProspectDecisionType.AssignToAffiliate, nhl.ScenarioSnapshot.CurrentDate));
+            nhlScenario,
+            new ProspectDecision(nhlProspect.ProspectPersonId, ProspectDecisionType.AssignToAffiliate, nhlScenario.CurrentDate));
 
         Assert.False(blocked.Success, "Junior-style rulebook without affiliate should not allow affiliate assignment.");
         Assert.True(assigned.Success, assigned.Message);

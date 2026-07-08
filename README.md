@@ -74,6 +74,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 5.1 Multi-League Career Framework
 - Alpha 5.3 Full League Teams + NHL/AHL Player Pipeline v1
 - Alpha 5.3.1 Trade Window Interactions + Living Staff Market
+- Alpha 5.4 NHL/AHL/Junior Player Pipeline v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -142,6 +143,8 @@ Alpha 5.1 - Multi-League Career Framework adds league and team selection before 
 Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1 fills out the fictional hockey map. League/team selection now exposes 32 NHL-style clubs, 32 AHL-style affiliates, and full WHL/OHL/QMJHL junior team lists with market, league/division, arena, owner/budget, organization identity, roster/prospect/staff quality, previous record, current strategy, and difficulty context. NHL and AHL teams now carry parent/affiliate links, AHL careers disable the amateur draft and start with parent-assigned/depth players, and drafted/prospect players track pipeline status, assignment status, rights holder, current level, parent/affiliate context, and assignment history in dossiers and save data.
 
 Alpha 5.3.1 - Trade Window Interactions + Living Staff Market makes two front-office screens behave like actual tools. The trade builder popup now has selectable lists for your assets and the other team's assets, double-click/add/remove controls, You Give/You Receive proposal rows, live roster/budget/evaluation/counter context, dossier access, and a disabled Propose Trade button until both sides have assets. Accepted trades still become Pending GM Actions and do not auto-complete. Staff hiring now uses a living market with available, interested, employed, hired, withdrawn, and not-interested candidate states, salary asks, career history, current employer, hiring interest, movement records, save/load preservation, and league-news staff movement without inbox spam.
+
+Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1 makes prospect assignment rules explicit. NHL-drafted prospects remain rights-held/unsigned/signed prospects until the GM acts, CHL/junior-age players can be signed and returned to junior without filling NHL/AHL rosters, AHL assignments require the right rulebook eligibility, 18/19-year-old signed players show ELC slide status and games toward the threshold, and dossiers/prospect lists explain AHL eligibility, junior eligibility, rights status, development level, and staff recommendations without adding salary cap, waivers, or full CBA systems.
 
 Alpha 4.4 - Scouting v2 (Intelligence & Reports) turns scouting into an information system instead of a rating reveal. Scouts now have tendencies, known regions, specialties, workload effects, confidence stars, viewing samples, tournament context, budget coverage notes, report comparisons, and scout career/development summaries. Player dossiers show multiple report-card style opinions, evidence, disagreements, and confidence while keeping hidden ratings private.
 

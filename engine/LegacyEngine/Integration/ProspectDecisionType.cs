@@ -8,5 +8,6 @@ public enum ProspectDecisionType
     ReturnToJunior,
     ReturnToYouthTeam,
     AssignToAffiliate,
+    KeepOnNhlRoster,
     ReleaseRights
 }

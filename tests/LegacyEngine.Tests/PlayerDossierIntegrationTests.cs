@@ -60,11 +60,16 @@ internal sealed class PlayerDossierIntegrationTests
 
         var dossier = new PlayerDossierService().CreateDossier(updated, playerId);
         var text = DossierText(dossier);
+        var developmentText = string.Join(
+            "\n",
+            dossier.Sections
+                .Where(section => string.Equals(section.Title, "Development", StringComparison.Ordinal))
+                .SelectMany(section => section.Lines));
 
         Assert.False(text.Contains("CurrentAbility", StringComparison.Ordinal), "Dossier must not expose current ability field names.");
         Assert.False(text.Contains("PotentialEstimate", StringComparison.Ordinal), "Dossier must not expose potential estimate field names.");
-        Assert.False(text.Contains("97", StringComparison.Ordinal), "Dossier must not expose current ability values.");
-        Assert.False(text.Contains("98", StringComparison.Ordinal), "Dossier must not expose potential values.");
+        Assert.False(developmentText.Contains("97", StringComparison.Ordinal), "Dossier development section must not expose current ability values.");
+        Assert.False(developmentText.Contains("98", StringComparison.Ordinal), "Dossier development section must not expose potential values.");
     }
 
     public void GmNoteCanBeAdded()

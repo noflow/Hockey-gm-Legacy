@@ -114,7 +114,8 @@ public static class RulebookPresets
                 FreeAgencyCloseOffsetDays = 330
             },
             StaffRules = CreateJuniorStaffRules(),
-            AffiliateRules = affiliateRules
+            AffiliateRules = affiliateRules,
+            PlayerAssignmentRules = CreatePlayerAssignmentRules(leagueType)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -167,5 +168,17 @@ public static class RulebookPresets
             Department = department,
             Minimum = minimum,
             Maximum = maximum
+        };
+
+    private static PlayerAssignmentRules CreatePlayerAssignmentRules(string leagueType) =>
+        new()
+        {
+            JuniorAgeCutoff = 19,
+            AhlEligibilityAge = 20,
+            ChlToAhlRestrictionEnabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase),
+            OneNineteenYearOldChlExceptionEnabled = false,
+            EuropeanAndCollegeProspectsCanPlayAhlAt18 = true,
+            ElcSlideAgeCutoff = 19,
+            ElcSlideNhlGameThreshold = 10
         };
 }

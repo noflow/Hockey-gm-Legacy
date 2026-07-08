@@ -39,6 +39,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("affiliate_rules")]
     public AffiliateRules? AffiliateRules { get; init; }
+
+    [JsonPropertyName("player_assignment_rules")]
+    public PlayerAssignmentRules? PlayerAssignmentRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -186,6 +189,30 @@ public sealed class AffiliateRules
 
     [JsonPropertyName("gm_responsibilities")]
     public IReadOnlyList<string> GmResponsibilities { get; init; } = Array.Empty<string>();
+}
+
+public sealed class PlayerAssignmentRules
+{
+    [JsonPropertyName("junior_age_cutoff")]
+    public int JuniorAgeCutoff { get; init; } = 19;
+
+    [JsonPropertyName("ahl_eligibility_age")]
+    public int AhlEligibilityAge { get; init; } = 20;
+
+    [JsonPropertyName("chl_to_ahl_restriction_enabled")]
+    public bool ChlToAhlRestrictionEnabled { get; init; } = true;
+
+    [JsonPropertyName("one_19_year_old_chl_exception_enabled")]
+    public bool OneNineteenYearOldChlExceptionEnabled { get; init; }
+
+    [JsonPropertyName("european_and_college_prospects_can_play_ahl_at_18")]
+    public bool EuropeanAndCollegeProspectsCanPlayAhlAt18 { get; init; } = true;
+
+    [JsonPropertyName("elc_slide_age_cutoff")]
+    public int ElcSlideAgeCutoff { get; init; } = 19;
+
+    [JsonPropertyName("elc_slide_nhl_game_threshold")]
+    public int ElcSlideNhlGameThreshold { get; init; } = 10;
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

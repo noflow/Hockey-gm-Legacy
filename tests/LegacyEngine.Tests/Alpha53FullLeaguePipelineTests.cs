@@ -65,15 +65,19 @@ internal sealed class Alpha53FullLeaguePipelineTests
         Assert.True(result.ScenarioSnapshot.PlayerPipeline.Any(record => record.PersonId == prospect.ProspectPersonId && record.PipelineStatus == PlayerPipelineStatus.ReturnedToJunior), "Pipeline should record returned-to-junior status.");
     }
 
-    public void DraftedNhlProspectCanBeAssignedToAhl()
+    public void DraftedNhlProspectCanBeAssignedToAhlWhenEligible()
     {
         var ready = ScenarioWithNhlProspect();
-        var prospect = ready.ScenarioSnapshot.ProspectRights.First();
+        var prospect = ready.ScenarioSnapshot.ProspectRights.First() with { Age = 20, Status = ProspectStatus.Signed };
+        var scenario = new PlayerPipelineService().UpsertProspect(
+            ready.ScenarioSnapshot with { ProspectRights = new[] { prospect } },
+            prospect,
+            "Test prospect signed and completed junior eligibility.");
 
         var result = new ProspectDecisionService().ApplyDecision(
             ready.Registry,
-            ready.ScenarioSnapshot,
-            new ProspectDecision(prospect.ProspectPersonId, ProspectDecisionType.AssignToAffiliate, ready.ScenarioSnapshot.CurrentDate));
+            scenario,
+            new ProspectDecision(prospect.ProspectPersonId, ProspectDecisionType.AssignToAffiliate, scenario.CurrentDate));
 
         Assert.True(result.Success, result.Message);
         Assert.Equal(ProspectStatus.AssignedToAffiliate, result.Prospect.Status);

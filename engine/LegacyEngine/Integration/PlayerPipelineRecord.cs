@@ -12,7 +12,18 @@ public sealed record PlayerPipelineRecord(
     AffiliateOrganizationReference? AffiliateOrganization,
     PlayerPipelineStatus PipelineStatus,
     PlayerAssignmentStatus AssignmentStatus,
-    IReadOnlyList<string> AssignmentHistory)
+    IReadOnlyList<string> AssignmentHistory,
+    PlayerDevelopmentLevel DevelopmentLevel = PlayerDevelopmentLevel.Junior,
+    PlayerRightsStatus RightsStatus = PlayerRightsStatus.RightsHeld,
+    bool IsSigned = false,
+    bool IsAhlEligible = false,
+    bool IsJuniorEligible = false,
+    bool IsContractSlideEligible = false,
+    bool IsContractSlideUsed = false,
+    int NhlGamesTowardSlideThreshold = 0,
+    string ContractSlideSummary = "No slide status tracked.",
+    string RecommendedAssignment = "Review development path.",
+    string StaffRecommendation = "Staff recommendation pending.")
 {
     public void Validate()
     {
@@ -27,6 +38,18 @@ public sealed record PlayerPipelineRecord(
 
         ParentOrganization?.Validate();
         AffiliateOrganization?.Validate();
+
+        if (NhlGamesTowardSlideThreshold < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(NhlGamesTowardSlideThreshold), "NHL games toward slide cannot be negative.");
+        }
+
+        if (string.IsNullOrWhiteSpace(ContractSlideSummary)
+            || string.IsNullOrWhiteSpace(RecommendedAssignment)
+            || string.IsNullOrWhiteSpace(StaffRecommendation))
+        {
+            throw new ArgumentException("Pipeline record requires slide, assignment, and staff recommendation summaries.");
+        }
 
         foreach (var entry in AssignmentHistory)
         {
