@@ -76,16 +76,27 @@ public sealed class TradeStrategyService
     public TradeEvaluation EvaluateTrade(NewGmScenarioSnapshot scenario, TradeOffer offer)
     {
         var profile = BuildTeamNeedsProfile(scenario, offer.OtherOrganizationId, offer.OtherOrganizationName);
+        var aiProfile = new OrganizationAiService().BuildProfile(
+            scenario,
+            new LeagueAiService().BuildOrganizationProfile(scenario, offer.OtherOrganizationId, offer.OtherOrganizationName));
         var giveValue = offer.PlayerGives.Sum(asset => asset.Value);
         var receiveValue = offer.PlayerReceives.Sum(asset => asset.Value);
         var budgetImpact = offer.PlayerReceives.Sum(asset => asset.SalaryImpact) - offer.PlayerGives.Sum(asset => asset.SalaryImpact);
         var otherTeamBudgetImpact = -budgetImpact;
         var matchedNeeds = MatchedNeeds(profile, offer.PlayerGives);
+        var aiDecision = new OrganizationAiService().EvaluateTradeDecision(aiProfile, offer.PlayerGives, otherTeamBudgetImpact);
         var fitScore = matchedNeeds.Count * 6 + AssetPreferenceScore(profile, offer.PlayerGives);
         var personalityScore = PersonalityScore(profile, offer);
         var ageScore = AgeFitScore(profile, offer.PlayerGives);
         var budgetScore = BudgetScore(profile, otherTeamBudgetImpact);
-        var score = giveValue - receiveValue + fitScore + personalityScore + ageScore + budgetScore;
+        var valueGap = giveValue - receiveValue;
+        var aiScore = Math.Clamp((aiDecision.Score - 50) / 5, -6, 6);
+        if (valueGap < -35)
+        {
+            aiScore = Math.Min(aiScore, 0);
+        }
+
+        var score = giveValue - receiveValue + fitScore + personalityScore + ageScore + budgetScore + aiScore;
         var threshold = profile.GmPersonality switch
         {
             TradeGmPersonality.AggressiveTrader => -8,
@@ -109,12 +120,12 @@ public sealed class TradeStrategyService
         var counter = decision == TradeOfferStatus.Countered
             ? BuildCounterSuggestion(profile, offer)
             : string.Empty;
-        var reasons = BuildReasons(profile, offer, score, fitScore, budgetScore, matchedNeeds, counter);
+        var reasons = BuildReasons(profile, aiProfile, aiDecision, offer, score, fitScore, budgetScore, matchedNeeds, counter);
         var explanation = decision switch
         {
-            TradeOfferStatus.Accepted => $"{offer.OtherOrganizationName} is willing to accept because the package fits their {Readable(profile.Direction).ToLowerInvariant()} plan. GM approval is still required.",
-            TradeOfferStatus.Countered => $"{offer.OtherOrganizationName} is interested, but wants a cleaner fit before agreeing. {counter}",
-            _ => $"{offer.OtherOrganizationName} rejected the offer because the package does not satisfy their current needs or strategy."
+            TradeOfferStatus.Accepted => $"{offer.OtherOrganizationName} is willing to accept because the package fits their {Readable(aiProfile.Strategy.Phase).ToLowerInvariant()} plan and current needs. GM approval is still required.",
+            TradeOfferStatus.Countered => $"{offer.OtherOrganizationName} is interested, but wants a cleaner fit with its {Readable(aiProfile.Personality).ToLowerInvariant()} profile before agreeing. {counter}",
+            _ => $"{offer.OtherOrganizationName} rejected the offer because the package does not satisfy its {Readable(aiProfile.Strategy.Phase).ToLowerInvariant()} strategy or priority needs."
         };
         var reactions = BuildStaffReaction(scenario, offer, decision, profile);
 
@@ -445,6 +456,8 @@ public sealed class TradeStrategyService
 
     private static IReadOnlyList<string> BuildReasons(
         TeamNeedsProfile profile,
+        OrganizationAiProfile aiProfile,
+        AiDecisionResult aiDecision,
         TradeOffer offer,
         int score,
         int fitScore,
@@ -456,6 +469,9 @@ public sealed class TradeStrategyService
         {
             $"Asset value and fit score from {offer.OtherOrganizationName}'s view: {score}.",
             $"{offer.OtherOrganizationName} direction: {Readable(profile.Direction)}; GM style: {Readable(profile.GmPersonality)}.",
+            $"AI strategy: {Readable(aiProfile.Strategy.Phase)}; personality: {Readable(aiProfile.Personality)}.",
+            $"Top needs: {string.Join(", ", aiProfile.CurrentNeeds.Take(3).Select(need => Readable(need.NeedType)))}.",
+            $"AI decision read: {Readable(aiDecision.Outcome)} ({aiDecision.Score}/100).",
             matchedNeeds.Count == 0 ? "The package does not clearly solve a priority need." : $"Package matches: {string.Join(", ", matchedNeeds.Select(need => Readable(need)))}.",
             $"Roster/strategy fit contribution: {fitScore}.",
             budgetScore >= 0 ? "Budget impact is manageable for their plan." : "Budget impact works against their plan."

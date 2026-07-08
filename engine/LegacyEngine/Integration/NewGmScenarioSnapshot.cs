@@ -124,6 +124,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<AgentHistoryRecord> AgentHistory { get; init; } = Array.Empty<AgentHistoryRecord>();
 
+    public IReadOnlyList<OrganizationAiProfile> OrganizationAiProfiles { get; init; } = Array.Empty<OrganizationAiProfile>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -347,6 +349,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var history in AgentHistory)
         {
             history.Validate();
+        }
+
+        foreach (var profile in OrganizationAiProfiles)
+        {
+            profile.Validate();
         }
     }
 }

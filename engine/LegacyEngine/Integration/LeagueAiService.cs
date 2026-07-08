@@ -15,9 +15,10 @@ public sealed class LeagueAiService
         var profiles = SeasonFrameworkService.LeagueTeams(scenario)
             .Select(team => BuildOrganizationProfile(scenario, team.OrganizationId, team.TeamName, budget))
             .ToArray();
-        var news = BuildLeagueNews(scenario, profiles);
+        var aiProfiles = new OrganizationAiService().BuildLeagueProfilesFromLeagueProfiles(scenario, profiles, budget);
+        var news = BuildLeagueNews(scenario, profiles, aiProfiles);
         var history = BuildHistoryNotes(scenario, profiles);
-        var report = new LeagueAiReport(profiles, news, history);
+        var report = new LeagueAiReport(profiles, news, history, aiProfiles);
         report.Validate();
         return report;
     }
@@ -374,7 +375,7 @@ public sealed class LeagueAiService
     private static string RecentDirectionFor(string teamName, LeagueTeamIdentity identity, OrganizationStrategyStage strategy, TeamNeedsProfile needs) =>
         $"{teamName} is leaning into {Readable(identity).ToLowerInvariant()} traits. Current strategy is {Readable(strategy).ToLowerInvariant()}, and the front office is prioritizing {string.Join(", ", needs.Needs.Take(2).Select(need => Readable(need.Need).ToLowerInvariant()))}.";
 
-    private IReadOnlyList<LeagueTransaction> BuildLeagueNews(NewGmScenarioSnapshot scenario, IReadOnlyList<OrganizationLeagueProfile> profiles)
+    private IReadOnlyList<LeagueTransaction> BuildLeagueNews(NewGmScenarioSnapshot scenario, IReadOnlyList<OrganizationLeagueProfile> profiles, IReadOnlyList<OrganizationAiProfile> aiProfiles)
     {
         var monthKey = scenario.CurrentDate.Year * 100 + scenario.CurrentDate.Month;
         return profiles
@@ -382,16 +383,23 @@ public sealed class LeagueAiService
             .Where(profile => StableHash($"{profile.OrganizationId}:{monthKey}:league-ai-news") % 3 == 0)
             .OrderBy(profile => profile.TeamName, StringComparer.Ordinal)
             .Take(3)
-            .Select(profile => new LeagueTransaction(
-                $"league-ai-news:{profile.OrganizationId}:{monthKey}",
-                new DateTimeOffset(scenario.CurrentDate.Year, scenario.CurrentDate.Month, scenario.CurrentDate.Day, 11, 0, 0, TimeSpan.Zero),
-                profile.OrganizationId,
-                profile.TeamName,
-                null,
-                Readable(profile.CurrentStrategy),
-                LeagueTransactionType.TeamIdentityUpdate,
-                LeagueNewsCategory.League,
-                $"{profile.TeamName} direction: {profile.RecentDirection}"))
+            .Select(profile =>
+            {
+                var ai = aiProfiles.FirstOrDefault(item => item.OrganizationId == profile.OrganizationId);
+                var description = ai is null
+                    ? $"{profile.TeamName} direction: {profile.RecentDirection}"
+                    : OrganizationAiService.StrategyNewsHeadline(ai);
+                return new LeagueTransaction(
+                    $"league-ai-news:{profile.OrganizationId}:{monthKey}",
+                    new DateTimeOffset(scenario.CurrentDate.Year, scenario.CurrentDate.Month, scenario.CurrentDate.Day, 11, 0, 0, TimeSpan.Zero),
+                    profile.OrganizationId,
+                    profile.TeamName,
+                    null,
+                    ai is null ? Readable(profile.CurrentStrategy) : Readable(ai.Strategy.Phase),
+                    LeagueTransactionType.TeamIdentityUpdate,
+                    LeagueNewsCategory.League,
+                    description);
+            })
             .ToArray();
     }
 

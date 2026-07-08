@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -586,7 +586,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 5.8 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 5.9 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2014,6 +2014,8 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Parent", string.IsNullOrWhiteSpace(team.ParentOrganizationId) ? "none" : team.ParentOrganizationId);
         AddLine(panel, "Affiliate", string.IsNullOrWhiteSpace(team.AffiliateOrganizationId) ? "none" : team.AffiliateOrganizationId);
         AddLine(panel, "Pipeline players", State.PipelineCountForOrganization(team.OrganizationId));
+        AddSubHeader(panel, "AI Strategy");
+        AddParagraph(panel, State.OrganizationAiTextForOrganization(team.OrganizationId, team.TeamName));
         AddSubHeader(panel, "Current Needs / Trade Direction");
         AddParagraph(panel, State.TeamNeedsTextForOrganization(team.OrganizationId, team.TeamName));
         AddSubHeader(panel, "Roster Browse");
@@ -2107,6 +2109,7 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Parent club", string.IsNullOrWhiteSpace(team.ParentOrganizationId) ? "none" : team.ParentOrganizationId);
         AddLine(panel, "Affiliate club", string.IsNullOrWhiteSpace(team.AffiliateOrganizationId) ? "none" : team.AffiliateOrganizationId);
         AddLine(panel, "Needs", State.TeamNeedsShortTextForOrganization(team.OrganizationId, team.TeamName));
+        AddLine(panel, "AI profile", State.OrganizationAiShortTextForOrganization(team.OrganizationId, team.TeamName));
 
         if (row is null)
         {
@@ -4261,10 +4264,33 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Development grade: {leagueProfile.DevelopmentGrade}");
         builder.AppendLine($"Recent direction: {leagueProfile.RecentDirection}");
         builder.AppendLine();
+        builder.AppendLine("League AI v2");
+        var aiProfile = State.PlayerOrganizationAiProfile;
+        builder.AppendLine($"AI personality: {aiProfile.Personality}");
+        builder.AppendLine($"Strategy phase: {aiProfile.Strategy.Phase}");
+        builder.AppendLine($"Draft philosophy: {aiProfile.Strategy.DraftPhilosophy}");
+        builder.AppendLine($"Trade behavior: {aiProfile.Strategy.TradeBehavior}");
+        builder.AppendLine($"Free agency behavior: {aiProfile.Strategy.FreeAgencyBehavior}");
+        builder.AppendLine($"Budget behavior: {aiProfile.Strategy.BudgetBehavior}");
+        builder.AppendLine($"Scouting philosophy: {aiProfile.Strategy.ScoutingBehavior}");
+        builder.AppendLine($"Staff behavior: {aiProfile.Strategy.StaffBehavior}");
+        builder.AppendLine("Recent strategy changes:");
+        foreach (var change in aiProfile.StrategyHistory.TakeLast(3))
+        {
+            builder.AppendLine($"- {change.Date:yyyy-MM-dd}: {change.FromPhase} -> {change.ToPhase} - {change.Reason}");
+        }
+
+        builder.AppendLine();
         builder.AppendLine("Current Needs");
         foreach (var need in leagueProfile.CurrentNeeds)
         {
             builder.AppendLine($"- {need.Priority}: {need.Need} - {need.Reason}");
+        }
+
+        builder.AppendLine("AI Need Profiles");
+        foreach (var need in aiProfile.CurrentNeeds)
+        {
+            builder.AppendLine($"- {need.Priority}: {need.NeedType} | urgency {need.Urgency} | target {need.SuggestedAssetType} - {need.Reason}");
         }
 
         builder.AppendLine();
@@ -4929,6 +4955,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine("League News / Transaction Wire");
         builder.AppendLine();
         builder.AppendLine("Filters: All | Signings | Roster Moves | Injuries | Draft | Staff | Trades | Free Agency | Rumors");
+        builder.AppendLine("League AI filters: Contender | Rebuilding | Buyer | Seller | Budget Pressure | Needs");
         builder.AppendLine("Other-team transactions appear here instead of crowding the GM inbox.");
         builder.AppendLine("Routine league churn stays quiet unless it affects your team, the standings, or a major roster story.");
         builder.AppendLine();
@@ -5947,6 +5974,7 @@ internal sealed class AlphaDesktopState
     private readonly MedicalHealthService _medicalHealth = new();
     private readonly OwnerOfficeService _ownerOffice = new();
     private readonly LeagueAiService _leagueAi = new();
+    private readonly OrganizationAiService _organizationAi = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
@@ -5982,7 +6010,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot));
+        ScenarioSnapshot = _organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot)));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -6126,8 +6154,14 @@ internal sealed class AlphaDesktopState
 
     public IReadOnlyList<OrganizationLeagueProfile> LeagueOrganizationProfiles => LeagueAiReport.Profiles;
 
+    public IReadOnlyList<OrganizationAiProfile> OrganizationAiProfiles =>
+        ScenarioSnapshot.OrganizationAiProfiles.Count > 0 ? ScenarioSnapshot.OrganizationAiProfiles : LeagueAiReport.AiProfiles;
+
     public OrganizationLeagueProfile PlayerOrganizationLeagueProfile =>
         LeagueOrganizationProfiles.First(profile => profile.OrganizationId == ScenarioSnapshot.Organization.OrganizationId);
+
+    public OrganizationAiProfile PlayerOrganizationAiProfile =>
+        OrganizationAiProfileFor(ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name);
 
     public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
@@ -8068,6 +8102,47 @@ internal sealed class AlphaDesktopState
         return $"{profile.Direction} | needs {string.Join(", ", profile.Needs.Take(2).Select(need => need.Need))}";
     }
 
+    public OrganizationAiProfile OrganizationAiProfileFor(string organizationId, string teamName) =>
+        OrganizationAiProfiles.FirstOrDefault(profile => profile.OrganizationId == organizationId)
+        ?? _organizationAi.BuildProfile(ScenarioSnapshot, _leagueAi.BuildOrganizationProfile(ScenarioSnapshot, organizationId, teamName, BudgetOverview), BudgetOverview);
+
+    public string OrganizationAiShortTextForOrganization(string organizationId, string teamName)
+    {
+        var profile = OrganizationAiProfileFor(organizationId, teamName);
+        return $"{profile.Personality} | {profile.Strategy.Phase} | top need {profile.CurrentNeeds.First().NeedType}";
+    }
+
+    public string OrganizationAiTextForOrganization(string organizationId, string teamName)
+    {
+        var profile = OrganizationAiProfileFor(organizationId, teamName);
+        var builder = new StringBuilder();
+        builder.AppendLine(profile.Summary);
+        builder.AppendLine($"AI personality: {profile.Personality}");
+        builder.AppendLine($"Strategy phase: {profile.Strategy.Phase}");
+        builder.AppendLine($"Draft philosophy: {profile.Strategy.DraftPhilosophy}");
+        builder.AppendLine($"Trade behavior: {profile.Strategy.TradeBehavior}");
+        builder.AppendLine($"Free agency behavior: {profile.Strategy.FreeAgencyBehavior}");
+        builder.AppendLine($"Budget behavior: {profile.Strategy.BudgetBehavior}");
+        builder.AppendLine($"Scouting philosophy: {profile.Strategy.ScoutingBehavior}");
+        builder.AppendLine($"Staff behavior: {profile.Strategy.StaffBehavior}");
+        builder.AppendLine("Current AI needs:");
+        foreach (var need in profile.CurrentNeeds.Take(5))
+        {
+            builder.AppendLine($"- {need.Priority}: {need.NeedType} | urgency {need.Urgency} | target {need.SuggestedAssetType} - {need.Reason}");
+        }
+
+        if (profile.StrategyHistory.Count > 0)
+        {
+            builder.AppendLine("Recent strategy changes:");
+            foreach (var change in profile.StrategyHistory.TakeLast(3))
+            {
+                builder.AppendLine($"- {change.Date:yyyy-MM-dd}: {change.FromPhase} -> {change.ToPhase} - {change.Reason}");
+            }
+        }
+
+        return builder.ToString().Trim();
+    }
+
     public string TeamNeedsTextForOrganization(string organizationId, string teamName)
     {
         var profile = _tradeStrategy.BuildTeamNeedsProfile(ScenarioSnapshot, organizationId, teamName);
@@ -8076,6 +8151,10 @@ internal sealed class AlphaDesktopState
         builder.AppendLine($"Trade direction: {profile.Direction}");
         builder.AppendLine($"AI GM personality: {profile.GmPersonality}");
         builder.AppendLine($"Asset preferences: {string.Join(", ", profile.AssetPreferences)}");
+        builder.AppendLine();
+        builder.AppendLine(OrganizationAiTextForOrganization(organizationId, teamName));
+        builder.AppendLine();
+        builder.AppendLine("Trade need read:");
         foreach (var need in profile.Needs.Take(5))
         {
             builder.AppendLine($"- {need.Priority}: {need.Need} - {need.Reason}");
@@ -8141,6 +8220,11 @@ internal sealed class AlphaDesktopState
         builder.AppendLine(profile.Summary);
         builder.AppendLine($"AI GM personality: {profile.GmPersonality}");
         builder.AppendLine($"Asset preferences: {string.Join(", ", profile.AssetPreferences)}");
+        builder.AppendLine();
+        builder.AppendLine("Other team AI strategy:");
+        builder.AppendLine(OrganizationAiTextForOrganization(entry.OrganizationId, entry.TeamName));
+        builder.AppendLine();
+        builder.AppendLine("Trade need read:");
         foreach (var need in profile.Needs)
         {
             builder.AppendLine($"- {need.Priority}: {need.Need} - {need.Reason}");

@@ -78,6 +78,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 5.6 Salary Cap & Roster Compliance v1
 - Alpha 5.7 Agent Engine v1
 - Alpha 5.8 Dynamic Draft Classes v1
+- Alpha 5.9 League AI v2
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -124,6 +125,8 @@ Alpha 5.6 - Salary Cap & Roster Compliance v1 adds rulebook-driven salary-cap be
 Alpha 5.7 - Agent Engine v1 introduces recurring player representatives as the primary contract and free-agency negotiators. Agents now have profiles, agencies, personalities, negotiation styles, reputation, relationships with the GM and organization, client lists, representation history, and negotiation history. Contract/free-agent offer evaluations now show agent opinion, likelihood, biggest concern, requested improvement, risk, and counter suggestion, while accepted terms still create GM approval decisions rather than auto-signing.
 
 Alpha 5.8 - Dynamic Draft Classes v1 gives each generated draft year a readable identity. Draft classes now have themes, quality, strengths, weaknesses, storylines, positional depth, regional distribution, scout quotes, risk/context notes, and rulebook-specific behavior: NHL-style drafts use 17-18 year olds with broader geography, junior-style drafts use younger regional prospects, and AHL-style rulebooks remain draft-disabled. Draft Board, Live Draft, dossiers, scouting reports, and draft history now surface class context without exposing hidden ratings or using real player databases.
+
+Alpha 5.9 - League AI v2 makes AI organizations behave less like clones. Every league team now carries an explicit OrganizationAiProfile with personality, strategy phase, current needs, urgency, suggested asset targets, draft/trade/free-agency/budget/scouting/staff behavior, strategy history, decision scoring, and limited league-news strategy headlines. Trade explanations now reference the other team's strategy and top needs, and save/load preserves organization AI profile state.
 
 Alpha 3.4 - Career & History Framework v1 starts the long-save memory layer. The engine now seeds GM, staff, organization, and player career history, tracks player draft picks and draft classes, adds Where Are They Now records, records trade/free-agent/injury history, and expands Reports / History with GM Career, Organization History, Draft History, Drafted Players, Player Career Timelines, Staff History, and Transaction History views without exposing hidden ratings.
 

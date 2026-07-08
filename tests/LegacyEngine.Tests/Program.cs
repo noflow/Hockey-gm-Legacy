@@ -71,6 +71,7 @@ var alpha54PlayerPipelineTests = new Alpha54PlayerPipelineTests();
 var alpha56SalaryCapRosterComplianceTests = new Alpha56SalaryCapRosterComplianceTests();
 var alpha57AgentEngineTests = new Alpha57AgentEngineTests();
 var alpha58DynamicDraftClassTests = new Alpha58DynamicDraftClassTests();
+var alpha59LeagueAiV2Tests = new Alpha59LeagueAiV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -936,6 +937,21 @@ runner.Run("alpha 5.8 history preserves class profile", alpha58DynamicDraftClass
 runner.Run("alpha 5.8 Where Are They Now shows class context", alpha58DynamicDraftClassTests.WhereAreTheyNowShowsClassContext);
 runner.Run("alpha 5.8 AlphaDesktop exposes draft class UI", alpha58DynamicDraftClassTests.AlphaDesktopExposesDraftClassSummaryAndLiveDraftContext);
 runner.Run("alpha 5.8 generated names stay clean", alpha58DynamicDraftClassTests.GeneratedNamesStayCleanAcrossLargePool);
+runner.Run("alpha 5.9 organization AI profiles generated", alpha59LeagueAiV2Tests.OrganizationAiProfilesGenerated);
+runner.Run("alpha 5.9 team needs generated from roster and strategy", alpha59LeagueAiV2Tests.TeamNeedsGeneratedFromRosterAndStrategy);
+runner.Run("alpha 5.9 rebuilding team values picks and prospects", alpha59LeagueAiV2Tests.RebuildingTeamValuesPicksAndProspects);
+runner.Run("alpha 5.9 contender values veterans and help-now assets", alpha59LeagueAiV2Tests.ContenderValuesVeteransAndHelpNow);
+runner.Run("alpha 5.9 budget team avoids expensive contracts", alpha59LeagueAiV2Tests.BudgetTeamAvoidsExpensiveContracts);
+runner.Run("alpha 5.9 draft behavior changes by strategy", alpha59LeagueAiV2Tests.DraftBehaviorChangesByStrategy);
+runner.Run("alpha 5.9 free agency behavior changes by personality", alpha59LeagueAiV2Tests.FreeAgencyBehaviorChangesByPersonality);
+runner.Run("alpha 5.9 staff hiring behavior changes by identity", alpha59LeagueAiV2Tests.StaffHiringBehaviorChangesByOrganizationIdentity);
+runner.Run("alpha 5.9 strategy evolves after poor season and aging roster", alpha59LeagueAiV2Tests.StrategyEvolvesAfterPoorSeasonAndAgingRoster);
+runner.Run("alpha 5.9 strategy changes recorded in history", alpha59LeagueAiV2Tests.StrategyChangesRecordedInHistory);
+runner.Run("alpha 5.9 league news receives strategy updates", alpha59LeagueAiV2Tests.LeagueNewsReceivesStrategyUpdates);
+runner.Run("alpha 5.9 AlphaDesktop exposes AI strategy and team needs", alpha59LeagueAiV2Tests.AlphaDesktopExposesAiStrategyAndTeamNeeds);
+runner.Run("alpha 5.9 trade evaluation includes strategy and needs", alpha59LeagueAiV2Tests.TradeEvaluationIncludesStrategyNeedExplanation);
+runner.Run("alpha 5.9 save load preserves AI profiles", alpha59LeagueAiV2Tests.SaveLoadPreservesAiProfiles);
+runner.Run("alpha 5.9 no hidden ratings or forbidden systems added", alpha59LeagueAiV2Tests.NoHiddenRatingsOrForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

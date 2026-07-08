@@ -3,8 +3,11 @@ namespace LegacyEngine.Integration;
 public sealed record LeagueAiReport(
     IReadOnlyList<OrganizationLeagueProfile> Profiles,
     IReadOnlyList<LeagueTransaction> LeagueNews,
-    IReadOnlyList<string> HistoryNotes)
+    IReadOnlyList<string> HistoryNotes,
+    IReadOnlyList<OrganizationAiProfile>? OrganizationAiProfiles = null)
 {
+    public IReadOnlyList<OrganizationAiProfile> AiProfiles => OrganizationAiProfiles ?? Array.Empty<OrganizationAiProfile>();
+
     public void Validate()
     {
         if (Profiles.Count == 0)
@@ -25,6 +28,11 @@ public sealed record LeagueAiReport(
         if (HistoryNotes.Any(string.IsNullOrWhiteSpace))
         {
             throw new ArgumentException("League AI history notes cannot be blank.", nameof(HistoryNotes));
+        }
+
+        foreach (var profile in AiProfiles)
+        {
+            profile.Validate();
         }
     }
 }

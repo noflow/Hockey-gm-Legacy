@@ -93,14 +93,15 @@ The five foundation pillars remain:
 - Alpha 5.6 - Salary Cap & Roster Compliance v1
 - Alpha 5.7 - Agent Engine v1
 - Alpha 5.8 - Dynamic Draft Classes v1
+- Alpha 5.9 - League AI v2
 
 ## Current Milestone
 
-Alpha 5.8 - Dynamic Draft Classes v1
+Alpha 5.9 - League AI v2
 
 ## Current Goal
 
-Generate annual draft classes with distinct identity, strengths, weaknesses, storylines, rulebook-aware age/geography/source behavior, public prospect bio data, class-aware scouting language, and preserved draft-class history. Draft classes must stay fictional, avoid visible numeric name suffixes, avoid hidden ratings, and keep AHL-style draft-disabled rulebooks from creating amateur draft flows.
+Make AI organizations feel distinct by giving every team an explicit strategy, personality, current needs, budget behavior, draft philosophy, trade/free-agency behavior, staff hiring posture, strategy history, limited league-news strategy updates, and save/load-preserved organization AI profiles.
 
 ## Why Relationship Engine Was Next
 
@@ -110,11 +111,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.9 - TBD
+Alpha 6.0 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.9 - TBD
+1. Alpha 6.0 - TBD
 
 ## Build Rule
 

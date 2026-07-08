@@ -1,29 +1,27 @@
 # Changelog
 
-## Current - Alpha 5.8
+## Current - Alpha 5.9
 
 ### Added
 
-- Dynamic draft class profiles with theme, quality, strengths, weaknesses, storyline, positional depth, regional distribution, scout quote, and uncertainty.
-- DraftClassGenerator for annual fictional class creation using NameGenerator, public DraftProspectBio, realistic position/measurement/handedness/team context, class risk, and class-context notes.
-- Rulebook-aware class behavior: NHL-style classes use 17-18 year olds and broader geography, junior-style classes use younger regional prospects, and AHL-style rulebooks generate no amateur draft class when draft is disabled.
-- Draft class history preservation so completed drafts keep the original class profile/read, original board rank, and Where Are They Now class context.
-- Draft Board and Live Draft class summaries, positional depth, best available by position, players to watch, risk/context notes, and future filter placeholders.
-- Dossier and scouting intelligence class context without exposing hidden ratings.
-- Tests covering class generation, themes, NHL/junior/AHL behavior, inherited scouting, clean generated names, UI exposure, dossiers, and history preservation.
+- OrganizationAiProfile with explicit team personality, strategy phase, current needs, urgency, suggested asset target, strategy history, and behavior summaries.
+- OrganizationAiService for AI draft, trade, free-agency, staff-hiring, and strategy-evolution decision scoring.
+- Organization AI profiles are stored on NewGmScenarioSnapshot so save/load preserves AI personality, strategy, needs, and strategy history.
+- Limited strategic league-news headlines for team direction changes without adding inbox spam.
+- AlphaDesktop organization/team/trade surfaces now show AI personality, strategy phase, needs, draft/trade/free-agency/budget/scouting/staff behavior, and future league AI filter placeholders.
+- Tests covering AI profile generation, needs, strategy-driven draft/trade/free-agency/staff behavior, strategy evolution/history, league news, UI exposure, save/load preservation, and hidden-rating safety.
 
 ### Changed
 
-- New GM scenario draft board creation now uses the dynamic class generator instead of static prospect position/projection helpers.
-- Season rollover now creates the next season's draft board from a new draft class profile.
-- Opening scenario draft prospects use birth dates that match their public league-style age on the scenario start date.
-- Inherited scouting reports now include class context and risk notes.
-- AlphaDesktop version label updated to Alpha 5.8.
+- League AI reports now expose both the existing team identity profile and the richer Alpha 5.9 organization AI profile.
+- Trade evaluations now include the other team's AI strategy, top needs, personality, and AI decision read in the explanation/reasons.
+- New GM scenario bootstrap now seeds organization AI profiles for all league teams.
+- AlphaDesktop backfills organization AI profiles for older loaded saves.
+- AlphaDesktop version label updated to Alpha 5.9.
 
 ### Fixed
 
-- NHL-style generated draft bios now use each generated prospect's actual origin instead of defaulting to local junior geography.
-- Draft prospect risk summaries now display from the new risk field instead of reusing analytics text.
+- AI team behavior no longer relies only on generic identity text; decision explanations now identify strategic motive and need fit.
 
 ### Verified
 
@@ -34,13 +32,16 @@
 ### Not Added
 
 - No Godot.
-- No real player database.
-- No media/mock draft engine.
-- No salary-cap or waiver changes.
+- No media engine.
+- No expansion/relocation.
+- No owner replacement.
+- No full playoff engine.
+- No new game simulation.
 - No game simulation changes.
 
 ## Recently Completed
 
+- Alpha 5.8 - Dynamic Draft Classes v1.
 - Alpha 5.7 - Agent Engine v1.
 - Alpha 5.6 - Salary Cap & Roster Compliance v1.
 - Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1.
@@ -56,4 +57,4 @@
 
 ## Next
 
-- Alpha 5.9 - TBD.
+- Alpha 6.0 - TBD.
