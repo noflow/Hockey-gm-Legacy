@@ -90,14 +90,15 @@ The five foundation pillars remain:
 - Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1
 - Alpha 5.3.1 - Trade Window Interactions + Living Staff Market
 - Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1
+- Alpha 5.6 - Salary Cap & Roster Compliance v1
 
 ## Current Milestone
 
-Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1
+Alpha 5.6 - Salary Cap & Roster Compliance v1
 
 ## Current Goal
 
-Make NHL, AHL, and junior prospect movement follow believable pipeline rules: drafted prospects keep rights instead of joining rosters automatically, CHL/junior-age players can be returned to junior, AHL assignment is gated by signing status and rulebook eligibility, ELC slide status is visible, and dossiers/prospect views explain the recommended development path.
+Make professional leagues enforce rulebook-driven salary cap and roster compliance while junior leagues continue to use operating budgets. The GM can see cap usage, available space, floor context, contract count, expiring salary, future commitments, and before/after cap impact for free-agent and trade decisions.
 
 ## Why Relationship Engine Was Next
 
@@ -107,11 +108,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.5 - TBD
+Alpha 5.7 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.5 - TBD
+1. Alpha 5.7 - TBD
 
 ## Build Rule
 

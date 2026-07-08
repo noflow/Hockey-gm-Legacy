@@ -116,6 +116,16 @@ public sealed class FreeAgencyV2Service
         }
 
         var evaluation = BuildOffer(registry, prepared, personId, annualSalary, termYears);
+        var cap = new SalaryCapService().ProjectAfterSigning(
+            prepared,
+            registry.Rulebook ?? prepared.LeagueProfile.Rulebook,
+            evaluation.AnnualCost,
+            evaluation.OfferRequest.TermYears);
+        if (!cap.IsCompliant)
+        {
+            return Result(false, prepared, state, agent, null, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), string.Join(" ", cap.Reasons));
+        }
+
         var delay = ResponseDelayDays(prepared, agent, evaluation);
         var pressure = MarketPressure(state, personId);
         var responseStatus = delay == 0 ? DecisionForEvaluation(evaluation) : FreeAgencyDecision.AwaitingResponse;

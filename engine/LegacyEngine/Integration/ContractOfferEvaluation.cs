@@ -18,9 +18,17 @@ public sealed record ContractOfferEvaluation(
     ContractDecisionExplanation Explanation,
     ContractComparison Comparison)
 {
+    public decimal CapHit { get; init; }
+
+    public decimal CapRemainingBefore { get; init; }
+
+    public decimal CapRemainingAfter { get; init; }
+
+    public string CapWarning { get; init; } = "Salary cap not enabled for this rulebook.";
+
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(EvaluationId) || string.IsNullOrWhiteSpace(RiskWarning))
+        if (string.IsNullOrWhiteSpace(EvaluationId) || string.IsNullOrWhiteSpace(RiskWarning) || string.IsNullOrWhiteSpace(CapWarning))
         {
             throw new ArgumentException("Contract offer evaluation requires id and risk warning.");
         }
@@ -30,7 +38,7 @@ public sealed record ContractOfferEvaluation(
         Term.Validate();
         Explanation.Validate();
         Comparison.Validate();
-        if (TotalCost < 0 || AnnualCost < 0)
+        if (TotalCost < 0 || AnnualCost < 0 || CapHit < 0 || CapRemainingBefore < 0 || CapRemainingAfter < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(TotalCost), "Contract offer costs cannot be negative.");
         }

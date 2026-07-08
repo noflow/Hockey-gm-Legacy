@@ -68,6 +68,7 @@ var alpha51FunctionalUiTradeWindowTests = new Alpha51FunctionalUiTradeWindowTest
 var alpha53FullLeaguePipelineTests = new Alpha53FullLeaguePipelineTests();
 var alpha531TradeStaffMarketTests = new Alpha531TradeStaffMarketTests();
 var alpha54PlayerPipelineTests = new Alpha54PlayerPipelineTests();
+var alpha56SalaryCapRosterComplianceTests = new Alpha56SalaryCapRosterComplianceTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -900,6 +901,17 @@ runner.Run("alpha 5.4 dossier shows pipeline status", alpha54PlayerPipelineTests
 runner.Run("alpha 5.4 save load preserves pipeline status", alpha54PlayerPipelineTests.SaveLoadPreservesPipelineStatus);
 runner.Run("alpha 5.4 AlphaDesktop exposes pipeline filters", alpha54PlayerPipelineTests.AlphaDesktopExposesPipelineFilters);
 runner.Run("alpha 5.4 no salary cap or waivers added", alpha54PlayerPipelineTests.NoSalaryCapOrWaiversAdded);
+runner.Run("alpha 5.6 professional rulebooks enable salary cap", alpha56SalaryCapRosterComplianceTests.ProfessionalRulebooksEnableSalaryCap);
+runner.Run("alpha 5.6 junior rulebook disables salary cap", alpha56SalaryCapRosterComplianceTests.JuniorRulebookDisablesSalaryCap);
+runner.Run("alpha 5.6 cap calculation counts signed contracts", alpha56SalaryCapRosterComplianceTests.CapCalculationCountsSignedPlayerContracts);
+runner.Run("alpha 5.6 cap updates after signing", alpha56SalaryCapRosterComplianceTests.CapUpdatesAfterSigning);
+runner.Run("alpha 5.6 cap updates after trade", alpha56SalaryCapRosterComplianceTests.CapUpdatesAfterTrade);
+runner.Run("alpha 5.6 trade validation rejects over-cap move", alpha56SalaryCapRosterComplianceTests.TradeValidationRejectsOverCapMove);
+runner.Run("alpha 5.6 roster compliance flags contract limit", alpha56SalaryCapRosterComplianceTests.RosterComplianceFlagsContractLimit);
+runner.Run("alpha 5.6 free agency offer respects cap", alpha56SalaryCapRosterComplianceTests.FreeAgencyOfferRespectsCap);
+runner.Run("alpha 5.6 dashboard and decisions expose cap details", alpha56SalaryCapRosterComplianceTests.DashboardAndDecisionScreensExposeCapDetails);
+runner.Run("alpha 5.6 save load preserves cap commitments", alpha56SalaryCapRosterComplianceTests.SaveLoadPreservesCapCommitments);
+runner.Run("alpha 5.6 no forbidden cap systems added", alpha56SalaryCapRosterComplianceTests.NoForbiddenCapSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

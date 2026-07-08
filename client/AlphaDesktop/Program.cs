@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -586,7 +586,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 5.4 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 5.6 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1644,6 +1644,7 @@ internal sealed class MainWindow : Window
         var readiness = State.SeasonReadinessReport;
         var roster = readiness.RosterReport;
         var budget = State.BudgetOverview;
+        var cap = State.SalaryCap;
         _dashboardPanel.Children.Clear();
 
         _dashboardPanel.Children.Add(new TextBlock
@@ -1682,6 +1683,11 @@ internal sealed class MainWindow : Window
         }
 
         metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
+        metrics.Children.Add(CreateDashboardMetric(
+            "Salary Cap",
+            cap.Status.ToString(),
+            cap.IsEnabled ? $"{cap.AvailableCapSpace:C0} remaining | {cap.CapPercentage:0.##}% used" : "Disabled by rulebook",
+            cap.Status is SalaryCapStatus.OverCap or SalaryCapStatus.Violation));
         metrics.Children.Add(CreateDashboardMetric("Owner Mood", OwnerMoodText(), $"Job security {State.OwnerOffice.JobSecurity.Level} | Support {State.OwnerOffice.Confidence.Support}", State.OwnerOffice.JobSecurity.Level is JobSecurityLevel.HotSeat or JobSecurityLevel.Critical));
         var nextGame = State.NextGame;
         var lastGame = State.LastGameRecap;
@@ -4110,10 +4116,11 @@ internal sealed class MainWindow : Window
     private string BuildBudgetWorkspace()
     {
         var budget = State.BudgetOverview;
+        var cap = State.SalaryCap;
         var builder = new StringBuilder();
         builder.AppendLine("Budget");
         builder.AppendLine("======");
-        builder.AppendLine("Hockey Operations Budget");
+        builder.AppendLine("Operating Budget");
         builder.AppendLine($"Owner status: {budget.OwnerBudgetConfidence}");
         builder.AppendLine($"Budget status: {budget.Status}");
         builder.AppendLine($"Total budget: {budget.TotalBudget:C0}");
@@ -4132,6 +4139,38 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Player contracts: {budget.PlayerContractsTotal:C0}");
         builder.AppendLine($"Scouting budget: {budget.ScoutingBudget:C0}");
         builder.AppendLine($"Medical/staff operations: {budget.MedicalAndStaffOperationsBudget:C0}");
+        builder.AppendLine();
+        builder.AppendLine("Salary Cap");
+        builder.AppendLine($"Cap enabled: {(cap.IsEnabled ? "Yes" : "No - this league uses operating budgets")}");
+        builder.AppendLine($"Cap status: {cap.Status}");
+        builder.AppendLine($"Cap amount: {cap.Profile.CapAmount:C0}");
+        builder.AppendLine($"Cap used: {cap.CapUsed:C0}");
+        builder.AppendLine($"Cap remaining: {cap.CapRemaining:C0}");
+        builder.AppendLine($"Cap percentage: {cap.CapPercentage:0.##}%");
+        builder.AppendLine($"Floor: {cap.Profile.SalaryFloor:C0}");
+        builder.AppendLine($"Contract count: {cap.ContractCount}/{(cap.Profile.MaximumContracts == int.MaxValue ? "unlimited" : cap.Profile.MaximumContracts.ToString())}");
+        builder.AppendLine($"Expiring contracts: {cap.ExpiringSalary:C0}");
+        builder.AppendLine($"Future commitments: {cap.CommittedFutureSalary:C0}");
+        builder.AppendLine($"Dead cap placeholder: {cap.DeadCapPlaceholder:C0}");
+        foreach (var warning in cap.Warnings)
+        {
+            builder.AppendLine($"Warning: {warning}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Current Contracts");
+        if (cap.ContractCommitments.Count == 0)
+        {
+            builder.AppendLine("No cap-counted player contracts yet.");
+        }
+        else
+        {
+            foreach (var contract in cap.ContractCommitments.OrderByDescending(item => item.CapHit).ThenBy(item => item.PersonName))
+            {
+                builder.AppendLine($"{contract.PersonName}: {contract.CapHit:C0} cap hit | {contract.YearsRemaining} year(s) | expires {contract.ExpiresOn:yyyy-MM-dd}");
+            }
+        }
+
         return builder.ToString();
     }
 
@@ -6043,6 +6082,8 @@ internal sealed class AlphaDesktopState
 
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
+    public SalaryCapSnapshot SalaryCap => new SalaryCapService().BuildSnapshot(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
     public OwnerOfficeSummary OwnerOffice => _ownerOffice.BuildSummary(ScenarioSnapshot, BudgetOverview);
 
     public LeagueAiReport LeagueAiReport => _leagueAi.BuildReport(ScenarioSnapshot, BudgetOverview);
@@ -7674,9 +7715,18 @@ internal sealed class AlphaDesktopState
 
         var remaining = BudgetOverview.RemainingBudget;
         var afterAsk = remaining - agent.ContractAsk.AnnualAmount;
-        return afterAsk < 0
+        var budgetText = afterAsk < 0
             ? $"Ask {agent.ContractAsk.AnnualAmount:C0}; would put hockey operations {Math.Abs(afterAsk):C0} over budget."
             : $"Ask {agent.ContractAsk.AnnualAmount:C0}; would leave {afterAsk:C0} in hockey operations budget.";
+        var cap = new SalaryCapService().ProjectAfterSigning(
+            ScenarioSnapshot,
+            _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook,
+            agent.ContractAsk.AnnualAmount,
+            agent.ContractAsk.TermYears);
+        var capText = cap.Before.IsEnabled
+            ? $" Current cap: {cap.Before.CapUsed:C0} used, {cap.Before.CapRemaining:C0} remaining. Cap after signing: {cap.After.CapUsed:C0} used, {cap.After.CapRemaining:C0} remaining. Cap warning: {(cap.IsCompliant ? "None" : string.Join(" ", cap.Reasons))}"
+            : " Salary cap disabled by rulebook.";
+        return budgetText + capText;
     }
 
     public string FreeAgentTopMotivations(string personId)
@@ -8003,7 +8053,22 @@ internal sealed class AlphaDesktopState
             }
 
             var impact = _tradePlayerReceives.Sum(asset => asset.SalaryImpact) - _tradePlayerGives.Sum(asset => asset.SalaryImpact);
-            return impact >= 0 ? $"Adds about {impact:C0}." : $"Saves about {Math.Abs(impact):C0}.";
+            var primaryOther = _tradePlayerReceives.First();
+            var offer = _trades.CreateOffer(
+                ScenarioSnapshot,
+                primaryOther.OrganizationId,
+                primaryOther.OrganizationName,
+                _tradePlayerGives.ToArray(),
+                _tradePlayerReceives.ToArray());
+            var cap = new SalaryCapService().ProjectAfterTrade(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook, offer);
+            var budgetImpact = impact >= 0 ? $"Adds about {impact:C0}." : $"Saves about {Math.Abs(impact):C0}.";
+            if (!cap.Before.IsEnabled)
+            {
+                return $"{budgetImpact} Salary cap disabled by rulebook.";
+            }
+
+            var indicator = cap.IsCompliant ? "Green" : "Red";
+            return $"{budgetImpact} Cap before: {cap.Before.CapUsed:C0} used, {cap.Before.CapRemaining:C0} remaining. Cap after: {cap.After.CapUsed:C0} used, {cap.After.CapRemaining:C0} remaining. Cap indicator: {indicator}.";
         }
     }
 

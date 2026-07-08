@@ -42,6 +42,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("player_assignment_rules")]
     public PlayerAssignmentRules? PlayerAssignmentRules { get; init; }
+
+    [JsonPropertyName("salary_cap_rules")]
+    public SalaryCapRules? SalaryCapRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -213,6 +216,30 @@ public sealed class PlayerAssignmentRules
 
     [JsonPropertyName("elc_slide_nhl_game_threshold")]
     public int ElcSlideNhlGameThreshold { get; init; } = 10;
+}
+
+public sealed class SalaryCapRules
+{
+    [JsonPropertyName("salary_cap_enabled")]
+    public bool SalaryCapEnabled { get; init; }
+
+    [JsonPropertyName("cap_amount")]
+    public decimal? CapAmount { get; init; }
+
+    [JsonPropertyName("salary_floor")]
+    public decimal? SalaryFloor { get; init; }
+
+    [JsonPropertyName("maximum_roster_size")]
+    public int? MaximumRosterSize { get; init; }
+
+    [JsonPropertyName("maximum_contracts")]
+    public int? MaximumContracts { get; init; }
+
+    [JsonPropertyName("maximum_retained_salary_placeholder")]
+    public decimal? MaximumRetainedSalaryPlaceholder { get; init; }
+
+    [JsonPropertyName("offseason_cap_rules_placeholder")]
+    public string? OffseasonCapRulesPlaceholder { get; init; }
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

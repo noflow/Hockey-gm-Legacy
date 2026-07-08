@@ -156,7 +156,7 @@ public sealed class TradeService
             return Result(false, failedScenario, failed, failed.Evaluation, new[] { Inbox(failedScenario, LegacyEventType.TradeFailedValidation, "Trade deadline has passed", "New trade proposals are closed after the deadline.", LegacyEventSeverity.Warning) }, Array.Empty<LeagueTransaction>(), "Trade deadline has passed.");
         }
 
-        var validation = ValidateOffer(scenario, offer);
+        var validation = ValidateOffer(scenario, offer, registry.Rulebook ?? scenario.LeagueProfile.Rulebook);
         if (validation is not null)
         {
             var failed = offer with
@@ -305,7 +305,7 @@ public sealed class TradeService
         return ProposeTrade(registry, scenario, offer);
     }
 
-    private static string? ValidateOffer(NewGmScenarioSnapshot scenario, TradeOffer offer)
+    private static string? ValidateOffer(NewGmScenarioSnapshot scenario, TradeOffer offer, LegacyEngine.RuleEngine.Rulebook? rulebook)
     {
         if (offer.PlayerGives.Count == 0 || offer.PlayerReceives.Count == 0)
         {
@@ -337,6 +337,23 @@ public sealed class TradeService
             {
                 return $"{asset.DisplayName} is not available from {offer.OtherOrganizationName}.";
             }
+        }
+
+        var cap = new SalaryCapService().ProjectAfterTrade(scenario, rulebook ?? scenario.LeagueProfile.Rulebook, offer);
+        if (!cap.IsCompliant)
+        {
+            return cap.Reasons.FirstOrDefault(reason => reason.Contains("salary cap", StringComparison.OrdinalIgnoreCase))
+                ?? cap.Reasons.FirstOrDefault(reason => reason.Contains("contract limit", StringComparison.OrdinalIgnoreCase))
+                ?? "Trade would violate salary cap or contract rules.";
+        }
+
+        var profile = cap.Before.Profile;
+        var activeAfter = scenario.AlphaSnapshot.Roster.ActivePlayers.Count
+            - offer.PlayerGives.Count(asset => asset.AssetType == TradeAssetType.Player)
+            + offer.PlayerReceives.Count(asset => asset.AssetType == TradeAssetType.Player);
+        if (profile.IsEnabled && profile.MaximumRosterSize > 0 && activeAfter > profile.MaximumRosterSize)
+        {
+            return "Trade would leave roster invalid by exceeding the professional roster limit.";
         }
 
         return null;

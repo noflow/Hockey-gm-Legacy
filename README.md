@@ -75,6 +75,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 5.3 Full League Teams + NHL/AHL Player Pipeline v1
 - Alpha 5.3.1 Trade Window Interactions + Living Staff Market
 - Alpha 5.4 NHL/AHL/Junior Player Pipeline v1
+- Alpha 5.6 Salary Cap & Roster Compliance v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -115,6 +116,8 @@ Alpha 2.7.1 - Roster & Front Office Realism Pass updates the junior roster targe
 Alpha 2.7.2 - Inbox Cleanup + League Transaction Wire keeps the GM inbox focused on your organization and decisions that need attention. Other-team signings, contract updates, roster moves, injuries, draft picks, and staff transactions now route into a separate League News / Transaction Wire feed with team, player/staff, category, date, and description.
 
 Alpha 2.7.3 - Live Draft Layout + Staff Hiring Layout Fix reshapes the live draft modal into selected prospect, draft list, and draft status columns. Draft rows now surface basic visible bio and scouting context, dossier overviews include draft bio facts, and the Staff tab separates Current Staff, Hire Staff / Staff Candidates, and Vacancies so candidate actions no longer look like staff actions.
+
+Alpha 5.6 - Salary Cap & Roster Compliance v1 adds rulebook-driven salary-cap behavior for professional leagues while junior leagues keep operating budgets. NHL-style and AHL-style rulebooks now expose cap amount, floor, roster limit, contract limit, and placeholders for retained salary/offseason rules. The desktop dashboard, budget workspace, free-agent decisions, and trade builder now show cap impact before the GM commits, and contract/trade/free-agent approval paths reject moves that would violate cap or contract-count rules.
 
 Alpha 3.4 - Career & History Framework v1 starts the long-save memory layer. The engine now seeds GM, staff, organization, and player career history, tracks player draft picks and draft classes, adds Where Are They Now records, records trade/free-agent/injury history, and expands Reports / History with GM Career, Organization History, Draft History, Drafted Players, Player Career Timelines, Staff History, and Transaction History views without exposing hidden ratings.
 

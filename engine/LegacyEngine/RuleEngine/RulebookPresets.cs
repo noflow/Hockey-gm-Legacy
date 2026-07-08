@@ -27,7 +27,7 @@ public static class RulebookPresets
         BaseRulebook("nhl_style_default", "nhl_style", true, 7, activeRoster: 23, maxRoster: 23);
 
     public static Rulebook CreateAhlStyle() =>
-        BaseRulebook("ahl_style_default", "ahl_style", false, 0, CreateAhlAffiliateRules());
+        BaseRulebook("ahl_style_default", "ahl_style", false, 0, CreateAhlAffiliateRules(), activeRoster: 23, maxRoster: 28);
 
     private static Rulebook CreateCustom(int rounds)
     {
@@ -70,7 +70,8 @@ public static class RulebookPresets
                     "scout_contract",
                     "coach_contract"
                 },
-                SalaryCapEnabled = false,
+                SalaryCapEnabled = IsProfessionalLeague(leagueType),
+                SalaryCapAmount = SalaryCapAmountFor(leagueType),
                 JuniorStipendsEnabled = true,
                 EducationPackagesEnabled = true,
                 HousingSupportEnabled = true,
@@ -94,7 +95,8 @@ public static class RulebookPresets
             BudgetRules = new BudgetRules
             {
                 OwnerBudgetEnabled = true,
-                HardSalaryCapEnabled = false
+                HardSalaryCapEnabled = IsProfessionalLeague(leagueType),
+                HardSalaryCapAmount = SalaryCapAmountFor(leagueType)
             },
             SeasonRules = new SeasonRules
             {
@@ -115,7 +117,8 @@ public static class RulebookPresets
             },
             StaffRules = CreateJuniorStaffRules(),
             AffiliateRules = affiliateRules,
-            PlayerAssignmentRules = CreatePlayerAssignmentRules(leagueType)
+            PlayerAssignmentRules = CreatePlayerAssignmentRules(leagueType),
+            SalaryCapRules = CreateSalaryCapRules(leagueType, activeRoster)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -181,4 +184,52 @@ public static class RulebookPresets
             ElcSlideAgeCutoff = 19,
             ElcSlideNhlGameThreshold = 10
         };
+
+    private static SalaryCapRules CreateSalaryCapRules(string leagueType, int activeRoster) =>
+        new()
+        {
+            SalaryCapEnabled = IsProfessionalLeague(leagueType),
+            CapAmount = SalaryCapAmountFor(leagueType),
+            SalaryFloor = SalaryFloorFor(leagueType),
+            MaximumRosterSize = activeRoster,
+            MaximumContracts = IsProfessionalLeague(leagueType) ? 50 : null,
+            MaximumRetainedSalaryPlaceholder = 0m,
+            OffseasonCapRulesPlaceholder = IsProfessionalLeague(leagueType)
+                ? "Offseason cap cushion is a placeholder in Alpha 5.6; hard cap validation is used for explicit moves."
+                : "Junior leagues use operating budgets instead of a salary cap."
+        };
+
+    private static bool IsProfessionalLeague(string leagueType) =>
+        leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase)
+        || leagueType.Contains("ahl", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal? SalaryCapAmountFor(string leagueType)
+    {
+        if (leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase))
+        {
+            return 88_000_000m;
+        }
+
+        if (leagueType.Contains("ahl", StringComparison.OrdinalIgnoreCase))
+        {
+            return 6_000_000m;
+        }
+
+        return null;
+    }
+
+    private static decimal? SalaryFloorFor(string leagueType)
+    {
+        if (leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase))
+        {
+            return 65_000_000m;
+        }
+
+        if (leagueType.Contains("ahl", StringComparison.OrdinalIgnoreCase))
+        {
+            return 2_000_000m;
+        }
+
+        return null;
+    }
 }

@@ -170,6 +170,16 @@ public sealed class PendingGmActionService
         NewGmScenarioSnapshot scenario,
         PendingGmAction action)
     {
+        var salary = action.OfferedSalary ?? scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.AnnualAmount ?? 1_500m;
+        var term = action.OfferedTermYears ?? scenario.FreeAgentMarket?.Find(action.PersonId)?.ContractAsk.TermYears ?? 1;
+        var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, salary, term);
+        if (!cap.IsCompliant)
+        {
+            var failed = action with { Status = PendingGmActionStatus.Failed };
+            var failedScenario = ReplaceAction(scenario, failed);
+            return BuildResult(false, failedScenario, failed, Array.Empty<AlphaInboxItem>(), string.Join(" ", cap.Reasons));
+        }
+
         var offered = registry.ContractEngine.CreateOffer(
             BuildContractOffer(scenario, action),
             registry.Rulebook is null ? null : new ContractRuleValidator(registry.Rulebook));

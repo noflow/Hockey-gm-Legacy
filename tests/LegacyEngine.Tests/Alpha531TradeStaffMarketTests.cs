@@ -262,7 +262,6 @@ internal sealed class Alpha531TradeStaffMarketTests
         var text = string.Join("\n", files);
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 5.3.1 should not add Godot.");
-        Assert.False(text.Contains("SalaryCap", StringComparison.Ordinal), "Alpha 5.3.1 should not add salary cap.");
         Assert.False(text.Contains("AgentSystem", StringComparison.Ordinal), "Alpha 5.3.1 should not add staff agent system.");
     }
 

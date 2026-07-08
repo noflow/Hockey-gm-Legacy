@@ -1,31 +1,32 @@
 # Changelog
 
-## Current - Alpha 5.4
+## Current - Alpha 5.6
 
 ### Added
 
-- NHL/AHL/Junior Player Pipeline v1.
-- Player assignment rule support for junior cutoff age, AHL eligibility age, CHL-to-AHL restrictions, optional 19-year-old exception, and ELC slide threshold.
-- Pipeline models for development level, rights status, assignment eligibility, assignment rules, assignment decisions, and assignment results.
-- Prospect pipeline display in dossiers and AlphaDesktop prospect views.
-- ELC slide visibility for signed 18/19-year-old prospects, including games toward the slide threshold.
-- AHL affiliate and parent-prospect visibility for NHL/AHL team contexts.
+- Salary Cap & Roster Compliance v1 for professional-style rulebooks.
+- Salary cap models and service: profile, status, snapshot, cap space, contract commitment, calculation, and service.
+- Rulebook-driven cap settings for enabled/disabled state, cap amount, floor, roster limit, contract limit, retained-salary placeholder, and offseason placeholder.
+- Dashboard salary-cap card for professional leagues.
+- Budget workspace split between operating budget and salary cap / current contracts.
+- Free agency cap preview showing current cap, cap after signing, remaining space, and warnings.
+- Trade builder cap preview with before/after cap impact and green/red indicator text.
+- Salary cap checks for free-agent offers, contract approvals, trade validation, and opening roster compliance.
 
 ### Changed
 
-- NHL-drafted prospects now remain in draft rights/prospect lists until the GM makes an explicit decision.
-- Drafted prospects no longer auto-join NHL or AHL rosters.
-- AHL assignment now requires the player to be signed and rulebook-eligible.
-- CHL/junior-age players can be signed and returned to junior while rights remain with the NHL club.
-- Prospect decisions now disable or reject invalid assignment paths with clear reasons.
-- Player dossiers now explain pipeline status, rights holder, signed/unsigned state, AHL assignment eligibility, junior return eligibility, contract slide status, and staff recommendation.
-- AlphaDesktop version label updated to Alpha 5.4.
+- NHL-style and AHL-style presets now enable salary cap rules by default.
+- Junior-style leagues keep operating-budget behavior and do not enable the salary cap.
+- AHL affiliate rulebooks preserve salary-cap settings when parent/affiliate IDs are applied.
+- Contract offer evaluation now includes cap hit, remaining cap before/after, and cap warnings.
+- Pending contract approval now fails cleanly if approving would break cap rules.
+- Older compatibility tests updated so Alpha 5.6 can intentionally add salary cap while still blocking full waiver systems.
+- AlphaDesktop version label updated to Alpha 5.6.
 
 ### Fixed
 
-- European/college placeholder prospects no longer inherit CHL protection from draft-board seed data when their explicit league path is non-CHL.
-- Older prospect-decision tests now reflect the current rule that AHL assignment requires a signed eligible player.
-- Dossier hidden-rating test narrowed to the development section so normal career/history numbers do not cause false failures.
+- Restored the missing Alpha 5.4 player-pipeline compatibility test class so the full test runner builds again.
+- Free agency now blocks impossible cap-breaking offers before they become active offers.
 
 ### Verified
 
@@ -36,13 +37,18 @@
 ### Not Added
 
 - No Godot.
-- No salary cap.
-- No waivers.
-- No full CBA system.
+- No LTIR.
+- No buyouts.
+- No retained salary implementation.
+- No performance bonuses.
+- No offer sheets.
+- No waiver claim system.
+- No full CBA edge cases.
 - No database or cloud save system.
 
 ## Recently Completed
 
+- Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1.
 - Alpha 5.3.1 - Trade Window Interactions + Living Staff Market.
 - Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1.
 - Alpha 5.1 - Multi-League Career Framework.
@@ -55,4 +61,4 @@
 
 ## Next
 
-- Alpha 5.5 - TBD.
+- Alpha 5.7 - TBD.

@@ -45,10 +45,11 @@ public sealed class ContractManagementService
         var annual = request.AnnualSalary;
         var total = annual * request.TermYears;
         var budgetAfter = budget.RemainingBudget - annual;
-        var score = ScoreOffer(scenario, ask, request, budgetAfter);
+        var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, annual, request.TermYears);
+        var score = ScoreOffer(scenario, ask, request, budgetAfter, cap);
         var likelihood = LikelihoodFor(score);
         var decision = DecisionFor(score, ask, request);
-        var explanation = Explain(ask, request, decision, score, budgetAfter);
+        var explanation = Explain(ask, request, decision, score, budgetAfter, cap);
         var currentCost = CurrentAnnualCost(scenario, request.PersonId);
         var comparison = new ContractComparison(
             CurrentAnnualCost: currentCost,
@@ -76,7 +77,13 @@ public sealed class ContractManagementService
             Likelihood: likelihood,
             Decision: decision,
             Explanation: explanation,
-            Comparison: comparison);
+            Comparison: comparison)
+        {
+            CapHit = annual,
+            CapRemainingBefore = cap.Before.AvailableCapSpace,
+            CapRemainingAfter = cap.After.AvailableCapSpace,
+            CapWarning = CapWarning(cap)
+        };
         evaluation.Validate();
         return evaluation;
     }
@@ -86,6 +93,19 @@ public sealed class ContractManagementService
         NewGmScenarioSnapshot scenario,
         ContractOfferBuildRequest request)
     {
+        var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, request.AnnualSalary, request.TermYears);
+        if (!cap.IsCompliant)
+        {
+            var blocked = BuildOffer(registry, scenario, request);
+            return new ContractManagementResult(
+                Success: false,
+                ScenarioSnapshot: scenario,
+                Evaluation: blocked,
+                InboxItems: Array.Empty<AlphaInboxItem>(),
+                LeagueTransactions: Array.Empty<LeagueTransaction>(),
+                Message: string.Join(" ", cap.Reasons));
+        }
+
         var evaluation = BuildOffer(registry, scenario, request);
         QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferSubmitted, "Contract offer submitted", $"{evaluation.Ask.PersonName} received a {request.TermYears}-year offer worth {request.AnnualSalary:C0} per year.", request.PersonId, evaluation);
 
@@ -375,7 +395,7 @@ public sealed class ContractManagementService
             string.IsNullOrWhiteSpace(action.DevelopmentPromise) ? "Pending GM decision." : action.DevelopmentPromise,
             action.Reason);
 
-    private static int ScoreOffer(NewGmScenarioSnapshot scenario, ContractAsk ask, ContractOfferBuildRequest request, decimal budgetAfter)
+    private static int ScoreOffer(NewGmScenarioSnapshot scenario, ContractAsk ask, ContractOfferBuildRequest request, decimal budgetAfter, SalaryCapCalculation cap)
     {
         var salaryScore = ask.RequestedSalary <= 0 ? 100 : Math.Clamp((int)Math.Round((request.AnnualSalary / ask.RequestedSalary) * 100m), 0, 125);
         var termScore = request.TermYears >= ask.RequestedTermYears ? 80 : 45;
@@ -384,6 +404,7 @@ public sealed class ContractManagementService
         var developmentScore = string.IsNullOrWhiteSpace(request.DevelopmentPromise) ? 45 : 75;
         var relationshipScore = RelationshipWithGm(scenario, ask.PersonId);
         var budgetScore = budgetAfter < 0 ? 25 : budgetAfter < ask.RequestedSalary ? 55 : 75;
+        var capScore = !cap.Before.IsEnabled ? 75 : cap.IsCompliant && cap.After.Status == SalaryCapStatus.Comfortable ? 80 : cap.IsCompliant ? 55 : 10;
         var careerFit = request.AskType switch
         {
             ContractAskType.Prospect or ContractAskType.Recruit => request.CampInvitePromise ? 75 : 55,
@@ -398,6 +419,7 @@ public sealed class ContractManagementService
             developmentScore * ask.Preference.DevelopmentImportance +
             relationshipScore * ask.Preference.RelationshipImportance +
             budgetScore * 40 +
+            capScore * 35 +
             ask.PreferredOrganizationFit * 30 +
             careerFit * 35;
         var weight =
@@ -406,11 +428,11 @@ public sealed class ContractManagementService
             ask.Preference.RoleImportance +
             ask.Preference.DevelopmentImportance +
             ask.Preference.RelationshipImportance +
-            40 + 30 + 35;
+            40 + 35 + 30 + 35;
         return Math.Clamp((int)Math.Round(score / Math.Max(1m, weight)), 0, 100);
     }
 
-    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter)
+    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap)
     {
         var reasons = new List<string>
         {
@@ -425,7 +447,8 @@ public sealed class ContractManagementService
                 : $"Role promise does not clearly match {ask.DesiredRole}.",
             budgetAfter < 0
                 ? "Budget impact is a concern and may trigger owner pushback."
-                : "Budget impact is manageable."
+                : "Budget impact is manageable.",
+            CapWarning(cap)
         };
         if (!string.IsNullOrWhiteSpace(request.DevelopmentPromise))
         {
@@ -440,6 +463,23 @@ public sealed class ContractManagementService
             _ => $"{ask.PersonName} remains undecided; score {score}/100."
         };
         return new ContractDecisionExplanation(decision, summary, reasons);
+    }
+
+    private static string CapWarning(SalaryCapCalculation cap)
+    {
+        if (!cap.Before.IsEnabled)
+        {
+            return "Salary cap is not enabled for this rulebook.";
+        }
+
+        if (!cap.IsCompliant)
+        {
+            return string.Join(" ", cap.Reasons);
+        }
+
+        return cap.After.Status == SalaryCapStatus.NearLimit
+            ? "Salary cap room would be tight after this offer."
+            : "Salary cap impact is manageable.";
     }
 
     private static ContractOfferDecision DecisionFor(int score, ContractAsk ask, ContractOfferBuildRequest request)
