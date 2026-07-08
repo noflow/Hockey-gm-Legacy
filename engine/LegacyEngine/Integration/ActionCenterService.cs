@@ -536,6 +536,29 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+
+        var chemistry = scenario.CurrentLineChemistry ?? new LineChemistryService().BuildReport(scenario with { CurrentLineup = lineup });
+        foreach (var issue in chemistry.Units.Where(unit => unit.UnitType != LineChemistryUnitType.Team && unit.IsMajorIssue).Take(2))
+        {
+            var playerId = issue.PlayerIds.FirstOrDefault();
+            var playerName = issue.PlayerNames.FirstOrDefault();
+            items.Add(new ActionCenterItem(
+                $"action-center:line-chemistry:{issue.UnitId}",
+                $"Line chemistry problem: {issue.Label}",
+                ActionCenterCategory.Roster,
+                issue.Score.Grade == LineChemistryGrade.Problem ? ActionCenterPriority.Urgent : ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(3),
+                playerId,
+                playerName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                issue.Weaknesses.FirstOrDefault() ?? issue.RelationshipNote,
+                "Chemistry should be a small modifier, but a poor fit can hurt confidence, role satisfaction, and development environment.",
+                issue.Recommendation,
+                null,
+                null,
+                null));
+        }
     }
 
     private static void AddUpcomingGames(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

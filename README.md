@@ -86,6 +86,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 6.3 Relationship Expansion v1
 - Alpha 6.4 Roster V3 + Lineup Roles v1
 - Alpha 6.4 Lineup & Role Management v1
+- Alpha 6.5 Line Chemistry v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -138,6 +139,8 @@ Alpha 5.9 - League AI v2 makes AI organizations behave less like clones. Every l
 Alpha 6.0 - Player Life Cycle v1 turns tracked players into long-term career stories. Players now receive life stages, career phases, reputation categories, milestones, achievements, career story lines, legacy scores, key staff influence, and limited notable league-news items. Player dossiers and Reports / History now show career milestones, player stories, timeline context, legacy score, staff/scout/medical career notes, and Action Center items for meaningful career developments without adding Hall of Fame, retirement decisions, awards voting, or game simulation changes.
 
 Alpha 6.1 - Staff Life Cycle v1 turns coaches, scouts, medical staff, and front-office staff into long-term careers. Staff now receive life stages, career phases, reputation categories, milestones, staff career stories, salary/role/organization history, coaching-tree links, scout discovery records, player-development influence, promotion readiness, concern summaries, limited staff League News milestones, and Action Center items for promotion/succession/performance review without adding Hall of Fame, retirement decisions, awards voting, or game simulation changes.
+
+Alpha 6.5 - Line Chemistry v1 adds explainable fit grades for forward lines, defense pairs, goalie depth, and the team summary. Chemistry considers player-type blend, handedness, position fit, role pressure, age/experience mix, relationships, coach philosophy, morale/confidence, role promises, and recent-performance placeholders. The Lineup workspace now shows chemistry beside each line/pair, selected-line details show strengths/weaknesses/recommendations, player dossiers include chemistry notes, and Action Center only flags major chemistry problems.
 
 Alpha 6.4 - Lineup & Role Management v1 makes lineup roles playable. Hockey Operations now includes a selectable Lineup workspace where the GM can assign, remove, swap, and auto-fill slots across four forward lines, three defense pairs, and starter/backup goalie depth. Roster rows and dossiers show current, expected, promised, coach-recommended, and potential roles, plus promise status, satisfaction, morale notes, and development usage context. Contract offer evaluation now warns when a role promise conflicts with lineup capacity, while invalid placements warn instead of crashing. This does not add special teams, tactics, line chemistry, Godot, or game simulation changes.
 

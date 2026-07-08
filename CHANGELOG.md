@@ -1,6 +1,43 @@
 # Changelog
 
-## Current - Alpha 6.4
+## Current - Alpha 6.5
+
+### Added
+
+- Line chemistry model for forward lines, defense pairs, goalie room, and team-level chemistry summaries.
+- Chemistry scoring grades: Excellent, Good, Neutral, Poor, and Problem.
+- LineChemistryService evaluation using player type fit, handedness balance, position fit, role fit, age/experience mix, personality estimate, relationships, coach philosophy, morale/confidence, role promises, and recent-performance placeholders.
+- Explainable strengths, weaknesses, coach recommendations, development notes, relationship notes, and role promise notes for each line/pair.
+- Team chemistry summary with overall grade, best unit, worst unit, major concerns, coach recommendations, and simple history events.
+- Lineup workspace chemistry rows for each forward line, defense pair, and goalie room.
+- Selected line/pair detail panel showing chemistry grade, players, strengths, weaknesses, factors, and recommendations.
+- Player dossier Role / Usage chemistry notes showing current line chemistry, best known fit placeholder, and chemistry context.
+- Action Center routing for major chemistry issues only, limited to poor/problem units to avoid inbox/action spam.
+- Alpha 6.5 tests covering forward, defense, goalie, player-type blend, duplicate-type penalty, L/R defense balance, veteran/prospect support, poor relationship penalty, coach recommendations, team summary, UI exposure, dossier exposure, major-only Action Center items, hidden-rating boundaries, and no tactics-engine expansion.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.5.
+- Lineup Summary now includes team chemistry and line/pair/goalie chemistry grades.
+- Lineup slot rows now include the relevant chemistry grade for the unit that slot belongs to.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No full tactics engine.
+- No special teams.
+- No power play / penalty kill.
+- No line matching.
+- No matchup engine.
+- No game simulation overhaul.
+
+## Previous - Alpha 6.4
 
 ### Added
 
@@ -41,7 +78,6 @@
 - No Godot.
 - No full tactics engine.
 - No special teams.
-- No line chemistry engine.
 - No drag/drop lineup editor.
 - No game simulation overhaul.
 
@@ -69,4 +105,4 @@
 
 ## Next
 
-- Alpha 6.5 - TBD.
+- Alpha 6.6 - TBD.

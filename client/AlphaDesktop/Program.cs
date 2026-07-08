@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -600,7 +600,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.4 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.5 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2261,10 +2261,21 @@ internal sealed class MainWindow : Window
                 "lineup-summary",
                 "Lineup Summary",
                 "LineupSummary",
-                State.LineupValidationText,
+                $"{State.LineupValidationText} | Chemistry: {State.LineChemistryReport.Overall.Score.Grade}",
                 lineup.Summary,
                 "Select a lineup slot to assign, remove, swap, view dossier, or auto-fill.")
         };
+
+        foreach (var unit in State.LineChemistryReport.ForwardLines.Concat(State.LineChemistryReport.DefensePairs).Append(State.LineChemistryReport.GoalieDepth))
+        {
+            rows.Add(new SelectablePersonRow(
+                unit.UnitId,
+                unit.Label,
+                "LineChemistry",
+                $"Chemistry: {unit.Score.Grade} ({unit.Score.Value})",
+                $"{string.Join(" | ", unit.PlayerNames)}",
+                $"{unit.Recommendation}"));
+        }
 
         foreach (var slot in State.LineupSlots)
         {
@@ -2275,7 +2286,7 @@ internal sealed class MainWindow : Window
                 LineupDisplay.SlotLabel(slot),
                 "LineupSlot",
                 assignment is null ? "Open slot" : $"{assignment.PlayerName} | {assignment.Position} | {LineupDisplay.Role(assignment.CurrentRole)}",
-                assignment is null ? "No player assigned" : $"Expected {LineupDisplay.Role(usage?.ExpectedRole ?? assignment.CurrentRole)} | promise {usage?.PromiseStatus.ToString() ?? "NotYetEvaluated"} | {usage?.Satisfaction.ToString() ?? "Neutral"}",
+                assignment is null ? "No player assigned" : $"{State.ChemistryTextForSlot(slot)} | Expected {LineupDisplay.Role(usage?.ExpectedRole ?? assignment.CurrentRole)} | promise {usage?.PromiseStatus.ToString() ?? "NotYetEvaluated"} | {usage?.Satisfaction.ToString() ?? "Neutral"}",
                 assignment is null ? $"Eligible replacements: {State.EligibleLineupReplacements(slot).Count}" : $"{assignment.CoachNote} | {State.LineupDevelopmentImpactText(assignment.PersonId)}"));
         }
 
@@ -2297,6 +2308,11 @@ internal sealed class MainWindow : Window
             return summary;
         }
 
+        if (row.Kind == "LineChemistry")
+        {
+            return BuildLineChemistryDetail(row.PersonId);
+        }
+
         if (!TryLineupSlot(row.PersonId, out var slot))
         {
             return EmptyDetail("Lineup", "Selected lineup row is not a slot.");
@@ -2305,6 +2321,13 @@ internal sealed class MainWindow : Window
         var assignment = State.CurrentLineup.Assignments.FirstOrDefault(assignment => assignment.Slot == slot);
         var panel = CreateDetailPanel(LineupDisplay.SlotLabel(slot), assignment?.PlayerName ?? "Open slot");
         AddLine(panel, "Lineup position", State.LineupPositionText(slot));
+        var chemistry = State.ChemistryForSlot(slot);
+        if (chemistry is not null)
+        {
+            AddLine(panel, "Chemistry", $"{chemistry.Score.Grade} ({chemistry.Score.Value}, {chemistry.Score.ScoreBand})");
+            AddLine(panel, "Chemistry note", chemistry.Recommendation);
+        }
+
         AddLine(panel, "Current player", assignment?.PlayerName ?? "none");
         if (assignment is not null)
         {
@@ -2341,6 +2364,43 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Swap", () => ShowLineupSwapPopup(slot), assignment is not null, "No player assigned"),
             CreateDetailButton("View Dossier", () => OpenDossierFor(assignment!.PersonId), assignment is not null, "No player assigned"),
             CreateDetailButton("Auto-fill", () => State.AutoFillLineup()));
+        return panel;
+    }
+
+    private UIElement BuildLineChemistryDetail(string unitId)
+    {
+        var chemistry = State.LineChemistryUnit(unitId);
+        if (chemistry is null)
+        {
+            return EmptyDetail("Line Chemistry", "Select a line, pair, or goalie room to view chemistry.");
+        }
+
+        var panel = CreateDetailPanel(chemistry.Label, $"Chemistry: {chemistry.Score.Grade} ({chemistry.Score.Value}, {chemistry.Score.ScoreBand})");
+        AddLine(panel, "Players", chemistry.PlayerNames.Count == 0 ? "None assigned" : string.Join(", ", chemistry.PlayerNames));
+        AddLine(panel, "Coach recommendation", chemistry.Recommendation);
+        AddLine(panel, "Development note", chemistry.DevelopmentNote);
+        AddLine(panel, "Relationship note", chemistry.RelationshipNote);
+        AddLine(panel, "Role promise note", chemistry.RolePromiseNote);
+
+        AddSubHeader(panel, "Strengths");
+        foreach (var strength in chemistry.Strengths)
+        {
+            AddParagraph(panel, strength);
+        }
+
+        AddSubHeader(panel, "Weaknesses");
+        foreach (var weakness in chemistry.Weaknesses)
+        {
+            AddParagraph(panel, weakness);
+        }
+
+        AddSubHeader(panel, "Factors");
+        foreach (var factor in chemistry.Factors)
+        {
+            AddParagraph(panel, $"{factor.FactorType}: {factor.Modifier:+#;-#;0} - {factor.Summary}");
+        }
+
+        AddActions(panel, CreateDetailButton("Auto-fill", () => State.AutoFillLineup()));
         return panel;
     }
 
@@ -3924,17 +3984,25 @@ internal sealed class MainWindow : Window
     private string BuildLineup()
     {
         var lineup = State.CurrentLineup;
+        var chemistry = State.LineChemistryReport;
         var builder = new StringBuilder();
         builder.AppendLine("Lineup");
         builder.AppendLine("======");
         builder.AppendLine($"{lineup.OrganizationName} | created {lineup.CreatedOn:yyyy-MM-dd}");
         builder.AppendLine(lineup.Summary);
         builder.AppendLine();
+        builder.AppendLine("Team Chemistry");
+        builder.AppendLine($"Overall: {chemistry.Overall.Score.Grade} ({chemistry.Overall.Score.Value})");
+        builder.AppendLine($"Best unit: {chemistry.BestLine}");
+        builder.AppendLine($"Worst unit: {chemistry.WorstLine}");
+        builder.AppendLine($"Biggest concern: {chemistry.MajorConcerns.FirstOrDefault() ?? "No major chemistry concern."}");
+        builder.AppendLine();
         builder.AppendLine("Forward Lines");
         builder.AppendLine("Line slots: Line 1, Line 2, Line 3, Line 4");
         foreach (var line in lineup.ForwardLines.OrderBy(line => line.LineNumber))
         {
-            builder.AppendLine($"Line {line.LineNumber}:");
+            var lineChemistry = chemistry.ForwardLines.FirstOrDefault(unit => unit.UnitId == $"forward-line:{line.LineNumber}");
+            builder.AppendLine($"Line {line.LineNumber}: Chemistry {lineChemistry?.Score.Grade.ToString() ?? "Not evaluated"}");
             builder.AppendLine($"  LW {LineupPlayerText(line.LeftWing)}");
             builder.AppendLine($"  C  {LineupPlayerText(line.Center)}");
             builder.AppendLine($"  RW {LineupPlayerText(line.RightWing)}");
@@ -3945,13 +4013,15 @@ internal sealed class MainWindow : Window
         builder.AppendLine("Pair slots: Pair 1, Pair 2, Pair 3");
         foreach (var pair in lineup.DefensePairs.OrderBy(pair => pair.PairNumber))
         {
-            builder.AppendLine($"Pair {pair.PairNumber}:");
+            var pairChemistry = chemistry.DefensePairs.FirstOrDefault(unit => unit.UnitId == $"defense-pair:{pair.PairNumber}");
+            builder.AppendLine($"Pair {pair.PairNumber}: Chemistry {pairChemistry?.Score.Grade.ToString() ?? "Not evaluated"}");
             builder.AppendLine($"  LD {LineupPlayerText(pair.LeftDefense)}");
             builder.AppendLine($"  RD {LineupPlayerText(pair.RightDefense)}");
         }
 
         builder.AppendLine();
         builder.AppendLine("Goalies");
+        builder.AppendLine($"Goalie room chemistry: {chemistry.GoalieDepth.Score.Grade}");
         builder.AppendLine($"Starter: {LineupPlayerText(lineup.Goalies.Starter)}");
         builder.AppendLine($"Backup:  {LineupPlayerText(lineup.Goalies.Backup)}");
         builder.AppendLine();
@@ -6677,6 +6747,7 @@ internal sealed class AlphaDesktopState
     private readonly OwnerLifeCycleService _ownerLifeCycle = new();
     private readonly RelationshipExpansionService _relationships = new();
     private readonly LineupService _lineups = new();
+    private readonly LineChemistryService _lineChemistry = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6695,7 +6766,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry));
+        ScenarioSnapshot = _lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry)));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -8104,6 +8175,56 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public LineChemistryReport LineChemistryReport
+    {
+        get
+        {
+            if (ScenarioSnapshot.CurrentLineChemistry is not null)
+            {
+                return ScenarioSnapshot.CurrentLineChemistry;
+            }
+
+            var updated = _lineChemistry.EnsureChemistry(ScenarioSnapshot);
+            ScenarioSnapshot = updated;
+            Snapshot = updated.AlphaSnapshot;
+            return updated.CurrentLineChemistry!;
+        }
+    }
+
+    public LineChemistry? LineChemistryUnit(string unitId) =>
+        LineChemistryReport.Units.FirstOrDefault(unit => unit.UnitId == unitId);
+
+    public LineChemistry? ChemistryForSlot(LineupSlot slot)
+    {
+        var unitId = slot switch
+        {
+            LineupSlot.Line1LW or LineupSlot.Line1C or LineupSlot.Line1RW => "forward-line:1",
+            LineupSlot.Line2LW or LineupSlot.Line2C or LineupSlot.Line2RW => "forward-line:2",
+            LineupSlot.Line3LW or LineupSlot.Line3C or LineupSlot.Line3RW => "forward-line:3",
+            LineupSlot.Line4LW or LineupSlot.Line4C or LineupSlot.Line4RW => "forward-line:4",
+            LineupSlot.Pair1LD or LineupSlot.Pair1RD => "defense-pair:1",
+            LineupSlot.Pair2LD or LineupSlot.Pair2RD => "defense-pair:2",
+            LineupSlot.Pair3LD or LineupSlot.Pair3RD => "defense-pair:3",
+            LineupSlot.Starter or LineupSlot.Backup => "goalie-depth",
+            _ => string.Empty
+        };
+        return string.IsNullOrWhiteSpace(unitId) ? null : LineChemistryUnit(unitId);
+    }
+
+    public string ChemistryTextForSlot(LineupSlot slot)
+    {
+        var chemistry = ChemistryForSlot(slot);
+        return chemistry is null ? "Chemistry: Not evaluated" : $"Chemistry: {chemistry.Score.Grade} ({chemistry.Score.Value})";
+    }
+
+    public string LineChemistryTextForPerson(string personId)
+    {
+        var chemistry = _lineChemistry.FindChemistryForPerson(LineChemistryReport, personId);
+        return chemistry is null
+            ? "Line chemistry: Not in lineup"
+            : $"Line chemistry: {chemistry.Score.Grade} ({chemistry.Score.Value}) on {chemistry.Label}";
+    }
+
     public LineupRoleAssignment? LineupAssignment(string personId) =>
         CurrentLineup.Assignments.FirstOrDefault(assignment => assignment.PersonId == personId);
 
@@ -8223,8 +8344,8 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            ScenarioSnapshot = _lineChemistry.EnsureChemistry(result.ScenarioSnapshot);
+            Snapshot = ScenarioSnapshot.AlphaSnapshot;
             EnsureSelectedDossierStillExists();
         }
 

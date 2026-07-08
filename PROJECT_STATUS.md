@@ -101,26 +101,27 @@ The five foundation pillars remain:
 - Alpha 6.3 - Relationship Expansion v1
 - Alpha 6.4 - Roster V3 + Lineup Roles v1
 - Alpha 6.4 - Lineup & Role Management v1
+- Alpha 6.5 - Line Chemistry v1
 
 ## Current Milestone
 
-Alpha 6.4 - Lineup & Role Management v1
+Alpha 6.5 - Line Chemistry v1
 
 ## Current Goal
 
-Let the GM manage lineup slots directly while tracking current role, expected role, promised role, coach recommended role, potential role, role satisfaction, promise status, development usage context, and contract role-promise warnings without exposing hidden ratings or adding a tactics engine.
+Make line combinations matter by giving the GM explainable chemistry grades for forward lines, defense pairs, goalie depth, and the full team without exposing hidden ratings or adding a full tactics engine.
 
-## Why Lineup Management Was Next
+## Why Line Chemistry Was Next
 
-Roster V3 added hockey role language. The next step was making those roles actionable: the GM can now assign, remove, swap, and auto-fill lineup slots, see eligibility warnings instead of crashes, monitor role promises, and understand how usage affects morale, relationships, development context, and contract decisions before deeper tactical systems are built.
+Lineup Management made roles actionable. The next useful layer is helping the GM understand why a line works: player type blend, handedness, natural position fit, role pressure, age/experience mix, relationships, coach philosophy, morale/confidence, and role promises now feed small explainable chemistry modifiers.
 
 ## Next Build Target
 
-Alpha 6.5 - TBD
+Alpha 6.6 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.5 - TBD
+1. Alpha 6.6 - TBD
 
 ## Build Rule
 

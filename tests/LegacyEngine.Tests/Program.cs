@@ -79,6 +79,7 @@ var alpha62OwnerLifeCycleTests = new Alpha62OwnerLifeCycleTests();
 var alpha621TradesV3Tests = new Alpha621TradesV3Tests();
 var alpha63RelationshipExpansionTests = new Alpha63RelationshipExpansionTests();
 var alpha64RosterLineupTests = new Alpha64RosterLineupTests();
+var alpha65LineChemistryTests = new Alpha65LineChemistryTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1065,6 +1066,21 @@ runner.Run("alpha 6.4 save load preserves lineup state", alpha64RosterLineupTest
 runner.Run("alpha 6.4 trade team browser exposes lineup role", alpha64RosterLineupTests.TradeTeamBrowserExposesLineupRole);
 runner.Run("alpha 6.4 no hidden ratings exposed", alpha64RosterLineupTests.NoHiddenRatingsExposed);
 runner.Run("alpha 6.4 no full tactical simulation added", alpha64RosterLineupTests.NoFullTacticalSimulationAdded);
+runner.Run("alpha 6.5 forward line chemistry generated", alpha65LineChemistryTests.ForwardLineChemistryGenerated);
+runner.Run("alpha 6.5 defense pair chemistry generated", alpha65LineChemistryTests.DefensePairChemistryGenerated);
+runner.Run("alpha 6.5 goalie depth chemistry generated", alpha65LineChemistryTests.GoalieDepthChemistryGenerated);
+runner.Run("alpha 6.5 playmaker shooter power mix improves chemistry", alpha65LineChemistryTests.PlaymakerShooterPowerMixImprovesChemistry);
+runner.Run("alpha 6.5 duplicate player types can reduce chemistry", alpha65LineChemistryTests.DuplicatePlayerTypesCanReduceChemistry);
+runner.Run("alpha 6.5 left right defense balance improves chemistry", alpha65LineChemistryTests.LeftRightDefenseBalanceImprovesChemistry);
+runner.Run("alpha 6.5 veteran prospect pairing gives development note", alpha65LineChemistryTests.VeteranProspectPairingGivesDevelopmentNote);
+runner.Run("alpha 6.5 poor relationship reduces chemistry", alpha65LineChemistryTests.PoorRelationshipReducesChemistry);
+runner.Run("alpha 6.5 coach recommendation generated", alpha65LineChemistryTests.CoachRecommendationGenerated);
+runner.Run("alpha 6.5 team chemistry summary generated", alpha65LineChemistryTests.TeamChemistrySummaryGenerated);
+runner.Run("alpha 6.5 lineup UI exposes chemistry", alpha65LineChemistryTests.LineupUiExposesChemistry);
+runner.Run("alpha 6.5 player dossier exposes chemistry note", alpha65LineChemistryTests.PlayerDossierExposesChemistryNote);
+runner.Run("alpha 6.5 Action Center only creates major chemistry issues", alpha65LineChemistryTests.ActionCenterOnlyCreatesMajorChemistryIssues);
+runner.Run("alpha 6.5 no hidden ratings exposed", alpha65LineChemistryTests.NoHiddenRatingsExposed);
+runner.Run("alpha 6.5 no tactics engine added", alpha65LineChemistryTests.NoTacticsEngineAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

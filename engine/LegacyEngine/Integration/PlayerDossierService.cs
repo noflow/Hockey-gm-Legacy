@@ -266,6 +266,7 @@ public sealed class PlayerDossierService
         var promise = lineup?.RolePromises.FirstOrDefault(promise => promise.PersonId == personId);
         var expectation = lineup?.RoleExpectations.FirstOrDefault(expectation => expectation.PersonId == personId);
         var impact = new LineupService().BuildDevelopmentImpact(scenario, personId);
+        var chemistry = scenario.CurrentLineChemistry is null ? null : new LineChemistryService().FindChemistryForPerson(scenario.CurrentLineChemistry, personId);
         var lines = new List<string>
         {
             $"Current line/pair: {assignment?.SlotLabel ?? "Not in lineup"}",
@@ -274,6 +275,9 @@ public sealed class PlayerDossierService
             $"Expected role: {(expectation is null ? "Not established" : LineupDisplay.Role(expectation.ExpectedRole))}",
             $"Coach recommended role: {(expectation is null ? assignment is null ? "Not established" : LineupDisplay.Role(assignment.CurrentRole) : LineupDisplay.Role(expectation.CoachRecommendedRole))}",
             $"Potential role: {(assignment is null ? "Not established" : LineupDisplay.Role(assignment.PotentialRole))}",
+            $"Current line chemistry: {(chemistry is null ? "Not evaluated" : $"{chemistry.Score.Grade} ({chemistry.Score.Value}) on {chemistry.Label}")}",
+            $"Best known fit: {(chemistry is null ? "Placeholder - chemistry fit will improve with more games and scouting context." : chemistry.Recommendation)}",
+            $"Chemistry notes: {(chemistry is null ? "No chemistry note yet." : chemistry.DevelopmentNote)}",
             $"Role satisfaction: {usage?.Satisfaction.ToString() ?? "Neutral"}",
             $"Promise status: {promise?.Status.ToString() ?? "NotYetEvaluated"}",
             $"Development impact: {impact.Summary}",
