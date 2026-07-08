@@ -778,6 +778,8 @@ runner.Run("alpha 4.5 coach recommendations generated", alpha45PlayerDevelopment
 runner.Run("alpha 4.5 yearly review generated", alpha45PlayerDevelopmentV2Tests.YearlyReviewGenerated);
 runner.Run("alpha 4.5 player dossier includes development plan", alpha45PlayerDevelopmentV2Tests.PlayerDossierIncludesDevelopmentPlan);
 runner.Run("alpha 4.5 career timeline updated", alpha45PlayerDevelopmentV2Tests.CareerTimelineUpdated);
+runner.Run("alpha 4.5 development plan can be created for draft prospect", alpha45PlayerDevelopmentV2Tests.DevelopmentPlanCanBeCreatedForDraftProspect);
+runner.Run("alpha 4.5 yearly review can be created for draft prospect", alpha45PlayerDevelopmentV2Tests.YearlyReviewCanBeCreatedForDraftProspect);
 runner.Run("alpha 4.5 dashboard action center includes development", alpha45PlayerDevelopmentV2Tests.DashboardActionCenterIncludesDevelopment);
 runner.Run("alpha 4.5 AlphaDesktop exposes development v2 UI", alpha45PlayerDevelopmentV2Tests.AlphaDesktopExposesDevelopmentV2Ui);
 runner.Run("alpha 4.5 no hidden ratings Godot or game simulation changes", alpha45PlayerDevelopmentV2Tests.Alpha45HasNoHiddenRatingsGodotOrGameSimulationChanges);

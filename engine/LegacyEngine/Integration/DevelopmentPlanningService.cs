@@ -58,14 +58,15 @@ public sealed class DevelopmentPlanningService
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(scenario);
 
-        var plans = EnsurePlans(scenario).ToList();
+        var scenarioWithTargetProfile = EnsureScenarioPlanForPerson(scenario, personId);
+        var plans = EnsurePlans(scenarioWithTargetProfile).ToList();
         var existing = plans.FirstOrDefault(plan => plan.PersonId == personId)
             ?? throw new ArgumentException("Player development plan was not found.", nameof(personId));
         var updatedPlan = existing with
         {
             FocusAreas = NormalizeFocusAreas(focusAreas),
             IceTimeRole = role,
-            LastReviewed = scenario.CurrentDate,
+            LastReviewed = scenarioWithTargetProfile.CurrentDate,
             GmComment = string.IsNullOrWhiteSpace(gmComment) ? $"GM updated plan to {role}." : gmComment.Trim(),
             CoachComment = BuildCoachComment(focusAreas, role)
         };
@@ -73,7 +74,7 @@ public sealed class DevelopmentPlanningService
 
         var index = plans.FindIndex(plan => plan.PersonId == personId);
         plans[index] = updatedPlan;
-        var updatedScenario = scenario with { DevelopmentPlans = plans };
+        var updatedScenario = scenarioWithTargetProfile with { DevelopmentPlans = plans };
         var progress = BuildProgress(updatedScenario, updatedPlan, DevelopmentOutcomeType.Progress, 0, Array.Empty<DevelopmentUpdate>());
         var recommendation = BuildRecommendation(updatedScenario, updatedPlan, progress);
         var inbox = CreateInboxItem(updatedScenario, progress, recommendation, "Development plan updated");
@@ -121,7 +122,7 @@ public sealed class DevelopmentPlanningService
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(scenario);
 
-        var scenarioWithPlans = EnsureScenarioPlans(scenario);
+        var scenarioWithPlans = EnsureScenarioPlanForPerson(scenario, personId);
         var plan = scenarioWithPlans.DevelopmentPlans.FirstOrDefault(item => item.PersonId == personId)
             ?? throw new ArgumentException("Development plan was not found.", nameof(personId));
         var profile = scenarioWithPlans.AlphaSnapshot.DevelopmentProfiles.FirstOrDefault(item => item.PersonId == personId)
@@ -203,7 +204,7 @@ public sealed class DevelopmentPlanningService
     public DevelopmentReview GenerateYearlyReview(NewGmScenarioSnapshot scenario, string personId)
     {
         ArgumentNullException.ThrowIfNull(scenario);
-        var scenarioWithPlans = EnsureScenarioPlans(scenario);
+        var scenarioWithPlans = EnsureScenarioPlanForPerson(scenario, personId);
         var person = FindPerson(scenarioWithPlans, personId)
             ?? throw new ArgumentException("Player was not found for development review.", nameof(personId));
         var plan = scenarioWithPlans.DevelopmentPlans.First(plan => plan.PersonId == personId);
@@ -309,6 +310,94 @@ public sealed class DevelopmentPlanningService
             GmComment: string.Empty);
         plan.Validate();
         return plan;
+    }
+
+    private NewGmScenarioSnapshot EnsureScenarioPlanForPerson(NewGmScenarioSnapshot scenario, string personId)
+    {
+        if (string.IsNullOrWhiteSpace(personId))
+        {
+            throw new ArgumentException("Person id is required.", nameof(personId));
+        }
+
+        var profileExists = scenario.AlphaSnapshot.DevelopmentProfiles.Any(profile => profile.PersonId == personId);
+        if (profileExists)
+        {
+            return EnsureScenarioPlans(scenario);
+        }
+
+        var person = FindPerson(scenario, personId)
+            ?? throw new ArgumentException("Player was not found for development planning.", nameof(personId));
+        var age = person.CalculateAge(scenario.CurrentDate);
+        var seed = StableHash(personId);
+        var profile = CreateGeneratedProfile(personId, age, seed, scenario.CurrentDate);
+        var alpha = scenario.AlphaSnapshot with
+        {
+            DevelopmentProfiles = scenario.AlphaSnapshot.DevelopmentProfiles
+                .Append(profile)
+                .ToArray()
+        };
+        return EnsureScenarioPlans(scenario with { AlphaSnapshot = alpha });
+    }
+
+    private static PlayerDevelopmentProfile CreateGeneratedProfile(string personId, int age, int seed, DateOnly currentDate)
+    {
+        var stage = age switch
+        {
+            <= 17 => DevelopmentStage.Prospect,
+            <= 20 => DevelopmentStage.Junior,
+            <= 24 => DevelopmentStage.YoungPro,
+            <= 28 => DevelopmentStage.Prime,
+            <= 32 => DevelopmentStage.Veteran,
+            _ => DevelopmentStage.Declining
+        };
+        var currentAbility = stage switch
+        {
+            DevelopmentStage.Prospect => 34 + seed % 10,
+            DevelopmentStage.Junior => 38 + seed % 12,
+            DevelopmentStage.YoungPro => 44 + seed % 14,
+            DevelopmentStage.Prime => 52 + seed % 16,
+            DevelopmentStage.Veteran => 50 + seed % 15,
+            _ => 44 + seed % 12
+        };
+        var potential = Math.Clamp(currentAbility + 12 + seed % 18, currentAbility, 100);
+        var profile = new PlayerDevelopmentProfile(
+            personId,
+            currentAbility,
+            potential,
+            stage,
+            GeneratedTraits(seed),
+            currentDate);
+        profile.Validate();
+        return profile;
+    }
+
+    private static IReadOnlyList<DevelopmentTrait> GeneratedTraits(int seed) =>
+        Enum.GetValues<DevelopmentAttribute>()
+            .Select((attribute, index) =>
+            {
+                var value = attribute switch
+                {
+                    DevelopmentAttribute.WorkEthic => 56 + ((seed + index * 7) % 18),
+                    DevelopmentAttribute.Coachability => 54 + ((seed + index * 5) % 18),
+                    DevelopmentAttribute.Confidence => 50 + ((seed + index * 3) % 16),
+                    _ => 47 + ((seed + index * 11) % 22)
+                };
+                return new DevelopmentTrait(attribute, Math.Clamp(value, 0, 100));
+            })
+            .ToArray();
+
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            var hash = 23;
+            foreach (var character in value)
+            {
+                hash = hash * 31 + character;
+            }
+
+            return hash == int.MinValue ? int.MaxValue : Math.Abs(hash);
+        }
     }
 
     private static IReadOnlyList<DevelopmentPlanFocus> DefaultFocus(PlayerDevelopmentProfile profile, NewGmScenarioSnapshot scenario, int index)

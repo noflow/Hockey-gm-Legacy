@@ -119,6 +119,31 @@ internal sealed class Alpha45PlayerDevelopmentV2Tests
         Assert.True(result.ScenarioSnapshot.CareerTimeline.ForPerson(personId).Any(entry => entry.Title.Contains("Development plan", StringComparison.OrdinalIgnoreCase)), "Development changes should create career timeline context.");
     }
 
+    public void DevelopmentPlanCanBeCreatedForDraftProspect()
+    {
+        var seed = NewGmScenarioBootstrapper.CreateScenario();
+        var service = new DevelopmentPlanningService();
+        var personId = seed.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries.First().ProspectPersonId;
+
+        var result = service.SetPlan(seed.Registry, seed.ScenarioSnapshot, personId, new[] { DevelopmentPlanFocus.Skating }, DevelopmentIceTimeRole.JuniorReturn, "Prospect plan test.");
+
+        Assert.True(result.ScenarioSnapshot.AlphaSnapshot.DevelopmentProfiles.Any(profile => profile.PersonId == personId), "Setting a prospect plan should create a development profile.");
+        Assert.True(result.ScenarioSnapshot.DevelopmentPlans.Any(plan => plan.PersonId == personId), "Setting a prospect plan should create a development plan.");
+        Assert.True(result.ScenarioSnapshot.CareerTimeline.ForPerson(personId).Any(entry => entry.Title.Contains("Development plan", StringComparison.OrdinalIgnoreCase)), "Prospect plan changes should create timeline context.");
+    }
+
+    public void YearlyReviewCanBeCreatedForDraftProspect()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario().ScenarioSnapshot;
+        var personId = scenario.AlphaSnapshot.DraftBoard.Entries.First().ProspectPersonId;
+
+        var review = new DevelopmentPlanningService().GenerateYearlyReview(scenario, personId);
+
+        Assert.Equal(personId, review.PersonId);
+        Assert.True(review.ImprovedThemes.Count > 0, "Prospect yearly review should include development themes.");
+        Assert.True(!string.IsNullOrWhiteSpace(review.FutureProjection), "Prospect yearly review should include a future projection.");
+    }
+
     public void DashboardActionCenterIncludesDevelopment()
     {
         var seed = NewGmScenarioBootstrapper.CreateScenario();
