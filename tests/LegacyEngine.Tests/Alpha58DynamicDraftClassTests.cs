@@ -51,7 +51,11 @@ internal sealed class Alpha58DynamicDraftClassTests
         var entries = created.ScenarioSnapshot.AlphaSnapshot.DraftBoard.Entries;
 
         Assert.Equal(7, created.ScenarioSnapshot.LeagueProfile.Rulebook.DraftRules!.Rounds);
-        Assert.True(entries.All(entry => created.ScenarioSnapshot.AlphaSnapshot.People.First(person => person.PersonId == entry.ProspectPersonId).CalculateAge(created.ScenarioSnapshot.CurrentDate) is 17 or 18), "NHL-style draft class should mostly use 17-18 year olds.");
+        var ages = entries
+            .Select(entry => created.ScenarioSnapshot.AlphaSnapshot.People.First(person => person.PersonId == entry.ProspectPersonId).CalculateAge(created.ScenarioSnapshot.CurrentDate))
+            .ToArray();
+        Assert.True(ages.All(age => age is >= 17 and <= 20), "NHL-style draft class should use 17-20 year olds.");
+        Assert.True(ages.Count(age => age is 18 or 19) > ages.Count(age => age is 17 or 20), "NHL-style draft class should mostly use 18-19 year olds.");
         Assert.True(entries.Any(entry => entry.Bio?.Country is not "Canada"), "NHL-style draft class should include broader geography.");
     }
 

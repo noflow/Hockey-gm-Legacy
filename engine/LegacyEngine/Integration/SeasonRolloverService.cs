@@ -263,9 +263,25 @@ public sealed class SeasonRolloverService
     private static int DraftBirthYearFor(int seasonYear, Rulebook rulebook, int index)
     {
         var age = rulebook.LeagueType == "nhl_style"
-            ? 17 + (index % 2)
+            ? NhlDraftAgeFor(index)
             : 16 + (index % 2);
         return seasonYear - age;
+    }
+
+    private static int NhlDraftAgeFor(int index)
+    {
+        var slot = index % 20;
+        if (slot == 0)
+        {
+            return 17;
+        }
+
+        if (slot <= 8)
+        {
+            return 18;
+        }
+
+        return slot <= 17 ? 19 : 20;
     }
 
     private static string DraftClassSummary(DraftBoard board)

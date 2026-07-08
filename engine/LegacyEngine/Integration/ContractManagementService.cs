@@ -278,13 +278,18 @@ public sealed class ContractManagementService
         var prospect = scenario.ProspectRights.FirstOrDefault(record => record.ProspectPersonId == personId)
             ?? throw new ArgumentException("Prospect was not found.", nameof(personId));
         var confidence = prospect.ScoutingConfidence?.ToString() ?? "Low";
-        var requested = 1_200m + Math.Max(0, 4 - prospect.RoundNumber) * 200m;
+        var requested = scenario.LeagueProfile.Experience == LeagueExperience.Nhl
+            ? NhlEntryLevelAsk(prospect)
+            : 1_200m + Math.Max(0, 4 - prospect.RoundNumber) * 200m;
+        var termYears = scenario.LeagueProfile.Experience == LeagueExperience.Nhl
+            ? NhlEntryLevelTerm(prospect.Age)
+            : 1;
         return new ContractAsk(
             prospect.ProspectPersonId,
             prospect.ProspectName,
             ContractAskType.Prospect,
             requested,
-            1,
+            termYears,
             RoleFor(prospect.Position),
             StandardPreference(60 + Math.Max(0, 4 - prospect.RoundNumber) * 5, role: 65, development: 85),
             $"Draft rights held; round {prospect.RoundNumber}, pick {prospect.PickNumber}.",
@@ -295,6 +300,30 @@ public sealed class ContractManagementService
             "Wants a believable development path, camp clarity, and a role that matches his age.",
             $"Scout confidence {confidence}; {prospect.ProjectionText}");
     }
+
+    private static decimal NhlEntryLevelAsk(DraftRightsRecord prospect)
+    {
+        var baseSalary = prospect.RoundNumber switch
+        {
+            1 when prospect.PickNumber <= 10 => 950_000m,
+            1 => 925_000m,
+            2 => 875_000m,
+            3 => 825_000m,
+            4 => 775_000m,
+            _ => 725_000m
+        };
+        return prospect.ScoutingConfidence >= ScoutingConfidenceLevel.High
+            ? baseSalary + 25_000m
+            : baseSalary;
+    }
+
+    private static int NhlEntryLevelTerm(int age) =>
+        age switch
+        {
+            <= 21 => 3,
+            22 or 23 => 2,
+            _ => 1
+        };
 
     private static ContractAsk BuildRecruitAsk(NewGmScenarioSnapshot scenario, string personId, BudgetSnapshot budget)
     {

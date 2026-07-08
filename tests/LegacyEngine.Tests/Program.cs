@@ -72,6 +72,7 @@ var alpha56SalaryCapRosterComplianceTests = new Alpha56SalaryCapRosterCompliance
 var alpha57AgentEngineTests = new Alpha57AgentEngineTests();
 var alpha58DynamicDraftClassTests = new Alpha58DynamicDraftClassTests();
 var alpha59LeagueAiV2Tests = new Alpha59LeagueAiV2Tests();
+var nhlScenarioRealismTests = new NhlScenarioRealismTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -952,6 +953,12 @@ runner.Run("alpha 5.9 AlphaDesktop exposes AI strategy and team needs", alpha59L
 runner.Run("alpha 5.9 trade evaluation includes strategy and needs", alpha59LeagueAiV2Tests.TradeEvaluationIncludesStrategyNeedExplanation);
 runner.Run("alpha 5.9 save load preserves AI profiles", alpha59LeagueAiV2Tests.SaveLoadPreservesAiProfiles);
 runner.Run("alpha 5.9 no hidden ratings or forbidden systems added", alpha59LeagueAiV2Tests.NoHiddenRatingsOrForbiddenSystemsAdded);
+runner.Run("NHL realism dashboard View All Actions opens Action Center", nhlScenarioRealismTests.DashboardViewAllActionsTargetsActionCenter);
+runner.Run("NHL realism roster has veterans and young players", nhlScenarioRealismTests.NhlRosterHasVeteransAndYoungPlayers);
+runner.Run("NHL realism scenario starts with prospects", nhlScenarioRealismTests.NhlScenarioStartsWithProspects);
+runner.Run("NHL realism draft ages are 17-20 weighted to 18-19", nhlScenarioRealismTests.NhlDraftAgeDistributionUsesSeventeenToTwenty);
+runner.Run("NHL realism roster contracts use professional scale", nhlScenarioRealismTests.NhlRosterContractsUseProfessionalScale);
+runner.Run("NHL realism prospect ask uses entry-level scale", nhlScenarioRealismTests.NhlProspectAskUsesEntryLevelScale);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

@@ -71,12 +71,14 @@ public sealed class NewGmScenarioBootstrapper
         var regionalScoutPerson = CreatePerson("person-scout-west", regionalScoutName.FirstName, regionalScoutName.LastName, Gender.Male, new DateOnly(1982, 9, 8), regionalScoutName.Nationality, regionalScoutName.Birthplace, 44, 39, 8)
             .AddRole(new PersonRole("role-regional-scout", PersonRoleType.Scout, scenarioSettings.OrganizationId, new DateOnly(2025, 8, 1), null, "Regional Scout"));
 
-        var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
+        var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
+        var existingProspectPeople = CreateExistingProspectPeople(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
         var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, activeRulebook);
         var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var tradeBlockPeople = TradeService.CreateTradeBlockPeople(startDate, scenarioSettings.SeasonYear, nameGenerator, nameRegistry);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
             .Concat(rosterPlayers)
+            .Concat(existingProspectPeople)
             .Concat(recruits)
             .Concat(freeAgentPeople)
             .Concat(tradeBlockPeople)
@@ -102,7 +104,7 @@ public sealed class NewGmScenarioBootstrapper
 
         var organization = CreateOrganization(registry, scenarioSettings, ownerPerson.PersonId, startDate);
         var staffContracts = CreateContracts(registry, scenarioSettings.OrganizationId, startDate, activeRulebook, scenarioSettings.SeasonSettings, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson);
-        var playerContracts = CreateRosterPlayerContracts(registry, scenarioSettings.OrganizationId, startDate, scenarioSettings.SeasonSettings, rosterPlayers);
+        var playerContracts = CreateRosterPlayerContracts(registry, scenarioSettings.OrganizationId, startDate, scenarioSettings.SeasonSettings, rosterPlayers, leagueProfile.Experience);
         var contracts = staffContracts.Concat(playerContracts).ToArray();
         var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, staffContracts);
         var roster = CreateRoster(registry, scenarioSettings, rosterPlayers, startDate);
@@ -189,7 +191,8 @@ public sealed class NewGmScenarioBootstrapper
             ScenarioSummary: ScenarioSummaryFor(leagueProfile, gmProfile.PreferredName, organization.Name))
         {
             CompletedScoutingReports = inheritedScoutingReports,
-            CurrentDraftClassProfile = draftClassProfile
+            CurrentDraftClassProfile = draftClassProfile,
+            ProspectRights = CreateExistingProspectRights(existingProspectPeople, startDate, leagueProfile.Experience)
         };
         var history = new ExistingWorldHistoryService().CreateHistory(scenarioSnapshot);
         var freeAgentMarket = new FreeAgentMarketService().GenerateMarket(scenarioSnapshot, freeAgentPeople);
@@ -372,13 +375,23 @@ public sealed class NewGmScenarioBootstrapper
         string organizationId,
         DateOnly startDate,
         SeasonSettings seasonSettings,
-        IReadOnlyList<Person> rosterPlayers)
+        IReadOnlyList<Person> rosterPlayers,
+        LeagueExperience experience)
     {
         var contracts = new List<Contract>();
         for (var index = 0; index < rosterPlayers.Count; index++)
         {
             var player = rosterPlayers[index];
-            var termYears = index switch
+            var termYears = experience == LeagueExperience.Nhl
+                ? index switch
+                {
+                    < 4 => 1,
+                    < 9 => 2,
+                    < 15 => 3,
+                    < 20 => 4,
+                    _ => 6
+                }
+                : index switch
             {
                 < 8 => 1,
                 < 14 => 2,
@@ -386,18 +399,21 @@ public sealed class NewGmScenarioBootstrapper
             };
             var offeredOn = startDate.AddMonths(-10).AddDays(index % 20);
             var term = ContractExpiryCalendar.TermForYears(offeredOn, seasonSettings, termYears);
+            var salary = experience == LeagueExperience.Nhl
+                ? NhlRosterSalaryFor(index)
+                : 1_200m + (index % 6 * 150m);
             var offered = registry.ContractEngine.CreateOffer(new ContractOffer(
                 OfferId: $"inherited-player-contract-{index + 1:00}",
                 PersonId: player.PersonId,
                 OrganizationId: organizationId,
                 ContractType: ContractType.JuniorPlayerAgreement,
                 Term: term,
-                Money: new ContractMoney(SalaryOrStipend: 1_200m + (index % 6 * 150m), Currency: "CAD"),
+                Money: new ContractMoney(SalaryOrStipend: salary, Currency: "CAD"),
                 Clauses: index % 4 == 0
                     ? new[] { new ContractClause("education-support", ContractClauseType.EducationPackage, "Existing education support from prior management.") }
                     : Array.Empty<ContractClause>(),
                 OfferedOn: offeredOn,
-                Notes: "Inherited junior player agreement from previous management."));
+                Notes: experience == LeagueExperience.Nhl ? "Inherited NHL roster contract from previous management." : "Inherited junior player agreement from previous management."));
             var signed = registry.ContractEngine.SignContract(offered, offeredOn.AddDays(1)).Contract;
             contracts.Add(term.EndDate < startDate ? signed.Expire(startDate) : signed);
         }
@@ -720,7 +736,8 @@ public sealed class NewGmScenarioBootstrapper
         string organizationId,
         NameGenerator nameGenerator,
         NameUniquenessRegistry nameRegistry,
-        int seasonYear)
+        int seasonYear,
+        LeagueExperience experience)
     {
         return Enumerable.Range(0, 26)
             .Select(index =>
@@ -730,7 +747,7 @@ public sealed class NewGmScenarioBootstrapper
                 $"person-roster-{index + 1:000}",
                     name.FirstName,
                     name.LastName,
-                    RosterBirthDateFor(index),
+                    RosterBirthDateFor(startDate, index, experience),
                     name.Nationality,
                     name.Birthplace,
                 organizationId,
@@ -739,8 +756,36 @@ public sealed class NewGmScenarioBootstrapper
             .ToArray();
     }
 
-    private static DateOnly RosterBirthDateFor(int index)
+    private static DateOnly RosterBirthDateFor(DateOnly startDate, int index, LeagueExperience experience)
     {
+        if (experience == LeagueExperience.Nhl)
+        {
+            var age = index switch
+            {
+                0 => 36,
+                1 => 34,
+                2 => 32,
+                3 => 30,
+                >= 4 and < 10 => 27 + (index % 4),
+                >= 10 and < 18 => 23 + (index % 4),
+                >= 18 and < 23 => 21 + (index % 3),
+                _ => 18 + (index % 3)
+            };
+            return startDate.AddYears(-age).AddDays(-(index * 29 + 11));
+        }
+
+        if (experience == LeagueExperience.Ahl)
+        {
+            var age = index switch
+            {
+                < 4 => 31 - index,
+                < 11 => 24 + (index % 5),
+                < 19 => 21 + (index % 4),
+                _ => 19 + (index % 3)
+            };
+            return startDate.AddYears(-age).AddDays(-(index * 23 + 9));
+        }
+
         if (index < 3)
         {
             return new DateOnly(2005, (index % 3) + 1, Math.Min(24, (index % 27) + 1));
@@ -759,6 +804,99 @@ public sealed class NewGmScenarioBootstrapper
         };
 
         return new DateOnly(birthYear, (index % 12) + 1, Math.Min(24, (index % 27) + 1));
+    }
+
+    private static decimal NhlRosterSalaryFor(int index) =>
+        index switch
+        {
+            0 => 7_250_000m,
+            1 => 5_750_000m,
+            2 => 4_600_000m,
+            3 => 3_800_000m,
+            >= 4 and < 10 => 2_650_000m + (index % 4) * 275_000m,
+            >= 10 and < 18 => 1_250_000m + (index % 5) * 175_000m,
+            _ => 875_000m + (index % 4) * 75_000m
+        };
+
+    private static IReadOnlyList<Person> CreateExistingProspectPeople(
+        DateOnly startDate,
+        string organizationId,
+        NameGenerator nameGenerator,
+        NameUniquenessRegistry nameRegistry,
+        int seasonYear,
+        LeagueExperience experience)
+    {
+        if (experience != LeagueExperience.Nhl)
+        {
+            return Array.Empty<Person>();
+        }
+
+        return Enumerable.Range(0, 12)
+            .Select(index =>
+            {
+                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "existing-prospects"), PlayerOrigins());
+                var age = index switch
+                {
+                    < 2 => 19,
+                    < 8 => 20,
+                    _ => 21
+                };
+                return CreatePlayer(
+                    $"person-existing-prospect-{index + 1:000}",
+                    name.FirstName,
+                    name.LastName,
+                    startDate.AddYears(-age).AddDays(-(index * 37 + 13)),
+                    name.Nationality,
+                    name.Birthplace,
+                    organizationId,
+                    startDate);
+            })
+            .ToArray();
+    }
+
+    private static IReadOnlyList<DraftRightsRecord> CreateExistingProspectRights(
+        IReadOnlyList<Person> prospectPeople,
+        DateOnly startDate,
+        LeagueExperience experience)
+    {
+        if (experience != LeagueExperience.Nhl || prospectPeople.Count == 0)
+        {
+            return Array.Empty<DraftRightsRecord>();
+        }
+
+        return prospectPeople
+            .Select((person, index) =>
+            {
+                var position = PositionFor(index + 8);
+                var age = person.CalculateAge(startDate);
+                return new DraftRightsRecord(
+                    person.PersonId,
+                    person.Identity.DisplayName,
+                    age,
+                    position,
+                    RoundNumber: index switch
+                    {
+                        < 2 => 1,
+                        < 5 => 2,
+                        < 8 => 3,
+                        _ => 5
+                    },
+                    PickNumber: 12 + index * 7,
+                    ProspectStatus.DraftRightsHeld,
+                    ProjectionText: position switch
+                    {
+                        RosterPosition.Goalie => "Existing drafted goalie prospect with AHL development runway.",
+                        RosterPosition.Defense => "Existing drafted defense prospect with call-up potential.",
+                        _ => "Existing drafted forward prospect with middle-line upside."
+                    },
+                    ScoutingConfidenceLevel.Medium,
+                    "Inherited prospect from previous management.",
+                    age <= 19 ? PlayerDevelopmentLevel.Junior : PlayerDevelopmentLevel.Ahl,
+                    CurrentTeam: age <= 19 ? "Junior rights club" : "AHL affiliate",
+                    CurrentLeague: age <= 19 ? "CHL / Junior" : "AHL",
+                    IsChlProtected: age <= 19);
+            })
+            .ToArray();
     }
 
     private static IReadOnlyList<Person> CreateRecruitPeople(
@@ -788,18 +926,42 @@ public sealed class NewGmScenarioBootstrapper
 
     private static int DraftBirthYearFor(int seasonYear, Rulebook rulebook, int index)
     {
-        var age = rulebook.LeagueType == "nhl_style"
-            ? 17 + (index % 2)
-            : 16 + (index % 2);
+        var age = DraftAgeFor(rulebook, index);
         return seasonYear - age;
     }
 
     private static DateOnly DraftBirthDateFor(DateOnly startDate, Rulebook rulebook, int index)
     {
-        var age = rulebook.LeagueType == "nhl_style"
-            ? 17 + (index % 2)
+        var desiredAge = rulebook.LeagueType == "nhl_style"
+            ? NhlDraftAgeFor(index)
             : 16 + (index % 2);
-        return startDate.AddYears(-age).AddDays(-(index % 90));
+        return startDate.AddYears(-desiredAge).AddDays(-(index % 90));
+    }
+
+    private static int DraftAgeFor(Rulebook rulebook, int index)
+    {
+        if (rulebook.LeagueType == "nhl_style")
+        {
+            return NhlDraftAgeFor(index);
+        }
+
+        return 16 + (index % 2);
+    }
+
+    private static int NhlDraftAgeFor(int index)
+    {
+        var slot = index % 20;
+        if (slot == 0)
+        {
+            return 17;
+        }
+
+        if (slot <= 8)
+        {
+            return 18;
+        }
+
+        return slot <= 17 ? 19 : 20;
     }
 
     private static IReadOnlyList<Person> CreateFreeAgentPeople(

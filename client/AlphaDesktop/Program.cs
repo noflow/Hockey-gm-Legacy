@@ -44,6 +44,7 @@ internal sealed class MainWindow : Window
     private readonly TextBlock _processedText = new();
     private readonly Dictionary<string, TextBox> _tabs = [];
     private readonly Dictionary<string, TabItem> _tabItems = [];
+    private readonly Dictionary<string, ListBox> _workspaceNavigations = [];
     private readonly Dictionary<string, ListBox> _selectableLists = [];
     private readonly Dictionary<string, StackPanel> _selectableDetails = [];
     private readonly Dictionary<string, string> _selectedPeopleByTab = [];
@@ -470,6 +471,7 @@ internal sealed class MainWindow : Window
 
         _tabs.Clear();
         _tabItems.Clear();
+        _workspaceNavigations.Clear();
         _selectableLists.Clear();
         _selectableDetails.Clear();
 
@@ -876,6 +878,7 @@ internal sealed class MainWindow : Window
             Content = root
         };
         _tabItems[title] = tab;
+        _workspaceNavigations[title] = navigation;
         tabs.Items.Add(tab);
     }
 
@@ -1718,7 +1721,7 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Advance to Month End", AdvanceToMonthEnd),
             CreateDetailButton("Review Inbox", () => SelectTab("Inbox")),
             CreateDetailButton("Review Draft Board", () => SelectTab("Hockey Operations")),
-            CreateDetailButton("Review Pending Actions", () => SelectTab("Dashboard")));
+            CreateDetailButton("Review Pending Actions", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")));
         Grid.SetColumn(actionsCard, 0);
         lower.Children.Add(actionsCard);
 
@@ -1779,7 +1782,7 @@ internal sealed class MainWindow : Window
         {
             AddLine(urgent, item.Category.ToString(), $"{item.Title} - {item.RecommendedAction}");
         }
-        AddActions(urgent, CreateDetailButton("View All Actions", () => SelectTab("Dashboard")));
+        AddActions(urgent, CreateDetailButton("View All Actions", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")));
         Grid.SetColumn(urgentCard, 1);
         workflow.Children.Add(urgentCard);
 
@@ -1899,6 +1902,24 @@ internal sealed class MainWindow : Window
         if (_mainTabs is not null && _tabItems.TryGetValue(title, out var item))
         {
             _mainTabs.SelectedItem = item;
+        }
+    }
+
+    private void SelectWorkspaceScreen(string title, string screenLabel)
+    {
+        SelectTab(title);
+        if (!_workspaceNavigations.TryGetValue(title, out var navigation))
+        {
+            return;
+        }
+
+        foreach (var item in navigation.Items.OfType<ListBoxItem>())
+        {
+            if (string.Equals(item.Content?.ToString(), screenLabel, StringComparison.Ordinal))
+            {
+                navigation.SelectedItem = item;
+                break;
+            }
         }
     }
 
