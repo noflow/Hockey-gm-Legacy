@@ -175,7 +175,7 @@ internal sealed class Alpha31FreeAgentMarketTests
         var text = string.Join("\n", integrationFiles.Select(File.ReadAllText));
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 3.1 should not add Godot dependency.");
-        Assert.False(text.Contains("AgentNegotiation", StringComparison.Ordinal), "Alpha 3.1 should not add full agent negotiation.");
+        Assert.False(text.Contains("ConversationTree", StringComparison.Ordinal), "Free agency should not add a full conversation tree.");
     }
 
     private static string FindRepositoryRoot()

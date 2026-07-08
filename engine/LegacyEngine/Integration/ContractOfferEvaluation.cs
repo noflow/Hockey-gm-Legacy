@@ -26,6 +26,31 @@ public sealed record ContractOfferEvaluation(
 
     public string CapWarning { get; init; } = "Salary cap not enabled for this rulebook.";
 
+    public AgentNegotiationReview? AgentReview { get; init; }
+
+    public string AgentName => AgentReview?.AgentName ?? "No agent";
+
+    public string AgentOpinion => AgentReview?.Opinion ?? "No agent review was attached.";
+
+    public string AgentBiggestConcern => AgentReview?.BiggestConcern ?? "No agent concern was attached.";
+
+    public string AgentRequestedImprovement => AgentReview?.RequestedImprovement ?? "No agent requested improvement was attached.";
+
+    public string AgentRisk => AgentReview?.Risk ?? RiskWarning;
+
+    public string AgentCounterSuggestion => AgentReview?.CounterSuggestion ?? "No agent counter suggestion was attached.";
+
+    public AgentNegotiationStyle AgentNegotiationStyle => AgentReview?.NegotiationStyle ?? AgentNegotiationStyle.Collaborative;
+
+    public int AgentLikelihood => AgentReview?.Likelihood ?? Likelihood switch
+    {
+        ContractLikelihood.VeryLikely => 90,
+        ContractLikelihood.Likely => 75,
+        ContractLikelihood.Possible => 55,
+        ContractLikelihood.Unlikely => 35,
+        _ => 20
+    };
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(EvaluationId) || string.IsNullOrWhiteSpace(RiskWarning) || string.IsNullOrWhiteSpace(CapWarning))
@@ -38,6 +63,7 @@ public sealed record ContractOfferEvaluation(
         Term.Validate();
         Explanation.Validate();
         Comparison.Validate();
+        AgentReview?.Validate();
         if (TotalCost < 0 || AnnualCost < 0 || CapHit < 0 || CapRemainingBefore < 0 || CapRemainingAfter < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(TotalCost), "Contract offer costs cannot be negative.");

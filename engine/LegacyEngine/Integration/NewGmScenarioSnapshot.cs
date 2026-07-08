@@ -116,6 +116,12 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<DevelopmentRecommendation> DevelopmentRecommendations { get; init; } = Array.Empty<DevelopmentRecommendation>();
 
+    public IReadOnlyList<Agent> Agents { get; init; } = Array.Empty<Agent>();
+
+    public IReadOnlyList<AgentRepresentationRecord> AgentRepresentations { get; init; } = Array.Empty<AgentRepresentationRecord>();
+
+    public IReadOnlyList<AgentHistoryRecord> AgentHistory { get; init; } = Array.Empty<AgentHistoryRecord>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -323,6 +329,21 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var recommendation in DevelopmentRecommendations)
         {
             recommendation.Validate();
+        }
+
+        foreach (var agent in Agents)
+        {
+            agent.Validate();
+        }
+
+        foreach (var representation in AgentRepresentations)
+        {
+            representation.Validate();
+        }
+
+        foreach (var history in AgentHistory)
+        {
+            history.Validate();
         }
     }
 }

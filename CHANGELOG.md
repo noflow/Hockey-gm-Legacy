@@ -1,32 +1,28 @@
 # Changelog
 
-## Current - Alpha 5.6
+## Current - Alpha 5.7
 
 ### Added
 
-- Salary Cap & Roster Compliance v1 for professional-style rulebooks.
-- Salary cap models and service: profile, status, snapshot, cap space, contract commitment, calculation, and service.
-- Rulebook-driven cap settings for enabled/disabled state, cap amount, floor, roster limit, contract limit, retained-salary placeholder, and offseason placeholder.
-- Dashboard salary-cap card for professional leagues.
-- Budget workspace split between operating budget and salary cap / current contracts.
-- Free agency cap preview showing current cap, cap after signing, remaining space, and warnings.
-- Trade builder cap preview with before/after cap impact and green/red indicator text.
-- Salary cap checks for free-agent offers, contract approvals, trade validation, and opening roster compliance.
+- Agent Engine v1 with agents, agent profiles, personalities, negotiation styles, reputation, relationships, client lists, and history.
+- Player representation records with representation type, start date, agent id where applicable, and representation history.
+- Agent negotiation reviews for contract and free-agency offers, including opinion, likelihood, biggest concern, requested improvement, risk, and counter suggestion.
+- Agent / Representation section in player dossiers.
+- AlphaDesktop agent readouts for Agent Card, client, relationship, negotiation style, agent comments, history, Improve Offer, Compare, and View Agent.
+- Tests covering generated agents, player assignments, relationships, negotiation style effects, free agency, dossiers, history, inbox wording, and UI exposure.
 
 ### Changed
 
-- NHL-style and AHL-style presets now enable salary cap rules by default.
-- Junior-style leagues keep operating-budget behavior and do not enable the salary cap.
-- AHL affiliate rulebooks preserve salary-cap settings when parent/affiliate IDs are applied.
-- Contract offer evaluation now includes cap hit, remaining cap before/after, and cap warnings.
-- Pending contract approval now fails cleanly if approving would break cap rules.
-- Older compatibility tests updated so Alpha 5.6 can intentionally add salary cap while still blocking full waiver systems.
-- AlphaDesktop version label updated to Alpha 5.6.
+- Contract offer responses now come from agents or advisors instead of generic player-facing messages.
+- Free agency offer messages now identify the agent/advisor and preserve the agent review in offer state.
+- Scenario bootstrap now seeds agents and representation records for roster players, prospects, recruits, and free agents.
+- Older compatibility tests now block conversation trees, arbitration, offer sheets, and Godot instead of blocking intentionally added agent/cap systems.
+- AlphaDesktop version label updated to Alpha 5.7.
 
 ### Fixed
 
-- Restored the missing Alpha 5.4 player-pipeline compatibility test class so the full test runner builds again.
-- Free agency now blocks impossible cap-breaking offers before they become active offers.
+- Loaded or newly created desktop scenarios defensively ensure agent data exists before showing contract/free-agent panels.
+- Contract inbox messages no longer use vague generic offer wording when an agent review exists.
 
 ### Verified
 
@@ -37,17 +33,16 @@
 ### Not Added
 
 - No Godot.
-- No LTIR.
-- No buyouts.
-- No retained salary implementation.
-- No performance bonuses.
+- No conversation trees.
+- No voice dialogue.
+- No arbitration.
 - No offer sheets.
-- No waiver claim system.
-- No full CBA edge cases.
-- No database or cloud save system.
+- No no-trade clauses.
+- No LTIR.
 
 ## Recently Completed
 
+- Alpha 5.6 - Salary Cap & Roster Compliance v1.
 - Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1.
 - Alpha 5.3.1 - Trade Window Interactions + Living Staff Market.
 - Alpha 5.3 - Full League Teams + NHL/AHL Player Pipeline v1.
@@ -61,4 +56,4 @@
 
 ## Next
 
-- Alpha 5.7 - TBD.
+- Alpha 5.8 - TBD.

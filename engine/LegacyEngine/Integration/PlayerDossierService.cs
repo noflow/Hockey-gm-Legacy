@@ -40,6 +40,7 @@ public sealed class PlayerDossierService
             BuildDevelopment(scenario, personId),
             BuildMedical(scenario, personId),
             BuildContractRights(scenario, personId),
+            BuildAgentRepresentation(scenario, personId),
             BuildStaffOpinions(scenario, personId),
             BuildRelationships(scenario, personId),
             BuildCareerHistory(scenario, personId),
@@ -322,6 +323,45 @@ public sealed class PlayerDossierService
         }
 
         return new PlayerDossierSection("Contract / Rights Status", lines);
+    }
+
+    private static PlayerDossierSection BuildAgentRepresentation(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var engine = new AgentEngine();
+        var representation = engine.FindRepresentation(scenario, personId);
+        if (representation is null)
+        {
+            return new PlayerDossierSection("Agent / Representation", new[] { "No agent or representation record is currently tracked." });
+        }
+
+        var agent = representation.AgentId is null ? null : engine.FindAgent(scenario, representation.AgentId);
+        var lines = new List<string>
+        {
+            $"Representation type: {representation.RepresentationType}",
+            $"Agent: {agent?.Name ?? "No formal agent"}",
+            $"Agency: {agent?.Profile.AgencyName ?? "Family / advisor only"}",
+            $"Representation start: {representation.RepresentationStart:yyyy-MM-dd}",
+            $"GM relationship: {(agent is null ? "not applicable" : $"{agent.GmRelationship.Score}/100 - {agent.GmRelationship.Summary}")}",
+            $"Organization relationship: {(agent is null ? "not applicable" : $"{agent.OrganizationRelationship.Score}/100 - {agent.OrganizationRelationship.Summary}")}",
+            $"Negotiation style: {agent?.NegotiationStyle.ToString() ?? "Informal"}",
+            $"Agent reputation: {(agent is null ? "not applicable" : $"{agent.Reputation.Overall}/100 - {agent.Reputation.Summary}")}"
+        };
+
+        lines.AddRange(representation.RepresentationHistory.Select(entry => $"Representation history: {entry}"));
+        foreach (var history in scenario.AgentHistory.Where(history => history.AgentId == representation.AgentId || history.PersonId == personId).Take(5))
+        {
+            lines.Add($"Agent history: {history.Date:yyyy-MM-dd} - {history.Category}: {history.Summary}");
+        }
+
+        var recentOffers = scenario.FreeAgencyMarketState?.OfferStates
+            .Where(offer => offer.PersonId == personId)
+            .OrderByDescending(offer => offer.SubmittedOn)
+            .Take(3)
+            .Select(offer => $"Recent negotiation: {offer.SubmittedOn:yyyy-MM-dd} {offer.ResponseStatus} - {offer.Evaluation.AgentOpinion}")
+            ?? Array.Empty<string>();
+        lines.AddRange(recentOffers);
+
+        return new PlayerDossierSection("Agent / Representation", lines);
     }
 
     private static PlayerDossierSection BuildStaffOpinions(NewGmScenarioSnapshot scenario, string personId)

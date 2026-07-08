@@ -181,7 +181,7 @@ internal sealed class Alpha41ContractsV2Tests
         Assert.True(source.Contains("Accepted Offers Awaiting GM Approval", StringComparison.Ordinal), "Desktop should show accepted offers awaiting approval.");
     }
 
-    public void Alpha41HasNoGodotSaveFullAgentOrSalaryCapSystem()
+    public void Alpha41HasNoGodotSaveConversationOrDatabaseSystem()
     {
         var root = FindRepositoryRoot();
         var files = Directory.GetFiles(Path.Combine(root, "engine", "LegacyEngine", "Integration"), "Contract*.cs", SearchOption.TopDirectoryOnly)
@@ -189,8 +189,9 @@ internal sealed class Alpha41ContractsV2Tests
         var text = string.Join("\n", files);
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 4.1 should not add Godot.");
-        Assert.False(text.Contains("AgentEngine", StringComparison.Ordinal), "Alpha 4.1 should not add full agent system.");
-        Assert.False(text.Contains("SalaryCapEngine", StringComparison.Ordinal), "Alpha 4.1 should not add salary cap system.");
+        Assert.False(text.Contains("ConversationTree", StringComparison.Ordinal), "Contracts should not add full conversation trees.");
+        Assert.False(text.Contains("ArbitrationEngine", StringComparison.Ordinal), "Contracts should not add arbitration.");
+        Assert.False(text.Contains("OfferSheetEngine", StringComparison.Ordinal), "Contracts should not add offer sheets.");
         Assert.False(text.Contains("DbContext", StringComparison.Ordinal), "Alpha 4.1 should not add database persistence.");
     }
 

@@ -69,6 +69,7 @@ var alpha53FullLeaguePipelineTests = new Alpha53FullLeaguePipelineTests();
 var alpha531TradeStaffMarketTests = new Alpha531TradeStaffMarketTests();
 var alpha54PlayerPipelineTests = new Alpha54PlayerPipelineTests();
 var alpha56SalaryCapRosterComplianceTests = new Alpha56SalaryCapRosterComplianceTests();
+var alpha57AgentEngineTests = new Alpha57AgentEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -721,7 +722,7 @@ runner.Run("alpha 4.1 inbox messages include explanation", alpha41ContractsV2Tes
 runner.Run("alpha 4.1 league news receives other-team notable signing", alpha41ContractsV2Tests.LeagueNewsReceivesOtherTeamNotableSigning);
 runner.Run("alpha 4.1 no auto signing", alpha41ContractsV2Tests.NoAutoSigning);
 runner.Run("alpha 4.1 AlphaDesktop exposes contract management UI", alpha41ContractsV2Tests.AlphaDesktopExposesContractManagementUi);
-runner.Run("alpha 4.1 no Godot save full agent or salary cap system", alpha41ContractsV2Tests.Alpha41HasNoGodotSaveFullAgentOrSalaryCapSystem);
+runner.Run("alpha 4.1 no Godot save conversation or database system", alpha41ContractsV2Tests.Alpha41HasNoGodotSaveConversationOrDatabaseSystem);
 runner.Run("alpha 4.2 free agency window uses season calendar", alpha42FreeAgencyV2Tests.FreeAgencyWindowUsesSeasonCalendar);
 runner.Run("alpha 4.2 free agency phase changes over time", alpha42FreeAgencyV2Tests.FreeAgencyPhaseChangesOverTime);
 runner.Run("alpha 4.2 motivations and competing offers generated", alpha42FreeAgencyV2Tests.MotivationsAndCompetingOffersGenerated);
@@ -734,7 +735,7 @@ runner.Run("alpha 4.2 late market reduces ask and improves interest", alpha42Fre
 runner.Run("alpha 4.2 staff recommendations generated", alpha42FreeAgencyV2Tests.StaffRecommendationsGenerated);
 runner.Run("alpha 4.2 save load preserves market state", alpha42FreeAgencyV2Tests.SaveLoadPreservesMarketState);
 runner.Run("alpha 4.2 AlphaDesktop exposes free agency v2 UI", alpha42FreeAgencyV2Tests.AlphaDesktopExposesFreeAgencyV2Ui);
-runner.Run("alpha 4.2 no Godot full agent salary cap or game simulation", alpha42FreeAgencyV2Tests.Alpha42HasNoGodotFullAgentSalaryCapOrGameSimulation);
+runner.Run("alpha 4.2 no Godot conversation tree or game simulation", alpha42FreeAgencyV2Tests.Alpha42HasNoGodotConversationTreeOrGameSimulation);
 runner.Run("alpha 4.3 team needs generated", alpha43TradeEngineV2Tests.TeamNeedsGenerated);
 runner.Run("alpha 4.3 GM personalities generated", alpha43TradeEngineV2Tests.GmPersonalitiesGenerated);
 runner.Run("alpha 4.3 multi-asset trades supported", alpha43TradeEngineV2Tests.MultiAssetTradesSupported);
@@ -912,6 +913,16 @@ runner.Run("alpha 5.6 free agency offer respects cap", alpha56SalaryCapRosterCom
 runner.Run("alpha 5.6 dashboard and decisions expose cap details", alpha56SalaryCapRosterComplianceTests.DashboardAndDecisionScreensExposeCapDetails);
 runner.Run("alpha 5.6 save load preserves cap commitments", alpha56SalaryCapRosterComplianceTests.SaveLoadPreservesCapCommitments);
 runner.Run("alpha 5.6 no forbidden cap systems added", alpha56SalaryCapRosterComplianceTests.NoForbiddenCapSystemsAdded);
+runner.Run("alpha 5.7 agents generated", alpha57AgentEngineTests.AgentsGenerated);
+runner.Run("alpha 5.7 players assigned agents", alpha57AgentEngineTests.PlayersAssignedAgents);
+runner.Run("alpha 5.7 agent relationships exist", alpha57AgentEngineTests.AgentRelationshipsExist);
+runner.Run("alpha 5.7 negotiation styles affect offer review", alpha57AgentEngineTests.NegotiationStylesAffectOfferReview);
+runner.Run("alpha 5.7 offer explanations include agent reasons", alpha57AgentEngineTests.OfferExplanationsIncludeAgentReasons);
+runner.Run("alpha 5.7 free agency uses agent messages", alpha57AgentEngineTests.FreeAgencyUsesAgentMessages);
+runner.Run("alpha 5.7 player dossier shows agent representation", alpha57AgentEngineTests.PlayerDossierShowsAgentRepresentation);
+runner.Run("alpha 5.7 agent history is tracked", alpha57AgentEngineTests.AgentHistoryIsTracked);
+runner.Run("alpha 5.7 AlphaDesktop exposes agent contract controls", alpha57AgentEngineTests.AlphaDesktopExposesAgentContractControls);
+runner.Run("alpha 5.7 no forbidden agent systems added", alpha57AgentEngineTests.NoForbiddenAgentSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

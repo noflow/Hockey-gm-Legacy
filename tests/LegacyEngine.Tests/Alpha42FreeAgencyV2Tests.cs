@@ -165,7 +165,7 @@ internal sealed class Alpha42FreeAgencyV2Tests
         Assert.True(source.Contains("Offer likelihood", StringComparison.Ordinal), "Desktop should show offer likelihood.");
     }
 
-    public void Alpha42HasNoGodotFullAgentSalaryCapOrGameSimulation()
+    public void Alpha42HasNoGodotConversationTreeOrGameSimulation()
     {
         var root = FindRepositoryRoot();
         var files = Directory.GetFiles(Path.Combine(root, "engine", "LegacyEngine", "Integration"), "FreeAgency*.cs", SearchOption.TopDirectoryOnly)
@@ -174,8 +174,9 @@ internal sealed class Alpha42FreeAgencyV2Tests
         var text = string.Join("\n", files);
 
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 4.2 should not add Godot.");
-        Assert.False(text.Contains("AgentEngine", StringComparison.Ordinal), "Alpha 4.2 should not add full Agent Engine.");
-        Assert.False(text.Contains("SalaryCapEngine", StringComparison.Ordinal), "Alpha 4.2 should not add salary cap system.");
+        Assert.False(text.Contains("ConversationTree", StringComparison.Ordinal), "Free agency should not add full conversation trees.");
+        Assert.False(text.Contains("ArbitrationEngine", StringComparison.Ordinal), "Free agency should not add arbitration.");
+        Assert.False(text.Contains("OfferSheetEngine", StringComparison.Ordinal), "Free agency should not add offer sheets.");
         Assert.False(text.Contains("PlayByPlay", StringComparison.Ordinal), "Alpha 4.2 should not add game simulation expansion.");
     }
 

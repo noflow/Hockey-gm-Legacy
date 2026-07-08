@@ -139,23 +139,23 @@ public sealed class FreeAgencyV2Service
             delay,
             pressure,
             evaluation,
-            delay == 0 ? evaluation.Explanation.Summary : $"{agent.Name} will respond by {prepared.CurrentDate.AddDays(delay):yyyy-MM-dd}.");
+            delay == 0 ? evaluation.Explanation.Summary : $"{evaluation.AgentName} will respond for {agent.Name} by {prepared.CurrentDate.AddDays(delay):yyyy-MM-dd}. {evaluation.AgentOpinion}");
         offerState.Validate();
 
         var updatedAgent = agent with { Status = delay == 0 ? agent.Status : FreeAgentStatus.Offered };
         var next = ReplaceAgent(prepared, updatedAgent);
         var nextState = state with { OfferStates = UpsertOffer(state.OfferStates, offerState) };
         next = next with { FreeAgencyMarketState = nextState };
-        QueueEvent(registry, next, LegacyEventType.FreeAgentOfferSubmitted, "Free agent offer submitted", $"{agent.Name} is reviewing a {evaluation.OfferRequest.TermYears}-year offer from {next.Organization.Name}.", personId);
+        QueueEvent(registry, next, LegacyEventType.FreeAgentOfferSubmitted, $"Offer submitted to {evaluation.AgentName}", $"{evaluation.AgentName} is reviewing a {evaluation.OfferRequest.TermYears}-year offer from {next.Organization.Name} for {agent.Name}.", personId);
 
         if (delay > 0)
         {
-            QueueEvent(registry, next, LegacyEventType.FreeAgentOfferResponseDue, "Free agent response due", $"{agent.Name} is expected to respond on {offerState.ResponseDate:yyyy-MM-dd}.", personId, LegacyEventSeverity.Warning);
+            QueueEvent(registry, next, LegacyEventType.FreeAgentOfferResponseDue, "Agent response due", $"{evaluation.AgentName} is expected to respond for {agent.Name} on {offerState.ResponseDate:yyyy-MM-dd}.", personId, LegacyEventSeverity.Warning);
             var inbox = new[]
             {
-                Inbox(next, LegacyEventType.FreeAgentOfferSubmitted, $"Offer submitted: {agent.Name}", $"{agent.Name} will respond by {offerState.ResponseDate:yyyy-MM-dd}. Likelihood: {evaluation.Likelihood}. {evaluation.RiskWarning}", personId)
+                Inbox(next, LegacyEventType.FreeAgentOfferSubmitted, $"Agent reviewing free agent offer: {evaluation.AgentName}", $"{evaluation.AgentOpinion} Response due {offerState.ResponseDate:yyyy-MM-dd}. Likelihood: {evaluation.Likelihood}. {evaluation.AgentRisk}", personId)
             };
-            return Result(true, next, nextState, updatedAgent, offerState, inbox, Array.Empty<LeagueTransaction>(), $"{agent.Name} is considering the offer.");
+            return Result(true, next, nextState, updatedAgent, offerState, inbox, Array.Empty<LeagueTransaction>(), $"{evaluation.AgentName} is considering the offer for {agent.Name}.");
         }
 
         return ApplyImmediateDecision(registry, next, offerState);
@@ -232,9 +232,12 @@ public sealed class FreeAgencyV2Service
         state = state with { OfferStates = UpsertOffer(state.OfferStates, offerState) };
         next = next with { FreeAgencyMarketState = state };
         var eventType = offerState.ResponseStatus == FreeAgencyDecision.WantsMore ? LegacyEventType.FreeAgentOfferNeedsRevision : LegacyEventType.FreeAgentOfferRejected;
-        var title = offerState.ResponseStatus == FreeAgencyDecision.WantsMore ? $"Free agent wants more: {agent.Name}" : $"Free agent rejected offer: {agent.Name}";
-        QueueEvent(registry, next, eventType, title, offerState.Evaluation.Explanation.Summary, agent.PersonId, LegacyEventSeverity.Warning);
-        return Result(true, next, state, nextAgent, offerState, new[] { Inbox(next, eventType, title, offerState.Evaluation.Explanation.Summary, agent.PersonId, LegacyEventSeverity.Warning) }, Array.Empty<LeagueTransaction>(), offerState.Evaluation.Explanation.Summary);
+        var title = offerState.ResponseStatus == FreeAgencyDecision.WantsMore ? $"Agent wants more: {agent.Name}" : $"Agent rejected offer: {agent.Name}";
+        var summary = offerState.ResponseStatus == FreeAgencyDecision.WantsMore
+            ? $"{offerState.Evaluation.AgentOpinion} {offerState.Evaluation.AgentCounterSuggestion}"
+            : offerState.Evaluation.AgentOpinion;
+        QueueEvent(registry, next, eventType, title, summary, agent.PersonId, LegacyEventSeverity.Warning);
+        return Result(true, next, state, nextAgent, offerState, new[] { Inbox(next, eventType, title, summary, agent.PersonId, LegacyEventSeverity.Warning) }, Array.Empty<LeagueTransaction>(), summary);
     }
 
     private FreeAgencyV2Result ResolveSingleResponse(EngineRegistry registry, NewGmScenarioSnapshot scenario, FreeAgencyOfferState offer)
@@ -291,7 +294,8 @@ public sealed class FreeAgencyV2Service
         }
 
         var seed = Math.Abs(HashCode.Combine(agent.PersonId, scenario.CurrentDate.DayNumber, evaluation.DecisionScore));
-        return 2 + seed % 4;
+        var agentDelay = evaluation.AgentReview?.ResponseDelayDays ?? 0;
+        return Math.Max(agentDelay, 2 + seed % 4);
     }
 
     private static int MarketPressure(FreeAgencyMarketState state, string personId)

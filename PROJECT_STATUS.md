@@ -91,14 +91,15 @@ The five foundation pillars remain:
 - Alpha 5.3.1 - Trade Window Interactions + Living Staff Market
 - Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1
 - Alpha 5.6 - Salary Cap & Roster Compliance v1
+- Alpha 5.7 - Agent Engine v1
 
 ## Current Milestone
 
-Alpha 5.6 - Salary Cap & Roster Compliance v1
+Alpha 5.7 - Agent Engine v1
 
 ## Current Goal
 
-Make professional leagues enforce rulebook-driven salary cap and roster compliance while junior leagues continue to use operating budgets. The GM can see cap usage, available space, floor context, contract count, expiring salary, future commitments, and before/after cap impact for free-agent and trade decisions.
+Introduce recurring player agents as the primary contract and free-agency negotiators. Players now have representation records, agents carry personalities, relationships, reputation, style, client lists, and history, and contract/free-agent responses include agent opinions, concerns, requested improvements, risk, and counter suggestions while final signing still requires GM approval.
 
 ## Why Relationship Engine Was Next
 
@@ -108,11 +109,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.7 - TBD
+Alpha 5.8 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.7 - TBD
+1. Alpha 5.8 - TBD
 
 ## Build Rule
 

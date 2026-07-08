@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -586,7 +586,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 5.6 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 5.7 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2282,7 +2282,7 @@ internal sealed class MainWindow : Window
                 agent.Name,
                 "FreeAgent",
                 $"{agent.Position} - age {agent.Age} - {agent.Status}",
-                $"{agent.PreviousTeam} | ask {agent.ContractAsk.AnnualAmount:C0} | {State.FreeAgentTopMotivations(agent.PersonId)}",
+                $"{agent.PreviousTeam} | ask {agent.ContractAsk.AnnualAmount:C0} | {State.AgentSummary(agent.PersonId)}",
                 $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
             .ToArray();
 
@@ -2655,6 +2655,8 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Player type", agent.PlayerType);
                 AddLine(panel, "Projected role", agent.ProjectedLineupRole);
                 AddLine(panel, "Contract ask", $"{agent.ContractAsk.TermYears} year(s), {agent.ContractAsk.AnnualAmount:C0} {agent.ContractAsk.Currency} - {agent.ContractAsk.Notes}");
+                AddLine(panel, "Agent Card", State.AgentSummary(row.PersonId));
+                AddLine(panel, "Agent comments", State.AgentOfferComment(row.PersonId));
                 AddLine(panel, "Interest", $"{agent.Interest.PlayerOrganizationInterest}/100 - {agent.Interest.MotivationSummary}");
                 AddLine(panel, "Top motivations", State.FreeAgentTopMotivations(row.PersonId));
                 AddLine(panel, "Pending response", State.FreeAgentOfferResponseText(row.PersonId));
@@ -3086,6 +3088,9 @@ internal sealed class MainWindow : Window
             var agent = State.FreeAgentFor(row.PersonId);
             yield return CreateDetailButton(agent?.IsShortlisted == true ? "Remove Shortlist" : "Shortlist", () => State.ToggleFreeAgentShortlist(row.PersonId), agent is not null);
             yield return CreateDetailButton("Offer Contract", () => State.OfferFreeAgentContractFor(row.PersonId), State.CanOfferFreeAgent(row.PersonId));
+            yield return CreateDetailButton("Improve Offer", () => MessageBox.Show(State.AgentOfferComment(row.PersonId), "Improve Offer", MessageBoxButton.OK, MessageBoxImage.Information), agent is not null);
+            yield return CreateDetailButton("Compare", () => MessageBox.Show(State.FreeAgentCompetitionSummary(row.PersonId), "Compare Offers", MessageBoxButton.OK, MessageBoxImage.Information), agent is not null);
+            yield return CreateDetailButton("View Agent", () => MessageBox.Show(State.AgentDetails(row.PersonId), "Agent Card", MessageBoxButton.OK, MessageBoxImage.Information), agent is not null);
             yield return CreateDetailButton("Invite to Camp", () => State.InviteFreeAgentToCampFor(row.PersonId), agent is not null && agent.Status is not FreeAgentStatus.Signed and not FreeAgentStatus.Unavailable);
             yield return CreateDetailButton("Withdraw Offer", () => State.WithdrawFreeAgentOfferFor(row.PersonId), agent is not null && (agent.Status is FreeAgentStatus.Offered or FreeAgentStatus.Negotiating));
             yield break;
@@ -4181,6 +4186,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine("Contracts");
         builder.AppendLine("=========");
         builder.AppendLine("Contracts v2 keeps final signings under GM control. Accepted terms create pending decisions; they do not auto-sign.");
+        builder.AppendLine("Agent Engine v1 routes contract talks through representatives. Contract windows expose an Agent Card, Client, Relationship, Negotiation Style, Agent comments, History, Improve Offer, Withdraw, Submit, Compare, and View Agent controls.");
         builder.AppendLine();
         builder.AppendLine("Budget Impact");
         builder.AppendLine($"  Total budget: {summary.Budget.TotalBudget:C0}");
@@ -5928,6 +5934,7 @@ internal sealed class AlphaDesktopState
     private readonly SeasonRolloverService _seasonRollover = new();
     private readonly ContractManagementService _contracts = new();
     private readonly PlayabilityPolishService _playability = new();
+    private readonly AgentEngine _agents = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -5946,7 +5953,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _developmentPlanning.EnsureScenarioPlans(scenarioSnapshot);
+        ScenarioSnapshot = _agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -7765,6 +7772,72 @@ internal sealed class AlphaDesktopState
 
         var evaluation = _freeAgencyV2.BuildOffer(_registry, ScenarioSnapshot, personId, agent.ContractAsk.AnnualAmount, agent.ContractAsk.TermYears);
         return $"{evaluation.Likelihood} ({evaluation.DecisionScore}/100): {evaluation.Explanation.Summary}";
+    }
+
+    public string AgentSummary(string personId)
+    {
+        var representation = _agents.FindRepresentation(ScenarioSnapshot, personId);
+        var agent = representation?.AgentId is null ? null : _agents.FindAgent(ScenarioSnapshot, representation.AgentId);
+        return representation is null
+            ? "Agent: untracked"
+            : agent is null
+                ? $"{representation.RepresentationType}: no formal agency"
+                : $"Agent: {agent.Name} ({agent.Profile.AgencyName}) | {agent.NegotiationStyle} | GM relationship {agent.GmRelationship.Score}/100";
+    }
+
+    public string AgentOfferComment(string personId)
+    {
+        var freeAgent = FreeAgentFor(personId);
+        if (freeAgent is not null)
+        {
+            var evaluation = _freeAgencyV2.BuildOffer(_registry, ScenarioSnapshot, personId, freeAgent.ContractAsk.AnnualAmount, freeAgent.ContractAsk.TermYears);
+            return $"{evaluation.AgentOpinion} Biggest concern: {evaluation.AgentBiggestConcern} Requested improvement: {evaluation.AgentRequestedImprovement} Risk: {evaluation.AgentRisk}";
+        }
+
+        var representation = _agents.FindRepresentation(ScenarioSnapshot, personId);
+        return representation is null
+            ? "No agent comment is available."
+            : $"{AgentSummary(personId)} Representation history: {string.Join("; ", representation.RepresentationHistory.Take(2))}";
+    }
+
+    public string AgentDetails(string personId)
+    {
+        var representation = _agents.FindRepresentation(ScenarioSnapshot, personId);
+        if (representation is null)
+        {
+            return "No agent or representation record is available.";
+        }
+
+        var agent = representation.AgentId is null ? null : _agents.FindAgent(ScenarioSnapshot, representation.AgentId);
+        var builder = new StringBuilder();
+        builder.AppendLine("Agent Card");
+        builder.AppendLine("==========");
+        builder.AppendLine($"Client: {representation.PersonName}");
+        builder.AppendLine($"Representation: {representation.RepresentationType}");
+        builder.AppendLine($"Start: {representation.RepresentationStart:yyyy-MM-dd}");
+        if (agent is null)
+        {
+            builder.AppendLine("Agent: No formal agent");
+            builder.AppendLine("Agency: Family / advisor only");
+            return builder.ToString();
+        }
+
+        builder.AppendLine($"Agent: {agent.Name}");
+        builder.AppendLine($"Agency: {agent.Profile.AgencyName}");
+        builder.AppendLine($"Nationality: {agent.Profile.Nationality}");
+        builder.AppendLine($"Age / experience: {agent.Profile.Age} / {agent.Profile.YearsExperience} year(s)");
+        builder.AppendLine($"Personality: {agent.Profile.Personality}");
+        builder.AppendLine($"Negotiation Style: {agent.NegotiationStyle}");
+        builder.AppendLine($"Relationship: GM {agent.GmRelationship.Score}/100; organization {agent.OrganizationRelationship.Score}/100");
+        builder.AppendLine($"Reputation: {agent.Reputation.Overall}/100 - {agent.Reputation.Summary}");
+        builder.AppendLine($"Current clients: {agent.ClientList.Clients.Count}");
+        builder.AppendLine("History:");
+        foreach (var history in ScenarioSnapshot.AgentHistory.Where(history => history.AgentId == agent.AgentId).Take(6))
+        {
+            builder.AppendLine($"- {history.Date:yyyy-MM-dd} {history.Category}: {history.Summary}");
+        }
+
+        return builder.ToString();
     }
 
     public FreeAgencyStaffRecommendations FreeAgentStaffRecommendations(string personId) =>

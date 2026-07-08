@@ -46,10 +46,12 @@ public sealed class ContractManagementService
         var total = annual * request.TermYears;
         var budgetAfter = budget.RemainingBudget - annual;
         var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, annual, request.TermYears);
-        var score = ScoreOffer(scenario, ask, request, budgetAfter, cap);
+        var baseScore = ScoreOffer(scenario, ask, request, budgetAfter, cap);
+        var agentReview = new AgentEngine().ReviewOffer(scenario, ask, request, baseScore);
+        var score = Math.Clamp(baseScore + agentReview.ScoreModifier, 0, 100);
         var likelihood = LikelihoodFor(score);
         var decision = DecisionFor(score, ask, request);
-        var explanation = Explain(ask, request, decision, score, budgetAfter, cap);
+        var explanation = Explain(ask, request, decision, score, budgetAfter, cap, agentReview);
         var currentCost = CurrentAnnualCost(scenario, request.PersonId);
         var comparison = new ContractComparison(
             CurrentAnnualCost: currentCost,
@@ -82,7 +84,8 @@ public sealed class ContractManagementService
             CapHit = annual,
             CapRemainingBefore = cap.Before.AvailableCapSpace,
             CapRemainingAfter = cap.After.AvailableCapSpace,
-            CapWarning = CapWarning(cap)
+            CapWarning = CapWarning(cap),
+            AgentReview = agentReview
         };
         evaluation.Validate();
         return evaluation;
@@ -107,31 +110,31 @@ public sealed class ContractManagementService
         }
 
         var evaluation = BuildOffer(registry, scenario, request);
-        QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferSubmitted, "Contract offer submitted", $"{evaluation.Ask.PersonName} received a {request.TermYears}-year offer worth {request.AnnualSalary:C0} per year.", request.PersonId, evaluation);
+        QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferSubmitted, $"Offer sent to {evaluation.AgentName}", $"{evaluation.AgentName} is reviewing a {request.TermYears}-year offer worth {request.AnnualSalary:C0} per year for {evaluation.Ask.PersonName}.", request.PersonId, evaluation);
 
         var inbox = new List<AlphaInboxItem>
         {
-            Inbox(scenario, LegacyEventType.ContractOfferSubmitted, $"Contract offer submitted: {evaluation.Ask.PersonName}", evaluation.Explanation.Summary, request.PersonId)
+            Inbox(scenario, LegacyEventType.ContractOfferSubmitted, $"Agent reviewing offer: {evaluation.AgentName}", evaluation.AgentOpinion, request.PersonId)
         };
         var next = scenario;
 
         if (evaluation.Decision == ContractOfferDecision.Accepted)
         {
-            QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferAccepted, "Contract offer accepted", $"{evaluation.Ask.PersonName} accepted terms, pending GM approval.", request.PersonId, evaluation);
+            QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferAccepted, $"Agent acceptance: {evaluation.AgentName}", $"{evaluation.AgentName} says {evaluation.Ask.PersonName} is ready to proceed, pending GM approval.", request.PersonId, evaluation);
             var pending = CreateAcceptedPendingAction(registry, scenario, request, evaluation);
             next = pending.ScenarioSnapshot;
             inbox.AddRange(pending.InboxItems);
-            inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferAccepted, $"Contract accepted pending approval: {evaluation.Ask.PersonName}", $"{evaluation.Ask.PersonName} accepted the offer. {evaluation.Explanation.Summary}", request.PersonId, LegacyEventSeverity.Warning));
+            inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferAccepted, $"Agent acceptance pending approval: {evaluation.Ask.PersonName}", evaluation.AgentOpinion, request.PersonId, LegacyEventSeverity.Warning));
         }
         else if (evaluation.Decision == ContractOfferDecision.Rejected)
         {
-            QueueContractEvent(registry, scenario, LegacyEventType.ContractRejected, "Contract offer rejected", $"{evaluation.Ask.PersonName} rejected the offer.", request.PersonId, evaluation, LegacyEventSeverity.Warning);
-            inbox.Add(Inbox(scenario, LegacyEventType.ContractRejected, $"Contract rejected: {evaluation.Ask.PersonName}", evaluation.Explanation.Summary, request.PersonId, LegacyEventSeverity.Warning));
+            QueueContractEvent(registry, scenario, LegacyEventType.ContractRejected, $"Agent rejection: {evaluation.AgentName}", evaluation.AgentOpinion, request.PersonId, evaluation, LegacyEventSeverity.Warning);
+            inbox.Add(Inbox(scenario, LegacyEventType.ContractRejected, $"Agent rejected offer: {evaluation.Ask.PersonName}", evaluation.AgentOpinion, request.PersonId, LegacyEventSeverity.Warning));
         }
         else
         {
-            QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferNeedsRevision, "Contract offer needs revision", $"{evaluation.Ask.PersonName} wants the offer revised.", request.PersonId, evaluation, LegacyEventSeverity.Warning);
-            inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferNeedsRevision, $"Contract needs revision: {evaluation.Ask.PersonName}", evaluation.Explanation.Summary, request.PersonId, LegacyEventSeverity.Warning));
+            QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferNeedsRevision, $"Agent wants revision: {evaluation.AgentName}", evaluation.AgentOpinion, request.PersonId, evaluation, LegacyEventSeverity.Warning);
+            inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferNeedsRevision, $"Agent counter: {evaluation.Ask.PersonName}", $"{evaluation.AgentOpinion} {evaluation.AgentCounterSuggestion}", request.PersonId, LegacyEventSeverity.Warning));
         }
 
         var result = new ContractManagementResult(
@@ -141,8 +144,8 @@ public sealed class ContractManagementService
             InboxItems: inbox,
             LeagueTransactions: Array.Empty<LeagueTransaction>(),
             Message: evaluation.Decision == ContractOfferDecision.Accepted
-                ? $"{evaluation.Ask.PersonName} accepted terms; GM approval is required before signing."
-                : $"{evaluation.Ask.PersonName}: {evaluation.Explanation.Summary}");
+                ? $"{evaluation.AgentName} accepted terms for {evaluation.Ask.PersonName}; GM approval is required before signing."
+                : $"{evaluation.AgentName}: {evaluation.AgentOpinion}");
         result.Validate();
         return result;
     }
@@ -225,7 +228,7 @@ public sealed class ContractManagementService
             PersonName: personName,
             OrganizationId: scenario.Organization.OrganizationId,
             Title: $"Approve contract: {personName}",
-            Reason: $"{personName} accepted {request.TermYears} year(s) at {request.AnnualSalary:C0}. {evaluation.Explanation.Summary}",
+            Reason: $"{evaluation.AgentName} accepted {request.TermYears} year(s) at {request.AnnualSalary:C0} for {personName}. {evaluation.AgentOpinion}",
             RecommendedAction: "Approve to create the signed contract, or decline to walk away.",
             Position: GuessPosition(scenario, request.PersonId),
             AcquisitionSource: request.AskType is ContractAskType.FreeAgent ? PlayerAcquisitionSource.FreeAgentSigning : PlayerAcquisitionSource.Unknown,
@@ -432,7 +435,7 @@ public sealed class ContractManagementService
         return Math.Clamp((int)Math.Round(score / Math.Max(1m, weight)), 0, 100);
     }
 
-    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap)
+    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap, AgentNegotiationReview agentReview)
     {
         var reasons = new List<string>
         {
@@ -450,6 +453,10 @@ public sealed class ContractManagementService
                 : "Budget impact is manageable.",
             CapWarning(cap)
         };
+        reasons.Add($"Agent opinion: {agentReview.Opinion}");
+        reasons.Add($"Agent concern: {agentReview.BiggestConcern}");
+        reasons.Add($"Requested improvement: {agentReview.RequestedImprovement}");
+        reasons.Add($"Agent risk: {agentReview.Risk}");
         if (!string.IsNullOrWhiteSpace(request.DevelopmentPromise))
         {
             reasons.Add($"Development/pathway promise: {request.DevelopmentPromise}");
@@ -457,10 +464,10 @@ public sealed class ContractManagementService
 
         var summary = decision switch
         {
-            ContractOfferDecision.Accepted => $"{ask.PersonName} is willing to accept, but the GM must approve before anything is signed.",
-            ContractOfferDecision.Rejected => $"{ask.PersonName} is likely to reject because the offer misses too many priorities.",
-            ContractOfferDecision.WantsMore => $"{ask.PersonName} wants a better offer before committing.",
-            _ => $"{ask.PersonName} remains undecided; score {score}/100."
+            ContractOfferDecision.Accepted => $"{agentReview.AgentName} says {ask.PersonName} is willing to accept, but the GM must approve before anything is signed.",
+            ContractOfferDecision.Rejected => $"{agentReview.AgentName} says {ask.PersonName} is likely to reject because the offer misses too many priorities.",
+            ContractOfferDecision.WantsMore => $"{agentReview.AgentName} wants a better offer before {ask.PersonName} commits.",
+            _ => $"{agentReview.AgentName} says {ask.PersonName} remains undecided; score {score}/100."
         };
         return new ContractDecisionExplanation(decision, summary, reasons);
     }
@@ -642,7 +649,10 @@ public sealed class ContractManagementService
                 ["reason"] = evaluation.Explanation.Summary,
                 ["annual_salary"] = evaluation.AnnualCost,
                 ["term_years"] = evaluation.OfferRequest.TermYears,
-                ["likelihood"] = evaluation.Likelihood.ToString()
+                ["likelihood"] = evaluation.Likelihood.ToString(),
+                ["agent_name"] = evaluation.AgentName,
+                ["agent_opinion"] = evaluation.AgentOpinion,
+                ["agent_style"] = evaluation.AgentNegotiationStyle.ToString()
             });
         registry.EventEngine.QueueEvent(legacyEvent);
     }
