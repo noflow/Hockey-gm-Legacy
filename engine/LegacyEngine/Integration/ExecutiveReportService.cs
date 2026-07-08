@@ -72,6 +72,7 @@ public sealed class ExecutiveReportService
                     ["Expectations"] = "Build a competitive team while protecting the development pipeline.",
                     ["Recommendation"] = readiness.OwnerReview
                 }),
+                Section("Owner Life Cycle", "Owner history tracks expectations, trust, budget posture, job security, and long-term organizational eras.", BuildOwnerLifeCycleItems(scenario)),
                 Section("Head Coach Report", "The coaching staff focused on roster balance, leadership, and opening-night usability.", new Dictionary<string, string>
                 {
                     ["Roster readiness"] = readiness.RosterStatus,
@@ -214,6 +215,7 @@ public sealed class ExecutiveReportService
                     ["Recommendation"] = ownerOffice.PerformanceReview.Recommendation,
                     ["Future Expectations"] = string.Join("; ", ownerOffice.Expectations.Take(3).Select(expectation => expectation.Description))
                 }),
+                Section("Owner Life Cycle", "Owner life-cycle history connects personality, budget support, job-security trend, and expectations across the organization era.", BuildOwnerLifeCycleItems(scenario)),
                 Section("Head Coach Review", "The coaching report identifies hockey needs without creating lines or game tactics.", new Dictionary<string, string>
                 {
                     ["Team strengths"] = "Roster continuity and development planning.",
@@ -433,6 +435,28 @@ public sealed class ExecutiveReportService
         var topLegacy = lifecycle.StaffCareerSummaries.OrderByDescending(item => item.LegacyScore).FirstOrDefault();
         items["Top Staff Legacy"] = topLegacy is null ? "No staff legacy score yet." : $"{topLegacy.StaffName} ({topLegacy.LegacyScore})";
         items["Staff Milestones"] = lifecycle.StaffMilestones.Count.ToString();
+        return items;
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildOwnerLifeCycleItems(NewGmScenarioSnapshot scenario)
+    {
+        var lifecycle = scenario.OwnerCareerSummary is null
+            ? new OwnerLifeCycleService().EnsureLifeCycle(scenario)
+            : scenario;
+        var highlights = new OwnerLifeCycleService().BuildReportHighlights(lifecycle).Take(6).ToArray();
+        var items = new Dictionary<string, string>();
+        for (var index = 0; index < highlights.Length; index++)
+        {
+            items[$"Owner Highlight {index + 1}"] = highlights[index];
+        }
+
+        if (lifecycle.OwnerCareerState is not null)
+        {
+            items["Life Stage"] = lifecycle.OwnerCareerState.LifeStage.ToString();
+            items["Confidence Trend"] = lifecycle.OwnerCareerState.ConfidenceTrend.ToString();
+            items["Job Security"] = lifecycle.OwnerCareerState.JobSecurity.ToString();
+        }
+
         return items;
     }
 

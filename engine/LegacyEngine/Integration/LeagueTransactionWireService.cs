@@ -117,6 +117,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.TeamIdentityUpdate => LeagueNewsCategory.League,
             LeagueTransactionType.PlayerMilestone => LeagueNewsCategory.League,
             LeagueTransactionType.StaffMilestone => LeagueNewsCategory.Staff,
+            LeagueTransactionType.OwnerMilestone => LeagueNewsCategory.League,
             _ => LeagueNewsCategory.All
         };
 
@@ -168,6 +169,7 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.SeasonCompleted => $"{teamName} completed the season. Standings leader: {personName}.",
             LeagueTransactionType.TeamIdentityUpdate => $"{teamName} direction update: {personName}.",
             LeagueTransactionType.StaffMilestone => $"{teamName} staff milestone for {personName}.",
+            LeagueTransactionType.OwnerMilestone => $"{teamName} ownership milestone for {personName}.",
             _ => $"{teamName} updated {personName}."
         };
 

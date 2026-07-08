@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -562,6 +562,10 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Coaching Trees", CreateTextScreen("Coaching Trees")),
             new WorkspaceScreen("Scout History", CreateTextScreen("Scout History")),
             new WorkspaceScreen("Development Staff History", CreateTextScreen("Development Staff History")),
+            new WorkspaceScreen("Owner History", CreateTextScreen("Owner History")),
+            new WorkspaceScreen("Owner Letters", CreateTextScreen("Owner Letters")),
+            new WorkspaceScreen("Job Security History", CreateTextScreen("Job Security History")),
+            new WorkspaceScreen("Expectation Results", CreateTextScreen("Expectation Results")),
             new WorkspaceScreen("Transaction History", CreateTextScreen("Transaction History")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
             new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
@@ -594,7 +598,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.1 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.2 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1635,6 +1639,10 @@ internal sealed class MainWindow : Window
         _tabs["Coaching Trees"].Text = BuildCoachingTreesReport();
         _tabs["Scout History"].Text = BuildScoutHistoryReport();
         _tabs["Development Staff History"].Text = BuildDevelopmentStaffHistoryReport();
+        _tabs["Owner History"].Text = BuildOwnerHistoryReport();
+        _tabs["Owner Letters"].Text = BuildOwnerLettersReport();
+        _tabs["Job Security History"].Text = BuildJobSecurityHistoryReport();
+        _tabs["Expectation Results"].Text = BuildExpectationResultsReport();
         _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
         _tabs["Draft Recaps"].Text = BuildDraftRecaps();
         _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
@@ -4077,6 +4085,20 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Pressure: {office.Confidence.Pressure}  Support: {office.Confidence.Support}");
         builder.AppendLine($"Job security: {office.JobSecurity.Level} ({office.JobSecurity.Score}/100)");
         builder.AppendLine(office.JobSecurity.Explanation);
+        if (State.ScenarioSnapshot.OwnerCareerSummary is { } lifeCycle)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Owner Life Cycle");
+            builder.AppendLine($"Life stage: {lifeCycle.LifeStage}");
+            builder.AppendLine($"Confidence trend: {lifeCycle.ConfidenceTrend}");
+            builder.AppendLine($"Current personality: {lifeCycle.CurrentPersonality}");
+            builder.AppendLine($"Career summary: {lifeCycle.CareerSummaryText}");
+            builder.AppendLine($"Personality evolution: {lifeCycle.PersonalityEvolution}");
+            builder.AppendLine($"Budget relationship: {lifeCycle.BudgetRelationship}");
+            builder.AppendLine($"Owner legacy: {lifeCycle.LegacyProfile.LegacySummary}");
+            builder.AppendLine($"Organization era: {lifeCycle.OrganizationHistorySummary}");
+        }
+
         builder.AppendLine($"Budget total: {owner.Budget.Total:C0}");
         builder.AppendLine($"Player payroll: {owner.Budget.PlayerPayroll:C0}");
         builder.AppendLine($"Staff: {owner.Budget.Staff:C0}");
@@ -4126,7 +4148,7 @@ internal sealed class MainWindow : Window
 
         builder.AppendLine();
         builder.AppendLine("Letters");
-        foreach (var letter in office.Letters)
+        foreach (var letter in State.ScenarioSnapshot.OwnerLetters.Count == 0 ? office.Letters : State.ScenarioSnapshot.OwnerLetters)
         {
             builder.AppendLine($"{letter.Date:yyyy-MM-dd} - {letter.Subject}");
             builder.AppendLine(letter.Body);
@@ -4134,10 +4156,23 @@ internal sealed class MainWindow : Window
 
         builder.AppendLine();
         builder.AppendLine("Meeting History / Schedule");
-        foreach (var meeting in office.Meetings)
+        if (State.ScenarioSnapshot.OwnerMeetingHistory.Count > 0)
         {
-            builder.AppendLine($"{meeting.ScheduledDate:yyyy-MM-dd} - {meeting.MeetingType}");
-            builder.AppendLine($"  {meeting.Summary}");
+            foreach (var meeting in State.ScenarioSnapshot.OwnerMeetingHistory.OrderBy(item => item.Date))
+            {
+                builder.AppendLine($"{meeting.Date:yyyy-MM-dd} - {meeting.MeetingType}");
+                builder.AppendLine($"  Topic: {meeting.Topic}");
+                builder.AppendLine($"  Outcome: {meeting.Outcome}");
+                builder.AppendLine($"  Confidence impact: {meeting.ConfidenceImpact}");
+            }
+        }
+        else
+        {
+            foreach (var meeting in office.Meetings)
+            {
+                builder.AppendLine($"{meeting.ScheduledDate:yyyy-MM-dd} - {meeting.MeetingType}");
+                builder.AppendLine($"  {meeting.Summary}");
+            }
         }
 
         builder.AppendLine();
@@ -4797,6 +4832,106 @@ internal sealed class MainWindow : Window
             {
                 builder.AppendLine($"    {player}");
             }
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildOwnerHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Owner History");
+        builder.AppendLine("=============");
+        var summary = State.ScenarioSnapshot.OwnerCareerSummary;
+        if (summary is null)
+        {
+            builder.AppendLine("No owner life-cycle history has been generated yet.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine($"{summary.OwnerName} - {summary.LifeStage}");
+        builder.AppendLine($"Personality: {summary.CurrentPersonality}");
+        builder.AppendLine($"Confidence trend: {summary.ConfidenceTrend}");
+        builder.AppendLine(summary.CareerSummaryText);
+        builder.AppendLine();
+        builder.AppendLine("Legacy Profile");
+        builder.AppendLine($"Tenure: {summary.LegacyProfile.TenureYears} year(s)");
+        builder.AppendLine($"Philosophy era: {summary.LegacyProfile.PhilosophyEra}");
+        builder.AppendLine($"Budget era: {summary.LegacyProfile.BudgetEra}");
+        builder.AppendLine($"GM relationship era: {summary.LegacyProfile.GmRelationshipEra}");
+        builder.AppendLine($"Competitive era: {summary.LegacyProfile.CompetitiveEra}");
+        builder.AppendLine($"Summary: {summary.LegacyProfile.LegacySummary}");
+        builder.AppendLine();
+        builder.AppendLine("Milestones");
+        foreach (var milestone in summary.Milestones.OrderByDescending(item => item.Date).Take(20))
+        {
+            builder.AppendLine($"{milestone.Date:yyyy-MM-dd} [{milestone.MilestoneType}] {milestone.Summary}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildOwnerLettersReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Owner Letters");
+        builder.AppendLine("=============");
+        var letters = State.ScenarioSnapshot.OwnerLetters;
+        if (letters.Count == 0)
+        {
+            builder.AppendLine("No owner letters have been stored yet.");
+            return builder.ToString();
+        }
+
+        foreach (var letter in letters.OrderByDescending(item => item.Date))
+        {
+            builder.AppendLine($"{letter.Date:yyyy-MM-dd} - {letter.Subject}{(letter.IsWarning ? " [Warning]" : string.Empty)}");
+            builder.AppendLine(letter.Body);
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildJobSecurityHistoryReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Job Security History");
+        builder.AppendLine("====================");
+        var history = State.ScenarioSnapshot.OwnerJobSecurityHistory;
+        if (history.Count == 0)
+        {
+            builder.AppendLine("No job-security history has been stored yet.");
+            return builder.ToString();
+        }
+
+        foreach (var item in history.OrderByDescending(item => item.Date))
+        {
+            builder.AppendLine($"{item.Date:yyyy-MM-dd} - {item.Level} ({item.Score}/100), trend {item.Trend}");
+            builder.AppendLine($"  {item.Reason}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildExpectationResultsReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Expectation Results");
+        builder.AppendLine("===================");
+        var history = State.ScenarioSnapshot.OwnerExpectationHistory;
+        if (history.Count == 0)
+        {
+            builder.AppendLine("No owner expectation history has been stored yet.");
+            return builder.ToString();
+        }
+
+        foreach (var item in history.OrderByDescending(item => item.SeasonYear).ThenByDescending(item => item.Priority))
+        {
+            builder.AppendLine($"{item.SeasonYear} - {item.ExpectationType} | Priority {item.Priority} | Difficulty {item.Difficulty}");
+            builder.AppendLine($"  Result: {item.Result}; progress {item.Progress}/100");
+            builder.AppendLine($"  Owner reaction: {item.OwnerReaction}");
+            builder.AppendLine($"  GM performance: {item.GmPerformanceSummary}");
         }
 
         return builder.ToString();
@@ -6216,6 +6351,7 @@ internal sealed class AlphaDesktopState
     private readonly AgentEngine _agents = new();
     private readonly PlayerLifeCycleService _lifeCycle = new();
     private readonly StaffLifeCycleService _staffLifeCycle = new();
+    private readonly OwnerLifeCycleService _ownerLifeCycle = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6234,7 +6370,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry);
+        ScenarioSnapshot = _ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry);
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -6255,6 +6391,7 @@ internal sealed class AlphaDesktopState
         _leagueTransactions
             .Concat(ScenarioSnapshot.PlayerLifeCycleNews)
             .Concat(ScenarioSnapshot.StaffLifeCycleNews)
+            .Concat(ScenarioSnapshot.OwnerLifeCycleNews)
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
             .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
@@ -9689,7 +9826,7 @@ internal sealed class AlphaDesktopState
 
     private void EnsureLifeCycleState()
     {
-        var updated = _staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry);
+        var updated = _ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry), _registry);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

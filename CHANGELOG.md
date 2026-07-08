@@ -1,27 +1,27 @@
 # Changelog
 
-## Current - Alpha 6.1
+## Current - Alpha 6.2
 
 ### Added
 
-- Staff life-cycle models for life stage, career phase, reputation category, milestones, career story, organizations, roles, salary history, personal legacy, promotion readiness, and concern summaries.
-- StaffLifeCycleService to evaluate current staff and staff-market candidates across coaching, scouting, medical, and front-office departments.
-- Staff milestones now feed career timelines and limited notable Staff-category League News items.
-- Staff profiles now show life stage, career phase, reputation, legacy score, organizations, roles, players developed, prospects discovered, coaching tree links, promotion readiness, and career concerns.
-- Reports / History now includes Staff Careers, Coaching Trees, Scout History, and Development Staff History views.
-- Executive reports and Action Center now include staff life-cycle highlights for promotion review, succession planning, staff performance review, top scout, development staff, and staff concerns.
-- Tests covering life stages, career history, reputation, scouting careers, coaching careers, coaching trees, promotion, staff movement, relationships, mentorship, timeline, history, reports, Action Center, save/load, and UI exposure.
+- Owner life-cycle models for life stage, career state, expectation history, confidence history, meeting history, job-security history, milestones, and legacy profiles.
+- OwnerLifeCycleService to evaluate owner personality evolution, budget relationship, confidence trends, permanent owner letters, ownership-era summaries, and organization-history context.
+- Owner milestones now feed career timelines and limited notable Owner-category League News items.
+- Owner workspace now shows life stage, confidence trend, current personality, owner career summary, personality evolution, budget relationship, legacy, and organization-era context.
+- Reports / History now includes Owner History, Owner Letters, Job Security History, and Expectation Results views.
+- Executive reports and Action Center now include owner life-cycle highlights for meetings, budget review, confidence pressure, letters, job-security warnings, and legacy context.
+- Tests covering life stage generation, expectations, confidence, meetings, letters, job security, legacy, milestones, Action Center, reports, budget pressure, save/load, UI exposure, and forbidden-system checks.
 
 ### Changed
 
-- New GM scenario bootstrap now seeds staff life-cycle records for the existing staff room.
-- AlphaDesktop backfills staff life-cycle records for current and loaded scenario state.
-- League News counts and feeds now include notable staff milestones.
-- AlphaDesktop version label updated to Alpha 6.1.
+- New GM scenario bootstrap now seeds owner life-cycle records for the existing ownership era.
+- AlphaDesktop backfills owner life-cycle records for current and loaded scenario state.
+- League News counts and feeds now include notable owner milestones.
+- AlphaDesktop version label updated to Alpha 6.2.
 
 ### Fixed
 
-- Staff career context no longer lives only in scattered staff history and market records; staff profiles and reports now show one coherent career read.
+- Owner context no longer lives only in current expectation/job-security snapshots; owner screens and reports now show a coherent long-term ownership read.
 
 ### Verified
 
@@ -32,15 +32,17 @@
 ### Not Added
 
 - No Godot.
-- No Hall of Fame logic.
-- No retirement decision system.
-- No awards voting.
-- No jersey retirement.
-- No media engine.
+- No actual firing system.
+- No owner replacement system.
+- No job offers.
+- No board of directors.
+- No media pressure engine.
+- No full finance engine.
 - No game simulation changes.
 
 ## Recently Completed
 
+- Alpha 6.1 - Staff Life Cycle v1.
 - Alpha 6.0 - Player Life Cycle v1.
 - Alpha 5.9 - League AI v2.
 - Alpha 5.8 - Dynamic Draft Classes v1.
@@ -59,4 +61,4 @@
 
 ## Next
 
-- Alpha 6.2 - TBD.
+- Alpha 6.3 - TBD.

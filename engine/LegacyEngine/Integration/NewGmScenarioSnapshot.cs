@@ -144,6 +144,26 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<LeagueTransaction> StaffLifeCycleNews { get; init; } = Array.Empty<LeagueTransaction>();
 
+    public OwnerCareerState? OwnerCareerState { get; init; }
+
+    public OwnerCareerSummary? OwnerCareerSummary { get; init; }
+
+    public OwnerLegacyProfile? OwnerLegacyProfile { get; init; }
+
+    public IReadOnlyList<OwnerExpectationHistoryRecord> OwnerExpectationHistory { get; init; } = Array.Empty<OwnerExpectationHistoryRecord>();
+
+    public IReadOnlyList<OwnerConfidenceHistoryRecord> OwnerConfidenceHistory { get; init; } = Array.Empty<OwnerConfidenceHistoryRecord>();
+
+    public IReadOnlyList<OwnerMeetingHistoryRecord> OwnerMeetingHistory { get; init; } = Array.Empty<OwnerMeetingHistoryRecord>();
+
+    public IReadOnlyList<OwnerLetter> OwnerLetters { get; init; } = Array.Empty<OwnerLetter>();
+
+    public IReadOnlyList<OwnerJobSecurityHistoryRecord> OwnerJobSecurityHistory { get; init; } = Array.Empty<OwnerJobSecurityHistoryRecord>();
+
+    public IReadOnlyList<OwnerMilestone> OwnerMilestones { get; init; } = Array.Empty<OwnerMilestone>();
+
+    public IReadOnlyList<LeagueTransaction> OwnerLifeCycleNews { get; init; } = Array.Empty<LeagueTransaction>();
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -415,6 +435,45 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         foreach (var transaction in StaffLifeCycleNews)
+        {
+            transaction.Validate();
+        }
+
+        OwnerCareerState?.Validate();
+        OwnerCareerSummary?.Validate();
+        OwnerLegacyProfile?.Validate();
+
+        foreach (var item in OwnerExpectationHistory)
+        {
+            item.Validate();
+        }
+
+        foreach (var item in OwnerConfidenceHistory)
+        {
+            item.Validate();
+        }
+
+        foreach (var item in OwnerMeetingHistory)
+        {
+            item.Validate();
+        }
+
+        foreach (var letter in OwnerLetters)
+        {
+            letter.Validate();
+        }
+
+        foreach (var item in OwnerJobSecurityHistory)
+        {
+            item.Validate();
+        }
+
+        foreach (var milestone in OwnerMilestones)
+        {
+            milestone.Validate();
+        }
+
+        foreach (var transaction in OwnerLifeCycleNews)
         {
             transaction.Validate();
         }

@@ -37,6 +37,7 @@ public sealed class ActionCenterService
         AddOffseasonChecklist(scenario, items);
         AddPlayerLifeCycleItems(scenario, items);
         AddStaffLifeCycleItems(scenario, items);
+        AddOwnerLifeCycleItems(scenario, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -702,6 +703,14 @@ public sealed class ActionCenterService
             ? new StaffLifeCycleService().EnsureLifeCycle(scenario)
             : scenario;
         items.AddRange(new StaffLifeCycleService().BuildActionItems(lifecycle));
+    }
+
+    private static void AddOwnerLifeCycleItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var lifecycle = scenario.OwnerCareerSummary is null
+            ? new OwnerLifeCycleService().EnsureLifeCycle(scenario)
+            : scenario;
+        items.AddRange(new OwnerLifeCycleService().BuildActionItems(lifecycle));
     }
 
     private static void AddPlayerLifeCycleItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

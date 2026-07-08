@@ -17,5 +17,6 @@ public enum LeagueTransactionType
     SeasonCompleted,
     TeamIdentityUpdate,
     PlayerMilestone,
-    StaffMilestone
+    StaffMilestone,
+    OwnerMilestone
 }

@@ -96,14 +96,15 @@ The five foundation pillars remain:
 - Alpha 5.9 - League AI v2
 - Alpha 6.0 - Player Life Cycle v1
 - Alpha 6.1 - Staff Life Cycle v1
+- Alpha 6.2 - Owner Life Cycle v1
 
 ## Current Milestone
 
-Alpha 6.1 - Staff Life Cycle v1
+Alpha 6.2 - Owner Life Cycle v1
 
 ## Current Goal
 
-Make every staff member feel like a living long-term career by tracking life stage, career phase, reputation, milestones, organizations, roles, salary history, coaching trees, scout discoveries, player development influence, promotion readiness, Action Center staff items, report highlights, and limited league-news milestones.
+Make owners feel like long-term organization stewards by tracking owner life stage, expectation history, confidence history, meeting history, permanent owner letters, budget relationship, job-security history, organization era context, Action Center owner items, report highlights, and limited league-news milestones.
 
 ## Why Relationship Engine Was Next
 
@@ -113,11 +114,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 6.2 - TBD
+Alpha 6.3 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.2 - TBD
+1. Alpha 6.3 - TBD
 
 ## Build Rule
 

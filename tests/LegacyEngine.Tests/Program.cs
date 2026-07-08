@@ -75,6 +75,7 @@ var alpha59LeagueAiV2Tests = new Alpha59LeagueAiV2Tests();
 var nhlScenarioRealismTests = new NhlScenarioRealismTests();
 var alpha60PlayerLifeCycleTests = new Alpha60PlayerLifeCycleTests();
 var alpha61StaffLifeCycleTests = new Alpha61StaffLifeCycleTests();
+var alpha62OwnerLifeCycleTests = new Alpha62OwnerLifeCycleTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -996,6 +997,19 @@ runner.Run("alpha 6.1 action center items generated", alpha61StaffLifeCycleTests
 runner.Run("alpha 6.1 save load preserves staff life cycle", alpha61StaffLifeCycleTests.SaveLoadPreservesStaffLifeCycle);
 runner.Run("alpha 6.1 AlphaDesktop exposes staff life-cycle UI", alpha61StaffLifeCycleTests.AlphaDesktopExposesStaffLifeCycleUi);
 runner.Run("alpha 6.1 no forbidden systems added", alpha61StaffLifeCycleTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 6.2 owner life stage generated", alpha62OwnerLifeCycleTests.OwnerLifeStageGenerated);
+runner.Run("alpha 6.2 expectation history generated", alpha62OwnerLifeCycleTests.ExpectationHistoryGenerated);
+runner.Run("alpha 6.2 confidence history generated", alpha62OwnerLifeCycleTests.ConfidenceHistoryGenerated);
+runner.Run("alpha 6.2 meeting and letter history generated", alpha62OwnerLifeCycleTests.MeetingAndLetterHistoryGenerated);
+runner.Run("alpha 6.2 job security history generated", alpha62OwnerLifeCycleTests.JobSecurityHistoryGenerated);
+runner.Run("alpha 6.2 owner legacy and organization era generated", alpha62OwnerLifeCycleTests.OwnerLegacyAndOrganizationEraGenerated);
+runner.Run("alpha 6.2 milestones update history and league news", alpha62OwnerLifeCycleTests.MilestonesUpdateHistoryAndLeagueNews);
+runner.Run("alpha 6.2 action center items generated", alpha62OwnerLifeCycleTests.ActionCenterItemsGenerated);
+runner.Run("alpha 6.2 reports include owner life-cycle highlights", alpha62OwnerLifeCycleTests.ReportsIncludeOwnerLifeCycleHighlights);
+runner.Run("alpha 6.2 budget relationship reflects budget pressure", alpha62OwnerLifeCycleTests.BudgetRelationshipReflectsBudgetPressure);
+runner.Run("alpha 6.2 save load preserves owner life cycle", alpha62OwnerLifeCycleTests.SaveLoadPreservesOwnerLifeCycle);
+runner.Run("alpha 6.2 AlphaDesktop exposes owner life-cycle UI", alpha62OwnerLifeCycleTests.AlphaDesktopExposesOwnerLifeCycleUi);
+runner.Run("alpha 6.2 no forbidden systems added", alpha62OwnerLifeCycleTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
