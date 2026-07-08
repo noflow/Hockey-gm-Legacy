@@ -98,14 +98,15 @@ The five foundation pillars remain:
 - Alpha 6.1 - Staff Life Cycle v1
 - Alpha 6.2 - Owner Life Cycle v1
 - Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers
+- Alpha 6.3 - Relationship Expansion v1
 
 ## Current Milestone
 
-Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers
+Alpha 6.3 - Relationship Expansion v1
 
 ## Current Goal
 
-Make trading usable for alpha testing by showing both teams' roster players, prospect rights, draft picks, and future-consideration placeholders; separating You Give and You Receive proposal buckets; adding concrete counter-offer packages; and keeping accepted trades behind explicit Pending GM approval.
+Make relationships matter across the hockey universe by tracking expanded GM/player/staff/owner/agent/organization relationships, visible history, trends, conflicts, chemistry summaries, and modest decision modifiers for contracts, trades, staff chemistry, dossiers, owner context, and Action Center warnings.
 
 ## Why Relationship Engine Was Next
 
@@ -115,11 +116,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 6.3 - TBD
+Alpha 6.4 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.3 - TBD
+1. Alpha 6.4 - TBD
 
 ## Build Rule
 

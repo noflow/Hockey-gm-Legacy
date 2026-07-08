@@ -364,7 +364,9 @@ public sealed class StaffOfficeService
             ? $"{name}: {string.Join(" ", warnings)}"
             : $"{name}: staff chemistry is stable; GM fit {Label(gmFit)} and department fit {Label(departmentFit)}.";
 
-        var report = new StaffChemistryReport(personId, name, gmFit, departmentFit, warnings, partnerships, summary);
+        var report = new RelationshipExpansionService().ApplyStaffChemistry(
+            new StaffChemistryReport(personId, name, gmFit, departmentFit, warnings, partnerships, summary),
+            scenario);
         report.Validate();
         return report;
     }

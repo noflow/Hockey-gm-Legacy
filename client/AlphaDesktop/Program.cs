@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.2.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -599,7 +599,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.2.1 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.3 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -4112,6 +4112,13 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Pressure: {office.Confidence.Pressure}  Support: {office.Confidence.Support}");
         builder.AppendLine($"Job security: {office.JobSecurity.Level} ({office.JobSecurity.Score}/100)");
         builder.AppendLine(office.JobSecurity.Explanation);
+        var ownerRelationship = State.RelationshipProfiles.FirstOrDefault(profile => profile.RelationshipType == ExpandedRelationshipType.GmOwner);
+        if (ownerRelationship is not null)
+        {
+            builder.AppendLine($"Relationship: {ownerRelationship.Label} | Trust {ownerRelationship.Trust}, Respect {ownerRelationship.Respect}, Loyalty {ownerRelationship.Loyalty}, Communication {ownerRelationship.CommunicationQuality}, Trend {ownerRelationship.Trend}");
+            builder.AppendLine($"Relationship note: {ownerRelationship.Summary}");
+        }
+
         if (State.ScenarioSnapshot.OwnerCareerSummary is { } lifeCycle)
         {
             builder.AppendLine();
@@ -4348,6 +4355,19 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Organization Health");
         builder.AppendLine("===================");
+        builder.AppendLine("Relationship Chemistry");
+        foreach (var line in State.RelationshipChemistry.SummaryLines)
+        {
+            builder.AppendLine($"- {line}");
+        }
+
+        foreach (var conflict in State.RelationshipConflicts.Where(conflict => conflict.IsMajor && conflict.IsActive).Take(3))
+        {
+            var profile = State.RelationshipProfiles.FirstOrDefault(profile => profile.RelationshipProfileId == conflict.RelationshipProfileId);
+            builder.AppendLine($"Conflict warning: {profile?.TargetName ?? "Unknown"} - {conflict.VisibleExplanation}");
+        }
+
+        builder.AppendLine();
         builder.AppendLine("Team Identity");
         builder.AppendLine($"Identity: {leagueProfile.Identity}");
         builder.AppendLine($"Current strategy: {leagueProfile.CurrentStrategy}");
@@ -5816,6 +5836,40 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Relationships");
         builder.AppendLine("=============");
+        builder.AppendLine("Chemistry Summary");
+        foreach (var line in State.RelationshipChemistry.SummaryLines)
+        {
+            builder.AppendLine($"- {line}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Expanded Relationship Profiles");
+        foreach (var profile in State.RelationshipProfiles
+            .OrderBy(profile => profile.RelationshipType)
+            .ThenBy(profile => profile.TargetName, StringComparer.Ordinal)
+            .Take(60))
+        {
+            builder.AppendLine($"{profile.RelationshipType}: {profile.SourceName} -> {profile.TargetName}");
+            builder.AppendLine($"  {profile.Label} | Trust {profile.Trust}, Respect {profile.Respect}, Loyalty {profile.Loyalty}, Conflict {profile.Conflict}, Communication {profile.CommunicationQuality}, Trend {profile.Trend}");
+            builder.AppendLine($"  {profile.Summary}");
+            foreach (var moment in profile.KeyMoments.TakeLast(2))
+            {
+                builder.AppendLine($"  Moment: {moment}");
+            }
+
+            builder.AppendLine();
+        }
+
+        builder.AppendLine("Active Conflicts");
+        foreach (var conflict in State.RelationshipConflicts.Where(conflict => conflict.IsActive).Take(12))
+        {
+            var profile = State.RelationshipProfiles.FirstOrDefault(profile => profile.RelationshipProfileId == conflict.RelationshipProfileId);
+            builder.AppendLine($"{conflict.ConflictType} | Severity {conflict.Severity}/100 | {(conflict.IsMajor ? "Major" : "Minor")} | {profile?.TargetName ?? "Unknown"}");
+            builder.AppendLine($"  {conflict.VisibleExplanation}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Legacy Directional Links");
         foreach (var relationship in State.Snapshot.Relationships.OrderBy(item => item.RelationshipType.ToString(), StringComparer.Ordinal))
         {
             builder.AppendLine($"{relationship.RelationshipType}: {FindPersonName(relationship.FromPersonId)} -> {FindPersonName(relationship.ToPersonId)}");
@@ -6379,6 +6433,7 @@ internal sealed class AlphaDesktopState
     private readonly PlayerLifeCycleService _lifeCycle = new();
     private readonly StaffLifeCycleService _staffLifeCycle = new();
     private readonly OwnerLifeCycleService _ownerLifeCycle = new();
+    private readonly RelationshipExpansionService _relationships = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6397,7 +6452,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry);
+        ScenarioSnapshot = _relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry);
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -6539,6 +6594,20 @@ internal sealed class AlphaDesktopState
     public SalaryCapSnapshot SalaryCap => new SalaryCapService().BuildSnapshot(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
 
     public OwnerOfficeSummary OwnerOffice => _ownerOffice.BuildSummary(ScenarioSnapshot, BudgetOverview);
+
+    public RelationshipChemistrySummary RelationshipChemistry =>
+        ScenarioSnapshot.RelationshipChemistry
+        ?? _relationships.EnsureExpansion(ScenarioSnapshot, _registry).RelationshipChemistry!;
+
+    public IReadOnlyList<ExpandedRelationshipProfile> RelationshipProfiles =>
+        ScenarioSnapshot.RelationshipProfiles.Count > 0
+            ? ScenarioSnapshot.RelationshipProfiles
+            : _relationships.EnsureExpansion(ScenarioSnapshot, _registry).RelationshipProfiles;
+
+    public IReadOnlyList<RelationshipConflict> RelationshipConflicts =>
+        ScenarioSnapshot.RelationshipConflicts.Count > 0
+            ? ScenarioSnapshot.RelationshipConflicts
+            : _relationships.EnsureExpansion(ScenarioSnapshot, _registry).RelationshipConflicts;
 
     public LeagueAiReport LeagueAiReport => _leagueAi.BuildReport(ScenarioSnapshot, BudgetOverview);
 
@@ -9903,7 +9972,7 @@ internal sealed class AlphaDesktopState
 
     private void EnsureLifeCycleState()
     {
-        var updated = _ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry), _registry);
+        var updated = _relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry), _registry), _registry);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

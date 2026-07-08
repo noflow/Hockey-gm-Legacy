@@ -77,6 +77,7 @@ var alpha60PlayerLifeCycleTests = new Alpha60PlayerLifeCycleTests();
 var alpha61StaffLifeCycleTests = new Alpha61StaffLifeCycleTests();
 var alpha62OwnerLifeCycleTests = new Alpha62OwnerLifeCycleTests();
 var alpha621TradesV3Tests = new Alpha621TradesV3Tests();
+var alpha63RelationshipExpansionTests = new Alpha63RelationshipExpansionTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1027,6 +1028,18 @@ runner.Run("alpha 6.2.1 approved trade moves players prospects and records picks
 runner.Run("alpha 6.2.1 declined trade leaves assets unchanged", alpha621TradesV3Tests.DeclinedTradeLeavesAssetsUnchanged);
 runner.Run("alpha 6.2.1 league news records draft picks in trade summary", alpha621TradesV3Tests.LeagueNewsRecordsDraftPicksInTradeSummary);
 runner.Run("alpha 6.2.1 no forbidden systems added", alpha621TradesV3Tests.Alpha621HasNoForbiddenSystems);
+runner.Run("alpha 6.3 relationship types exist", alpha63RelationshipExpansionTests.RelationshipTypesExist);
+runner.Run("alpha 6.3 relationship change records reason and date", alpha63RelationshipExpansionTests.RelationshipChangeRecordsReasonAndDate);
+runner.Run("alpha 6.3 signing improves relationship", alpha63RelationshipExpansionTests.SigningImprovesRelationship);
+runner.Run("alpha 6.3 rejected offer can reduce relationship", alpha63RelationshipExpansionTests.RejectedOfferCanReduceRelationship);
+runner.Run("alpha 6.3 trade can affect relationship", alpha63RelationshipExpansionTests.TradeCanAffectRelationship);
+runner.Run("alpha 6.3 broken promise creates conflict", alpha63RelationshipExpansionTests.BrokenPromiseCreatesConflict);
+runner.Run("alpha 6.3 relationship affects contract decision", alpha63RelationshipExpansionTests.RelationshipAffectsContractDecision);
+runner.Run("alpha 6.3 relationship affects staff chemistry", alpha63RelationshipExpansionTests.RelationshipAffectsStaffChemistry);
+runner.Run("alpha 6.3 relationship appears in dossier", alpha63RelationshipExpansionTests.RelationshipAppearsInDossier);
+runner.Run("alpha 6.3 Action Center shows major conflict", alpha63RelationshipExpansionTests.ActionCenterShowsMajorConflict);
+runner.Run("alpha 6.3 save load preserves relationship history", alpha63RelationshipExpansionTests.SaveLoadPreservesRelationshipHistory);
+runner.Run("alpha 6.3 no forbidden dependency added", alpha63RelationshipExpansionTests.NoForbiddenDependencyAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

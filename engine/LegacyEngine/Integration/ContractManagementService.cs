@@ -46,12 +46,13 @@ public sealed class ContractManagementService
         var total = annual * request.TermYears;
         var budgetAfter = budget.RemainingBudget - annual;
         var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, annual, request.TermYears);
-        var baseScore = ScoreOffer(scenario, ask, request, budgetAfter, cap);
+        var relationshipImpact = new RelationshipExpansionService().BuildContractImpact(scenario, request.PersonId);
+        var baseScore = Math.Clamp(ScoreOffer(scenario, ask, request, budgetAfter, cap) + relationshipImpact.Modifier, 0, 100);
         var agentReview = new AgentEngine().ReviewOffer(scenario, ask, request, baseScore);
         var score = Math.Clamp(baseScore + agentReview.ScoreModifier, 0, 100);
         var likelihood = LikelihoodFor(score);
         var decision = DecisionFor(score, ask, request);
-        var explanation = Explain(ask, request, decision, score, budgetAfter, cap, agentReview);
+        var explanation = Explain(ask, request, decision, score, budgetAfter, cap, agentReview, relationshipImpact);
         var currentCost = CurrentAnnualCost(scenario, request.PersonId);
         var comparison = new ContractComparison(
             CurrentAnnualCost: currentCost,
@@ -464,7 +465,7 @@ public sealed class ContractManagementService
         return Math.Clamp((int)Math.Round(score / Math.Max(1m, weight)), 0, 100);
     }
 
-    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap, AgentNegotiationReview agentReview)
+    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap, AgentNegotiationReview agentReview, RelationshipImpactSummary relationshipImpact)
     {
         var reasons = new List<string>
         {
@@ -482,6 +483,7 @@ public sealed class ContractManagementService
                 : "Budget impact is manageable.",
             CapWarning(cap)
         };
+        reasons.Add($"Relationship impact: {relationshipImpact.Explanation}");
         reasons.Add($"Agent opinion: {agentReview.Opinion}");
         reasons.Add($"Agent concern: {agentReview.BiggestConcern}");
         reasons.Add($"Requested improvement: {agentReview.RequestedImprovement}");

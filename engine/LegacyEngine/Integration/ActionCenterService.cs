@@ -38,6 +38,7 @@ public sealed class ActionCenterService
         AddPlayerLifeCycleItems(scenario, items);
         AddStaffLifeCycleItems(scenario, items);
         AddOwnerLifeCycleItems(scenario, items);
+        AddRelationshipItems(scenario, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -716,6 +717,11 @@ public sealed class ActionCenterService
     private static void AddPlayerLifeCycleItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
         items.AddRange(new PlayerLifeCycleService().BuildActionItems(scenario));
+    }
+
+    private static void AddRelationshipItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new RelationshipExpansionService().BuildActionItems(scenario));
     }
 
     private static ActionCenterItem ApplyStatus(ActionCenterItem item, IReadOnlyDictionary<string, ActionCenterStatus>? statusOverrides) =>

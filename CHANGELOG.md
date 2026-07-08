@@ -1,28 +1,30 @@
 # Changelog
 
-## Current - Alpha 6.2.1
+## Current - Alpha 6.3
 
 ### Added
 
-- Trade asset builders for both organizations, including roster players, prospect rights, draft picks, and future-consideration placeholders.
-- Draft pick trade assets with year, round, original owner, current owner, protected-placeholder, estimated value, and readable display text.
-- Trade counter offers now carry revised proposal packages so the GM can accept the counter into the builder before proposing again.
-- AlphaDesktop trade builder now separates assets into Your Assets, You Give, You Receive, and Other Team Assets.
-- Tests covering both-team roster assets, prospect assets, draft-pick assets, separated proposal buckets, counter offers, pending approvals, approved/declined trades, League News summaries, and forbidden-system checks.
+- Relationship Expansion models for expanded relationship types, trends, change triggers, conflicts, chemistry labels, and impact summaries.
+- Relationship profiles for GM/player, GM/staff, GM/owner, GM/agent, player/coach, staff/staff, staff/owner, organization/player, organization/staff, organization/agent, and organization/organization links.
+- Relationship change history records with reason, amount, date, related event reference, and visible explanation.
+- Simple conflict records for tension, trust issues, broken promises, role frustration, personality clashes, and staff disagreement.
+- Chemistry summaries for roster, staff, scouting department, coach-player fit, and GM office relationships.
+- Tests covering relationship types, change history, signing/rejected-offer/trade/broken-promise effects, contract impact, staff chemistry, dossiers, Action Center conflicts, save/load preservation, and forbidden dependency checks.
 
 ### Changed
 
-- Other-team trade assets now include active-roster style players instead of only a thin prospect/trade-block view.
-- Trade validation accepts correctly owned other-team roster/prospect/pick assets without requiring every other-team asset to exist in the small trade-block list.
-- AI trade evaluation rejects truly lopsided offers while returning Countered for close-but-incomplete packages.
-- Completed trade League News summaries include players, prospects, and draft picks moved.
-- AlphaDesktop version label updated to Alpha 6.2.1.
+- Contract offer evaluation now includes a modest relationship modifier and explains that impact.
+- Staff chemistry now reads expanded relationship profiles and active conflicts.
+- Player dossiers now show expanded relationship score, trend, key moments, recent changes, and conflict context.
+- Owner, Organization Health, and Relationships desktop views now surface relationship health and chemistry.
+- New GM scenarios and loaded careers backfill relationship expansion state automatically.
+- Save/load now preserves relationship profiles, change history, conflicts, and chemistry through the scenario snapshot.
+- AlphaDesktop version label updated to Alpha 6.3.
 
 ### Fixed
 
-- Trade proposal area no longer mixes both sides' selected assets in one shared list.
-- Draft picks are now selectable on both the You Give and You Receive sides.
-- Counter offers no longer only say no; they can request concrete added assets.
+- Staff relationship conflicts now appear in staff chemistry warnings even when the numeric chemistry score has not fully collapsed yet.
+- Relationship event helpers infer staff, owner, agent, or player target type instead of treating every GM relationship as GM-player.
 
 ### Verified
 
@@ -33,15 +35,14 @@
 ### Not Added
 
 - No Godot.
-- No retained salary.
-- No conditional picks.
-- No no-trade clauses.
-- No three-team trades.
-- No salary cap expansion.
+- No full morale/drama engine.
+- No social media or media system.
+- No firing system.
 - No game simulation changes.
 
 ## Recently Completed
 
+- Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers.
 - Alpha 6.2 - Owner Life Cycle v1.
 - Alpha 6.1 - Staff Life Cycle v1.
 - Alpha 6.0 - Player Life Cycle v1.
@@ -62,4 +63,4 @@
 
 ## Next
 
-- Alpha 6.3 - TBD.
+- Alpha 6.4 - TBD.

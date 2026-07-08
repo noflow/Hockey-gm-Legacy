@@ -164,6 +164,14 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<LeagueTransaction> OwnerLifeCycleNews { get; init; } = Array.Empty<LeagueTransaction>();
 
+    public IReadOnlyList<ExpandedRelationshipProfile> RelationshipProfiles { get; init; } = Array.Empty<ExpandedRelationshipProfile>();
+
+    public IReadOnlyList<RelationshipChangeRecord> RelationshipChangeHistory { get; init; } = Array.Empty<RelationshipChangeRecord>();
+
+    public IReadOnlyList<RelationshipConflict> RelationshipConflicts { get; init; } = Array.Empty<RelationshipConflict>();
+
+    public RelationshipChemistrySummary? RelationshipChemistry { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -477,5 +485,22 @@ public sealed record NewGmScenarioSnapshot(
         {
             transaction.Validate();
         }
+
+        foreach (var profile in RelationshipProfiles)
+        {
+            profile.Validate();
+        }
+
+        foreach (var change in RelationshipChangeHistory)
+        {
+            change.Validate();
+        }
+
+        foreach (var conflict in RelationshipConflicts)
+        {
+            conflict.Validate();
+        }
+
+        RelationshipChemistry?.Validate();
     }
 }

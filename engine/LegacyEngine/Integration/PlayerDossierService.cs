@@ -419,19 +419,20 @@ public sealed class PlayerDossierService
 
     private static PlayerDossierSection BuildRelationships(NewGmScenarioSnapshot scenario, string personId)
     {
-        var lines = scenario.AlphaSnapshot.Relationships
+        var lines = new RelationshipExpansionService().BuildDossierRelationshipLines(scenario, personId).ToList();
+
+        lines.AddRange(scenario.AlphaSnapshot.Relationships
             .Where(relationship => relationship.FromPersonId == personId || relationship.ToPersonId == personId)
             .Take(8)
             .Select(relationship =>
             {
                 var otherId = relationship.FromPersonId == personId ? relationship.ToPersonId : relationship.FromPersonId;
                 return $"{relationship.RelationshipType}: {FindName(scenario, otherId)} - trust {Label(relationship.Trust)}, respect {Label(relationship.Respect)}, confidence {Label(relationship.Confidence)}.";
-            })
-            .ToArray();
+            }));
 
-        if (lines.Length == 0)
+        if (lines.Count == 0)
         {
-            lines = new[] { "No relationship notes are currently tracked." };
+            lines.Add("No relationship notes are currently tracked.");
         }
 
         return new PlayerDossierSection("Relationships", lines);
