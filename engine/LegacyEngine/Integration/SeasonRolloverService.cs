@@ -5,6 +5,7 @@ using LegacyEngine.Names;
 using LegacyEngine.People;
 using LegacyEngine.Recruiting;
 using LegacyEngine.Rosters;
+using LegacyEngine.RuleEngine;
 using LegacyEngine.Scouting;
 using LegacyEngine.Seasons;
 using LegacyEngine.World;
@@ -108,6 +109,7 @@ public sealed class SeasonRolloverService
             SeasonReadiness = new SeasonReadinessState(),
             TrainingCamp = null,
             DraftExperience = null,
+            CurrentDraftClassProfile = draftClass.Profile,
             DraftRights = Array.Empty<DraftPickSummary>(),
             SeasonRollover = state
         };
@@ -208,6 +210,8 @@ public sealed class SeasonRolloverService
 
     private static GeneratedDraftClass GenerateNextDraftClass(NewGmScenarioSnapshot scenario, int seasonYear)
     {
+        var draftClassGenerator = new DraftClassGenerator();
+        var profile = draftClassGenerator.GenerateProfile(scenario.LeagueProfile.Rulebook, seasonYear, scenario.Season.LeagueId, NextDraftClassSize);
         var registry = new NameUniquenessRegistry();
         foreach (var person in scenario.AlphaSnapshot.People)
         {
@@ -219,17 +223,17 @@ public sealed class SeasonRolloverService
         var recruits = new List<RecruitProfile>();
         var board = DraftBoard.Create($"draft-board-{scenario.Organization.OrganizationId}-{seasonYear}", scenario.Organization.OrganizationId);
 
-        for (var index = 0; index < NextDraftClassSize; index++)
+        for (var index = 0; index < profile.TotalProspects; index++)
         {
             var name = generator.Generate(registry, Scope(seasonYear), PlayerOrigins());
             var personId = $"person-draft-{seasonYear}-{index + 1:000}";
-            var position = PositionForIndex(index);
-            var birthYear = seasonYear - 16 - (index % 2);
+            var position = draftClassGenerator.PositionFor(profile, index);
+            var birthYear = DraftBirthYearFor(seasonYear, scenario.LeagueProfile.Rulebook, index);
             var person = NewGmScenarioBootstrapper.CreateScenarioPersonForGeneratedSystems(
                 personId,
                 name.FirstName,
                 name.LastName,
-                new DateOnly(birthYear, (index % 12) + 1, Math.Min(24, (index % 25) + 1)),
+                new DateOnly(birthYear, 1, Math.Min(24, (index % 25) + 1)),
                 name.Nationality,
                 name.Birthplace,
                 "unassigned");
@@ -242,16 +246,26 @@ public sealed class SeasonRolloverService
                 ProspectPersonId: personId,
                 Rank: index + 1,
                 ScoutingReportId: null,
-                ScoutingConfidence: ScoutingConfidenceLevel.Low,
-                ProjectionText: ProjectionFor(position, index),
+                ScoutingConfidence: draftClassGenerator.StartingConfidence(profile, index + 1, inheritedScouting: false),
+                ProjectionText: draftClassGenerator.ProjectionFor(profile, position, index),
                 IsStarred: index < 3,
                 PersonalNotes: "",
-                AnalyticsSummary: "Early-year view only; assign scouts for a clearer projection.",
-                Bio: BioFor(position, index, birthYear, name.Birthplace)));
+                AnalyticsSummary: draftClassGenerator.AnalyticsFor(profile, position, index),
+                Bio: draftClassGenerator.BuildBio(profile, position, index, birthYear, name.Birthplace),
+                RiskSummary: draftClassGenerator.RiskFor(profile, position, index),
+                ClassContextNote: draftClassGenerator.ClassContextFor(profile, position, index + 1)));
         }
 
-        var summary = DraftClassSummary(board);
-        return new GeneratedDraftClass(people, recruits, board, summary);
+        var summary = draftClassGenerator.BuildSummary(profile, board);
+        return new GeneratedDraftClass(people, recruits, board, profile, $"{profile.PreviewText} {summary.Profile.ScoutQuote}");
+    }
+
+    private static int DraftBirthYearFor(int seasonYear, Rulebook rulebook, int index)
+    {
+        var age = rulebook.LeagueType == "nhl_style"
+            ? 17 + (index % 2)
+            : 16 + (index % 2);
+        return seasonYear - age;
     }
 
     private static string DraftClassSummary(DraftBoard board)
@@ -596,5 +610,6 @@ public sealed class SeasonRolloverService
         IReadOnlyList<Person> People,
         IReadOnlyList<RecruitProfile> Recruits,
         DraftBoard DraftBoard,
+        DraftClassProfile Profile,
         string Summary);
 }

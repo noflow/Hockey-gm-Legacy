@@ -92,14 +92,15 @@ The five foundation pillars remain:
 - Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1
 - Alpha 5.6 - Salary Cap & Roster Compliance v1
 - Alpha 5.7 - Agent Engine v1
+- Alpha 5.8 - Dynamic Draft Classes v1
 
 ## Current Milestone
 
-Alpha 5.7 - Agent Engine v1
+Alpha 5.8 - Dynamic Draft Classes v1
 
 ## Current Goal
 
-Introduce recurring player agents as the primary contract and free-agency negotiators. Players now have representation records, agents carry personalities, relationships, reputation, style, client lists, and history, and contract/free-agent responses include agent opinions, concerns, requested improvements, risk, and counter suggestions while final signing still requires GM approval.
+Generate annual draft classes with distinct identity, strengths, weaknesses, storylines, rulebook-aware age/geography/source behavior, public prospect bio data, class-aware scouting language, and preserved draft-class history. Draft classes must stay fictional, avoid visible numeric name suffixes, avoid hidden ratings, and keep AHL-style draft-disabled rulebooks from creating amateur draft flows.
 
 ## Why Relationship Engine Was Next
 
@@ -109,11 +110,11 @@ The Relationship Engine must exist before Recruiting.
 
 ## Next Build Target
 
-Alpha 5.8 - TBD
+Alpha 5.9 - TBD
 
 ## Next Milestones
 
-1. Alpha 5.8 - TBD
+1. Alpha 5.9 - TBD
 
 ## Build Rule
 

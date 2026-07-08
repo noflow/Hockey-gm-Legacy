@@ -7,6 +7,8 @@ public sealed record DraftClassHistory(
     IReadOnlyList<DraftPickHistory> Picks,
     string Summary)
 {
+    public DraftClassProfile? ClassProfile { get; init; }
+
     public void Validate()
     {
         if (Year < 1
@@ -17,6 +19,7 @@ public sealed record DraftClassHistory(
             throw new ArgumentException("Draft class history requires year, organization, and summary.");
         }
 
+        ClassProfile?.Validate();
         foreach (var pick in Picks)
         {
             pick.Validate();

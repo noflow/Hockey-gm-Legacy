@@ -11,7 +11,9 @@ public sealed record DraftBoardEntry(
     bool IsStarred = false,
     string PersonalNotes = "",
     string AnalyticsSummary = "",
-    DraftProspectBio? Bio = null)
+    DraftProspectBio? Bio = null,
+    string RiskSummary = "",
+    string ClassContextNote = "")
 {
     public void Validate()
     {
@@ -31,5 +33,9 @@ public sealed record DraftBoardEntry(
         }
 
         Bio?.Validate();
+        if (RiskSummary is null || ClassContextNote is null)
+        {
+            throw new ArgumentException("Draft board risk and class context notes cannot be null.");
+        }
     }
 }

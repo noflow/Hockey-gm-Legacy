@@ -83,12 +83,18 @@ public sealed class CareerHistoryService
         }
 
         var picks = playerSelections.Select(selection => BuildDraftPickHistory(scenario, selection)).ToArray();
+        var classSummary = scenario.CurrentDraftClassProfile is null
+            ? $"{scenario.Organization.Name} made {picks.Length} tracked pick(s) in the {scenario.Season.Year} draft."
+            : $"{scenario.Organization.Name} made {picks.Length} tracked pick(s) in the {scenario.Season.Year} draft. Class identity: {scenario.CurrentDraftClassProfile.ReadableTheme}.";
         var draftClass = new DraftClassHistory(
             scenario.Season.Year,
             scenario.Organization.OrganizationId,
             scenario.Organization.Name,
             picks,
-            $"{scenario.Organization.Name} made {picks.Length} tracked pick(s) in the {scenario.Season.Year} draft.");
+            classSummary)
+        {
+            ClassProfile = scenario.CurrentDraftClassProfile
+        };
         var timeline = scenario.CareerTimeline;
         foreach (var pick in picks)
         {

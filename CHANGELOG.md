@@ -1,28 +1,29 @@
 # Changelog
 
-## Current - Alpha 5.7
+## Current - Alpha 5.8
 
 ### Added
 
-- Agent Engine v1 with agents, agent profiles, personalities, negotiation styles, reputation, relationships, client lists, and history.
-- Player representation records with representation type, start date, agent id where applicable, and representation history.
-- Agent negotiation reviews for contract and free-agency offers, including opinion, likelihood, biggest concern, requested improvement, risk, and counter suggestion.
-- Agent / Representation section in player dossiers.
-- AlphaDesktop agent readouts for Agent Card, client, relationship, negotiation style, agent comments, history, Improve Offer, Compare, and View Agent.
-- Tests covering generated agents, player assignments, relationships, negotiation style effects, free agency, dossiers, history, inbox wording, and UI exposure.
+- Dynamic draft class profiles with theme, quality, strengths, weaknesses, storyline, positional depth, regional distribution, scout quote, and uncertainty.
+- DraftClassGenerator for annual fictional class creation using NameGenerator, public DraftProspectBio, realistic position/measurement/handedness/team context, class risk, and class-context notes.
+- Rulebook-aware class behavior: NHL-style classes use 17-18 year olds and broader geography, junior-style classes use younger regional prospects, and AHL-style rulebooks generate no amateur draft class when draft is disabled.
+- Draft class history preservation so completed drafts keep the original class profile/read.
+- Draft Board and Live Draft class summaries, positional depth, best available by position, players to watch, risk/context notes, and future filter placeholders.
+- Dossier and scouting intelligence class context without exposing hidden ratings.
+- Tests covering class generation, themes, NHL/junior/AHL behavior, inherited scouting, clean generated names, UI exposure, dossiers, and history preservation.
 
 ### Changed
 
-- Contract offer responses now come from agents or advisors instead of generic player-facing messages.
-- Free agency offer messages now identify the agent/advisor and preserve the agent review in offer state.
-- Scenario bootstrap now seeds agents and representation records for roster players, prospects, recruits, and free agents.
-- Older compatibility tests now block conversation trees, arbitration, offer sheets, and Godot instead of blocking intentionally added agent/cap systems.
-- AlphaDesktop version label updated to Alpha 5.7.
+- New GM scenario draft board creation now uses the dynamic class generator instead of static prospect position/projection helpers.
+- Season rollover now creates the next season's draft board from a new draft class profile.
+- Opening scenario draft prospects use birth dates that match their public league-style age on the scenario start date.
+- Inherited scouting reports now include class context and risk notes.
+- AlphaDesktop version label updated to Alpha 5.8.
 
 ### Fixed
 
-- Loaded or newly created desktop scenarios defensively ensure agent data exists before showing contract/free-agent panels.
-- Contract inbox messages no longer use vague generic offer wording when an agent review exists.
+- NHL-style generated draft bios now use each generated prospect's actual origin instead of defaulting to local junior geography.
+- Draft prospect risk summaries now display from the new risk field instead of reusing analytics text.
 
 ### Verified
 
@@ -33,15 +34,14 @@
 ### Not Added
 
 - No Godot.
-- No conversation trees.
-- No voice dialogue.
-- No arbitration.
-- No offer sheets.
-- No no-trade clauses.
-- No LTIR.
+- No real player database.
+- No media/mock draft engine.
+- No salary-cap or waiver changes.
+- No game simulation changes.
 
 ## Recently Completed
 
+- Alpha 5.7 - Agent Engine v1.
 - Alpha 5.6 - Salary Cap & Roster Compliance v1.
 - Alpha 5.4 - NHL/AHL/Junior Player Pipeline v1.
 - Alpha 5.3.1 - Trade Window Interactions + Living Staff Market.
@@ -56,4 +56,4 @@
 
 ## Next
 
-- Alpha 5.8 - TBD.
+- Alpha 5.9 - TBD.

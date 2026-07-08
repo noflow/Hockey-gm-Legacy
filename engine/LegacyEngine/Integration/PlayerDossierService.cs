@@ -115,6 +115,20 @@ public sealed class PlayerDossierService
             lines.Add($"Current team/league: {boardEntry.Bio.CurrentTeam} / {boardEntry.Bio.League}");
             lines.Add($"Projection: {boardEntry.ProjectionText}");
             lines.Add($"Scouting confidence: {boardEntry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+            if (scenario.CurrentDraftClassProfile is not null)
+            {
+                lines.Add($"Draft class: {scenario.CurrentDraftClassProfile.ReadableTheme}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(boardEntry.ClassContextNote))
+            {
+                lines.Add($"Class context: {boardEntry.ClassContextNote}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(boardEntry.RiskSummary))
+            {
+                lines.Add($"Risk summary: {boardEntry.RiskSummary}");
+            }
         }
 
         var freeAgent = scenario.FreeAgentMarket?.Find(person.PersonId);
@@ -197,6 +211,16 @@ public sealed class PlayerDossierService
 
             lines.Add($"Projection: {boardEntry.ProjectionText}");
             lines.Add($"Confidence: {boardEntry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+            if (!string.IsNullOrWhiteSpace(boardEntry.ClassContextNote))
+            {
+                lines.Add($"Class context: {boardEntry.ClassContextNote}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(boardEntry.RiskSummary))
+            {
+                lines.Add($"Risk: {boardEntry.RiskSummary}");
+            }
+
             if (!string.IsNullOrWhiteSpace(boardEntry.AnalyticsSummary))
             {
                 lines.Add($"Evidence: {boardEntry.AnalyticsSummary}");

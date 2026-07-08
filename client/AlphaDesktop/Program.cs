@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 5.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -586,7 +586,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 5.7 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 5.8 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2311,7 +2311,7 @@ internal sealed class MainWindow : Window
                 "ScoutingProspect",
                 $"Rank #{entry.Rank} | {State.DraftQuickScan(entry)}",
                 $"{State.ScoutingConfidenceSummary(entry.ProspectPersonId)} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
-                $"{State.ScoutingReportHeadline(entry.ProspectPersonId)} | {State.DraftFuturePicture(entry)}"))
+                $"{State.ScoutingReportHeadline(entry.ProspectPersonId)} | {State.DraftFuturePicture(entry)} | {State.DraftClassContext(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingOperationRows() =>
@@ -2338,7 +2338,7 @@ internal sealed class MainWindow : Window
                 "DraftBoard",
                 $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank} | {State.DraftQuickScan(entry)}",
                 $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Projection: {entry.ProjectionText}",
-                $"{State.DraftCurrentPicture(entry)} | {State.DraftFuturePicture(entry)}"))
+                $"{State.DraftCurrentPicture(entry)} | Risk: {State.DraftRiskText(entry)} | {State.DraftClassContext(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildProspectRows() =>
@@ -2695,6 +2695,8 @@ internal sealed class MainWindow : Window
 
                 AddLine(panel, "Current picture", State.DraftCurrentPicture(entry));
                 AddLine(panel, "Future projection", State.DraftFuturePicture(entry));
+                AddLine(panel, "Class context", State.DraftClassContext(entry));
+                AddLine(panel, "Risk", State.DraftRiskText(entry));
                 AddLine(panel, "Report", entry.ScoutingReportId ?? "none");
                 AddLine(panel, "Analytics", string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary);
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes);
@@ -3504,6 +3506,9 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Team selecting: {draft.TeamSelecting}");
         builder.AppendLine($"Your next pick: {draft.PlayerNextPick?.PickNumber.ToString() ?? "none"}");
         builder.AppendLine($"Available players: {State.Snapshot.DraftBoard.Entries.Count}");
+        builder.AppendLine($"Class theme: {State.DraftClassThemeText}");
+        builder.AppendLine($"Position depth: {State.DraftClassPositionDepthText}");
+        builder.AppendLine($"Best available by position: {State.DraftClassRemainingBestByPositionText}");
         builder.AppendLine();
 
         builder.AppendLine("Recent Picks");
@@ -3586,6 +3591,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Future picture: {State.DraftFuturePicture(entry)}");
         builder.AppendLine($"Projection: {entry.ProjectionText}");
         builder.AppendLine($"Player type: {State.PlayerType(entry.ProspectPersonId)}");
+        builder.AppendLine($"Class context: {State.DraftClassContext(entry)}");
         builder.AppendLine($"Risk summary: {DraftRiskSummary(entry)}");
         builder.AppendLine($"GM notes: {(string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes)}");
 
@@ -3614,8 +3620,8 @@ internal sealed class MainWindow : Window
     }
 
     private static string DraftRiskSummary(DraftBoardEntry entry) =>
-        !string.IsNullOrWhiteSpace(entry.AnalyticsSummary)
-            ? entry.AnalyticsSummary
+        !string.IsNullOrWhiteSpace(entry.RiskSummary)
+            ? entry.RiskSummary
             : entry.ScoutingConfidence switch
             {
                 ScoutingConfidenceLevel.VeryHigh or ScoutingConfidenceLevel.High => "Risk is mostly role-fit and development timeline; staff have useful evidence.",
@@ -4413,6 +4419,14 @@ internal sealed class MainWindow : Window
         foreach (var draftClass in State.ScenarioSnapshot.DraftClassHistory.OrderByDescending(item => item.Year))
         {
             builder.AppendLine($"{draftClass.Year}: {draftClass.Summary}");
+            if (draftClass.ClassProfile is not null)
+            {
+                builder.AppendLine($"  Theme: {draftClass.ClassProfile.ReadableTheme}");
+                builder.AppendLine($"  Strengths: {string.Join("; ", draftClass.ClassProfile.Strengths.Select(item => $"{item.Category}: {item.Description}"))}");
+                builder.AppendLine($"  Weaknesses: {string.Join("; ", draftClass.ClassProfile.Weaknesses.Select(item => $"{item.Category}: {item.Description}"))}");
+                builder.AppendLine($"  Original class read: {draftClass.ClassProfile.PreviewText}");
+            }
+
             foreach (var pick in draftClass.Picks)
             {
                 builder.AppendLine($"  R{pick.Round} P{pick.OverallPick}: {pick.PlayerName} ({pick.Position}) - {pick.Outcome}");
@@ -5147,6 +5161,17 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Draft Board");
         builder.AppendLine("===========");
+        builder.AppendLine("Draft Class Summary");
+        builder.AppendLine($"  Theme: {State.DraftClassThemeText}");
+        builder.AppendLine($"  Overview: {State.DraftClassSummaryText}");
+        builder.AppendLine($"  Strengths: {State.DraftClassStrengthText}");
+        builder.AppendLine($"  Weaknesses: {State.DraftClassWeaknessText}");
+        builder.AppendLine($"  Positional depth: {State.DraftClassPositionDepthText}");
+        builder.AppendLine($"  Regional mix: {State.DraftClassRegionalText}");
+        builder.AppendLine($"  Scout quote: {State.DraftClassScoutQuoteText}");
+        builder.AppendLine($"  Players to watch: {State.DraftClassPlayersToWatchText}");
+        builder.AppendLine("  Filters placeholder: position, region, current league, handedness, projection, confidence, risk, class fit.");
+        builder.AppendLine();
         if (State.ScenarioSnapshot.DraftExperience is { } draftState)
         {
             builder.AppendLine($"Status: {draftState.Status}");
@@ -5202,6 +5227,8 @@ internal sealed class MainWindow : Window
             }
 
             builder.AppendLine($"  Projection: {entry.ProjectionText}");
+            builder.AppendLine($"  Class context: {State.DraftClassContext(entry)}");
+            builder.AppendLine($"  Risk: {State.DraftRiskText(entry)}");
             builder.AppendLine($"  Analytics: {(string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary)}");
             builder.AppendLine($"  GM Notes: {(string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes)}");
             builder.AppendLine("  View Dossier button: opens player dossier without exposing true ratings.");
@@ -6309,6 +6336,82 @@ internal sealed class AlphaDesktopState
             1 => "1 day",
             var days => $"{days} days"
         };
+
+    private DraftClassProfile? DraftClassProfile => ScenarioSnapshot.CurrentDraftClassProfile;
+
+    public string DraftClassThemeText => DraftClassProfile?.ReadableTheme ?? "draft class profile not generated";
+
+    public string DraftClassSummaryText => DraftClassProfile?.PreviewText ?? "No draft class summary is available yet.";
+
+    public string DraftClassStrengthText =>
+        DraftClassProfile is null
+            ? "not available"
+            : string.Join("; ", DraftClassProfile.Strengths.Select(strength => $"{strength.Category}: {strength.Description}"));
+
+    public string DraftClassWeaknessText =>
+        DraftClassProfile is null
+            ? "not available"
+            : string.Join("; ", DraftClassProfile.Weaknesses.Select(weakness => $"{weakness.Category}: {weakness.Description}"));
+
+    public string DraftClassPositionDepthText =>
+        DraftClassProfile is null
+            ? "not available"
+            : string.Join(" | ", DraftClassProfile.PositionalDepth
+                .Where(item => item.Value > 0)
+                .Select(item => $"{PositionShort(item.Key)} {item.Value}"));
+
+    public string DraftClassRegionalText =>
+        DraftClassProfile is null
+            ? "not available"
+            : string.Join(" | ", DraftClassProfile.RegionalDistribution.Select(item => $"{item.Key} {item.Value}"));
+
+    public string DraftClassScoutQuoteText => DraftClassProfile?.ScoutQuote ?? "No scout quote is available yet.";
+
+    public string DraftClassPlayersToWatchText
+    {
+        get
+        {
+            if (DraftClassProfile is null)
+            {
+                return "not available";
+            }
+
+            var summary = new DraftClassGenerator().BuildSummary(DraftClassProfile, Snapshot.DraftBoard);
+            return summary.PlayersToWatch.Count == 0 ? "none listed" : string.Join(" | ", summary.PlayersToWatch);
+        }
+    }
+
+    public string DraftClassRemainingBestByPositionText
+    {
+        get
+        {
+            var drafted = ScenarioSnapshot.DraftExperience?.Selections
+                .Select(selection => selection.ProspectPersonId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
+            var best = Snapshot.DraftBoard.Entries
+                .Where(entry => !drafted.Contains(entry.ProspectPersonId))
+                .OrderBy(entry => entry.Rank)
+                .GroupBy(entry => entry.Bio?.Position ?? PersonPosition(entry.ProspectPersonId))
+                .Select(group =>
+                {
+                    var entry = group.First();
+                    return $"{PositionShort(group.Key)}: #{entry.Rank} {FindPersonNameForDisplay(entry.ProspectPersonId)}";
+                });
+            var text = string.Join(" | ", best);
+            return string.IsNullOrWhiteSpace(text) ? "none remaining" : text;
+        }
+    }
+
+    public string DraftClassContext(DraftBoardEntry entry) =>
+        string.IsNullOrWhiteSpace(entry.ClassContextNote)
+            ? "Class context still being built."
+            : entry.ClassContextNote;
+
+    public string DraftRiskText(DraftBoardEntry entry) =>
+        string.IsNullOrWhiteSpace(entry.RiskSummary)
+            ? "Risk read still being built."
+            : entry.RiskSummary;
 
     public string TrainingCampCountdownText
     {

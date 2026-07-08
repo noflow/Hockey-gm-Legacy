@@ -353,6 +353,11 @@ public sealed class ScoutingIntelligenceService
             evidence.Add($"{tournament} viewing adds pressure, leadership, consistency, and big-game performance context.");
         }
 
+        if (!string.IsNullOrWhiteSpace(entry?.ClassContextNote))
+        {
+            evidence.Add($"Draft class context: {entry.ClassContextNote}");
+        }
+
         if (profile.Traits.Contains(ScoutPersonalityTrait.ExcellentWithGoalies) && position == RosterPosition.Goalie)
         {
             evidence.Add("Goalie specialist note: reads tracking, recovery, and composure better than a general report.");
@@ -387,6 +392,11 @@ public sealed class ScoutingIntelligenceService
         if (entry?.Bio?.CharacterSummary is { Length: > 0 } character)
         {
             concerns.Add($"Character context: {character}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(entry?.RiskSummary))
+        {
+            concerns.Add($"Class risk: {entry.RiskSummary}");
         }
 
         if (concerns.Count == 0)

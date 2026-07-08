@@ -72,7 +72,7 @@ public sealed class NewGmScenarioBootstrapper
             .AddRole(new PersonRole("role-regional-scout", PersonRoleType.Scout, scenarioSettings.OrganizationId, new DateOnly(2025, 8, 1), null, "Regional Scout"));
 
         var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
-        var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
+        var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, activeRulebook);
         var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var tradeBlockPeople = TradeService.CreateTradeBlockPeople(startDate, scenarioSettings.SeasonYear, nameGenerator, nameRegistry);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
@@ -107,7 +107,8 @@ public sealed class NewGmScenarioBootstrapper
         var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, staffContracts);
         var roster = CreateRoster(registry, scenarioSettings, rosterPlayers, startDate);
         var recruitProfiles = CreateRecruitProfiles(scenarioSettings.OrganizationId, recruits, startDate);
-        var draftBoard = CreateDraftBoard(scenarioSettings, recruitProfiles);
+        var draftClassProfile = new DraftClassGenerator().GenerateProfile(activeRulebook, scenarioSettings.SeasonYear, scenarioSettings.LeagueId, recruitProfiles.Count);
+        var draftBoard = CreateDraftBoard(scenarioSettings, recruitProfiles, recruits, activeRulebook, draftClassProfile);
         var scout = new Scout(
             ScoutId: "scout-head-prairie-falcons",
             Name: headScoutPerson.Identity.DisplayName,
@@ -187,7 +188,8 @@ public sealed class NewGmScenarioBootstrapper
             FirstDayInbox: firstDayInbox,
             ScenarioSummary: ScenarioSummaryFor(leagueProfile, gmProfile.PreferredName, organization.Name))
         {
-            CompletedScoutingReports = inheritedScoutingReports
+            CompletedScoutingReports = inheritedScoutingReports,
+            CurrentDraftClassProfile = draftClassProfile
         };
         var history = new ExistingWorldHistoryService().CreateHistory(scenarioSnapshot);
         var freeAgentMarket = new FreeAgentMarketService().GenerateMarket(scenarioSnapshot, freeAgentPeople);
@@ -459,12 +461,14 @@ public sealed class NewGmScenarioBootstrapper
                 {
                     $"Previous staff tracked {entry.Bio.ShootsCatches}, {entry.Bio.HeightDisplay}, {entry.Bio.WeightDisplay}.",
                     entry.Bio.CharacterSummary,
-                    entry.AnalyticsSummary
+                    entry.AnalyticsSummary,
+                    $"Class context: {entry.ClassContextNote}"
                 },
                 Opinions: new[]
                 {
                     $"Current picture: {CurrentPictureFor(entry, confidence)}",
                     $"Future projection: {entry.Bio.PotentialLineupProjection}; {entry.ProjectionText}",
+                    $"Risk read: {entry.RiskSummary}",
                     confidence == ScoutingConfidenceLevel.High ? "Staff feel comfortable using this report for draft-day decisions." : "Staff recommend at least one more viewing before making a major commitment."
                 },
                 Unknowns: new[]
@@ -480,7 +484,9 @@ public sealed class NewGmScenarioBootstrapper
                 {
                     ["inherited_from_previous_staff"] = true,
                     ["visible_to_new_gm"] = true,
-                    ["scouting_year"] = startDate.Year - 1
+                    ["scouting_year"] = startDate.Year - 1,
+                    ["draft_class_context"] = entry.ClassContextNote,
+                    ["risk_summary"] = entry.RiskSummary
                 });
             report.Validate();
             reports.Add(report);
@@ -612,22 +618,33 @@ public sealed class NewGmScenarioBootstrapper
 
     private static DraftBoard CreateDraftBoard(
         NewGmScenarioSettings settings,
-        IReadOnlyList<RecruitProfile> recruits)
+        IReadOnlyList<RecruitProfile> recruits,
+        IReadOnlyList<Person> recruitPeople,
+        Rulebook rulebook,
+        DraftClassProfile draftClassProfile)
     {
+        var draftGenerator = new DraftClassGenerator();
+        var peopleById = recruitPeople.ToDictionary(person => person.PersonId, StringComparer.Ordinal);
         var board = DraftBoard.Create(settings.DraftBoardId, settings.OrganizationId);
-        for (var index = 0; index < recruits.Count; index++)
+        var count = Math.Min(recruits.Count, draftClassProfile.TotalProspects);
+        for (var index = 0; index < count; index++)
         {
-            var position = PositionFor(index);
+            var position = draftGenerator.PositionFor(draftClassProfile, index);
+            peopleById.TryGetValue(recruits[index].RecruitPersonId, out var person);
+            var birthYear = person?.Identity.BirthDate.Year ?? DraftBirthYearFor(settings.SeasonYear, rulebook, index);
+            var birthplace = person?.Identity.Birthplace ?? "Saskatoon, SK, Canada";
             board = board.AddProspect(new DraftBoardEntry(
                 ProspectPersonId: recruits[index].RecruitPersonId,
                 Rank: index + 1,
                 ScoutingReportId: index < 45 ? $"scenario-report-{index + 1:000}" : null,
-                ScoutingConfidence: index < 10 ? ScoutingConfidenceLevel.High : index < 45 ? ScoutingConfidenceLevel.Medium : ScoutingConfidenceLevel.Low,
-                ProjectionText: ProjectionFor(position, index),
+                ScoutingConfidence: draftGenerator.StartingConfidence(draftClassProfile, index + 1, inheritedScouting: true),
+                ProjectionText: draftGenerator.ProjectionFor(draftClassProfile, position, index),
                 IsStarred: index < 2,
                 PersonalNotes: index < 3 ? "GM note: review again before draft day." : "",
-                AnalyticsSummary: AnalyticsFor(position, index),
-                Bio: BioFor(recruits[index], position, index)));
+                AnalyticsSummary: draftGenerator.AnalyticsFor(draftClassProfile, position, index),
+                Bio: draftGenerator.BuildBio(draftClassProfile, position, index, birthYear, birthplace),
+                RiskSummary: draftGenerator.RiskFor(draftClassProfile, position, index),
+                ClassContextNote: draftGenerator.ClassContextFor(draftClassProfile, position, index + 1)));
         }
 
         return board;
@@ -747,23 +764,41 @@ public sealed class NewGmScenarioBootstrapper
         DateOnly startDate,
         NameGenerator nameGenerator,
         NameUniquenessRegistry nameRegistry,
-        int seasonYear)
+        int seasonYear,
+        Rulebook rulebook)
     {
         return Enumerable.Range(0, 60)
             .Select(index =>
             {
                 var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "draft-class"), PlayerOrigins());
+                var birthDate = DraftBirthDateFor(startDate, rulebook, index);
                 return CreatePlayer(
                     $"person-recruit-{index + 1:000}",
                     name.FirstName,
                     name.LastName,
-                    new DateOnly(2009, (index % 12) + 1, Math.Min(24, (index % 25) + 1)),
+                    birthDate,
                     name.Nationality,
                     name.Birthplace,
                     "unassigned",
                     startDate);
             })
             .ToArray();
+    }
+
+    private static int DraftBirthYearFor(int seasonYear, Rulebook rulebook, int index)
+    {
+        var age = rulebook.LeagueType == "nhl_style"
+            ? 17 + (index % 2)
+            : 16 + (index % 2);
+        return seasonYear - age;
+    }
+
+    private static DateOnly DraftBirthDateFor(DateOnly startDate, Rulebook rulebook, int index)
+    {
+        var age = rulebook.LeagueType == "nhl_style"
+            ? 17 + (index % 2)
+            : 16 + (index % 2);
+        return startDate.AddYears(-age).AddDays(-(index % 90));
     }
 
     private static IReadOnlyList<Person> CreateFreeAgentPeople(

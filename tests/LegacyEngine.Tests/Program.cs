@@ -70,6 +70,7 @@ var alpha531TradeStaffMarketTests = new Alpha531TradeStaffMarketTests();
 var alpha54PlayerPipelineTests = new Alpha54PlayerPipelineTests();
 var alpha56SalaryCapRosterComplianceTests = new Alpha56SalaryCapRosterComplianceTests();
 var alpha57AgentEngineTests = new Alpha57AgentEngineTests();
+var alpha58DynamicDraftClassTests = new Alpha58DynamicDraftClassTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -923,6 +924,17 @@ runner.Run("alpha 5.7 player dossier shows agent representation", alpha57AgentEn
 runner.Run("alpha 5.7 agent history is tracked", alpha57AgentEngineTests.AgentHistoryIsTracked);
 runner.Run("alpha 5.7 AlphaDesktop exposes agent contract controls", alpha57AgentEngineTests.AlphaDesktopExposesAgentContractControls);
 runner.Run("alpha 5.7 no forbidden agent systems added", alpha57AgentEngineTests.NoForbiddenAgentSystemsAdded);
+runner.Run("alpha 5.8 draft class profile generated", alpha58DynamicDraftClassTests.DraftClassProfileIsGenerated);
+runner.Run("alpha 5.8 theme affects class shape", alpha58DynamicDraftClassTests.ThemeAffectsClassShape);
+runner.Run("alpha 5.8 NHL style uses rules and broader sources", alpha58DynamicDraftClassTests.NhlStyleClassUsesNhlDraftRulesAndBroaderSources);
+runner.Run("alpha 5.8 junior style uses younger regional prospects", alpha58DynamicDraftClassTests.JuniorStyleClassUsesYoungerRegionalProspects);
+runner.Run("alpha 5.8 AHL style draft disabled", alpha58DynamicDraftClassTests.AhlStyleDraftDisabled);
+runner.Run("alpha 5.8 scenario class context and ids", alpha58DynamicDraftClassTests.ScenarioDraftProspectsHaveClassContextAndNoDuplicateIds);
+runner.Run("alpha 5.8 opening scenario mostly scouted", alpha58DynamicDraftClassTests.OpeningScenarioDraftClassIsMostlyScouted);
+runner.Run("alpha 5.8 dossier includes class context", alpha58DynamicDraftClassTests.PlayerDossierIncludesClassContextWithoutHiddenRatings);
+runner.Run("alpha 5.8 history preserves class profile", alpha58DynamicDraftClassTests.DraftClassHistoryPreservesProfile);
+runner.Run("alpha 5.8 AlphaDesktop exposes draft class UI", alpha58DynamicDraftClassTests.AlphaDesktopExposesDraftClassSummaryAndLiveDraftContext);
+runner.Run("alpha 5.8 generated names stay clean", alpha58DynamicDraftClassTests.GeneratedNamesStayCleanAcrossLargePool);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
