@@ -38,6 +38,7 @@ public sealed class PlayerDossierService
             BuildFacts(scenario, person, resolvedSource),
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
+            BuildRoleUsage(scenario, personId),
             BuildMedical(scenario, personId),
             BuildContractRights(scenario, personId),
             BuildAgentRepresentation(scenario, personId),
@@ -255,6 +256,37 @@ public sealed class PlayerDossierService
         }
 
         return new PlayerDossierSection("Scouting Reports", lines);
+    }
+
+    private static PlayerDossierSection BuildRoleUsage(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lineup = scenario.CurrentLineup;
+        var assignment = lineup?.Assignments.FirstOrDefault(assignment => assignment.PersonId == personId);
+        var usage = lineup?.Usage.FirstOrDefault(usage => usage.PersonId == personId);
+        var promise = lineup?.RolePromises.FirstOrDefault(promise => promise.PersonId == personId);
+        var expectation = lineup?.RoleExpectations.FirstOrDefault(expectation => expectation.PersonId == personId);
+        var impact = new LineupService().BuildDevelopmentImpact(scenario, personId);
+        var lines = new List<string>
+        {
+            $"Current line/pair: {assignment?.SlotLabel ?? "Not in lineup"}",
+            $"Current role: {(assignment is null ? "Unassigned" : LineupDisplay.Role(assignment.CurrentRole))}",
+            $"Promised role: {(promise is null ? "None" : LineupDisplay.Role(promise.PromisedRole))}",
+            $"Expected role: {(expectation is null ? "Not established" : LineupDisplay.Role(expectation.ExpectedRole))}",
+            $"Coach recommended role: {(expectation is null ? assignment is null ? "Not established" : LineupDisplay.Role(assignment.CurrentRole) : LineupDisplay.Role(expectation.CoachRecommendedRole))}",
+            $"Potential role: {(assignment is null ? "Not established" : LineupDisplay.Role(assignment.PotentialRole))}",
+            $"Role satisfaction: {usage?.Satisfaction.ToString() ?? "Neutral"}",
+            $"Promise status: {promise?.Status.ToString() ?? "NotYetEvaluated"}",
+            $"Development impact: {impact.Summary}",
+            $"Morale note: {usage?.MoraleNote ?? "No role morale issue tracked."}"
+        };
+
+        if (lineup?.RoleHistory.Count > 0)
+        {
+            lines.Add("Role history:");
+            lines.AddRange(lineup.RoleHistory.TakeLast(5));
+        }
+
+        return new PlayerDossierSection("Role / Usage", lines);
     }
 
     private static PlayerDossierSection BuildDevelopment(NewGmScenarioSnapshot scenario, string personId)

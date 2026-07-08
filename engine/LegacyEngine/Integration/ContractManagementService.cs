@@ -86,6 +86,7 @@ public sealed class ContractManagementService
             CapRemainingBefore = cap.Before.AvailableCapSpace,
             CapRemainingAfter = cap.After.AvailableCapSpace,
             CapWarning = CapWarning(cap),
+            RoleFitWarning = RoleFitWarning(scenario, request),
             AgentReview = agentReview
         };
         evaluation.Validate();
@@ -565,6 +566,49 @@ public sealed class ContractManagementService
         }
 
         return "No major contract risk flagged.";
+    }
+
+    private static string RoleFitWarning(NewGmScenarioSnapshot scenario, ContractOfferBuildRequest request)
+    {
+        if (request.AskType == ContractAskType.StaffMember || string.IsNullOrWhiteSpace(request.RolePromise))
+        {
+            return "No role promise capacity warning.";
+        }
+
+        var lineup = scenario.CurrentLineup;
+        if (lineup is null)
+        {
+            return "No role promise capacity warning.";
+        }
+
+        var role = request.RolePromise;
+        if (role.Contains("first", StringComparison.OrdinalIgnoreCase)
+            || role.Contains("top six", StringComparison.OrdinalIgnoreCase)
+            || role.Contains("top-six", StringComparison.OrdinalIgnoreCase))
+        {
+            var topSixCount = lineup.Assignments.Count(assignment =>
+                assignment.Slot is LineupSlot.Line1LW or LineupSlot.Line1C or LineupSlot.Line1RW or LineupSlot.Line2LW or LineupSlot.Line2C or LineupSlot.Line2RW);
+            return topSixCount >= 6
+                ? "Role promise warning: top-six forward spots are already filled, so this promise needs a lineup plan."
+                : "No role promise capacity warning.";
+        }
+
+        if (role.Contains("top pair", StringComparison.OrdinalIgnoreCase) || role.Contains("top-pair", StringComparison.OrdinalIgnoreCase))
+        {
+            var topPairCount = lineup.Assignments.Count(assignment => assignment.Slot is LineupSlot.Pair1LD or LineupSlot.Pair1RD);
+            return topPairCount >= 2
+                ? "Role promise warning: top-pair defense spots are already filled, so this promise needs a lineup plan."
+                : "No role promise capacity warning.";
+        }
+
+        if (role.Contains("starter", StringComparison.OrdinalIgnoreCase))
+        {
+            return lineup.Assignments.Any(assignment => assignment.Slot == LineupSlot.Starter)
+                ? "Role promise warning: the starting goalie spot is already filled, so this promise needs a lineup plan."
+                : "No role promise capacity warning.";
+        }
+
+        return "No role promise capacity warning.";
     }
 
     private static ContractPreference StandardPreference(int interest, int role, int development) =>

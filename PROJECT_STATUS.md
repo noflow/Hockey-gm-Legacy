@@ -99,28 +99,28 @@ The five foundation pillars remain:
 - Alpha 6.2 - Owner Life Cycle v1
 - Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers
 - Alpha 6.3 - Relationship Expansion v1
+- Alpha 6.4 - Roster V3 + Lineup Roles v1
+- Alpha 6.4 - Lineup & Role Management v1
 
 ## Current Milestone
 
-Alpha 6.3 - Relationship Expansion v1
+Alpha 6.4 - Lineup & Role Management v1
 
 ## Current Goal
 
-Make relationships matter across the hockey universe by tracking expanded GM/player/staff/owner/agent/organization relationships, visible history, trends, conflicts, chemistry summaries, and modest decision modifiers for contracts, trades, staff chemistry, dossiers, owner context, and Action Center warnings.
+Let the GM manage lineup slots directly while tracking current role, expected role, promised role, coach recommended role, potential role, role satisfaction, promise status, development usage context, and contract role-promise warnings without exposing hidden ratings or adding a tactics engine.
 
-## Why Relationship Engine Was Next
+## Why Lineup Management Was Next
 
-Recruiting, contracts, coaching, trades, owner trust, scouting networks, player morale, and communication all depend on relationships.
-
-The Relationship Engine must exist before Recruiting.
+Roster V3 added hockey role language. The next step was making those roles actionable: the GM can now assign, remove, swap, and auto-fill lineup slots, see eligibility warnings instead of crashes, monitor role promises, and understand how usage affects morale, relationships, development context, and contract decisions before deeper tactical systems are built.
 
 ## Next Build Target
 
-Alpha 6.4 - TBD
+Alpha 6.5 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.4 - TBD
+1. Alpha 6.5 - TBD
 
 ## Build Rule
 

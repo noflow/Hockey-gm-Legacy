@@ -26,6 +26,8 @@ public sealed record ContractOfferEvaluation(
 
     public string CapWarning { get; init; } = "Salary cap not enabled for this rulebook.";
 
+    public string RoleFitWarning { get; init; } = "No role promise capacity warning.";
+
     public AgentNegotiationReview? AgentReview { get; init; }
 
     public string AgentName => AgentReview?.AgentName ?? "No agent";
@@ -53,7 +55,7 @@ public sealed record ContractOfferEvaluation(
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(EvaluationId) || string.IsNullOrWhiteSpace(RiskWarning) || string.IsNullOrWhiteSpace(CapWarning))
+        if (string.IsNullOrWhiteSpace(EvaluationId) || string.IsNullOrWhiteSpace(RiskWarning) || string.IsNullOrWhiteSpace(CapWarning) || string.IsNullOrWhiteSpace(RoleFitWarning))
         {
             throw new ArgumentException("Contract offer evaluation requires id and risk warning.");
         }

@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -521,6 +521,7 @@ internal sealed class MainWindow : Window
         var hockeyOperations = new List<WorkspaceScreen>
         {
             new("Roster", CreateSelectablePeopleContent("Roster")),
+            new("Lineup", CreateSelectablePeopleContent("Lineup")),
             new("Prospects", CreateSelectablePeopleContent("Prospect List")),
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
@@ -599,7 +600,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.3 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.4 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -914,7 +915,7 @@ internal sealed class MainWindow : Window
         _rosterPlayerTypeFilter = CreateRosterFilter(new[] { "All", "Goalie", "Defense", "Forward", "Prospect", "Veteran", "Injured" });
         panel.Children.Add(LabeledControl("Player type", _rosterPlayerTypeFilter));
 
-        _rosterRoleFilter = CreateRosterFilter(new[] { "All", "Top Line", "Middle Six", "Depth", "Starter", "Backup", "Development" });
+        _rosterRoleFilter = CreateRosterFilter(new[] { "All", "Franchise", "First Line", "Top Six", "Middle Six", "Checking", "Fourth Line", "Top Pair", "Second Pair", "Third Pair", "Starter", "Tandem", "Backup", "Depth", "Prospect", "Healthy Scratch" });
         panel.Children.Add(LabeledControl("Role", _rosterRoleFilter));
 
         _rosterAgeFilter = CreateRosterFilter(new[] { "All", "Under 18", "18-19", "20+", "Unknown" });
@@ -1599,6 +1600,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
         RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
         RefreshSelectableTab("Roster", BuildRosterRows());
+        RefreshSelectableTab("Lineup", BuildLineupRows());
         RefreshSelectableTab("Recruits", BuildRecruitRows());
         RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
         _tabs["Contracts"].Text = BuildContractsWorkspace();
@@ -1988,6 +1990,7 @@ internal sealed class MainWindow : Window
             "Staff Hiring" => BuildStaffDetail(row),
             "Vacancies" => BuildStaffDetail(row),
             "Roster" => BuildPlayerDetail(title, row),
+            "Lineup" => BuildLineupDetail(row),
             "Recruits" => BuildPlayerDetail(title, row),
             "Free Agents" => BuildPlayerDetail(title, row),
             "League Free Agents" => BuildPlayerDetail("Free Agents", row),
@@ -2069,7 +2072,7 @@ internal sealed class MainWindow : Window
         {
             foreach (var player in roster.Take(8))
             {
-                AddParagraph(panel, $"{player.Name} | {State.PositionShortText(player.Position)} | age {player.Age} | {player.CurrentRole} | {player.InterestLevel}");
+                AddParagraph(panel, $"{player.Name} | {State.PositionShortText(player.Position)} | age {player.Age} | {player.CurrentRole} | potential {State.TradePotentialRole(player)} | {State.TradeTargetType(player)} | {player.InterestLevel}");
             }
         }
 
@@ -2109,9 +2112,9 @@ internal sealed class MainWindow : Window
                 entry.PersonId,
                 entry.Name,
                 "OtherTeamPlayer",
-                $"{State.PositionShortText(entry.Position)} | age {entry.Age} | {entry.CurrentRole}",
+                $"{State.PositionShortText(entry.Position)} | age {entry.Age} | {entry.CurrentRole} | potential {State.TradePotentialRole(entry)}",
                 $"{entry.ContractStatus} | salary {entry.SalaryImpact:C0}",
-                $"{entry.TeamName} | trade interest {entry.InterestLevel} | ask: {entry.AskingPriceSummary}"))
+                $"{entry.TeamName} | {State.TradeTargetType(entry)} | trade interest {entry.InterestLevel} | ask: {entry.AskingPriceSummary}"))
             .ToArray();
         var list = new ListBox
         {
@@ -2171,6 +2174,8 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Name", entry.Name);
         AddLine(panel, "Bio", $"{State.PositionShortText(entry.Position)} | age {entry.Age} | {State.RegionTeamText(entry.PersonId)}");
         AddLine(panel, "Role", entry.CurrentRole);
+        AddLine(panel, "Potential role", State.TradePotentialRole(entry));
+        AddLine(panel, "Trade target type", State.TradeTargetType(entry));
         AddLine(panel, "Contract", entry.ContractStatus);
         AddLine(panel, "Last-season stats", State.LastSeasonStats(entry.PersonId));
         AddLine(panel, "Career summary", State.CareerStatSummary(entry.PersonId));
@@ -2239,12 +2244,169 @@ internal sealed class MainWindow : Window
                     FindPersonName(player.PersonId),
                     "RosterPlayer",
                     $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {player.Status}",
-                    $"{State.PlayerType(player.PersonId)} | {State.LastSeasonStats(player.PersonId)}",
-                    $"Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
+                    $"{State.PlayerType(player.PersonId)} | role {State.CurrentLineupRole(player.PersonId)} | expected {State.ExpectedRoleText(player.PersonId)} | promised {State.PromisedRoleText(player.PersonId)} | {State.CurrentLinePair(player.PersonId)}",
+                    $"Satisfaction: {State.RoleSatisfactionText(player.PersonId)} | Stage: {State.DevelopmentStageText(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Last year: {State.LastSeasonStats(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
             })
             .ToArray());
 
         return rows;
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildLineupRows()
+    {
+        var lineup = State.CurrentLineup;
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "lineup-summary",
+                "Lineup Summary",
+                "LineupSummary",
+                State.LineupValidationText,
+                lineup.Summary,
+                "Select a lineup slot to assign, remove, swap, view dossier, or auto-fill.")
+        };
+
+        foreach (var slot in State.LineupSlots)
+        {
+            var assignment = lineup.Assignments.FirstOrDefault(assignment => assignment.Slot == slot);
+            var usage = assignment is null ? null : lineup.Usage.FirstOrDefault(usage => usage.PersonId == assignment.PersonId);
+            rows.Add(new SelectablePersonRow(
+                $"lineup-slot:{slot}",
+                LineupDisplay.SlotLabel(slot),
+                "LineupSlot",
+                assignment is null ? "Open slot" : $"{assignment.PlayerName} | {assignment.Position} | {LineupDisplay.Role(assignment.CurrentRole)}",
+                assignment is null ? "No player assigned" : $"Expected {LineupDisplay.Role(usage?.ExpectedRole ?? assignment.CurrentRole)} | promise {usage?.PromiseStatus.ToString() ?? "NotYetEvaluated"} | {usage?.Satisfaction.ToString() ?? "Neutral"}",
+                assignment is null ? $"Eligible replacements: {State.EligibleLineupReplacements(slot).Count}" : $"{assignment.CoachNote} | {State.LineupDevelopmentImpactText(assignment.PersonId)}"));
+        }
+
+        return rows;
+    }
+
+    private UIElement BuildLineupDetail(SelectablePersonRow? row)
+    {
+        if (row is null)
+        {
+            return EmptyDetail("Lineup", "Select a lineup slot to manage usage and role promises.");
+        }
+
+        if (row.Kind == "LineupSummary")
+        {
+            var summary = CreateDetailPanel("Lineup Summary", State.LineupValidationText);
+            AddParagraph(summary, BuildLineup());
+            AddActions(summary, CreateDetailButton("Auto-fill", () => State.AutoFillLineup()));
+            return summary;
+        }
+
+        if (!TryLineupSlot(row.PersonId, out var slot))
+        {
+            return EmptyDetail("Lineup", "Selected lineup row is not a slot.");
+        }
+
+        var assignment = State.CurrentLineup.Assignments.FirstOrDefault(assignment => assignment.Slot == slot);
+        var panel = CreateDetailPanel(LineupDisplay.SlotLabel(slot), assignment?.PlayerName ?? "Open slot");
+        AddLine(panel, "Lineup position", State.LineupPositionText(slot));
+        AddLine(panel, "Current player", assignment?.PlayerName ?? "none");
+        if (assignment is not null)
+        {
+            var usage = State.LineupUsageFor(assignment.PersonId);
+            AddLine(panel, "Current role", LineupDisplay.Role(assignment.CurrentRole));
+            AddLine(panel, "Expected role", usage is null ? "Not established" : LineupDisplay.Role(usage.ExpectedRole));
+            AddLine(panel, "Promised role", State.PromisedRoleText(assignment.PersonId));
+            AddLine(panel, "Coach recommended role", usage is null ? LineupDisplay.Role(assignment.CurrentRole) : LineupDisplay.Role(usage.CoachRecommendedRole));
+            AddLine(panel, "Potential role", LineupDisplay.Role(assignment.PotentialRole));
+            AddLine(panel, "Promise status", usage?.PromiseStatus.ToString() ?? "NotYetEvaluated");
+            AddLine(panel, "Role satisfaction", usage?.Satisfaction.ToString() ?? "Neutral");
+            AddLine(panel, "Development impact", usage?.DevelopmentImpactNote ?? State.LineupDevelopmentImpactText(assignment.PersonId));
+            AddLine(panel, "Morale note", usage?.MoraleNote ?? "No role morale issue tracked.");
+            AddLine(panel, "Coach note", assignment.CoachNote);
+        }
+
+        AddSubHeader(panel, "Eligible Replacements");
+        var replacements = State.EligibleLineupReplacements(slot).Take(8).ToArray();
+        if (replacements.Length == 0)
+        {
+            AddParagraph(panel, "No eligible replacement is available for this slot.");
+        }
+        else
+        {
+            foreach (var replacement in replacements)
+            {
+                AddParagraph(panel, $"{replacement.PlayerName} | {replacement.Position} | {LineupDisplay.Role(replacement.CurrentRole)} | {replacement.SlotLabel}");
+            }
+        }
+
+        AddActions(panel,
+            CreateDetailButton("Assign", () => ShowLineupAssignmentPopup(slot), replacements.Length > 0, "No eligible replacement is available"),
+            CreateDetailButton("Remove", () => State.RemoveLineupSlot(slot), assignment is not null, "No player assigned"),
+            CreateDetailButton("Swap", () => ShowLineupSwapPopup(slot), assignment is not null, "No player assigned"),
+            CreateDetailButton("View Dossier", () => OpenDossierFor(assignment!.PersonId), assignment is not null, "No player assigned"),
+            CreateDetailButton("Auto-fill", () => State.AutoFillLineup()));
+        return panel;
+    }
+
+    private static bool TryLineupSlot(string value, out LineupSlot slot)
+    {
+        slot = default;
+        const string prefix = "lineup-slot:";
+        return value.StartsWith(prefix, StringComparison.Ordinal)
+            && Enum.TryParse(value[prefix.Length..], out slot);
+    }
+
+    private void ShowLineupAssignmentPopup(LineupSlot slot)
+    {
+        var replacements = State.EligibleLineupReplacements(slot);
+        var panel = CreateDetailPanel($"Assign {LineupDisplay.SlotLabel(slot)}", "Eligible replacements");
+        AddParagraph(panel, "Choose one eligible player for this lineup slot. Invalid positions, injured players, unsigned prospects, and duplicate active assignments are filtered out.");
+        var list = new ListBox
+        {
+            ItemsSource = replacements,
+            DisplayMemberPath = nameof(LineupRoleAssignment.PlayerName),
+            MinHeight = 260,
+            Margin = new Thickness(0, 8, 0, 12)
+        };
+        list.SelectedItem = replacements.FirstOrDefault();
+        panel.Children.Add(list);
+        AddActions(panel,
+            CreateDetailButton("Assign", () =>
+            {
+                if (list.SelectedItem is LineupRoleAssignment selected)
+                {
+                    State.AssignLineupSlot(slot, selected.PersonId);
+                    Window.GetWindow(panel)?.Close();
+                }
+            }, replacements.Count > 0, "No eligible replacement is available"),
+            CreateDetailButton("Cancel", () => Window.GetWindow(panel)?.Close()));
+        ShowPopup($"Assign {LineupDisplay.SlotLabel(slot)}", panel, 560, 520, includeCloseButton: false);
+    }
+
+    private void ShowLineupSwapPopup(LineupSlot slot)
+    {
+        var slots = State.LineupSlots
+            .Where(other => other != slot)
+            .Select(other => new LineupSlotChoice(other, $"{LineupDisplay.SlotLabel(other)} - {State.LineupSlotPlayerText(other)}"))
+            .ToArray();
+        var panel = CreateDetailPanel($"Swap {LineupDisplay.SlotLabel(slot)}", "Lineup slots");
+        AddParagraph(panel, "Choose another occupied slot. The engine validates position fit before changing the lineup.");
+        var list = new ListBox
+        {
+            ItemsSource = slots,
+            DisplayMemberPath = nameof(LineupSlotChoice.Display),
+            MinHeight = 260,
+            Margin = new Thickness(0, 8, 0, 12)
+        };
+        list.SelectedItem = slots.FirstOrDefault();
+        panel.Children.Add(list);
+        AddActions(panel,
+            CreateDetailButton("Swap", () =>
+            {
+                if (list.SelectedItem is LineupSlotChoice selected)
+                {
+                    State.SwapLineupSlots(slot, selected.Slot);
+                    Window.GetWindow(panel)?.Close();
+                }
+            }, slots.Length > 0, "No other slot is available"),
+            CreateDetailButton("Cancel", () => Window.GetWindow(panel)?.Close()));
+        ShowPopup($"Swap {LineupDisplay.SlotLabel(slot)}", panel, 560, 520, includeCloseButton: false);
     }
 
     private bool PassesRosterFilters(RosterPlayer player)
@@ -2342,7 +2504,7 @@ internal sealed class MainWindow : Window
                 "TradeBlock",
                 $"{entry.TeamName} | {State.PositionShortText(entry.Position)} | age {entry.Age} | {entry.CurrentRole}",
                 $"Salary {entry.SalaryImpact:C0} | Ask: {entry.AskingPriceSummary}",
-                $"{State.TradeTeamNeedsShortText(entry)} | {entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType}"))
+                $"{State.TradeTeamNeedsShortText(entry)} | {entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType} | trade target type: {State.TradeTargetType(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
@@ -2636,7 +2798,15 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
             AddLine(panel, "Player type", State.PlayerType(row.PersonId));
             AddLine(panel, "Current lineup role", State.CurrentLineupRole(row.PersonId));
+            AddLine(panel, "Expected role", State.ExpectedRoleText(row.PersonId));
+            AddLine(panel, "Promised role", State.PromisedRoleText(row.PersonId));
+            AddLine(panel, "Promise status", State.PromiseStatusText(row.PersonId));
+            AddLine(panel, "Role satisfaction", State.RoleSatisfactionText(row.PersonId));
             AddLine(panel, "Potential lineup role", State.PotentialLineupRole(row.PersonId));
+            AddLine(panel, "Current line/pair", State.CurrentLinePair(row.PersonId));
+            AddLine(panel, "Development stage", State.DevelopmentStageText(row.PersonId));
+            AddLine(panel, "Lineup development impact", State.LineupDevelopmentImpactText(row.PersonId));
+            AddLine(panel, "Coach note", State.LineupCoachNote(row.PersonId));
             AddLine(panel, "Last-season stats", State.LastSeasonStats(row.PersonId));
             AddLine(panel, "Career summary", State.CareerStatSummary(row.PersonId));
             AddLine(panel, "Contract / rights status", State.ContractRightsStatus(row.PersonId));
@@ -2832,6 +3002,8 @@ internal sealed class MainWindow : Window
         AddSubHeader(panel, "Target");
         AddLine(panel, "Player type", entry.PlayerType);
         AddLine(panel, "Current role", entry.CurrentRole);
+        AddLine(panel, "Potential role", State.TradePotentialRole(entry));
+        AddLine(panel, "Trade target type", State.TradeTargetType(entry));
         AddLine(panel, "Contract", entry.ContractStatus);
         AddLine(panel, "Salary / budget impact", $"{entry.SalaryImpact:C0}");
         AddLine(panel, "Asking price", entry.AskingPriceSummary);
@@ -3748,6 +3920,71 @@ internal sealed class MainWindow : Window
         builder.AppendLine(State.LatestSummary);
         return builder.ToString();
     }
+
+    private string BuildLineup()
+    {
+        var lineup = State.CurrentLineup;
+        var builder = new StringBuilder();
+        builder.AppendLine("Lineup");
+        builder.AppendLine("======");
+        builder.AppendLine($"{lineup.OrganizationName} | created {lineup.CreatedOn:yyyy-MM-dd}");
+        builder.AppendLine(lineup.Summary);
+        builder.AppendLine();
+        builder.AppendLine("Forward Lines");
+        builder.AppendLine("Line slots: Line 1, Line 2, Line 3, Line 4");
+        foreach (var line in lineup.ForwardLines.OrderBy(line => line.LineNumber))
+        {
+            builder.AppendLine($"Line {line.LineNumber}:");
+            builder.AppendLine($"  LW {LineupPlayerText(line.LeftWing)}");
+            builder.AppendLine($"  C  {LineupPlayerText(line.Center)}");
+            builder.AppendLine($"  RW {LineupPlayerText(line.RightWing)}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Defense Pairs");
+        builder.AppendLine("Pair slots: Pair 1, Pair 2, Pair 3");
+        foreach (var pair in lineup.DefensePairs.OrderBy(pair => pair.PairNumber))
+        {
+            builder.AppendLine($"Pair {pair.PairNumber}:");
+            builder.AppendLine($"  LD {LineupPlayerText(pair.LeftDefense)}");
+            builder.AppendLine($"  RD {LineupPlayerText(pair.RightDefense)}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Goalies");
+        builder.AppendLine($"Starter: {LineupPlayerText(lineup.Goalies.Starter)}");
+        builder.AppendLine($"Backup:  {LineupPlayerText(lineup.Goalies.Backup)}");
+        builder.AppendLine();
+        builder.AppendLine("Coach Recommendations");
+        if (lineup.CoachRecommendations.Count == 0)
+        {
+            builder.AppendLine("No major lineup concerns today.");
+        }
+        else
+        {
+            foreach (var recommendation in lineup.CoachRecommendations)
+            {
+                builder.AppendLine($"- {(recommendation.IsImportant ? "Important" : "Note")}: {recommendation.PlayerName} - {recommendation.Reason}");
+                builder.AppendLine($"  Recommended action: {recommendation.SuggestedAction}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Development Context");
+        foreach (var assignment in lineup.Assignments
+            .Where(assignment => assignment.Slot != LineupSlot.HealthyScratch)
+            .Take(8))
+        {
+            builder.AppendLine($"- {assignment.PlayerName}: {State.LineupDevelopmentImpactText(assignment.PersonId)}");
+        }
+
+        return builder.ToString();
+    }
+
+    private static string LineupPlayerText(LineupRoleAssignment? assignment) =>
+        assignment is null
+            ? "unassigned"
+            : $"{assignment.PlayerName} | {assignment.Position} | {LineupDisplay.Role(assignment.CurrentRole)} | potential {LineupDisplay.Role(assignment.PotentialRole)}";
 
     private void RefreshInboxPanels()
     {
@@ -6393,6 +6630,11 @@ internal sealed record TradeAssetRow(TradeAsset Asset, string Label)
     public override string ToString() => Label;
 }
 
+internal sealed record LineupSlotChoice(LineupSlot Slot, string Display)
+{
+    public override string ToString() => Display;
+}
+
 internal sealed class AlphaDesktopState
 {
     private readonly DailySimulationCoordinator _coordinator = new();
@@ -6434,6 +6676,7 @@ internal sealed class AlphaDesktopState
     private readonly StaffLifeCycleService _staffLifeCycle = new();
     private readonly OwnerLifeCycleService _ownerLifeCycle = new();
     private readonly RelationshipExpansionService _relationships = new();
+    private readonly LineupService _lineups = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -6452,7 +6695,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry);
+        ScenarioSnapshot = _lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -7809,6 +8052,12 @@ internal sealed class AlphaDesktopState
 
     public string PlayerType(string personId)
     {
+        var assignment = LineupAssignment(personId);
+        if (assignment is not null)
+        {
+            return assignment.PlayerType;
+        }
+
         var position = PersonPosition(personId);
         if (InjuryStatus(personId) != "Available")
         {
@@ -7839,40 +8088,168 @@ internal sealed class AlphaDesktopState
         return "Forward";
     }
 
+    public Lineup CurrentLineup
+    {
+        get
+        {
+            if (ScenarioSnapshot.CurrentLineup is not null)
+            {
+                return ScenarioSnapshot.CurrentLineup;
+            }
+
+            var updated = _lineups.EnsureLineup(ScenarioSnapshot);
+            ScenarioSnapshot = updated;
+            Snapshot = updated.AlphaSnapshot;
+            return updated.CurrentLineup!;
+        }
+    }
+
+    public LineupRoleAssignment? LineupAssignment(string personId) =>
+        CurrentLineup.Assignments.FirstOrDefault(assignment => assignment.PersonId == personId);
+
     public string CurrentLineupRole(string personId)
     {
-        var position = PersonPosition(personId);
-        var development = Snapshot.DevelopmentProfiles.FirstOrDefault(profile => profile.PersonId == personId);
-        if (position == RosterPosition.Goalie)
-        {
-            return development?.CurrentAbility >= 55 ? "Starter" : "Backup";
-        }
-
-        return development?.CurrentAbility switch
-        {
-            >= 65 => "Top Line",
-            >= 52 => "Middle Six",
-            >= 40 => "Depth",
-            _ => "Development"
-        };
+        var assignment = LineupAssignment(personId);
+        return assignment is null ? "Unassigned" : LineupDisplay.Role(assignment.CurrentRole);
     }
 
     public string PotentialLineupRole(string personId)
     {
-        var position = PersonPosition(personId);
-        var development = Snapshot.DevelopmentProfiles.FirstOrDefault(profile => profile.PersonId == personId);
-        if (position == RosterPosition.Goalie)
+        var assignment = LineupAssignment(personId);
+        return assignment is null ? "Unassigned" : LineupDisplay.Role(assignment.PotentialRole);
+    }
+
+    public string CurrentLinePair(string personId)
+    {
+        var assignment = LineupAssignment(personId);
+        return assignment?.SlotLabel ?? "Not in lineup";
+    }
+
+    public string DevelopmentStageText(string personId)
+    {
+        var assignment = LineupAssignment(personId);
+        if (assignment?.DevelopmentStage is not null)
         {
-            return development?.Potential >= 60 ? "Starter" : "Backup";
+            return assignment.DevelopmentStage.Value.ToString();
         }
 
-        return development?.Potential switch
+        return Snapshot.DevelopmentProfiles.FirstOrDefault(profile => profile.PersonId == personId)?.Stage.ToString() ?? "Unknown";
+    }
+
+    public string LineupDevelopmentImpactText(string personId) =>
+        _lineups.BuildDevelopmentImpact(ScenarioSnapshot, personId).Summary;
+
+    public string LineupCoachNote(string personId) =>
+        LineupAssignment(personId)?.CoachNote ?? "No coach lineup note yet.";
+
+    public IReadOnlyList<LineupSlot> LineupSlots { get; } = new[]
+    {
+        LineupSlot.Line1LW,
+        LineupSlot.Line1C,
+        LineupSlot.Line1RW,
+        LineupSlot.Line2LW,
+        LineupSlot.Line2C,
+        LineupSlot.Line2RW,
+        LineupSlot.Line3LW,
+        LineupSlot.Line3C,
+        LineupSlot.Line3RW,
+        LineupSlot.Line4LW,
+        LineupSlot.Line4C,
+        LineupSlot.Line4RW,
+        LineupSlot.Pair1LD,
+        LineupSlot.Pair1RD,
+        LineupSlot.Pair2LD,
+        LineupSlot.Pair2RD,
+        LineupSlot.Pair3LD,
+        LineupSlot.Pair3RD,
+        LineupSlot.Starter,
+        LineupSlot.Backup
+    };
+
+    public string LineupValidationText => _lineups.ValidateLineup(ScenarioSnapshot).Message;
+
+    public string LineupPositionText(LineupSlot slot) =>
+        LineupDisplay.Position(slot switch
         {
-            >= 72 => "Top Line",
-            >= 58 => "Middle Six",
-            >= 45 => "Depth",
-            _ => "Development"
+            LineupSlot.Line1LW or LineupSlot.Line2LW or LineupSlot.Line3LW or LineupSlot.Line4LW => LineupPosition.LeftWing,
+            LineupSlot.Line1C or LineupSlot.Line2C or LineupSlot.Line3C or LineupSlot.Line4C => LineupPosition.Center,
+            LineupSlot.Line1RW or LineupSlot.Line2RW or LineupSlot.Line3RW or LineupSlot.Line4RW => LineupPosition.RightWing,
+            LineupSlot.Pair1LD or LineupSlot.Pair2LD or LineupSlot.Pair3LD => LineupPosition.LeftDefense,
+            LineupSlot.Pair1RD or LineupSlot.Pair2RD or LineupSlot.Pair3RD => LineupPosition.RightDefense,
+            LineupSlot.Starter => LineupPosition.StarterGoalie,
+            LineupSlot.Backup => LineupPosition.BackupGoalie,
+            _ => LineupPosition.HealthyScratch
+        });
+
+    public IReadOnlyList<LineupRoleAssignment> EligibleLineupReplacements(LineupSlot slot) =>
+        _lineups.EligiblePlayersForSlot(ScenarioSnapshot, slot);
+
+    public PlayerLineupUsage? LineupUsageFor(string personId) =>
+        CurrentLineup.Usage.FirstOrDefault(usage => usage.PersonId == personId);
+
+    public string PromisedRoleText(string personId)
+    {
+        var promise = CurrentLineup.RolePromises.FirstOrDefault(promise => promise.PersonId == personId);
+        return promise is null ? "No explicit role promise" : $"{LineupDisplay.Role(promise.PromisedRole)} ({promise.Status})";
+    }
+
+    public string ExpectedRoleText(string personId)
+    {
+        var usage = LineupUsageFor(personId);
+        return usage is null ? "Not established" : LineupDisplay.Role(usage.ExpectedRole);
+    }
+
+    public string RoleSatisfactionText(string personId) =>
+        LineupUsageFor(personId)?.Satisfaction.ToString() ?? "Neutral";
+
+    public string PromiseStatusText(string personId) =>
+        LineupUsageFor(personId)?.PromiseStatus.ToString() ?? "NotYetEvaluated";
+
+    public string LineupSlotPlayerText(LineupSlot slot) =>
+        CurrentLineup.Assignments.FirstOrDefault(assignment => assignment.Slot == slot)?.PlayerName ?? "open";
+
+    public void AutoFillLineup() => ApplyLineupResult(_lineups.AutoFillLineup(ScenarioSnapshot));
+
+    public void AssignLineupSlot(LineupSlot slot, string personId) =>
+        ApplyLineupResult(_lineups.AssignPlayerToSlot(ScenarioSnapshot, slot, personId));
+
+    public void RemoveLineupSlot(LineupSlot slot) =>
+        ApplyLineupResult(_lineups.RemovePlayerFromSlot(ScenarioSnapshot, slot));
+
+    public void SwapLineupSlots(LineupSlot sourceSlot, LineupSlot targetSlot) =>
+        ApplyLineupResult(_lineups.SwapPlayers(ScenarioSnapshot, sourceSlot, targetSlot));
+
+    private void ApplyLineupResult(LineupManagementResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Validation.IsValid ? result.Message : $"{result.Message} {result.Validation.Message}";
+    }
+
+    public string LineupRoleTradeText(string personId)
+    {
+        var assignment = LineupAssignment(personId);
+        if (assignment is null)
+        {
+            return "Trade target type: unassigned/buried";
+        }
+
+        var type = assignment.CurrentRole switch
+        {
+            LineupRole.FranchiseForward or LineupRole.FirstLineForward or LineupRole.TopSixForward => "top-line player",
+            LineupRole.FranchiseDefenseman or LineupRole.TopPairDefenseman => "top-pair defenseman",
+            LineupRole.ProspectForward or LineupRole.ProspectDefenseman or LineupRole.ProspectGoalie => "prospect",
+            LineupRole.DepthForward or LineupRole.DepthDefenseman or LineupRole.DepthGoalie => "depth player",
+            _ when assignment.Slot == LineupSlot.HealthyScratch => "buried player",
+            _ => "roster player"
         };
+        return $"Lineup role: {LineupDisplay.Role(assignment.CurrentRole)} | {assignment.SlotLabel} | Trade target type: {type}";
     }
 
     public string ContractRightsStatus(string personId)
@@ -8711,6 +9088,39 @@ internal sealed class AlphaDesktopState
         return $"{profile.Direction} | needs {string.Join(", ", profile.Needs.Take(2).Select(need => need.Need))}";
     }
 
+    public string TradePotentialRole(TradeBlockEntry entry) =>
+        entry.Position switch
+        {
+            RosterPosition.Goalie when entry.Age <= 20 => "Prospect Goalie",
+            RosterPosition.Goalie => entry.AssetValue >= 66 ? "Starting Goalie" : "Backup Goalie",
+            RosterPosition.Defense when entry.AssetValue >= 68 => "Top Pair Defenseman",
+            RosterPosition.Defense when entry.Age <= 20 => "Prospect Defenseman",
+            RosterPosition.Defense => "Second Pair Defenseman",
+            _ when entry.AssetValue >= 68 => "Top Six Forward",
+            _ when entry.Age <= 20 => "Prospect Forward",
+            _ => "Middle Six Forward"
+        };
+
+    public string TradeTargetType(TradeBlockEntry entry)
+    {
+        if (entry.CurrentRole.Contains("top", StringComparison.OrdinalIgnoreCase) || entry.CurrentRole.Contains("first", StringComparison.OrdinalIgnoreCase))
+        {
+            return entry.Position == RosterPosition.Defense ? "top-pair defenseman" : "top-line player";
+        }
+
+        if (entry.CurrentRole.Contains("prospect", StringComparison.OrdinalIgnoreCase) || entry.PlayerType.Contains("prospect", StringComparison.OrdinalIgnoreCase))
+        {
+            return "prospect";
+        }
+
+        if (entry.CurrentRole.Contains("scratch", StringComparison.OrdinalIgnoreCase) || entry.CurrentRole.Contains("buried", StringComparison.OrdinalIgnoreCase))
+        {
+            return "buried player";
+        }
+
+        return entry.CurrentRole.Contains("depth", StringComparison.OrdinalIgnoreCase) ? "depth player" : "roster player";
+    }
+
     public string TradeTeamNeedsText(string personId)
     {
         var entry = TradeBlockEntryFor(personId);
@@ -8743,6 +9153,9 @@ internal sealed class AlphaDesktopState
         var builder = new StringBuilder();
         builder.AppendLine($"{value.PlayerName}, age {value.Age}");
         builder.AppendLine($"Role: {value.Role}");
+        builder.AppendLine(TradeBlockEntryFor(personId) is { } entry
+            ? $"Lineup role: {entry.CurrentRole}; potential role: {TradePotentialRole(entry)}; trade target type: {TradeTargetType(entry)}"
+            : LineupRoleTradeText(personId));
         builder.AppendLine($"Contract: {value.Contract}");
         builder.AppendLine($"Budget: {value.BudgetImpact:C0}; years remaining: {value.YearsRemaining}");
         builder.AppendLine($"Development: {value.DevelopmentSummary}");
@@ -9972,7 +10385,7 @@ internal sealed class AlphaDesktopState
 
     private void EnsureLifeCycleState()
     {
-        var updated = _relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry), _registry), _registry);
+        var updated = _lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry), _registry), _registry));
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

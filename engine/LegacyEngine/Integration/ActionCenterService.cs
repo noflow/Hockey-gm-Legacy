@@ -28,6 +28,7 @@ public sealed class ActionCenterService
         AddBudgetWarnings(budget, items);
         AddScoutingCompletions(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
+        AddLineupRecommendations(scenario, items);
         AddStaffCoachingItems(scenario, items);
         AddOwnerOfficeItems(scenario, budget, items);
         AddUpcomingGames(scenario, items);
@@ -506,6 +507,31 @@ public sealed class ActionCenterService
                 recommendation.Reason,
                 "Development plans are affected by role, confidence, morale, coaching fit, injuries, and opportunity.",
                 recommendation.RecommendedAction,
+                null,
+                null,
+                null));
+        }
+    }
+
+    private static void AddLineupRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var lineup = scenario.CurrentLineup
+            ?? new LineupService().BuildDefaultLineup(scenario, scenario.Organization.OrganizationId, scenario.Organization.Name, scenario.AlphaSnapshot.Roster.ActivePlayers);
+        foreach (var recommendation in lineup.CoachRecommendations.Where(item => item.IsImportant).Take(4))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:lineup:{recommendation.RecommendationId}",
+                $"Lineup recommendation: {recommendation.PlayerName}",
+                ActionCenterCategory.Roster,
+                ActionCenterPriority.Important,
+                scenario.CurrentDate.AddDays(3),
+                recommendation.PersonId,
+                recommendation.PlayerName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                recommendation.Reason,
+                "Lineup role and opportunity can affect development, roster balance, and opening-night readiness.",
+                recommendation.SuggestedAction,
                 null,
                 null,
                 null));

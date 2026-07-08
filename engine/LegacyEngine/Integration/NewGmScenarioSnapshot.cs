@@ -172,6 +172,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public RelationshipChemistrySummary? RelationshipChemistry { get; init; }
 
+    public Lineup? CurrentLineup { get; init; }
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -502,5 +504,6 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         RelationshipChemistry?.Validate();
+        CurrentLineup?.Validate();
     }
 }

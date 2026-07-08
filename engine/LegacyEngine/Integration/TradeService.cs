@@ -72,7 +72,7 @@ public sealed class TradeService
             player.Age ?? PersonAge(scenario, personId),
             SalaryFor(scenario, personId),
             value,
-            $"{player.Position}, {ContractStatusText(scenario, personId)}");
+            $"{player.Position}, {LineupSummaryFor(scenario, personId)}, {ContractStatusText(scenario, personId)}");
     }
 
     public TradeAsset CreateProspectRightsAsset(NewGmScenarioSnapshot scenario, string prospectPersonId, TradeSide side = TradeSide.PlayerOrganization)
@@ -641,11 +641,20 @@ public sealed class TradeService
     private static string RoleFor(RosterPosition position, int index) =>
         position switch
         {
-            RosterPosition.Goalie => "Goalie competition",
-            RosterPosition.Defense => index % 2 == 0 ? "Second-pair option" : "Depth defense",
-            RosterPosition.Center => "Middle-six center",
-            _ => "Depth winger"
+            RosterPosition.Goalie => index % 5 == 0 ? "Starting Goalie" : index % 2 == 0 ? "Tandem Goalie" : "Backup Goalie",
+            RosterPosition.Defense => index % 7 == 0 ? "Top Pair Defenseman" : index % 3 == 0 ? "Second Pair Defenseman" : "Depth Defenseman",
+            RosterPosition.Center => index % 5 == 0 ? "Top Six Forward" : index % 3 == 0 ? "Middle Six Forward" : "Checking Line Forward",
+            _ => index % 6 == 0 ? "First Line Forward" : index % 2 == 0 ? "Top Six Forward" : "Depth Forward"
         };
+
+    private static string LineupSummaryFor(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var assignment = (scenario.CurrentLineup ?? new LineupService().BuildDefaultLineup(scenario, scenario.Organization.OrganizationId, scenario.Organization.Name, scenario.AlphaSnapshot.Roster.ActivePlayers))
+            .Assignments.FirstOrDefault(assignment => assignment.PersonId == personId);
+        return assignment is null
+            ? "lineup role unassigned"
+            : $"{LineupDisplay.Role(assignment.CurrentRole)} at {assignment.SlotLabel}; potential {LineupDisplay.Role(assignment.PotentialRole)}";
+    }
 
     private static string Reason(int index) =>
         new[] { "rebuilding", "roster surplus", "budget pressure", "veteran available", "prospect blocked", "needs change", "poor fit" }[index % 7];

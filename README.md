@@ -84,6 +84,8 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 6.2 Owner Life Cycle v1
 - Alpha 6.2.1 Trades v3: Roster Assets, Draft Picks, and Counter Offers
 - Alpha 6.3 Relationship Expansion v1
+- Alpha 6.4 Roster V3 + Lineup Roles v1
+- Alpha 6.4 Lineup & Role Management v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -137,11 +139,15 @@ Alpha 6.0 - Player Life Cycle v1 turns tracked players into long-term career sto
 
 Alpha 6.1 - Staff Life Cycle v1 turns coaches, scouts, medical staff, and front-office staff into long-term careers. Staff now receive life stages, career phases, reputation categories, milestones, staff career stories, salary/role/organization history, coaching-tree links, scout discovery records, player-development influence, promotion readiness, concern summaries, limited staff League News milestones, and Action Center items for promotion/succession/performance review without adding Hall of Fame, retirement decisions, awards voting, or game simulation changes.
 
+Alpha 6.4 - Lineup & Role Management v1 makes lineup roles playable. Hockey Operations now includes a selectable Lineup workspace where the GM can assign, remove, swap, and auto-fill slots across four forward lines, three defense pairs, and starter/backup goalie depth. Roster rows and dossiers show current, expected, promised, coach-recommended, and potential roles, plus promise status, satisfaction, morale notes, and development usage context. Contract offer evaluation now warns when a role promise conflicts with lineup capacity, while invalid placements warn instead of crashing. This does not add special teams, tactics, line chemistry, Godot, or game simulation changes.
+
 Alpha 6.2 - Owner Life Cycle v1 turns ownership into a long-term organization story. Owners now receive life stages, career states, expectation history, confidence history, meeting history, permanent owner letters, job-security history, legacy profiles, budget relationship summaries, organization era context, owner milestones, limited League News milestones, Action Center owner items, and Reports / History views for Owner History, Owner Letters, Job Security History, and Expectation Results without adding actual firing, owner replacement, job offers, board logic, or game simulation changes.
 
 Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers makes the trade builder usable for alpha testing. Trade windows now show both teams' roster players, prospect rights, draft picks, and future-consideration placeholders; draft picks have year, round, owner, protected-placeholder, and value context; proposal buckets are separated into You Give and You Receive; close offers can return concrete counter packages; and completed trades create readable League News summaries while still requiring Pending GM approval.
 
 Alpha 6.3 - Relationship Expansion v1 makes relationship context visible and useful across the hockey universe. The engine now tracks expanded GM/player/staff/owner/agent/organization relationship profiles with trust, respect, loyalty, conflict, communication quality, trend, key moments, change history, conflicts, and chemistry summaries. Contract offers, trade context, staff chemistry, player dossiers, owner views, organization health, save/load, and Action Center warnings now use relationship context as a modest decision modifier without adding a full drama system.
+
+Alpha 6.4 - Roster V3 + Lineup Roles v1 adds hockey-readable roster context. Teams now generate opinion-based lineup roles such as First Line Forward, Top Six Forward, Top Pair Defenseman, Starting Goalie, Depth Forward, and Prospect Goalie; the player organization receives default forward lines, defense pairs, and goalie depth; Hockey Operations now includes a Lineup view with coach recommendations; roster rows show role, potential role, line/pair, development stage, and contract status; and trade/team-browser screens identify target type without exposing hidden ratings or adding a tactics engine.
 
 Alpha 3.4 - Career & History Framework v1 starts the long-save memory layer. The engine now seeds GM, staff, organization, and player career history, tracks player draft picks and draft classes, adds Where Are They Now records, records trade/free-agent/injury history, and expands Reports / History with GM Career, Organization History, Draft History, Drafted Players, Player Career Timelines, Staff History, and Transaction History views without exposing hidden ratings.
 

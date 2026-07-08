@@ -1,30 +1,34 @@
 # Changelog
 
-## Current - Alpha 6.3
+## Current - Alpha 6.4
 
 ### Added
 
-- Relationship Expansion models for expanded relationship types, trends, change triggers, conflicts, chemistry labels, and impact summaries.
-- Relationship profiles for GM/player, GM/staff, GM/owner, GM/agent, player/coach, staff/staff, staff/owner, organization/player, organization/staff, organization/agent, and organization/organization links.
-- Relationship change history records with reason, amount, date, related event reference, and visible explanation.
-- Simple conflict records for tension, trust issues, broken promises, role frustration, personality clashes, and staff disagreement.
-- Chemistry summaries for roster, staff, scouting department, coach-player fit, and GM office relationships.
-- Tests covering relationship types, change history, signing/rejected-offer/trade/broken-promise effects, contract impact, staff chemistry, dossiers, Action Center conflicts, save/load preservation, and forbidden dependency checks.
+- Lineup role model covering forwards, defensemen, and goalies with opinion/projection labels such as Franchise Forward, Top Six Forward, Top Pair Defenseman, Starting Goalie, Backup Goalie, and Prospect Goalie.
+- Lineup model for four forward lines, three defense pairs, starter/backup goalie depth, lineup slot assignments, coach recommendations, and lineup development impact summaries.
+- LineupService default lineup generation for the player organization using position, age, development stage, player type, team strength, and roster balance.
+- Manual lineup management for assign, remove, swap, and auto-fill actions with slot eligibility validation.
+- Player role expectation tracking for current role, expected role, promised role, coach recommended role, potential role, promise status, role satisfaction, development usage context, and morale note.
+- Role promise consequences that can mark promises kept, at risk, or broken and route broken promises through relationship/morale fallout.
+- Contract role-promise capacity warning when an offer promises top-six, top-pair, first-line, or starter usage that the lineup cannot easily support.
+- Player dossier Role / Usage section with lineup slot, expectation, promise, coach recommendation, satisfaction, role history, and development impact context.
+- Hockey Operations Lineup view showing lines, pairs, goalie depth, coach recommendations, and lineup-driven development context.
+- Alpha 6.4 tests covering NHL top-line/top-pair role generation, contender vs rebuilding role differences, lineup structure, manual slot assignment, swaps, invalid placement warnings, duplicate warnings, injured-player warnings, role promises, relationship/morale fallout, dossier usage, contract role warnings, save preservation, trade role labels, hidden-rating boundaries, and no tactical-simulation expansion.
 
 ### Changed
 
-- Contract offer evaluation now includes a modest relationship modifier and explains that impact.
-- Staff chemistry now reads expanded relationship profiles and active conflicts.
-- Player dossiers now show expanded relationship score, trend, key moments, recent changes, and conflict context.
-- Owner, Organization Health, and Relationships desktop views now surface relationship health and chemistry.
-- New GM scenarios and loaded careers backfill relationship expansion state automatically.
-- Save/load now preserves relationship profiles, change history, conflicts, and chemistry through the scenario snapshot.
-- AlphaDesktop version label updated to Alpha 6.3.
+- New GM scenarios now store a generated current lineup in the scenario snapshot.
+- AlphaDesktop version label updated to Alpha 6.4.
+- Roster rows now show player type, current lineup role, expected role, promised role, current line/pair, satisfaction, development stage, contract/rights status, prior stats, injury status, and development trend.
+- Roster detail panels now include expected role, promised role, promise status, role satisfaction, lineup development impact, and coach lineup notes.
+- Roster role filters now include richer hockey role labels, including franchise, first line, top six, checking, top pair, second pair, starter, tandem, backup, depth, prospect, and healthy scratch.
+- Trade assets and team-browser roster views now show role, potential role, and target type context such as top-line player, top-pair defenseman, depth player, prospect, and buried player.
+- Important coach lineup recommendations now appear in the Action Center as roster items.
 
 ### Fixed
 
-- Staff relationship conflicts now appear in staff chemistry warnings even when the numeric chemistry score has not fully collapsed yet.
-- Relationship event helpers infer staff, owner, agent, or player target type instead of treating every GM relationship as GM-player.
+- Roster role labels no longer rely on desktop-only hidden current-ability/potential thresholds.
+- Trade asset summaries now include lineup role context instead of generic middle-six/depth wording only.
 
 ### Verified
 
@@ -35,13 +39,15 @@
 ### Not Added
 
 - No Godot.
-- No full morale/drama engine.
-- No social media or media system.
-- No firing system.
-- No game simulation changes.
+- No full tactics engine.
+- No special teams.
+- No line chemistry engine.
+- No drag/drop lineup editor.
+- No game simulation overhaul.
 
 ## Recently Completed
 
+- Alpha 6.3 - Relationship Expansion v1.
 - Alpha 6.2.1 - Trades v3: Roster Assets, Draft Picks, and Counter Offers.
 - Alpha 6.2 - Owner Life Cycle v1.
 - Alpha 6.1 - Staff Life Cycle v1.
@@ -63,4 +69,4 @@
 
 ## Next
 
-- Alpha 6.4 - TBD.
+- Alpha 6.5 - TBD.

@@ -78,6 +78,7 @@ var alpha61StaffLifeCycleTests = new Alpha61StaffLifeCycleTests();
 var alpha62OwnerLifeCycleTests = new Alpha62OwnerLifeCycleTests();
 var alpha621TradesV3Tests = new Alpha621TradesV3Tests();
 var alpha63RelationshipExpansionTests = new Alpha63RelationshipExpansionTests();
+var alpha64RosterLineupTests = new Alpha64RosterLineupTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1040,6 +1041,30 @@ runner.Run("alpha 6.3 relationship appears in dossier", alpha63RelationshipExpan
 runner.Run("alpha 6.3 Action Center shows major conflict", alpha63RelationshipExpansionTests.ActionCenterShowsMajorConflict);
 runner.Run("alpha 6.3 save load preserves relationship history", alpha63RelationshipExpansionTests.SaveLoadPreservesRelationshipHistory);
 runner.Run("alpha 6.3 no forbidden dependency added", alpha63RelationshipExpansionTests.NoForbiddenDependencyAdded);
+runner.Run("alpha 6.4 NHL roster generation includes top-line forwards", alpha64RosterLineupTests.NhlRosterGenerationIncludesTopLineForwards);
+runner.Run("alpha 6.4 NHL roster generation includes top-pair defensemen", alpha64RosterLineupTests.NhlRosterGenerationIncludesTopPairDefensemen);
+runner.Run("alpha 6.4 rebuilding team composition differs from contender", alpha64RosterLineupTests.RebuildingTeamCompositionDiffersFromContender);
+runner.Run("alpha 6.4 default lineup creates four forward lines", alpha64RosterLineupTests.DefaultLineupCreatesFourForwardLines);
+runner.Run("alpha 6.4 default lineup creates three defense pairs", alpha64RosterLineupTests.DefaultLineupCreatesThreeDefensePairs);
+runner.Run("alpha 6.4 default lineup creates starter and backup", alpha64RosterLineupTests.DefaultLineupCreatesStarterAndBackup);
+runner.Run("alpha 6.4 lineup view exposes line slots", alpha64RosterLineupTests.LineupViewExposesLineSlots);
+runner.Run("alpha 6.4 roster rows show lineup role", alpha64RosterLineupTests.RosterRowsShowLineupRole);
+runner.Run("alpha 6.4 development considers lineup role", alpha64RosterLineupTests.DevelopmentConsidersLineupRole);
+runner.Run("alpha 6.4 coach recommendation generated", alpha64RosterLineupTests.CoachRecommendationGenerated);
+runner.Run("alpha 6.4 player can be assigned to line one", alpha64RosterLineupTests.PlayerCanBeAssignedToLineOne);
+runner.Run("alpha 6.4 players can be swapped between slots", alpha64RosterLineupTests.PlayersCanBeSwappedBetweenSlots);
+runner.Run("alpha 6.4 invalid position warning generated", alpha64RosterLineupTests.InvalidPositionWarningGenerated);
+runner.Run("alpha 6.4 duplicate lineup warning generated", alpha64RosterLineupTests.DuplicateLineupWarningGenerated);
+runner.Run("alpha 6.4 injured player warning generated", alpha64RosterLineupTests.InjuredPlayerWarningGenerated);
+runner.Run("alpha 6.4 role promise statuses can be evaluated", alpha64RosterLineupTests.RolePromiseStatusesCanBeEvaluated);
+runner.Run("alpha 6.4 broken promise affects relationship and morale", alpha64RosterLineupTests.BrokenPromiseAffectsRelationshipAndMorale);
+runner.Run("alpha 6.4 development report references lineup usage", alpha64RosterLineupTests.DevelopmentReportReferencesLineupUsage);
+runner.Run("alpha 6.4 dossier exposes role usage section", alpha64RosterLineupTests.DossierExposesRoleUsageSection);
+runner.Run("alpha 6.4 contract role promise warning generated", alpha64RosterLineupTests.ContractRolePromiseWarningGenerated);
+runner.Run("alpha 6.4 save load preserves lineup state", alpha64RosterLineupTests.SaveLoadPreservesLineupState);
+runner.Run("alpha 6.4 trade team browser exposes lineup role", alpha64RosterLineupTests.TradeTeamBrowserExposesLineupRole);
+runner.Run("alpha 6.4 no hidden ratings exposed", alpha64RosterLineupTests.NoHiddenRatingsExposed);
+runner.Run("alpha 6.4 no full tactical simulation added", alpha64RosterLineupTests.NoFullTacticalSimulationAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
