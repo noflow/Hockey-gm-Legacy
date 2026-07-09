@@ -39,6 +39,7 @@ public sealed class PlayerDossierService
             BuildRatings(scenario, personId),
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
+            BuildDevelopmentCurve(scenario, personId),
             BuildRoleUsage(scenario, personId),
             BuildGameUsage(scenario, personId),
             BuildTactics(scenario, personId),
@@ -346,6 +347,12 @@ public sealed class PlayerDossierService
                 $"Last development review: {profile.LastUpdated:yyyy-MM-dd}",
                 "Player-facing summary only; internal development values remain private."
             }.Concat(planSummary).ToArray());
+    }
+
+    private static PlayerDossierSection BuildDevelopmentCurve(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new DevelopmentCurveService().BuildDossierLines(scenario, personId);
+        return new PlayerDossierSection("Development Curve", lines);
     }
 
     private static PlayerDossierSection BuildMedical(NewGmScenarioSnapshot scenario, string personId)

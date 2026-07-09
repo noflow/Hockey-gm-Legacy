@@ -5,16 +5,20 @@
 ### Added
 
 - Public player rating model with `PlayerRating`, `PlayerPotential`, confidence bands, rating snapshots, rating history, and `PlayerRatingService`.
+- Development curve model with curve types, pace, potential variance, hidden ceiling context, breakthrough/setback notes, projected outcomes, and `DevelopmentCurveService`.
 - Visible 0-100 OVR/POT estimates across roster, recruits, prospects, scouting, draft board, live draft, free agents, trade rows, player details, and player dossier ratings.
 - Scouting-confidence-driven rating uncertainty: high confidence shows tighter estimates while low-confidence prospects show ranges instead of hidden truth.
 - Rating history and dossier trend text for visible OVR/POT movement, peak visible OVR, potential estimate changes, plateau notes, and injury impact.
-- Alpha 6.17 tests covering player ratings, junior/NHL scale differences, elite draft prospects, rare 95+ potential, confidence ranges, development gains, plateau, injury impact, UI exposure, and hidden-potential privacy.
+- Player dossiers now show Development Curve with curve type, pace, ETA, plateau risk, breakout chance, staff note, and best development path.
+- Action Center now surfaces major development-curve risks without adding routine inbox noise.
+- Alpha 6.17 tests covering player ratings, junior/NHL scale differences, elite draft prospects, rare 95+ potential, confidence ranges, development gains, plateau, injury impact, UI exposure, hidden-potential privacy, exceed/miss projection outcomes, late bloomers, fast/slow curves, role/coaching/injury modifiers, dossier exposure, and Action Center risk warnings.
 
 ### Changed
 
 - AlphaDesktop version label updated to Alpha 6.17.
 - Draft prospect rating estimates now support elite low-80s OVR at the top of a class while keeping most draft players lower.
 - Roster ratings now respond to development profile changes and active injury penalties.
+- Visible potential can now be influenced by curve-aware estimated ceiling while still hiding true ceiling when confidence is low.
 
 ### Verified
 

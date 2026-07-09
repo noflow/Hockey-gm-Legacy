@@ -144,6 +144,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public PlayerRatingHistory PlayerRatingHistory { get; init; } = PlayerRatingHistory.Empty;
 
+    public IReadOnlyList<PlayerDevelopmentCurve> DevelopmentCurves { get; init; } = Array.Empty<PlayerDevelopmentCurve>();
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -453,6 +455,11 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         PlayerRatingHistory.Validate();
+
+        foreach (var curve in DevelopmentCurves)
+        {
+            curve.Validate();
+        }
 
         foreach (var state in PlayerCareerStates)
         {

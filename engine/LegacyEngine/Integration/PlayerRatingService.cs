@@ -44,9 +44,11 @@ public sealed class PlayerRatingService
             .FirstOrDefault();
         var confidence = ResolveConfidence(scenario, personId, draft, latestReport);
         var raw = EstimateRawRatings(scenario, personId, position, age, profile, draft, latestReport);
+        var curve = scenario.DevelopmentCurves.FirstOrDefault(curve => curve.PersonId == personId);
         var injuryPenalty = ActiveInjuryPenalty(scenario, personId);
         var adjustedOverall = Math.Clamp(raw.Overall - injuryPenalty, 0, 100);
-        var adjustedPotential = Math.Clamp(Math.Max(raw.Potential, adjustedOverall), 0, 100);
+        var curveCeiling = curve?.Variance.CurrentEstimatedCeiling ?? raw.Potential;
+        var adjustedPotential = Math.Clamp(Math.Max(Math.Max(raw.Potential, curveCeiling), adjustedOverall), 0, 100);
         var overall = VisibleOverall(adjustedOverall, confidence);
         var potential = VisiblePotential(adjustedPotential, confidence);
         var band = BandFor(overall.Midpoint, potential.Midpoint, scenario.LeagueProfile.Experience, draft is not null);

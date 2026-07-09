@@ -28,6 +28,7 @@ public sealed class ActionCenterService
         AddBudgetWarnings(budget, items);
         AddScoutingCompletions(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
+        AddDevelopmentCurveItems(scenario, items);
         AddLineupRecommendations(scenario, items);
         AddGameUsageRecommendations(scenario, items);
         AddTacticalRecommendations(scenario, items);
@@ -515,6 +516,11 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+    }
+
+    private static void AddDevelopmentCurveItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new DevelopmentCurveService().BuildActionCenterItems(scenario));
     }
 
     private static void AddLineupRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

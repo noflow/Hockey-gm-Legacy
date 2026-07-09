@@ -92,6 +92,7 @@ var alpha614MediaNewsTests = new Alpha614MediaNewsTests();
 var alpha615AwardsRecordsTests = new Alpha615AwardsRecordsTests();
 var alpha616DraftWarRoomTests = new Alpha616DraftWarRoomTests();
 var alpha617PlayerRatingsTests = new Alpha617PlayerRatingsTests();
+var alpha617DevelopmentCurveTests = new Alpha617DevelopmentCurveTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1224,6 +1225,17 @@ runner.Run("alpha 6.17 plateau can occur below potential", alpha617PlayerRatings
 runner.Run("alpha 6.17 injury can reduce overall", alpha617PlayerRatingsTests.InjuryCanReduceOverall);
 runner.Run("alpha 6.17 UI exposes ratings", alpha617PlayerRatingsTests.UiExposesRatings);
 runner.Run("alpha 6.17 low confidence does not show hidden true potential", alpha617PlayerRatingsTests.HiddenTruePotentialNotShownWhenConfidenceLow);
+runner.Run("alpha 6.17 player can exceed visible potential range", alpha617DevelopmentCurveTests.PlayerCanExceedVisiblePotentialRange);
+runner.Run("alpha 6.17 player can miss high potential due to poor development", alpha617DevelopmentCurveTests.PlayerCanMissHighPotentialDueToPoorDevelopment);
+runner.Run("alpha 6.17 rushed player can plateau", alpha617DevelopmentCurveTests.RushedPlayerCanPlateau);
+runner.Run("alpha 6.17 late bloomer develops after several years", alpha617DevelopmentCurveTests.LateBloomerDevelopsAfterSeveralYears);
+runner.Run("alpha 6.17 fast developer improves quickly", alpha617DevelopmentCurveTests.FastDeveloperImprovesQuickly);
+runner.Run("alpha 6.17 slow burn takes longer", alpha617DevelopmentCurveTests.SlowBurnTakesLonger);
+runner.Run("alpha 6.17 coaching environment affects outcome", alpha617DevelopmentCurveTests.CoachingEnvironmentAffectsOutcome);
+runner.Run("alpha 6.17 injury reduces growth chance", alpha617DevelopmentCurveTests.InjuryReducesGrowthChance);
+runner.Run("alpha 6.17 proper role improves growth chance", alpha617DevelopmentCurveTests.ProperRoleImprovesGrowthChance);
+runner.Run("alpha 6.17 dossier exposes development curve", alpha617DevelopmentCurveTests.DossierExposesDevelopmentCurve);
+runner.Run("alpha 6.17 Action Center warns on major development risk", alpha617DevelopmentCurveTests.ActionCenterWarnsOnMajorDevelopmentRisk);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

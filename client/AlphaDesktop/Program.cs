@@ -8752,6 +8752,7 @@ internal sealed class AlphaDesktopState
         prepared = _lineChemistry.EnsureChemistry(prepared);
         prepared = _gameUsage.EnsureGameUsage(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
+        prepared = new DevelopmentCurveService().EnsureCurves(prepared);
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _tactics.EnsureTactics(prepared);
         ScenarioSnapshot = prepared;
@@ -10708,7 +10709,7 @@ internal sealed class AlphaDesktopState
             return rating;
         }
 
-        var updated = _ratings.EnsureRatings(ScenarioSnapshot);
+        var updated = _ratings.EnsureRatings(new DevelopmentCurveService().EnsureCurves(ScenarioSnapshot));
         ScenarioSnapshot = updated;
         Snapshot = updated.AlphaSnapshot;
         return updated.PlayerRatings.FirstOrDefault(item => item.PersonId == personId)
@@ -12888,6 +12889,7 @@ internal sealed class AlphaDesktopState
         updated = _media.EnsureMediaFeed(updated, LeagueTransactions, _registry);
         updated = _lineups.EnsureLineup(updated);
         updated = _warRoom.EnsureWarRoom(updated);
+        updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = _ratings.EnsureRatings(updated);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {

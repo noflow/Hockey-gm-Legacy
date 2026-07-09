@@ -121,7 +121,7 @@ Alpha 6.17 - Player Ratings & Potential v1
 
 ## Current Goal
 
-Make players easier to read at a glance with visible 0-100 Overall and Potential estimates while preserving scouting uncertainty, reports, roles, dossiers, and hidden development truth. Ratings now expose exact numbers only when confidence is high enough, use ranges for uncertain prospects, update with development/injury context, and appear across key player lists, cards, dossiers, draft views, free agents, and trade contexts without adding a full attribute system or editable ratings.
+Make players easier to read at a glance with visible 0-100 Overall and Potential estimates while preserving scouting uncertainty, reports, roles, dossiers, and hidden development truth. Ratings now expose exact numbers only when confidence is high enough, use ranges for uncertain prospects, update with development/injury context, and appear across key player lists, cards, dossiers, draft views, free agents, and trade contexts. The new Development Curve layer explains pace, ETA, plateau risk, breakout chance, staff notes, and best path so potential is no longer treated as fixed destiny.
 
 ## Why Player Ratings Were Next
 
