@@ -45,6 +45,7 @@ public sealed class PlayerDossierService
             BuildContractRights(scenario, personId),
             BuildAgentRepresentation(scenario, personId),
             BuildOrganizationFit(scenario, personId),
+            BuildStories(scenario, personId),
             BuildStaffOpinions(scenario, personId),
             BuildRelationships(scenario, personId),
             BuildCareerHistory(scenario, personId),
@@ -456,6 +457,12 @@ public sealed class PlayerDossierService
         lines.AddRange(fit.Reasons.Select(reason => $"Fit reason: {reason}"));
         lines.Add("This is an explainable fit summary only; hidden ratings remain private.");
         return new PlayerDossierSection("Organization Fit", lines);
+    }
+
+    private static PlayerDossierSection BuildStories(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new StoryService().BuildPlayerDossierLines(scenario, personId);
+        return new PlayerDossierSection("Stories", lines);
     }
 
     private static PlayerDossierSection BuildStaffOpinions(NewGmScenarioSnapshot scenario, string personId)

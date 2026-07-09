@@ -87,6 +87,7 @@ var alpha69PlayoffsChampionshipTests = new Alpha69PlayoffsChampionshipTests();
 var alpha610HockeyOperationsCommandCenterTests = new Alpha610HockeyOperationsCommandCenterTests();
 var alpha611OrganizationCommandCenterTests = new Alpha611OrganizationCommandCenterTests();
 var alpha612FranchiseIdentityCultureTests = new Alpha612FranchiseIdentityCultureTests();
+var alpha613LivingStoryEngineTests = new Alpha613LivingStoryEngineTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1161,6 +1162,16 @@ runner.Run("alpha 6.12 player fit appears in dossier", alpha612FranchiseIdentity
 runner.Run("alpha 6.12 staff fit can be evaluated", alpha612FranchiseIdentityCultureTests.StaffFitCanBeEvaluated);
 runner.Run("alpha 6.12 save load preserves franchise identity", alpha612FranchiseIdentityCultureTests.SaveLoadPreservesFranchiseIdentity);
 runner.Run("alpha 6.12 no forbidden systems added", alpha612FranchiseIdentityCultureTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 6.13 player stories generated", alpha613LivingStoryEngineTests.PlayerStoriesGenerated);
+runner.Run("alpha 6.13 GM and organization stories generated", alpha613LivingStoryEngineTests.GmAndOrganizationStoriesGenerated);
+runner.Run("alpha 6.13 story progression records event", alpha613LivingStoryEngineTests.StoryProgressionRecordsEvent);
+runner.Run("alpha 6.13 story summaries are readable", alpha613LivingStoryEngineTests.StorySummariesAreReadable);
+runner.Run("alpha 6.13 league news references stories", alpha613LivingStoryEngineTests.LeagueNewsReferencesStories);
+runner.Run("alpha 6.13 player dossier includes story section", alpha613LivingStoryEngineTests.PlayerDossierIncludesStorySection);
+runner.Run("alpha 6.13 organization reports and action center include stories", alpha613LivingStoryEngineTests.OrganizationReportsAndActionCenterIncludeStories);
+runner.Run("alpha 6.13 monthly reports reference stories", alpha613LivingStoryEngineTests.MonthlyReportsReferenceStories);
+runner.Run("alpha 6.13 save load preserves stories", alpha613LivingStoryEngineTests.SaveLoadPreservesStories);
+runner.Run("alpha 6.13 no forbidden systems added", alpha613LivingStoryEngineTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

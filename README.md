@@ -94,6 +94,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 6.10 Hockey Operations Command Center
 - Alpha 6.11 Organization Command Center
 - Alpha 6.12 Franchise Identity & Culture v1
+- Alpha 6.13 Living Story Engine v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -162,6 +163,8 @@ Alpha 6.10 - Hockey Operations Command Center turns Hockey Operations into one i
 Alpha 6.11 - Organization Command Center adds the matching front-office workspace. The GM can select Owner, Front Office, Coaching, Scouting, Development, Medical, Equipment, Finance, or Facilities placeholder departments, review department health, organization chart, needs, budget, reports, and Action Center items, then select staff/vacancies on the right for profile, performance, contract, relationship, history, focus, movement, release, or hiring workflow actions. This is an executive UI/workflow pass only.
 
 Alpha 6.12 - Franchise Identity & Culture v1 gives every organization a long-term identity, culture, current era, historical eras, reputation, team DNA, strengths, weaknesses, future goals, and identity-shift history. Organization Command Center now shows a Franchise Overview, executive reports include franchise identity context, League News can surface limited identity/culture headlines, and player/staff fit summaries explain why someone fits the club without exposing hidden ratings.
+
+Alpha 6.13 - Living Story Engine v1 connects isolated history, milestones, relationships, career context, and franchise identity into readable story arcs. Player dossiers now include a Stories section, Organization Command Center shows the current organization story, reports/monthly summaries reference top stories, Action Center can surface only major story updates, League News gets capped story headlines, and save/load preserves story state without adding a media engine, articles, social media, or extra inbox spam.
 
 Alpha 6.4 - Lineup & Role Management v1 makes lineup roles playable. Hockey Operations now includes a selectable Lineup workspace where the GM can assign, remove, swap, and auto-fill slots across four forward lines, three defense pairs, and starter/backup goalie depth. Roster rows and dossiers show current, expected, promised, coach-recommended, and potential roles, plus promise status, satisfaction, morale notes, and development usage context. Contract offer evaluation now warns when a role promise conflicts with lineup capacity, while invalid placements warn instead of crashing. This does not add special teams, tactics, line chemistry, Godot, or game simulation changes.
 

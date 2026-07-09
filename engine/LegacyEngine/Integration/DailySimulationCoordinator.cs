@@ -36,6 +36,7 @@ public sealed class DailySimulationCoordinator
             : null;
         var finalScenario = report?.Success == true ? report.ScenarioSnapshot : playoffs.ScenarioSnapshot;
         finalScenario = new DevelopmentPlanningService().EnsureScenarioPlans(finalScenario);
+        finalScenario = new StoryService().EnsureStories(finalScenario, registry);
         if (finalScenario.CurrentDate.Day == 1)
         {
             var recommendations = new DevelopmentPlanningService().BuildMonthlyRecommendations(finalScenario)

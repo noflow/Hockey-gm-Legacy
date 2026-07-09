@@ -85,7 +85,9 @@ public sealed class MonthlyGmSummaryService
             : $"Head scout delivered {scoutingReports} completed report(s).";
         var developmentUpdate = monthRecaps.SelectMany(recap => recap.DevelopmentNotes).FirstOrDefault()
             ?? "Routine development notes stayed internal; no major player development alert.";
-        var narrative = $"The {scenario.Organization.Name} finished {monthName} {monthRecord}. {ownerMood} {coachConcern} Medical staff: {biggestInjuryConcern} Pending GM actions: {pending}.";
+        var storyItems = new StoryService().BuildExecutiveReportItems(scenario);
+        var topStory = storyItems.TryGetValue("Top Story", out var storyHeadline) ? storyHeadline : "No major story yet.";
+        var narrative = $"The {scenario.Organization.Name} finished {monthName} {monthRecord}. {ownerMood} {coachConcern} Top story: {topStory} Medical staff: {biggestInjuryConcern} Pending GM actions: {pending}.";
 
         var sections = new[]
         {
@@ -93,6 +95,7 @@ public sealed class MonthlyGmSummaryService
             new MonthlyGmSummarySection("Players", new[] { $"Best player: {bestPlayer?.PlayerName ?? "No skater stats yet"}", $"Struggling player: {strugglingPlayer?.PlayerName ?? "No skater stats yet"}", $"Top goalie: {topGoalie?.PlayerName ?? "No goalie stats yet"}" }),
             new MonthlyGmSummarySection("Owner / Staff", new[] { ownerMood, coachConcern, scoutUpdate }),
             new MonthlyGmSummarySection("Development / Medical", new[] { developmentUpdate, biggestInjuryConcern }),
+            new MonthlyGmSummarySection("Storylines", storyItems.Take(4).Select(item => $"{item.Key}: {item.Value}").ToArray()),
             new MonthlyGmSummarySection("Roster / Budget", new[] { $"Roster warning: {rosterWarning}", $"Budget status: {budget.Status} - {budget.OwnerBudgetConfidence}" }),
             new MonthlyGmSummarySection("Decisions", new[] { $"Scouting reports completed: {scoutingReports}", $"Pending GM actions: {pending}" })
         };

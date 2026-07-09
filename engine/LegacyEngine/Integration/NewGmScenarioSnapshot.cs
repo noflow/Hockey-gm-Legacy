@@ -130,6 +130,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<FranchiseIdentity> FranchiseIdentities { get; init; } = Array.Empty<FranchiseIdentity>();
 
+    public IReadOnlyList<Story> Stories { get; init; } = Array.Empty<Story>();
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -418,6 +420,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var identity in FranchiseIdentities)
         {
             identity.Validate();
+        }
+
+        foreach (var story in Stories)
+        {
+            story.Validate();
         }
 
         foreach (var state in PlayerCareerStates)

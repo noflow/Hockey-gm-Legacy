@@ -18,5 +18,6 @@ public enum LeagueTransactionType
     TeamIdentityUpdate,
     PlayerMilestone,
     StaffMilestone,
-    OwnerMilestone
+    OwnerMilestone,
+    StoryUpdate
 }

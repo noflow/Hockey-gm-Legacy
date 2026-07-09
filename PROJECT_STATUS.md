@@ -109,18 +109,19 @@ The five foundation pillars remain:
 - Alpha 6.10 - Hockey Operations Command Center
 - Alpha 6.11 - Organization Command Center
 - Alpha 6.12 - Franchise Identity & Culture v1
+- Alpha 6.13 - Living Story Engine v1
 
 ## Current Milestone
 
-Alpha 6.12 - Franchise Identity & Culture v1
+Alpha 6.13 - Living Story Engine v1
 
 ## Current Goal
 
-Give every organization a long-term franchise identity, culture, era history, reputation, team DNA, strengths, weaknesses, and player/staff fit context that can appear in the Organization Command Center, executive reports, league news, dossiers, save/load, and future career history.
+Transform isolated events into readable long-term stories for players, the GM, staff, owners, and organizations. Stories now connect related milestones, relationships, franchise identity, careers, and reports into visible arcs across dossiers, Organization Command Center, Action Center, League News, monthly summaries, executive reports, and save/load.
 
-## Why Franchise Identity & Culture Was Next
+## Why Living Story Engine Was Next
 
-Alpha 6.10 and 6.11 created command centers for hockey operations and the front office. The next layer is making organizations feel like long-running institutions with an identity that affects how players, staff, owners, agents, and future seasons interpret the club.
+Alpha 6.0 through 6.12 gave players, staff, owners, relationships, careers, command centers, and franchise identity persistent context. The next layer connects that context into stories the GM can actually read and remember without adding a media engine or junk inbox.
 
 ## Next Build Target
 

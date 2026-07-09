@@ -43,6 +43,7 @@ public sealed class ActionCenterService
         AddStaffLifeCycleItems(scenario, items);
         AddOwnerLifeCycleItems(scenario, items);
         AddRelationshipItems(scenario, items);
+        AddStoryItems(scenario, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -904,6 +905,11 @@ public sealed class ActionCenterService
     private static void AddRelationshipItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
         items.AddRange(new RelationshipExpansionService().BuildActionItems(scenario));
+    }
+
+    private static void AddStoryItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new StoryService().BuildActionCenterItems(scenario));
     }
 
     private static ActionCenterItem ApplyStatus(ActionCenterItem item, IReadOnlyDictionary<string, ActionCenterStatus>? statusOverrides) =>

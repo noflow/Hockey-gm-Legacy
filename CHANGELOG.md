@@ -1,6 +1,42 @@
 # Changelog
 
-## Current - Alpha 6.12
+## Current - Alpha 6.13
+
+### Added
+
+- Living Story Engine models for `Story`, `StoryArc`, `StoryEvent`, `StoryType`, `StoryStatus`, `StoryImportance`, `StorySummary`, and `StoryService`.
+- Generated story arcs for players, the GM, the organization, scouting staff, and owner context using existing career history, life-cycle, relationship, franchise identity, and prospect data.
+- Story progression support that records dated story events, updates arc progress/status, and preserves readable key moments.
+- Player Dossier Stories section with current story, status, progress, summary, and major moments.
+- Organization Command Center Current Organization Story card.
+- Executive report and monthly summary Living Stories / Storylines sections.
+- Action Center story items for major or at-risk stories only.
+- Limited League News story headlines using `LeagueTransactionType.StoryUpdate`.
+- Save/load preservation through `NewGmScenarioSnapshot.Stories`.
+- Alpha 6.13 tests covering story generation, progression, readable summaries, League News, dossier/report/action-center visibility, monthly reports, save/load, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.13.
+- New GM scenario, daily advancement, and loaded desktop state now ensure story state alongside life-cycle, relationship, franchise identity, lineup, chemistry, usage, and tactics state.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No media engine.
+- No articles.
+- No social media.
+- No voice/commentary system.
+- No Hall of Fame.
+- No Godot.
+- No save database/cloud changes.
+
+## Previous - Alpha 6.12
 
 ### Added
 

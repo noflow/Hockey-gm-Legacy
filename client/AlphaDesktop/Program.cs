@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.12 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.13 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -621,7 +621,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.12 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.13 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2652,6 +2652,7 @@ internal sealed class MainWindow : Window
         _organizationCommandCenterPanel.Children.Add(header);
 
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Franchise Overview", BuildFranchiseOverviewLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Current Organization Story", BuildOrganizationStoryLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Needs", BuildOrganizationNeedsLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Department Health", BuildDepartmentHealthLines(_organizationCommandDepartment));
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Chart", BuildOrganizationChartLines());
@@ -2723,6 +2724,14 @@ internal sealed class MainWindow : Window
             ? "Identity change: stable; no recent shift tracked."
             : $"Identity change: {latestShift.Date:yyyy-MM-dd} - {latestShift.VisibleExplanation}";
         yield return $"Franchise history: {State.PlayerFranchiseIdentity.History.PlayoffAppearances} playoff appearances, {State.PlayerFranchiseIdentity.History.Championships} championship(s), longest streak {State.PlayerFranchiseIdentity.History.LongestPlayoffStreak}.";
+    }
+
+    private IEnumerable<string> BuildOrganizationStoryLines()
+    {
+        foreach (var line in new StoryService().BuildOrganizationLines(State.ScenarioSnapshot))
+        {
+            yield return line;
+        }
     }
 
     private IEnumerable<string> BuildOrganizationNeedsLines()
@@ -8276,6 +8285,7 @@ internal sealed class AlphaDesktopState
     private readonly LineChemistryService _lineChemistry = new();
     private readonly GameUsageService _gameUsage = new();
     private readonly TacticsService _tactics = new();
+    private readonly StoryService _stories = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8294,7 +8304,20 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _tactics.EnsureTactics(_gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_franchiseIdentity.EnsureIdentities(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot)))), registry), registry), registry), registry)))));
+        var prepared = _developmentPlanning.EnsureScenarioPlans(scenarioSnapshot);
+        prepared = _agents.EnsureAgents(prepared);
+        prepared = _organizationAi.EnsureProfiles(prepared);
+        prepared = _franchiseIdentity.EnsureIdentities(prepared);
+        prepared = _lifeCycle.EnsureLifeCycle(prepared, registry);
+        prepared = _staffLifeCycle.EnsureLifeCycle(prepared, registry);
+        prepared = _ownerLifeCycle.EnsureLifeCycle(prepared, registry);
+        prepared = _relationships.EnsureExpansion(prepared, registry);
+        prepared = _stories.EnsureStories(prepared, registry);
+        prepared = _lineups.EnsureLineup(prepared);
+        prepared = _lineChemistry.EnsureChemistry(prepared);
+        prepared = _gameUsage.EnsureGameUsage(prepared);
+        prepared = _tactics.EnsureTactics(prepared);
+        ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -8317,6 +8340,7 @@ internal sealed class AlphaDesktopState
             .Concat(ScenarioSnapshot.StaffLifeCycleNews)
             .Concat(ScenarioSnapshot.OwnerLifeCycleNews)
             .Concat(FranchiseIdentityNews)
+            .Concat(StoryLeagueNews)
             .Concat(ScenarioSnapshot.Playoffs.PlayoffLeagueNews)
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
@@ -8475,6 +8499,13 @@ internal sealed class AlphaDesktopState
         FranchiseIdentities.First(identity => identity.OrganizationId == ScenarioSnapshot.Organization.OrganizationId);
 
     public IReadOnlyList<LeagueTransaction> FranchiseIdentityNews => _franchiseIdentity.BuildLeagueNews(ScenarioSnapshot);
+
+    public IReadOnlyList<Story> Stories =>
+        ScenarioSnapshot.Stories.Count > 0
+            ? ScenarioSnapshot.Stories
+            : _stories.EnsureStories(ScenarioSnapshot, _registry).Stories;
+
+    public IReadOnlyList<LeagueTransaction> StoryLeagueNews => _stories.BuildLeagueNews(ScenarioSnapshot);
 
     public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
@@ -12248,7 +12279,13 @@ internal sealed class AlphaDesktopState
 
     private void EnsureLifeCycleState()
     {
-        var updated = _lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_franchiseIdentity.EnsureIdentities(ScenarioSnapshot), _registry), _registry), _registry), _registry));
+        var updated = _franchiseIdentity.EnsureIdentities(ScenarioSnapshot);
+        updated = _lifeCycle.EnsureLifeCycle(updated, _registry);
+        updated = _staffLifeCycle.EnsureLifeCycle(updated, _registry);
+        updated = _ownerLifeCycle.EnsureLifeCycle(updated, _registry);
+        updated = _relationships.EnsureExpansion(updated, _registry);
+        updated = _stories.EnsureStories(updated, _registry);
+        updated = _lineups.EnsureLineup(updated);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

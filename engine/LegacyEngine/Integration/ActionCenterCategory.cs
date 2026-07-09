@@ -13,5 +13,6 @@ public enum ActionCenterCategory
     League,
     GameDay,
     Budget,
+    Storyline,
     System
 }

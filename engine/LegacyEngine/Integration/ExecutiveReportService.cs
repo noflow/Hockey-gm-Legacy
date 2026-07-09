@@ -128,6 +128,7 @@ public sealed class ExecutiveReportService
                     ["Development"] = scenario.AlphaSnapshot.DevelopmentProfiles.Count > 0 ? "Up" : "Flat"
                 }),
                 Section("Franchise Identity", "Franchise identity tracks long-term culture, current era, reputation, DNA, and direction.", BuildFranchiseIdentityItems(scenario)),
+                Section("Living Stories", "Living stories connect related events into readable arcs for the GM.", BuildLivingStoryItems(scenario)),
                 Section("Opening Night Recommendation", $"Opening night recommendation: {recommendation}.", new Dictionary<string, string>
                 {
                     ["Recommendation"] = recommendation
@@ -291,6 +292,7 @@ public sealed class ExecutiveReportService
                 }),
                 Section("Organization Progress", "Progress compares this report with the previous season where available.", BuildProgressComparison(health, scenario, previous)),
                 Section("Franchise Identity", "Franchise identity tracks culture, eras, direction, and reputation across the organization timeline.", BuildFranchiseIdentityItems(scenario)),
+                Section("Living Stories", "Living stories connect related events into readable arcs for the GM.", BuildLivingStoryItems(scenario)),
                 Section("GM Career", "Career values are scoped to the current Alpha organization session.", new Dictionary<string, string>
                 {
                     ["Career Record"] = "Not simulated",
@@ -385,6 +387,11 @@ public sealed class ExecutiveReportService
     {
         var service = new FranchiseIdentityService();
         return service.BuildExecutiveReportItems(scenario, scenario.Organization.OrganizationId);
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildLivingStoryItems(NewGmScenarioSnapshot scenario)
+    {
+        return new StoryService().BuildExecutiveReportItems(scenario);
     }
 
     private static IReadOnlyDictionary<string, string> BuildPlayerLifeCycleItems(NewGmScenarioSnapshot scenario)
