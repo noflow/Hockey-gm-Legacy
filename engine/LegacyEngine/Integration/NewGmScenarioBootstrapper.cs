@@ -224,6 +224,7 @@ public sealed class NewGmScenarioBootstrapper
         scenarioSnapshot = new DevelopmentPlanningService().EnsureScenarioPlans(scenarioSnapshot);
         scenarioSnapshot = new AgentEngine().EnsureAgents(scenarioSnapshot);
         scenarioSnapshot = new OrganizationAiService().EnsureProfiles(scenarioSnapshot);
+        scenarioSnapshot = new FranchiseIdentityService().EnsureIdentities(scenarioSnapshot);
         scenarioSnapshot = new PlayerLifeCycleService().EnsureLifeCycle(scenarioSnapshot, registry);
         scenarioSnapshot = new StaffLifeCycleService().EnsureLifeCycle(scenarioSnapshot, registry);
         scenarioSnapshot = new OwnerLifeCycleService().EnsureLifeCycle(scenarioSnapshot, registry);

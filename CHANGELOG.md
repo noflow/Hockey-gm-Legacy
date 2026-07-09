@@ -1,6 +1,103 @@
 # Changelog
 
-## Current - Alpha 6.9
+## Current - Alpha 6.12
+
+### Added
+
+- Franchise Identity model with current identity, historical identity, current philosophy, culture, future direction, current era, historical eras, franchise reputation, team DNA, strengths, weaknesses, future goals, and identity shift history.
+- Franchise Identity service that seeds every league organization from existing League AI/team-profile context and evolves identity conservatively when enough evidence exists.
+- Franchise history counters for playoff appearances, championships, finals appearances, rebuilds, dynasties, longest playoff streak, worst season, greatest draft class, and best trade.
+- Organization Command Center Franchise Overview card with identity, culture, era, reputation, DNA, strengths, weaknesses, future goals, identity change, and franchise history.
+- Player Dossier Organization Fit section explaining why a player fits the club identity/culture without exposing hidden ratings.
+- Staff/owner command-center fit context using existing staff and organization data.
+- Executive report Franchise Identity section and limited League News identity headlines.
+- Save/load preservation through `NewGmScenarioSnapshot.FranchiseIdentities`.
+- Alpha 6.12 tests covering identity, culture, eras, evolution, reputation, history, command center UI, reports, league news, player fit, staff fit, save/load, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.12.
+- New GM scenario and loaded desktop state now ensure franchise identity exists alongside Organization AI, life-cycle, relationship, lineup, chemistry, usage, and tactics state.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No expansion.
+- No relocation.
+- No Hall of Fame.
+- No media engine.
+- No Godot.
+- No game simulation changes.
+
+## Previous - Alpha 6.11
+
+### Added
+
+- AlphaDesktop Organization Command Center as the first Organization workspace.
+- Department rail for Owner, Front Office, Coaching, Scouting, Development, Medical, Equipment, Finance, and Facilities placeholder.
+- Department overview cards for organization needs, department health, organization chart, financial overview, executive report, and Action Center items.
+- Department health display with grade, summary, evidence, strengths, weaknesses, budget, staff count, vacancies, and recommendations.
+- Selected owner/staff/vacancy card with salary, years remaining, extension recommendation, replacement cost, relationship, performance, history, and context-specific actions.
+- Staff movement workflow buttons for promote, demote, move department/focus, performance review, and release using existing Staff Office actions.
+- Vacancy workflow routing to Staff Hiring and Vacancies.
+- Alpha 6.11 tests covering Organization Command Center exposure, departments, health, chart/budget/report/action cards, selected staff actions, owner/vacancy workflow, and forbidden-system boundaries.
+
+### Changed
+
+- Organization workspace now opens on Command Center while preserving the existing Owner, Staff, Staff Hiring, Vacancies, Budget, Organization Health, and Relationships screens.
+- AlphaDesktop version label updated to Alpha 6.11.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No media system.
+- No facilities simulation.
+- No new gameplay system.
+- No game simulation changes.
+
+## Previous - Alpha 6.10
+
+### Added
+
+- AlphaDesktop Hockey Operations Command Center as the first Hockey Operations workspace.
+- Left source rail for Roster, Prospects, AHL, Junior Rights, Free Agents, and Trade Targets.
+- Center work views for Lines, Roster, Development, Contracts, Scouting, Trade, and Free Agency.
+- Persistent selected-player command card with photo placeholder, position, age, team/rights, current role, potential role, current line, contract/rights, development, medical, scouting, relationships, and history context.
+- Command Center quick actions and context menu for dossier, line assignment, development review, contract view, scout assignment, trade view, and history.
+- Source/search filtering with row deduping by person id.
+- Alpha 6.10 tests covering Command Center exposure, source rails, work views, selected-player context, quick actions, and forbidden-system boundaries.
+
+### Changed
+
+- Hockey Operations now opens on Command Center while preserving the existing Roster, Lineup, Tactics, Prospects, Recruits, Scouting, Draft Board, Training Camp, and related screens.
+- AlphaDesktop version label updated to Alpha 6.10.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No media system.
+- No new game simulation logic.
+- No new tactics engine.
+- No save/load changes.
+
+## Previous - Alpha 6.9
 
 ### Added
 

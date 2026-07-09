@@ -106,18 +106,21 @@ The five foundation pillars remain:
 - Alpha 6.7 - Tactics & Coaching Style v1
 - Alpha 6.8 - Game Simulation v2
 - Alpha 6.9 - Playoffs & Championship Framework v1
+- Alpha 6.10 - Hockey Operations Command Center
+- Alpha 6.11 - Organization Command Center
+- Alpha 6.12 - Franchise Identity & Culture v1
 
 ## Current Milestone
 
-Alpha 6.9 - Playoffs & Championship Framework v1
+Alpha 6.12 - Franchise Identity & Culture v1
 
 ## Current Goal
 
-Add a basic playoff path after the regular season: seed teams from standings, generate a bracket, simulate playoff series with the existing boxscore game engine, track playoff stats separately, crown a champion, and preserve playoff history in reports and save/load.
+Give every organization a long-term franchise identity, culture, era history, reputation, team DNA, strengths, weaknesses, and player/staff fit context that can appear in the Organization Command Center, executive reports, league news, dossiers, save/load, and future career history.
 
-## Why Playoffs Were Next
+## Why Franchise Identity & Culture Was Next
 
-Alpha 6.8 made games readable enough to matter. The next playable season layer is giving those results a destination: qualification, series pressure, championship history, and a clear offseason transition.
+Alpha 6.10 and 6.11 created command centers for hockey operations and the front office. The next layer is making organizations feel like long-running institutions with an identity that affects how players, staff, owners, agents, and future seasons interpret the club.
 
 ## Next Build Target
 

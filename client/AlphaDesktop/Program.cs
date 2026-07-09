@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.12 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -48,6 +48,21 @@ internal sealed class MainWindow : Window
     private readonly Dictionary<string, ListBox> _selectableLists = [];
     private readonly Dictionary<string, StackPanel> _selectableDetails = [];
     private readonly Dictionary<string, string> _selectedPeopleByTab = [];
+    private ListBox? _commandCenterSourceList;
+    private ListBox? _commandCenterViewList;
+    private ListBox? _commandCenterPlayerList;
+    private StackPanel? _commandCenterCenterPanel;
+    private StackPanel? _commandCenterPlayerCard;
+    private TextBox? _commandCenterSearchInput;
+    private string _commandCenterSource = "Roster";
+    private string _commandCenterView = "Roster";
+    private string? _selectedCommandCenterPersonId;
+    private ListBox? _organizationCommandDepartmentList;
+    private ListBox? _organizationCommandStaffList;
+    private StackPanel? _organizationCommandCenterPanel;
+    private StackPanel? _organizationCommandStaffCard;
+    private string _organizationCommandDepartment = "Owner";
+    private string? _selectedOrganizationStaffPersonId;
     private TabControl? _mainTabs;
     private StackPanel? _dashboardPanel;
     private TextBox? _rosterSearchInput;
@@ -509,6 +524,7 @@ internal sealed class MainWindow : Window
 
         AddWorkspaceTab(tabs, "Organization", new[]
         {
+            new WorkspaceScreen("Command Center", CreateOrganizationCommandCenter()),
             new WorkspaceScreen("Owner", CreateTextScreen("Owner")),
             new WorkspaceScreen("Staff", CreateSelectablePeopleContent("Staff")),
             new WorkspaceScreen("Staff Hiring", CreateSelectablePeopleContent("Staff Hiring")),
@@ -520,6 +536,7 @@ internal sealed class MainWindow : Window
 
         var hockeyOperations = new List<WorkspaceScreen>
         {
+            new("Command Center", CreateHockeyOperationsCommandCenter()),
             new("Roster", CreateSelectablePeopleContent("Roster")),
             new("Lineup", CreateSelectablePeopleContent("Lineup")),
             new("Tactics", CreateSelectablePeopleContent("Tactics")),
@@ -604,7 +621,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.9 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.12 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -836,6 +853,161 @@ internal sealed class MainWindow : Window
 
         _selectableLists[title] = list;
         _selectableDetails[title] = detail;
+        return root;
+    }
+
+    private UIElement CreateHockeyOperationsCommandCenter()
+    {
+        var root = new Grid { Background = Brushes.White };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(240) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(430) });
+
+        var left = new StackPanel
+        {
+            Background = new SolidColorBrush(Color.FromRgb(239, 243, 248)),
+            Margin = new Thickness(0)
+        };
+        left.Children.Add(new TextBlock
+        {
+            Text = "Hockey Operations Command Center",
+            FontSize = 17,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(12, 12, 12, 10)
+        });
+        _commandCenterSearchInput = new TextBox
+        {
+            MinHeight = 30,
+            Margin = new Thickness(12, 0, 12, 10),
+            ToolTip = "Search Command Center players, prospects, free agents, and trade targets."
+        };
+        _commandCenterSearchInput.TextChanged += (_, _) => RefreshHockeyOperationsCommandCenter();
+        left.Children.Add(_commandCenterSearchInput);
+        _commandCenterSourceList = new ListBox
+        {
+            ItemsSource = new[] { "Roster", "Prospects", "AHL", "Junior Rights", "Free Agents", "Trade Targets" },
+            SelectedItem = _commandCenterSource,
+            MinHeight = 210,
+            Margin = new Thickness(12, 0, 12, 12)
+        };
+        _commandCenterSourceList.SelectionChanged += (_, _) =>
+        {
+            if (_commandCenterSourceList.SelectedItem is string source)
+            {
+                _commandCenterSource = source;
+                RefreshHockeyOperationsCommandCenter();
+            }
+        };
+        left.Children.Add(_commandCenterSourceList);
+        Grid.SetColumn(left, 0);
+        root.Children.Add(left);
+
+        var center = new Grid { Margin = new Thickness(14) };
+        center.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        center.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        _commandCenterViewList = new ListBox
+        {
+            ItemsSource = new[] { "Lines", "Roster", "Development", "Contracts", "Scouting", "Trade", "Free Agency" },
+            SelectedItem = _commandCenterView,
+            MinHeight = 44,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        _commandCenterViewList.SelectionChanged += (_, _) =>
+        {
+            if (_commandCenterViewList.SelectedItem is string view)
+            {
+                _commandCenterView = view;
+                RefreshHockeyOperationsCommandCenter();
+            }
+        };
+        Grid.SetRow(_commandCenterViewList, 0);
+        center.Children.Add(_commandCenterViewList);
+        _commandCenterCenterPanel = new StackPanel();
+        var centerScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = _commandCenterCenterPanel,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        Grid.SetRow(centerScroll, 1);
+        center.Children.Add(centerScroll);
+        Grid.SetColumn(center, 1);
+        root.Children.Add(center);
+
+        _commandCenterPlayerCard = new StackPanel { Margin = new Thickness(16) };
+        var right = new ScrollViewer
+        {
+            BorderThickness = new Thickness(1, 0, 0, 0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = _commandCenterPlayerCard
+        };
+        Grid.SetColumn(right, 2);
+        root.Children.Add(right);
+        return root;
+    }
+
+    private UIElement CreateOrganizationCommandCenter()
+    {
+        var root = new Grid { Background = Brushes.White };
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(230) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(420) });
+
+        var left = new StackPanel
+        {
+            Background = new SolidColorBrush(Color.FromRgb(239, 243, 248)),
+            Margin = new Thickness(0)
+        };
+        left.Children.Add(new TextBlock
+        {
+            Text = "Organization Command Center",
+            FontSize = 17,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(12, 12, 12, 10)
+        });
+        _organizationCommandDepartmentList = new ListBox
+        {
+            ItemsSource = new[] { "Owner", "Front Office", "Coaching", "Scouting", "Development", "Medical", "Equipment", "Finance", "Facilities" },
+            SelectedItem = _organizationCommandDepartment,
+            MinHeight = 320,
+            Margin = new Thickness(12, 0, 12, 12)
+        };
+        _organizationCommandDepartmentList.SelectionChanged += (_, _) =>
+        {
+            if (_organizationCommandDepartmentList.SelectedItem is string department)
+            {
+                _organizationCommandDepartment = department;
+                RefreshOrganizationCommandCenter();
+            }
+        };
+        left.Children.Add(_organizationCommandDepartmentList);
+        Grid.SetColumn(left, 0);
+        root.Children.Add(left);
+
+        _organizationCommandCenterPanel = new StackPanel { Margin = new Thickness(14) };
+        var centerScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = _organizationCommandCenterPanel
+        };
+        Grid.SetColumn(centerScroll, 1);
+        root.Children.Add(centerScroll);
+
+        _organizationCommandStaffCard = new StackPanel { Margin = new Thickness(16) };
+        var right = new ScrollViewer
+        {
+            BorderThickness = new Thickness(1, 0, 0, 0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Content = _organizationCommandStaffCard
+        };
+        Grid.SetColumn(right, 2);
+        root.Children.Add(right);
         return root;
     }
 
@@ -1591,6 +1763,8 @@ internal sealed class MainWindow : Window
         RefreshDashboard();
         RefreshInboxPanels();
         RefreshActionCenter();
+        RefreshHockeyOperationsCommandCenter();
+        RefreshOrganizationCommandCenter();
         _tabs["Owner"].Text = BuildOwner();
         _tabs["League Overview"].Text = BuildLeagueOverview();
         _tabs["League Rules"].Text = BuildLeagueRules();
@@ -2020,6 +2194,861 @@ internal sealed class MainWindow : Window
             "Player Dossier" => BuildDossierDetail(row),
             _ => EmptyDetail(title, "No detail panel is configured for this view.")
         });
+    }
+
+    private void RefreshHockeyOperationsCommandCenter()
+    {
+        if (_commandCenterCenterPanel is null || _commandCenterPlayerCard is null)
+        {
+            return;
+        }
+
+        var rows = BuildCommandCenterRows();
+        var selected = rows.FirstOrDefault(row => string.Equals(row.PersonId, _selectedCommandCenterPersonId, StringComparison.Ordinal))
+            ?? rows.FirstOrDefault();
+        _selectedCommandCenterPersonId = selected?.PersonId;
+
+        RenderCommandCenterCenter(rows, selected);
+        RenderCommandCenterPlayerCard(selected);
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildCommandCenterRows()
+    {
+        IReadOnlyList<SelectablePersonRow> sourceRows = _commandCenterSource switch
+        {
+            "Prospects" => BuildProspectRows(),
+            "AHL" => BuildProspectRows()
+                .Where(row => CommandCenterMatches(row, "AHL", "affiliate", "assigned"))
+                .ToArray(),
+            "Junior Rights" => BuildProspectRows()
+                .Where(row => CommandCenterMatches(row, "junior", "youth", "rights"))
+                .ToArray(),
+            "Free Agents" => BuildFreeAgentRows(),
+            "Trade Targets" => BuildTradeRows(),
+            _ => BuildRosterRows()
+                .Where(row => row.Kind != "RosterSummary")
+                .ToArray()
+        };
+
+        var query = _commandCenterSearchInput?.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            sourceRows = sourceRows
+                .Where(row => CommandCenterMatches(row, query))
+                .ToArray();
+        }
+
+        return sourceRows
+            .GroupBy(row => row.PersonId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private static bool CommandCenterMatches(SelectablePersonRow row, params string[] terms) =>
+        terms.Any(term => !string.IsNullOrWhiteSpace(term)
+            && (row.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || row.Kind.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || row.Primary.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || row.Secondary.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || row.Summary.Contains(term, StringComparison.OrdinalIgnoreCase)));
+
+    private void RenderCommandCenterCenter(IReadOnlyList<SelectablePersonRow> rows, SelectablePersonRow? selected)
+    {
+        if (_commandCenterCenterPanel is null)
+        {
+            return;
+        }
+
+        _commandCenterCenterPanel.Children.Clear();
+        var header = CreateDetailPanel($"{_commandCenterSource} - {_commandCenterView}", "Integrated hockey operations workspace");
+        AddLine(header, "Roster", State.RosterBreakdownSummary);
+        AddLine(header, "Lineup", $"{State.LineupValidationText} | chemistry {State.LineChemistryReport.Overall.Score.Grade}");
+        AddLine(header, "Game usage", State.CurrentGameUsage.Summary);
+        AddLine(header, "Scouting", $"{State.ScoutingReportCount} reports | {State.ScoutingBudgetText}");
+        AddLine(header, "Contracts", $"{State.ContractDecisionCount} contract decision(s)");
+        AddLine(header, "Pending decisions", State.PendingDecisionCount);
+        _commandCenterCenterPanel.Children.Add(header);
+
+        AddSubHeader(_commandCenterCenterPanel, "Current View");
+        foreach (var line in BuildCommandCenterViewLines().Take(18))
+        {
+            AddParagraph(_commandCenterCenterPanel, line);
+        }
+
+        AddSubHeader(_commandCenterCenterPanel, $"{_commandCenterSource} List");
+        _commandCenterPlayerList = new ListBox
+        {
+            ItemsSource = rows,
+            SelectedItem = selected,
+            MinHeight = 320,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ContextMenu = BuildCommandCenterContextMenu()
+        };
+        _commandCenterPlayerList.SelectionChanged += (_, _) =>
+        {
+            if (_commandCenterPlayerList.SelectedItem is SelectablePersonRow row)
+            {
+                _selectedCommandCenterPersonId = row.PersonId;
+                RenderCommandCenterPlayerCard(row);
+            }
+        };
+        _commandCenterCenterPanel.Children.Add(_commandCenterPlayerList);
+
+        if (rows.Count == 0)
+        {
+            AddParagraph(_commandCenterCenterPanel, "No players match this source and search filter.");
+        }
+    }
+
+    private IReadOnlyList<string> BuildCommandCenterViewLines()
+    {
+        var lines = new List<string>();
+        switch (_commandCenterView)
+        {
+            case "Lines":
+                lines.AddRange(BuildLineup().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+                break;
+            case "Development":
+                lines.Add("Development focus, role fit, and ice-time risk for the selected operations source.");
+                lines.AddRange(BuildCommandCenterRows()
+                    .Take(10)
+                    .Select(row => $"{row.Name}: {State.DevelopmentStageText(row.PersonId)} | {State.DevelopmentTrend(row.PersonId)} | {State.LineupDevelopmentImpactText(row.PersonId)}"));
+                break;
+            case "Contracts":
+                lines.AddRange(BuildContractsWorkspace().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+                break;
+            case "Scouting":
+                lines.AddRange(BuildScouting().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+                break;
+            case "Trade":
+                lines.Add("Review trade candidates beside roster impact and budget context. Select a player for dossier, contract, and trade actions.");
+                lines.AddRange(BuildTradeRows().Take(8).Select(row => $"{row.Name}: {row.Primary} | {row.Secondary}"));
+                break;
+            case "Free Agency":
+                lines.Add("Free-agent market view with fit, ask, agent, and interest context.");
+                lines.AddRange(BuildFreeAgentRows().Take(8).Select(row => $"{row.Name}: {row.Primary} | {row.Secondary}"));
+                break;
+            default:
+                lines.Add("Depth chart and roster breakdown.");
+                lines.Add($"Roster count: {State.RosterBreakdownTitle}");
+                lines.Add($"Position breakdown: {State.RosterBreakdownSecondary}");
+                lines.Add($"Age mix: {State.RosterAgeBreakdown}");
+                lines.Add($"Contracts: {State.RosterContractBreakdown}");
+                lines.AddRange(BuildCommandCenterDepthChartLines());
+                break;
+        }
+
+        return lines;
+    }
+
+    private IEnumerable<string> BuildCommandCenterDepthChartLines()
+    {
+        var active = State.Snapshot.Roster.ActivePlayers;
+        foreach (var group in active.GroupBy(player => player.Position).OrderBy(group => group.Key.ToString(), StringComparer.Ordinal))
+        {
+            yield return $"{group.Key}: {string.Join(", ", group.Take(8).Select(player => $"{FindPersonName(player.PersonId)} ({State.CurrentLineupRole(player.PersonId)})"))}";
+        }
+    }
+
+    private void RenderCommandCenterPlayerCard(SelectablePersonRow? row)
+    {
+        if (_commandCenterPlayerCard is null)
+        {
+            return;
+        }
+
+        _commandCenterPlayerCard.Children.Clear();
+        if (row is null)
+        {
+            _commandCenterPlayerCard.Children.Add(EmptyDetail("Selected Player", "Select a player, prospect, free agent, or trade target."));
+            return;
+        }
+
+        var tab = CommandCenterTabForRow(row);
+        var panel = CreateDetailPanel(row.Name, $"{row.Kind} | {row.Primary}");
+        AddLine(panel, "Photo", "Photo Placeholder");
+        AddLine(panel, "Position", State.PersonPosition(row.PersonId));
+        AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
+        AddLine(panel, "Team / rights", State.RegionTeamText(row.PersonId));
+        AddLine(panel, "Current role", State.CurrentLineupRole(row.PersonId));
+        AddLine(panel, "Potential role", State.PotentialLineupRole(row.PersonId));
+        AddLine(panel, "Current line", State.CurrentLinePair(row.PersonId));
+        AddLine(panel, "Contract / rights", State.ContractRightsStatus(row.PersonId));
+        AddLine(panel, "Development", $"{State.DevelopmentStageText(row.PersonId)} | {State.DevelopmentTrend(row.PersonId)}");
+        AddLine(panel, "Health", State.InjuryStatus(row.PersonId));
+        AddLine(panel, "Scouting confidence", State.ScoutingConfidenceText(row.PersonId));
+        AddLine(panel, "Last season", State.LastSeasonStats(row.PersonId));
+        AddLine(panel, "Career", State.CareerStatSummary(row.PersonId));
+        AddSubHeader(panel, "Basic Bio");
+        AddParagraph(panel, BuildCommandCenterBioText(row.PersonId));
+        AddSubHeader(panel, "Coach Comments");
+        AddParagraph(panel, State.PlayerCoachFitText(row.PersonId));
+        AddParagraph(panel, State.RoleSatisfactionText(row.PersonId));
+        AddSubHeader(panel, "Scout Reports");
+        AddParagraph(panel, State.ScoutingReportHeadline(row.PersonId));
+        AddParagraph(panel, State.ScoutingComparisonText(row.PersonId));
+        AddSubHeader(panel, "Development");
+        AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
+        AddParagraph(panel, State.LineupDevelopmentImpactText(row.PersonId));
+        AddSubHeader(panel, "Medical");
+        AddParagraph(panel, State.MedicalReportText(row.PersonId));
+        AddSubHeader(panel, "Relationships");
+        AddParagraph(panel, BuildCommandCenterRelationshipText(row.PersonId));
+        AddSubHeader(panel, "History");
+        AddParagraph(panel, BuildCommandCenterCareerText(row.PersonId));
+        AddSubHeader(panel, "Quick Actions");
+        AddActions(panel, BuildCommandCenterActionButtons(row, tab).ToArray());
+        _commandCenterPlayerCard.Children.Add(panel);
+    }
+
+    private string BuildCommandCenterBioText(string personId)
+    {
+        var draftEntry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == personId);
+        if (draftEntry?.Bio is not null)
+        {
+            var bio = draftEntry.Bio;
+            return $"{State.DraftQuickScan(draftEntry)} | born {bio.BirthYear} | {bio.Hometown}, {bio.ProvinceState}, {bio.Country} | {bio.CharacterSummary} | {bio.PotentialLineupProjection}";
+        }
+
+        var freeAgent = State.FreeAgentFor(personId);
+        if (freeAgent is not null)
+        {
+            return $"{freeAgent.Position} | {freeAgent.ShootsCatches} | {freeAgent.HeightDisplay}, {freeAgent.WeightDisplay} | {freeAgent.Nationality} | {freeAgent.Hometown} | {freeAgent.PlayerType}";
+        }
+
+        return $"{State.PersonPosition(personId)} | age {State.PersonAge(personId)?.ToString() ?? "unknown"} | {State.RegionTeamText(personId)} | {State.PlayerType(personId)}";
+    }
+
+    private string BuildCommandCenterRelationshipText(string personId)
+    {
+        var profiles = State.RelationshipProfiles
+            .Where(profile => string.Equals(profile.SourceId, personId, StringComparison.Ordinal) || string.Equals(profile.TargetId, personId, StringComparison.Ordinal))
+            .Take(4)
+            .ToArray();
+        if (profiles.Length == 0)
+        {
+            return $"GM relationship: {State.RelationshipWithGm(personId)}/100.";
+        }
+
+        return string.Join(Environment.NewLine, profiles.Select(profile =>
+        {
+            var other = string.Equals(profile.SourceId, personId, StringComparison.Ordinal) ? profile.TargetName : profile.SourceName;
+            return $"{other}: {profile.Label}, trust {profile.Trust}, respect {profile.Respect}, loyalty {profile.Loyalty}, conflict {profile.Conflict}, communication {profile.CommunicationQuality}, trend {profile.Trend}. {profile.Summary}";
+        }));
+    }
+
+    private string BuildCommandCenterCareerText(string personId)
+    {
+        var lines = new List<string>();
+        lines.Add(State.CareerStatSummary(personId));
+        foreach (var timeline in State.ScenarioSnapshot.PlayerCareerTimelines.Where(timeline => timeline.PersonId == personId).Take(1))
+        {
+            lines.AddRange(timeline.Entries.Take(4));
+        }
+
+        lines.AddRange(State.ScenarioSnapshot.CareerTimeline.ForPerson(personId)
+            .Take(4)
+            .Select(entry => $"{entry.Date:yyyy-MM-dd}: {entry.Title} - {entry.Description}"));
+        return string.Join(Environment.NewLine, lines.Where(line => !string.IsNullOrWhiteSpace(line)).DefaultIfEmpty("No career timeline tracked yet."));
+    }
+
+    private IEnumerable<Button> BuildCommandCenterActionButtons(SelectablePersonRow row, string tab)
+    {
+        yield return CreateDetailButton("Dossier", () => OpenDossierFor(row.PersonId));
+        yield return CreateDetailButton("Assign Line", () => SelectWorkspaceScreen("Hockey Operations", "Lineup"));
+        yield return CreateDetailButton("Development", () => MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information), CommandCenterHasDevelopmentProfile(row.PersonId), "No development profile is tracked for this person");
+        yield return CreateDetailButton("Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contracts"));
+        yield return CreateDetailButton("Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0);
+        yield return CreateDetailButton("Trade", () => SelectWorkspaceScreen("Hockey Operations", "Trades"));
+        yield return CreateDetailButton("History", () => MessageBox.Show(BuildCommandCenterCareerText(row.PersonId), "Player History", MessageBoxButton.OK, MessageBoxImage.Information));
+        foreach (var button in BuildPlayerActionButtons(tab, row))
+        {
+            yield return button;
+        }
+    }
+
+    private bool CommandCenterHasDevelopmentProfile(string personId) =>
+        State.Snapshot.DevelopmentProfiles.Any(profile => string.Equals(profile.PersonId, personId, StringComparison.Ordinal));
+
+    private ContextMenu BuildCommandCenterContextMenu()
+    {
+        var menu = new ContextMenu();
+        AddCommandCenterMenuItem(menu, "View Dossier", row => OpenDossierFor(row.PersonId));
+        AddCommandCenterMenuItem(menu, "Assign Line", _ => SelectWorkspaceScreen("Hockey Operations", "Lineup"));
+        AddCommandCenterMenuItem(menu, "Development Review", row =>
+        {
+            if (CommandCenterHasDevelopmentProfile(row.PersonId))
+            {
+                MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("No development profile is tracked for this person.", "Development Review", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        });
+        AddCommandCenterMenuItem(menu, "Contract View", _ => SelectWorkspaceScreen("Hockey Operations", "Contracts"));
+        AddCommandCenterMenuItem(menu, "Assign Scout", row => ShowScoutAssignmentDialog(row.PersonId));
+        AddCommandCenterMenuItem(menu, "Trade View", _ => SelectWorkspaceScreen("Hockey Operations", "Trades"));
+        return menu;
+    }
+
+    private void AddCommandCenterMenuItem(ContextMenu menu, string label, Action<SelectablePersonRow> action)
+    {
+        var item = new MenuItem { Header = label };
+        item.Click += (_, _) =>
+        {
+            if (_commandCenterPlayerList?.SelectedItem is SelectablePersonRow row)
+            {
+                action(row);
+            }
+        };
+        menu.Items.Add(item);
+    }
+
+    private static string CommandCenterTabForRow(SelectablePersonRow row) =>
+        row.Kind switch
+        {
+            "FreeAgent" => "Free Agents",
+            "TradeBlock" => "Trades",
+            "ScoutingProspect" => "Scouting",
+            "DraftBoard" => "Draft Board",
+            "Prospect" => "Prospect List",
+            "CampPlayer" => "Training Camp",
+            _ => "Roster"
+        };
+
+    private void RefreshOrganizationCommandCenter()
+    {
+        if (_organizationCommandCenterPanel is null || _organizationCommandStaffCard is null)
+        {
+            return;
+        }
+
+        var rows = BuildOrganizationCommandRows();
+        var selected = rows.FirstOrDefault(row => string.Equals(row.PersonId, _selectedOrganizationStaffPersonId, StringComparison.Ordinal))
+            ?? rows.FirstOrDefault();
+        _selectedOrganizationStaffPersonId = selected?.PersonId;
+
+        RenderOrganizationCommandCenter(rows, selected);
+        RenderOrganizationStaffCard(selected);
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildOrganizationCommandRows()
+    {
+        if (_organizationCommandDepartment == "Owner")
+        {
+            return new[]
+            {
+                new SelectablePersonRow(
+                    "owner",
+                    State.Snapshot.Owner.Name,
+                    "Owner",
+                    $"{State.Snapshot.Owner.Archetype} owner",
+                    $"Confidence {State.OwnerOffice.Confidence.Confidence} | Job security {State.OwnerOffice.JobSecurity.Level}",
+                    State.OwnerOffice.Personality.Vision)
+            };
+        }
+
+        if (_organizationCommandDepartment == "Finance" || _organizationCommandDepartment == "Facilities")
+        {
+            return Array.Empty<SelectablePersonRow>();
+        }
+
+        var rows = StaffRowsForOrganizationDepartment(_organizationCommandDepartment).ToList();
+        rows.AddRange(VacancyRowsForOrganizationDepartment(_organizationCommandDepartment));
+        return rows
+            .GroupBy(row => row.PersonId, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToArray();
+    }
+
+    private IEnumerable<SelectablePersonRow> StaffRowsForOrganizationDepartment(string department)
+    {
+        return State.StaffProfiles
+            .Where(profile => MatchesOrganizationDepartment(profile, department))
+            .OrderBy(profile => OrganizationRoleSort(profile.CurrentRole))
+            .ThenBy(profile => profile.Name, StringComparer.Ordinal)
+            .Select(profile => new SelectablePersonRow(
+                profile.PersonId,
+                profile.Name,
+                "Staff",
+                $"{StaffRoles.Title(profile.CurrentRole)} | {profile.Department}",
+                $"{profile.ContractStatus} | salary {profile.Salary.AnnualAmount:C0} | relationship {profile.RelationshipWithGm}/100",
+                $"{profile.Chemistry.Summary} Focus: {profile.CurrentFocus}"));
+    }
+
+    private IEnumerable<SelectablePersonRow> VacancyRowsForOrganizationDepartment(string department)
+    {
+        return State.StaffVacancies
+            .Where(vacancy => MatchesOrganizationDepartment(vacancy, department))
+            .Select(vacancy => new SelectablePersonRow(
+                $"vacancy:{vacancy.Role}",
+                StaffRoles.Title(vacancy.Role),
+                "Vacancy",
+                $"Vacancy | {vacancy.Department}",
+                $"{vacancy.Current}/{vacancy.Required} filled | max {vacancy.Maximum}",
+                vacancy.Warning));
+    }
+
+    private static bool MatchesOrganizationDepartment(StaffOfficeProfile profile, string department) =>
+        department switch
+        {
+            "Front Office" => profile.Department is StaffDepartment.Executive or StaffDepartment.Management,
+            "Coaching" => profile.Department == StaffDepartment.Coaching && profile.CurrentRole is not StaffRole.DevelopmentCoach and not StaffRole.SkillsCoach and not StaffRole.StrengthCoach and not StaffRole.StrengthConditioningCoach,
+            "Development" => profile.CurrentRole is StaffRole.DevelopmentCoach or StaffRole.SkillsCoach or StaffRole.StrengthCoach or StaffRole.StrengthConditioningCoach,
+            "Scouting" => profile.Department == StaffDepartment.Scouting,
+            "Medical" => profile.Department == StaffDepartment.Medical,
+            "Equipment" => profile.Department == StaffDepartment.Equipment,
+            _ => false
+        };
+
+    private static bool MatchesOrganizationDepartment(StaffVacancy vacancy, string department) =>
+        department switch
+        {
+            "Front Office" => vacancy.Department is StaffDepartment.Executive or StaffDepartment.Management,
+            "Coaching" => vacancy.Department == StaffDepartment.Coaching && vacancy.Role is not StaffRole.DevelopmentCoach and not StaffRole.SkillsCoach and not StaffRole.StrengthCoach and not StaffRole.StrengthConditioningCoach,
+            "Development" => vacancy.Role is StaffRole.DevelopmentCoach or StaffRole.SkillsCoach or StaffRole.StrengthCoach or StaffRole.StrengthConditioningCoach,
+            "Scouting" => vacancy.Department == StaffDepartment.Scouting,
+            "Medical" => vacancy.Department == StaffDepartment.Medical,
+            "Equipment" => vacancy.Department == StaffDepartment.Equipment,
+            _ => false
+        };
+
+    private static int OrganizationRoleSort(StaffRole role) =>
+        role switch
+        {
+            StaffRole.GeneralManager => 0,
+            StaffRole.AssistantGM => 1,
+            StaffRole.DirectorOfHockeyOperations => 2,
+            StaffRole.HeadCoach => 10,
+            StaffRole.AssistantCoach => 11,
+            StaffRole.GoalieCoach or StaffRole.GoaltendingCoach => 12,
+            StaffRole.DevelopmentCoach => 20,
+            StaffRole.DirectorOfScouting => 30,
+            StaffRole.HeadScout => 31,
+            StaffRole.Scout or StaffRole.RegionalScout or StaffRole.AmateurScout or StaffRole.ProfessionalScout or StaffRole.EuropeanScout or StaffRole.GoaltendingScout => 32,
+            StaffRole.HeadAthleticTherapist => 40,
+            StaffRole.TeamDoctor => 41,
+            StaffRole.AthleticTherapist or StaffRole.AssistantTrainer or StaffRole.Physiotherapist or StaffRole.MassageTherapist => 42,
+            StaffRole.HeadEquipmentManager => 50,
+            StaffRole.EquipmentManager => 51,
+            StaffRole.AssistantEquipmentManager => 52,
+            _ => 99
+        };
+
+    private void RenderOrganizationCommandCenter(IReadOnlyList<SelectablePersonRow> rows, SelectablePersonRow? selected)
+    {
+        if (_organizationCommandCenterPanel is null)
+        {
+            return;
+        }
+
+        _organizationCommandCenterPanel.Children.Clear();
+        var header = CreateDetailPanel($"{_organizationCommandDepartment} Department", State.ScenarioSnapshot.Organization.Name);
+        AddLine(header, "Owner mood", OwnerMoodText());
+        AddLine(header, "Organization health", State.SeasonReadinessReport.OrganizationHealth);
+        AddLine(header, "Budget", $"{State.BudgetOverview.Status} | {State.BudgetOverview.RemainingBudget:C0} remaining");
+        AddLine(header, "Vacancies", State.StaffVacancySummary);
+        _organizationCommandCenterPanel.Children.Add(header);
+
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Franchise Overview", BuildFranchiseOverviewLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Needs", BuildOrganizationNeedsLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Department Health", BuildDepartmentHealthLines(_organizationCommandDepartment));
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Chart", BuildOrganizationChartLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Financial Overview", BuildFinancialOverviewLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Executive Report", BuildOrganizationReportLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Action Center", BuildOrganizationActionLines());
+
+        AddSubHeader(_organizationCommandCenterPanel, $"{_organizationCommandDepartment} People");
+        _organizationCommandStaffList = new ListBox
+        {
+            ItemsSource = rows,
+            SelectedItem = selected,
+            MinHeight = 250,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
+        _organizationCommandStaffList.SelectionChanged += (_, _) =>
+        {
+            if (_organizationCommandStaffList.SelectedItem is SelectablePersonRow row)
+            {
+                _selectedOrganizationStaffPersonId = row.PersonId;
+                RenderOrganizationStaffCard(row);
+            }
+        };
+        _organizationCommandCenterPanel.Children.Add(_organizationCommandStaffList);
+        if (rows.Count == 0)
+        {
+            AddParagraph(_organizationCommandCenterPanel, _organizationCommandDepartment == "Facilities"
+                ? "Facilities are a placeholder in this alpha. No facilities simulation has been added."
+                : "No staff rows are assigned to this department yet.");
+        }
+    }
+
+    private void AddOrganizationCommandCard(StackPanel parent, string title, IEnumerable<string> lines)
+    {
+        var content = new StackPanel();
+        content.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 15,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(38, 58, 82)),
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+        foreach (var line in lines.Where(line => !string.IsNullOrWhiteSpace(line)).DefaultIfEmpty("No items."))
+        {
+            AddParagraph(content, line);
+        }
+
+        parent.Children.Add(new Border
+        {
+            BorderThickness = new Thickness(1),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
+            Background = new SolidColorBrush(Color.FromRgb(250, 252, 255)),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 0, 0, 10),
+            Child = content
+        });
+    }
+
+    private IEnumerable<string> BuildFranchiseOverviewLines()
+    {
+        foreach (var line in new FranchiseIdentityService().BuildCommandCenterLines(State.ScenarioSnapshot, State.ScenarioSnapshot.Organization.OrganizationId))
+        {
+            yield return line;
+        }
+
+        var latestShift = State.PlayerFranchiseIdentity.IdentityShifts.OrderByDescending(shift => shift.Date).FirstOrDefault();
+        yield return latestShift is null
+            ? "Identity change: stable; no recent shift tracked."
+            : $"Identity change: {latestShift.Date:yyyy-MM-dd} - {latestShift.VisibleExplanation}";
+        yield return $"Franchise history: {State.PlayerFranchiseIdentity.History.PlayoffAppearances} playoff appearances, {State.PlayerFranchiseIdentity.History.Championships} championship(s), longest streak {State.PlayerFranchiseIdentity.History.LongestPlayoffStreak}.";
+    }
+
+    private IEnumerable<string> BuildOrganizationNeedsLines()
+    {
+        foreach (var vacancy in State.StaffVacancies.Take(4))
+        {
+            yield return $"Need {StaffRoles.Title(vacancy.Role)}: {vacancy.Warning}";
+        }
+
+        foreach (var grade in State.DepartmentGrades.Where(report => report.Score < 60).Take(3))
+        {
+            yield return $"Weak department: {grade.DepartmentName} is {grade.Grade} - {grade.Summary}";
+        }
+
+        if (State.BudgetOverview.RemainingBudget < 0)
+        {
+            yield return $"Budget issue: over budget by {Math.Abs(State.BudgetOverview.RemainingBudget):C0}.";
+        }
+
+        foreach (var item in State.ActionCenterItems.Where(item => item.Status == ActionCenterStatus.Open && item.Category is ActionCenterCategory.Staff or ActionCenterCategory.Owner or ActionCenterCategory.Budget).Take(3))
+        {
+            yield return $"{item.Priority}: {item.Title} - {item.Reason}";
+        }
+    }
+
+    private IEnumerable<string> BuildDepartmentHealthLines(string department)
+    {
+        var grade = DepartmentGradeFor(department);
+        yield return $"Grade: {grade.Grade} ({grade.Score}/100)";
+        yield return grade.Summary;
+        foreach (var evidence in grade.Evidence.Take(3))
+        {
+            yield return $"Evidence: {evidence}";
+        }
+
+        var staff = StaffRowsForOrganizationDepartment(department).ToArray();
+        var vacancies = VacancyRowsForOrganizationDepartment(department).ToArray();
+        yield return $"Staff Count: {staff.Length}";
+        yield return $"Vacancies: {vacancies.Length}";
+        yield return $"Budget: {DepartmentBudgetText(department)}";
+        yield return $"Strengths: {DepartmentStrengthText(department, staff)}";
+        yield return $"Weaknesses: {DepartmentWeaknessText(department, vacancies)}";
+        yield return $"Recommendations: {DepartmentRecommendationText(department, grade, vacancies.Length)}";
+    }
+
+    private DepartmentGradeReport DepartmentGradeFor(string department)
+    {
+        var report = State.DepartmentGrades.FirstOrDefault(report => report.DepartmentName.Contains(department, StringComparison.OrdinalIgnoreCase));
+        if (report is not null)
+        {
+            return report;
+        }
+
+        var budget = State.BudgetOverview;
+        if (department == "Finance")
+        {
+            var score = budget.RemainingBudget < 0 ? 45 : budget.RemainingBudget > budget.TotalBudget * 0.15m ? 82 : 68;
+            return new DepartmentGradeReport("Finance", ScoreToDepartmentGrade(score), score, $"{budget.Status}; {budget.OwnerBudgetConfidence}", new[] { $"Remaining budget {budget.RemainingBudget:C0}", $"Staff payroll {budget.StaffTotal:C0}", $"Player payroll {budget.PlayerContractsTotal:C0}" });
+        }
+
+        if (department == "Owner")
+        {
+            var score = Math.Clamp((State.OwnerOffice.Confidence.Confidence + State.OwnerOffice.Confidence.Trust + State.OwnerOffice.Confidence.Support) / 3, 0, 100);
+            return new DepartmentGradeReport("Owner", ScoreToDepartmentGrade(score), score, State.OwnerOffice.JobSecurity.Explanation, State.OwnerOffice.Confidence.Drivers.Take(3).ToArray());
+        }
+
+        return new DepartmentGradeReport(department, DepartmentGrade.C, 65, department == "Facilities" ? "Facilities placeholder only; no facilities simulation is active." : "Department grade is being assembled from staff, budget, and vacancies.", Array.Empty<string>());
+    }
+
+    private static DepartmentGrade ScoreToDepartmentGrade(int score) =>
+        score >= 85 ? DepartmentGrade.A :
+        score >= 70 ? DepartmentGrade.B :
+        score >= 55 ? DepartmentGrade.C :
+        score >= 40 ? DepartmentGrade.D :
+        DepartmentGrade.F;
+
+    private string DepartmentBudgetText(string department)
+    {
+        var budget = State.BudgetOverview;
+        return department switch
+        {
+            "Front Office" => $"GM salary {budget.GmSalary:C0}; staff total {budget.StaffTotal:C0}",
+            "Coaching" or "Development" => $"Coaching salaries {budget.CoachingSalaries:C0}",
+            "Scouting" => $"Scouting salaries {budget.ScoutingSalaries:C0}; scouting budget {budget.ScoutingBudget:C0}",
+            "Medical" => $"Medical/training salaries {budget.MedicalTrainingSalaries:C0}; operations {budget.MedicalAndStaffOperationsBudget:C0}",
+            "Finance" => $"Total {budget.TotalBudget:C0}; used {budget.UsedBudget:C0}; remaining {budget.RemainingBudget:C0}",
+            _ => $"Staff total {budget.StaffTotal:C0}"
+        };
+    }
+
+    private static string DepartmentStrengthText(string department, IReadOnlyList<SelectablePersonRow> staff) =>
+        staff.Count == 0
+            ? $"{department} has no assigned staff strength yet."
+            : string.Join("; ", staff.Take(3).Select(row => row.Summary));
+
+    private static string DepartmentWeaknessText(string department, IReadOnlyList<SelectablePersonRow> vacancies) =>
+        vacancies.Count == 0
+            ? $"{department} has no open rulebook vacancy."
+            : string.Join("; ", vacancies.Take(3).Select(row => row.Summary));
+
+    private static string DepartmentRecommendationText(string department, DepartmentGradeReport grade, int vacancies) =>
+        vacancies > 0 ? $"Fill {department} vacancies before expanding responsibilities." :
+        grade.Score < 60 ? $"Review leadership and fit in {department}." :
+        grade.Score >= 80 ? $"Maintain continuity and monitor extension candidates in {department}." :
+        $"Keep developing staff chemistry and performance in {department}.";
+
+    private IEnumerable<string> BuildOrganizationChartLines()
+    {
+        yield return $"Owner: {State.Snapshot.Owner.Name}";
+        yield return $"General Manager: {State.Snapshot.GeneralManager.Identity.DisplayName}";
+        foreach (var node in State.OrganizationChart.OrderBy(node => OrganizationRoleSort(RoleFromText(node.Role))).Take(16))
+        {
+            yield return $"{node.Name} - {node.Role} | reports to {FindPersonName(node.ReportsToPersonId)} | {node.Responsibilities} | {node.SalaryText}";
+        }
+
+        yield return "President: future placeholder";
+        yield return "Facilities Director: placeholder only";
+    }
+
+    private static StaffRole RoleFromText(string text) =>
+        Enum.GetValues<StaffRole>().FirstOrDefault(role => text.Contains(role.ToString(), StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<string> BuildFinancialOverviewLines()
+    {
+        var budget = State.BudgetOverview;
+        yield return $"Operating Budget: {budget.TotalBudget:C0}";
+        yield return $"Player Payroll: {budget.PlayerContractsTotal:C0}";
+        yield return $"Staff Payroll: {budget.StaffTotal:C0}";
+        yield return $"Scouting Budget: {budget.ScoutingBudget:C0}";
+        yield return $"Medical Budget: {budget.MedicalAndStaffOperationsBudget:C0}";
+        yield return "Travel: placeholder";
+        yield return $"Future Commitments: {State.SalaryCap.CommittedFutureSalary:C0}";
+        yield return $"Over/Under Budget: {budget.OverUnderBudget:C0}";
+    }
+
+    private IEnumerable<string> BuildOrganizationReportLines()
+    {
+        yield return $"Department Grades: {State.DepartmentGradesText().Replace(Environment.NewLine, " | ", StringComparison.Ordinal)}";
+        yield return $"Staff Performance: {State.StaffProfiles.Count} active profile(s); {State.ScenarioSnapshot.StaffCareerSummaries.Count} career summary record(s).";
+        yield return $"Budget Health: {State.BudgetOverview.Status} - {State.BudgetOverview.OwnerBudgetConfidence}";
+        yield return $"Organization Health: {State.SeasonReadinessReport.OrganizationHealth}";
+        yield return $"Franchise Direction: {State.PlayerFranchiseIdentity.Summary}";
+        yield return $"Recommendations: {DepartmentRecommendationText(_organizationCommandDepartment, DepartmentGradeFor(_organizationCommandDepartment), VacancyRowsForOrganizationDepartment(_organizationCommandDepartment).Count())}";
+    }
+
+    private IEnumerable<string> BuildOrganizationActionLines()
+    {
+        foreach (var item in State.ActionCenterItems
+            .Where(item => item.Status == ActionCenterStatus.Open && item.Category is ActionCenterCategory.Staff or ActionCenterCategory.Owner or ActionCenterCategory.Budget)
+            .Take(6))
+        {
+            yield return $"{item.Priority} | {item.Category}: {item.Title} - {item.RecommendedAction}";
+        }
+    }
+
+    private void RenderOrganizationStaffCard(SelectablePersonRow? row)
+    {
+        if (_organizationCommandStaffCard is null)
+        {
+            return;
+        }
+
+        _organizationCommandStaffCard.Children.Clear();
+        if (row is null)
+        {
+            _organizationCommandStaffCard.Children.Add(EmptyDetail("Selected Staff", "Select a staff member, vacancy, or owner record."));
+            return;
+        }
+
+        if (row.Kind == "Owner")
+        {
+            _organizationCommandStaffCard.Children.Add(BuildOrganizationOwnerCard());
+            return;
+        }
+
+        if (row.Kind == "Vacancy")
+        {
+            _organizationCommandStaffCard.Children.Add(BuildOrganizationVacancyCard(row));
+            return;
+        }
+
+        var profile = State.StaffProfiles.FirstOrDefault(profile => profile.PersonId == row.PersonId);
+        if (profile is null)
+        {
+            _organizationCommandStaffCard.Children.Add(EmptyDetail("Selected Staff", "Selected staff member is no longer available."));
+            return;
+        }
+
+        var panel = CreateDetailPanel(profile.Name, $"{StaffRoles.Title(profile.CurrentRole)} | {profile.Department}");
+        AddLine(panel, "Salary", $"{profile.Salary.AnnualAmount:C0}");
+        AddLine(panel, "Years remaining", YearsRemainingFromContract(profile.ContractStatus));
+        AddLine(panel, "Contract", profile.ContractStatus);
+        AddLine(panel, "Extension recommendation", ExtensionRecommendation(profile));
+        AddLine(panel, "Replacement cost", $"{profile.Salary.AnnualAmount * 1.15m:C0} estimated");
+        AddLine(panel, "Relationship", $"{profile.RelationshipWithGm}/100");
+        AddLine(panel, "Franchise fit", new FranchiseIdentityService().EvaluateStaffFit(State.ScenarioSnapshot, profile.PersonId).Summary);
+        AddLine(panel, "Performance", StaffPerformanceOutcomeText(profile.PersonId));
+        AddLine(panel, "Current assignment", profile.CurrentAssignment);
+        AddLine(panel, "Current focus", profile.CurrentFocus);
+        AddSubHeader(panel, "Strengths");
+        AddParagraph(panel, string.Join(", ", profile.Strengths.DefaultIfEmpty("No strength noted.")));
+        AddSubHeader(panel, "Weaknesses");
+        AddParagraph(panel, string.Join(", ", profile.Weaknesses.DefaultIfEmpty("No weakness noted.")));
+        AddSubHeader(panel, "History");
+        AddParagraph(panel, StaffHistoryText(profile.PersonId));
+        AddSubHeader(panel, "Actions");
+        AddActions(panel,
+            CreateDetailButton("View Profile", () => ShowStaffProfile(profile.PersonId)),
+            CreateDetailButton("Promote", () => State.ReassignStaffRoleFor(profile.PersonId)),
+            CreateDetailButton("Demote", () => State.ReassignStaffRoleFor(profile.PersonId)),
+            CreateDetailButton("Move Department", () => State.SetStaffFocusFor(profile.PersonId)),
+            CreateDetailButton("Set Focus", () => SetStaffFocusFor(profile.PersonId)),
+            CreateDetailButton("Performance Review", () => MessageBox.Show(State.StaffPerformanceReviewText(profile.PersonId), "Staff Performance Review", MessageBoxButton.OK, MessageBoxImage.Information)),
+            CreateDetailButton("Release", () => State.ReleaseStaffFor(profile.PersonId)));
+        _organizationCommandStaffCard.Children.Add(panel);
+    }
+
+    private UIElement BuildOrganizationOwnerCard()
+    {
+        var owner = State.Snapshot.Owner;
+        var office = State.OwnerOffice;
+        var panel = CreateDetailPanel(owner.Name, $"{owner.Archetype} owner");
+        AddLine(panel, "Budget", $"{State.BudgetOverview.TotalBudget:C0} total | {State.BudgetOverview.RemainingBudget:C0} remaining");
+        AddLine(panel, "Expectations", office.Expectations.FirstOrDefault()?.Description ?? "No active expectation.");
+        AddLine(panel, "Confidence", $"{office.Confidence.Confidence}/100");
+        AddLine(panel, "Trust", $"{office.Confidence.Trust}/100");
+        AddLine(panel, "Patience", $"{office.Confidence.Patience}/100");
+        AddLine(panel, "Job security", $"{office.JobSecurity.Level} ({office.JobSecurity.Score}/100)");
+        AddLine(panel, "Department grades", State.DepartmentGradesText().Replace(Environment.NewLine, " | ", StringComparison.Ordinal));
+        AddLine(panel, "Long-term vision", office.Personality.Vision);
+        AddLine(panel, "Franchise identity", State.PlayerFranchiseIdentity.Summary);
+        AddLine(panel, "Current era", $"{State.PlayerFranchiseIdentity.CurrentEra.Name} ({State.PlayerFranchiseIdentity.CurrentEra.StartYear}-present)");
+        AddSubHeader(panel, "Recommendations");
+        foreach (var recommendation in State.AssistantGmRecommendations.Take(4))
+        {
+            AddParagraph(panel, recommendation);
+        }
+
+        AddActions(panel,
+            CreateDetailButton("Owner Workspace", () => SelectWorkspaceScreen("Organization", "Owner")),
+            CreateDetailButton("Budget View", () => SelectWorkspaceScreen("Organization", "Budget")),
+            CreateDetailButton("Owner History", () => SelectWorkspaceScreen("Reports / History", "Owner History")));
+        return panel;
+    }
+
+    private UIElement BuildOrganizationVacancyCard(SelectablePersonRow row)
+    {
+        var panel = CreateDetailPanel(row.Name, row.Primary);
+        AddLine(panel, "Department", _organizationCommandDepartment);
+        AddLine(panel, "Status", row.Secondary);
+        AddParagraph(panel, row.Summary);
+        AddSubHeader(panel, "Recommended Action");
+        AddParagraph(panel, "Review the staff market and hire a candidate whose role fit, department fit, salary, personality, and chemistry match the organization.");
+        AddActions(panel,
+            CreateDetailButton("Hire Staff", () => SelectWorkspaceScreen("Organization", "Staff Hiring")),
+            CreateDetailButton("View Vacancies", () => SelectWorkspaceScreen("Organization", "Vacancies")));
+        return panel;
+    }
+
+    private string StaffPerformanceOutcomeText(string personId)
+    {
+        var review = State.StaffPerformanceReviewText(personId);
+        var outcomeLine = review.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(line => line.StartsWith("Outcome:", StringComparison.OrdinalIgnoreCase));
+        return string.IsNullOrWhiteSpace(outcomeLine) ? "Performance review available" : outcomeLine.Replace("Outcome:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+    }
+
+    private string ExtensionRecommendation(StaffOfficeProfile profile)
+    {
+        var review = State.StaffPerformanceReviewText(profile.PersonId);
+        var recommendationLine = review.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(line => line.StartsWith("Recommendation:", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(recommendationLine))
+        {
+            return recommendationLine.Replace("Recommendation:", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
+        }
+
+        return profile.RelationshipWithGm >= 70 ? "Extension candidate" : "Review fit before extension";
+    }
+
+    private string StaffHistoryText(string personId)
+    {
+        var history = State.ScenarioSnapshot.StaffCareerHistory.FirstOrDefault(history => history.PersonId == personId);
+        var summary = State.ScenarioSnapshot.StaffCareerSummaries.FirstOrDefault(summary => summary.PersonId == personId);
+        var lines = new List<string>();
+        if (history is not null)
+        {
+            lines.Add($"Current organization: {history.CurrentOrganization}");
+            lines.Add($"Previous roles: {string.Join(", ", history.PreviousRoles.Take(4))}");
+            lines.AddRange(history.NotableHistory.Take(4));
+            lines.Add(history.EvaluationSummary);
+        }
+
+        if (summary is not null)
+        {
+            lines.Add($"Organizations: {string.Join(", ", summary.Organizations.Take(4))}");
+            lines.Add($"Roles: {string.Join(", ", summary.Roles.Take(5))}");
+            if (summary.PlayersDeveloped.Count > 0)
+            {
+                lines.Add($"Players developed: {string.Join(", ", summary.PlayersDeveloped.Take(4))}");
+            }
+
+            if (summary.PlayersDiscovered.Count > 0)
+            {
+                lines.Add($"Players scouted: {string.Join(", ", summary.PlayersDiscovered.Take(4))}");
+            }
+        }
+
+        return string.Join(Environment.NewLine, lines.DefaultIfEmpty("No staff history is recorded yet."));
+    }
+
+    private static string YearsRemainingFromContract(string contractStatus)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(contractStatus, @"through\s+(\d{4})-(\d{2})-(\d{2})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!match.Success
+            || !int.TryParse(match.Groups[1].Value, out var year)
+            || !int.TryParse(match.Groups[2].Value, out var month)
+            || !int.TryParse(match.Groups[3].Value, out var day))
+        {
+            return "contract term not tracked";
+        }
+
+        var end = new DateOnly(year, month, day);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var remaining = Math.Max(0, end.Year - today.Year - (end.DayOfYear < today.DayOfYear ? 1 : 0));
+        return remaining == 1 ? "1 year" : $"{remaining} years";
     }
 
     private IReadOnlyList<SelectablePersonRow> BuildStaffRows() =>
@@ -7221,6 +8250,7 @@ internal sealed class AlphaDesktopState
     private readonly OwnerOfficeService _ownerOffice = new();
     private readonly LeagueAiService _leagueAi = new();
     private readonly OrganizationAiService _organizationAi = new();
+    private readonly FranchiseIdentityService _franchiseIdentity = new();
     private readonly BudgetOverviewService _budgetOverview = new();
     private readonly RecruitingV2Service _recruitingV2 = new();
     private readonly SeasonFrameworkService _seasonFramework = new();
@@ -7264,7 +8294,7 @@ internal sealed class AlphaDesktopState
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
     {
         _registry = registry;
-        ScenarioSnapshot = _tactics.EnsureTactics(_gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot))), registry), registry), registry), registry)))));
+        ScenarioSnapshot = _tactics.EnsureTactics(_gameUsage.EnsureGameUsage(_lineChemistry.EnsureChemistry(_lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_franchiseIdentity.EnsureIdentities(_organizationAi.EnsureProfiles(_agents.EnsureAgents(_developmentPlanning.EnsureScenarioPlans(scenarioSnapshot)))), registry), registry), registry), registry)))));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
         if (addFirstDayInbox)
@@ -7286,6 +8316,7 @@ internal sealed class AlphaDesktopState
             .Concat(ScenarioSnapshot.PlayerLifeCycleNews)
             .Concat(ScenarioSnapshot.StaffLifeCycleNews)
             .Concat(ScenarioSnapshot.OwnerLifeCycleNews)
+            .Concat(FranchiseIdentityNews)
             .Concat(ScenarioSnapshot.Playoffs.PlayoffLeagueNews)
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
@@ -7434,6 +8465,16 @@ internal sealed class AlphaDesktopState
 
     public OrganizationAiProfile PlayerOrganizationAiProfile =>
         OrganizationAiProfileFor(ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name);
+
+    public IReadOnlyList<FranchiseIdentity> FranchiseIdentities =>
+        ScenarioSnapshot.FranchiseIdentities.Count > 0
+            ? ScenarioSnapshot.FranchiseIdentities
+            : _franchiseIdentity.EnsureIdentities(ScenarioSnapshot).FranchiseIdentities;
+
+    public FranchiseIdentity PlayerFranchiseIdentity =>
+        FranchiseIdentities.First(identity => identity.OrganizationId == ScenarioSnapshot.Organization.OrganizationId);
+
+    public IReadOnlyList<LeagueTransaction> FranchiseIdentityNews => _franchiseIdentity.BuildLeagueNews(ScenarioSnapshot);
 
     public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
@@ -11207,7 +12248,7 @@ internal sealed class AlphaDesktopState
 
     private void EnsureLifeCycleState()
     {
-        var updated = _lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(ScenarioSnapshot, _registry), _registry), _registry), _registry));
+        var updated = _lineups.EnsureLineup(_relationships.EnsureExpansion(_ownerLifeCycle.EnsureLifeCycle(_staffLifeCycle.EnsureLifeCycle(_lifeCycle.EnsureLifeCycle(_franchiseIdentity.EnsureIdentities(ScenarioSnapshot), _registry), _registry), _registry), _registry));
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

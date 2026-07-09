@@ -128,6 +128,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<OrganizationAiProfile> OrganizationAiProfiles { get; init; } = Array.Empty<OrganizationAiProfile>();
 
+    public IReadOnlyList<FranchiseIdentity> FranchiseIdentities { get; init; } = Array.Empty<FranchiseIdentity>();
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -411,6 +413,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var profile in OrganizationAiProfiles)
         {
             profile.Validate();
+        }
+
+        foreach (var identity in FranchiseIdentities)
+        {
+            identity.Validate();
         }
 
         foreach (var state in PlayerCareerStates)

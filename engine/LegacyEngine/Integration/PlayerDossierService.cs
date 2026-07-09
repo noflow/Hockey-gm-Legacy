@@ -44,6 +44,7 @@ public sealed class PlayerDossierService
             BuildMedical(scenario, personId),
             BuildContractRights(scenario, personId),
             BuildAgentRepresentation(scenario, personId),
+            BuildOrganizationFit(scenario, personId),
             BuildStaffOpinions(scenario, personId),
             BuildRelationships(scenario, personId),
             BuildCareerHistory(scenario, personId),
@@ -436,6 +437,25 @@ public sealed class PlayerDossierService
         lines.AddRange(recentOffers);
 
         return new PlayerDossierSection("Agent / Representation", lines);
+    }
+
+    private static PlayerDossierSection BuildOrganizationFit(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var service = new FranchiseIdentityService();
+        var withIdentity = service.EnsureIdentities(scenario);
+        var identity = service.PlayerIdentity(withIdentity);
+        var fit = service.EvaluatePlayerFit(withIdentity, personId);
+        var lines = new List<string>
+        {
+            fit.Summary,
+            $"Organization identity: {identity.CurrentIdentity}",
+            $"Culture: {identity.Culture}",
+            $"Current era: {identity.CurrentEra.Name}",
+            $"Team DNA: {string.Join(", ", identity.TeamDna.Take(4))}"
+        };
+        lines.AddRange(fit.Reasons.Select(reason => $"Fit reason: {reason}"));
+        lines.Add("This is an explainable fit summary only; hidden ratings remain private.");
+        return new PlayerDossierSection("Organization Fit", lines);
     }
 
     private static PlayerDossierSection BuildStaffOpinions(NewGmScenarioSnapshot scenario, string personId)

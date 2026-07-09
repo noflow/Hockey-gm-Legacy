@@ -127,6 +127,7 @@ public sealed class ExecutiveReportService
                     ["Recruiting"] = scenario.AlphaSnapshot.Recruits.Count > 0 ? "Up" : "Flat",
                     ["Development"] = scenario.AlphaSnapshot.DevelopmentProfiles.Count > 0 ? "Up" : "Flat"
                 }),
+                Section("Franchise Identity", "Franchise identity tracks long-term culture, current era, reputation, DNA, and direction.", BuildFranchiseIdentityItems(scenario)),
                 Section("Opening Night Recommendation", $"Opening night recommendation: {recommendation}.", new Dictionary<string, string>
                 {
                     ["Recommendation"] = recommendation
@@ -289,6 +290,7 @@ public sealed class ExecutiveReportService
                     ["Biggest Story"] = "Front office structure became the club's identity."
                 }),
                 Section("Organization Progress", "Progress compares this report with the previous season where available.", BuildProgressComparison(health, scenario, previous)),
+                Section("Franchise Identity", "Franchise identity tracks culture, eras, direction, and reputation across the organization timeline.", BuildFranchiseIdentityItems(scenario)),
                 Section("GM Career", "Career values are scoped to the current Alpha organization session.", new Dictionary<string, string>
                 {
                     ["Career Record"] = "Not simulated",
@@ -377,6 +379,12 @@ public sealed class ExecutiveReportService
             ["Medical Budget"] = summary.MedicalBudgetImpact,
             ["Players Entering Offseason Healthy"] = (scenario.AlphaSnapshot.Roster.CurrentPlayers.Count - injuries.Count(injury => injury.IsActive)).ToString()
         };
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildFranchiseIdentityItems(NewGmScenarioSnapshot scenario)
+    {
+        var service = new FranchiseIdentityService();
+        return service.BuildExecutiveReportItems(scenario, scenario.Organization.OrganizationId);
     }
 
     private static IReadOnlyDictionary<string, string> BuildPlayerLifeCycleItems(NewGmScenarioSnapshot scenario)

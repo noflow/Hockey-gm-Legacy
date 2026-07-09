@@ -91,6 +91,9 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 6.7 Tactics & Coaching Style v1
 - Alpha 6.8 Game Simulation v2
 - Alpha 6.9 Playoffs & Championship Framework v1
+- Alpha 6.10 Hockey Operations Command Center
+- Alpha 6.11 Organization Command Center
+- Alpha 6.12 Franchise Identity & Culture v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -153,6 +156,12 @@ Alpha 6.7 - Tactics & Coaching Style v1 defines how the team plays without becom
 Alpha 6.8 - Game Simulation v2 upgrades the scheduled-game simulator while staying boxscore-based. Daily games now build explainable team profiles from lineup roles, line chemistry, special-teams usage, tactics, coach fit, goalie workload, injuries, home/away context, and public strength bands. Recaps now show top-line, special teams, tactical, chemistry, goalie usage, key concern, injury, development, and milestone context without adding play-by-play, line matching, shift simulation, or Godot.
 
 Alpha 6.9 - Playoffs & Championship Framework v1 adds a basic postseason path after the regular season. The engine now seeds playoff teams from standings, builds a rulebook-aware bracket, simulates best-of series using the existing boxscore game simulator, tracks playoff stats separately from regular-season stats, records series results, crowns a champion, stores playoff history, and exposes Playoffs, Playoff Archive, and Champions views in AlphaDesktop.
+
+Alpha 6.10 - Hockey Operations Command Center turns Hockey Operations into one integrated workspace. The GM can move between roster, prospects, AHL, junior rights, free agents, and trade targets from a left source rail; review lines, roster, development, contracts, scouting, trade, and free-agency context in the center; and keep a selected-player command card on the right with dossier, role, current line, contract/rights, development, scouting, medical, relationships, history, and quick actions. This is a UI/workflow pass only.
+
+Alpha 6.11 - Organization Command Center adds the matching front-office workspace. The GM can select Owner, Front Office, Coaching, Scouting, Development, Medical, Equipment, Finance, or Facilities placeholder departments, review department health, organization chart, needs, budget, reports, and Action Center items, then select staff/vacancies on the right for profile, performance, contract, relationship, history, focus, movement, release, or hiring workflow actions. This is an executive UI/workflow pass only.
+
+Alpha 6.12 - Franchise Identity & Culture v1 gives every organization a long-term identity, culture, current era, historical eras, reputation, team DNA, strengths, weaknesses, future goals, and identity-shift history. Organization Command Center now shows a Franchise Overview, executive reports include franchise identity context, League News can surface limited identity/culture headlines, and player/staff fit summaries explain why someone fits the club without exposing hidden ratings.
 
 Alpha 6.4 - Lineup & Role Management v1 makes lineup roles playable. Hockey Operations now includes a selectable Lineup workspace where the GM can assign, remove, swap, and auto-fill slots across four forward lines, three defense pairs, and starter/backup goalie depth. Roster rows and dossiers show current, expected, promised, coach-recommended, and potential roles, plus promise status, satisfaction, morale notes, and development usage context. Contract offer evaluation now warns when a role promise conflicts with lineup capacity, while invalid placements warn instead of crashing. This does not add special teams, tactics, line chemistry, Godot, or game simulation changes.
 
