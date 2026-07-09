@@ -89,6 +89,7 @@ var alpha611OrganizationCommandCenterTests = new Alpha611OrganizationCommandCent
 var alpha612FranchiseIdentityCultureTests = new Alpha612FranchiseIdentityCultureTests();
 var alpha613LivingStoryEngineTests = new Alpha613LivingStoryEngineTests();
 var alpha614MediaNewsTests = new Alpha614MediaNewsTests();
+var alpha615AwardsRecordsTests = new Alpha615AwardsRecordsTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1183,6 +1184,20 @@ runner.Run("alpha 6.14 dashboard and dossier expose media", alpha614MediaNewsTes
 runner.Run("alpha 6.14 league news and media remain separate", alpha614MediaNewsTests.LeagueNewsAndMediaRemainSeparate);
 runner.Run("alpha 6.14 save load preserves media feed", alpha614MediaNewsTests.SaveLoadPreservesMediaFeed);
 runner.Run("alpha 6.14 no real brands social media or Godot", alpha614MediaNewsTests.NoRealBrandsSocialMediaOrGodot);
+runner.Run("alpha 6.15 MVP award generated", alpha615AwardsRecordsTests.MvpAwardGenerated);
+runner.Run("alpha 6.15 rookie award generated", alpha615AwardsRecordsTests.RookieAwardGenerated);
+runner.Run("alpha 6.15 goalie award generated", alpha615AwardsRecordsTests.GoalieAwardGenerated);
+runner.Run("alpha 6.15 coach and GM awards generated", alpha615AwardsRecordsTests.CoachAndGmAwardsGenerated);
+runner.Run("alpha 6.15 award history stored", alpha615AwardsRecordsTests.AwardHistoryStored);
+runner.Run("alpha 6.15 winner gets timeline entry", alpha615AwardsRecordsTests.WinnerGetsTimelineEntry);
+runner.Run("alpha 6.15 media article generated for major award", alpha615AwardsRecordsTests.MediaArticleGeneratedForMajorAward);
+runner.Run("alpha 6.15 record book created", alpha615AwardsRecordsTests.RecordBookCreated);
+runner.Run("alpha 6.15 record updates after stats", alpha615AwardsRecordsTests.RecordUpdatesAfterStats);
+runner.Run("alpha 6.15 broken record creates history and media", alpha615AwardsRecordsTests.BrokenRecordCreatesHistoryAndMedia);
+runner.Run("alpha 6.15 player dossier exposes awards and records", alpha615AwardsRecordsTests.PlayerDossierExposesAwardsAndRecords);
+runner.Run("alpha 6.15 Reports History exposes awards and records", alpha615AwardsRecordsTests.ReportsHistoryExposesAwardsAndRecords);
+runner.Run("alpha 6.15 save load preserves awards and records", alpha615AwardsRecordsTests.SaveLoadPreservesAwardsAndRecords);
+runner.Run("alpha 6.15 no Hall of Fame or Godot dependency", alpha615AwardsRecordsTests.NoHallOfFameOrGodotDependency);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

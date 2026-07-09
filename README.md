@@ -96,6 +96,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 6.12 Franchise Identity & Culture v1
 - Alpha 6.13 Living Story Engine v1
 - Alpha 6.14 Media & News v1
+- Alpha 6.15 Awards & Records v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -168,6 +169,8 @@ Alpha 6.12 - Franchise Identity & Culture v1 gives every organization a long-ter
 Alpha 6.13 - Living Story Engine v1 connects isolated history, milestones, relationships, career context, and franchise identity into readable story arcs. Player dossiers now include a Stories section, Organization Command Center shows the current organization story, reports/monthly summaries reference top stories, Action Center can surface only major story updates, League News gets capped story headlines, and save/load preserves story state without adding a media engine, articles, social media, or extra inbox spam.
 
 Alpha 6.14 - Media & News v1 turns stories and major hockey events into short fictional media articles. The new media feed uses fictional sources such as League Wire, Hockey Daily, Prospect Central, Front Office Report, Local Beat, and Draft Desk; separates article/story coverage from the League News transaction wire; supports rumor confidence labels; surfaces top headlines on the dashboard; adds Media / News under Reports / History; and shows related media in player dossiers and Organization Command Center without adding social media, press conferences, real media brands, or inbox spam.
+
+Alpha 6.15 - Awards & Records v1 adds basic accomplishment history. Season-end award generation now creates deterministic league/team/playoff/rookie/staff/GM/scouting/development winners from public stats, team success, role, reputation, and story context; record books track goals, assists, points, goalie wins, shutouts, games played, team wins, championships, and playoff points placeholders; winners and broken records create career timeline/media history; Reports / History now includes Awards, Record Book, Team Records, and League Records; player dossiers and Organization Command Center surface awards and records without adding Hall of Fame, jersey retirement, real trophy names, or a full voting system.
 
 Alpha 6.4 - Lineup & Role Management v1 makes lineup roles playable. Hockey Operations now includes a selectable Lineup workspace where the GM can assign, remove, swap, and auto-fill slots across four forward lines, three defense pairs, and starter/backup goalie depth. Roster rows and dossiers show current, expected, promised, coach-recommended, and potential roles, plus promise status, satisfaction, morale notes, and development usage context. Contract offer evaluation now warns when a role promise conflicts with lineup capacity, while invalid placements warn instead of crashing. This does not add special teams, tactics, line chemistry, Godot, or game simulation changes.
 

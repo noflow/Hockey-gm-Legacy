@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.14 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.15 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -579,6 +579,10 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Career Milestones", CreateTextScreen("Career Milestones")),
             new WorkspaceScreen("Player Stories", CreateTextScreen("Player Stories")),
             new WorkspaceScreen("Media / News", CreateTextScreen("Media / News")),
+            new WorkspaceScreen("Awards", CreateTextScreen("Awards")),
+            new WorkspaceScreen("Record Book", CreateTextScreen("Record Book")),
+            new WorkspaceScreen("Team Records", CreateTextScreen("Team Records")),
+            new WorkspaceScreen("League Records", CreateTextScreen("League Records")),
             new WorkspaceScreen("Staff History", CreateTextScreen("Staff History")),
             new WorkspaceScreen("Staff Careers", CreateTextScreen("Staff Careers")),
             new WorkspaceScreen("Coaching Trees", CreateTextScreen("Coaching Trees")),
@@ -622,7 +626,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.14 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.15 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1819,6 +1823,10 @@ internal sealed class MainWindow : Window
         _tabs["Career Milestones"].Text = BuildCareerMilestonesReport();
         _tabs["Player Stories"].Text = BuildPlayerStoriesReport();
         _tabs["Media / News"].Text = BuildMediaNews();
+        _tabs["Awards"].Text = BuildAwardsReport();
+        _tabs["Record Book"].Text = BuildRecordBookReport();
+        _tabs["Team Records"].Text = BuildTeamRecordsReport();
+        _tabs["League Records"].Text = BuildLeagueRecordsReport();
         _tabs["Staff History"].Text = BuildStaffHistoryReport();
         _tabs["Staff Careers"].Text = BuildStaffCareersReport();
         _tabs["Coaching Trees"].Text = BuildCoachingTreesReport();
@@ -2662,6 +2670,7 @@ internal sealed class MainWindow : Window
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Franchise Overview", BuildFranchiseOverviewLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Current Organization Story", BuildOrganizationStoryLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Media Coverage", BuildOrganizationMediaLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Team Awards & Records", BuildOrganizationAwardRecordLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Needs", BuildOrganizationNeedsLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Department Health", BuildDepartmentHealthLines(_organizationCommandDepartment));
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Chart", BuildOrganizationChartLines());
@@ -2748,6 +2757,35 @@ internal sealed class MainWindow : Window
         foreach (var line in new MediaService().BuildOrganizationLines(State.ScenarioSnapshot, State.LeagueTransactions))
         {
             yield return line;
+        }
+    }
+
+    private IEnumerable<string> BuildOrganizationAwardRecordLines()
+    {
+        var organizationId = State.ScenarioSnapshot.Organization.OrganizationId;
+        var awards = State.ScenarioSnapshot.AwardHistory.Awards
+            .Where(award => string.Equals(award.Winner.OrganizationId, organizationId, StringComparison.Ordinal))
+            .OrderByDescending(award => award.SeasonYear)
+            .Take(4)
+            .ToArray();
+        var records = State.ScenarioSnapshot.RecordBook.ForOrganization(organizationId)
+            .Take(4)
+            .ToArray();
+
+        if (awards.Length == 0 && records.Length == 0)
+        {
+            yield return "No team awards or records have been tracked yet.";
+            yield break;
+        }
+
+        foreach (var award in awards)
+        {
+            yield return $"Award: {award.SeasonYear} {Readable(award.AwardType)} - {award.Winner.RecipientName}";
+        }
+
+        foreach (var record in records)
+        {
+            yield return $"Record: {Readable(record.RecordType)} {record.Value} - {record.HolderName}";
         }
     }
 
@@ -7234,6 +7272,118 @@ internal sealed class MainWindow : Window
         {
             builder.AppendLine($"    People: {string.Join(", ", article.PersonNames)}");
         }
+    }
+
+    private static string Readable(Enum value)
+    {
+        var text = value.ToString();
+        return string.Concat(text.Select((letter, index) => index > 0 && char.IsUpper(letter) ? $" {letter}" : letter.ToString()));
+    }
+
+    private string BuildAwardsReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Awards");
+        builder.AppendLine("======");
+        var awards = State.ScenarioSnapshot.AwardHistory.Awards
+            .OrderByDescending(award => award.SeasonYear)
+            .ThenBy(award => award.Category)
+            .ThenBy(award => award.AwardType)
+            .ToArray();
+        if (awards.Length == 0)
+        {
+            builder.AppendLine("No awards have been handed out yet. Awards are generated at season end.");
+            return builder.ToString();
+        }
+
+        foreach (var group in awards.GroupBy(award => award.SeasonYear).OrderByDescending(group => group.Key))
+        {
+            builder.AppendLine(group.Key.ToString());
+            foreach (var award in group)
+            {
+                builder.AppendLine($"  {Readable(award.AwardType)} | {award.Category} | Winner: {award.Winner.RecipientName}");
+                builder.AppendLine($"    Reasoning: {award.Reasoning}");
+                if (award.Finalists.Count > 1)
+                {
+                    builder.AppendLine($"    Finalists: {string.Join(", ", award.Finalists.Select(finalist => finalist.RecipientName).Distinct(StringComparer.Ordinal).Take(4))}");
+                }
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildRecordBookReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Record Book");
+        builder.AppendLine("===========");
+        var records = State.ScenarioSnapshot.RecordBook.Records
+            .OrderBy(record => record.Scope)
+            .ThenBy(record => record.RecordType)
+            .ToArray();
+        if (records.Length == 0)
+        {
+            builder.AppendLine("No records are tracked yet. Records are established or broken from season, career, team, and playoff stats.");
+            return builder.ToString();
+        }
+
+        foreach (var record in records)
+        {
+            builder.AppendLine($"{Readable(record.Scope)} | {Readable(record.RecordType)} | {record.Value}");
+            builder.AppendLine($"  Holder: {record.HolderName} ({record.HolderKind}) | Set: {record.DateSet:yyyy-MM-dd}");
+            builder.AppendLine($"  {record.Summary}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildTeamRecordsReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Team Records");
+        builder.AppendLine("============");
+        var records = State.ScenarioSnapshot.RecordBook.ForOrganization(State.ScenarioSnapshot.Organization.OrganizationId)
+            .OrderBy(record => record.Scope)
+            .ThenBy(record => record.RecordType)
+            .ToArray();
+        if (records.Length == 0)
+        {
+            builder.AppendLine("No team records are tracked yet.");
+            return builder.ToString();
+        }
+
+        foreach (var record in records)
+        {
+            builder.AppendLine($"{Readable(record.RecordType)}: {record.Value} - {record.HolderName}");
+            builder.AppendLine($"  {record.Summary}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildLeagueRecordsReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("League Records");
+        builder.AppendLine("==============");
+        var records = State.ScenarioSnapshot.RecordBook.Records
+            .Where(record => record.Scope is RecordScope.League or RecordScope.SingleSeason or RecordScope.Playoff or RecordScope.Career)
+            .OrderBy(record => record.Scope)
+            .ThenBy(record => record.RecordType)
+            .ToArray();
+        if (records.Length == 0)
+        {
+            builder.AppendLine("No league records are tracked yet.");
+            return builder.ToString();
+        }
+
+        foreach (var record in records)
+        {
+            builder.AppendLine($"{Readable(record.Scope)} {Readable(record.RecordType)}: {record.Value} - {record.HolderName}");
+        }
+
+        return builder.ToString();
     }
 
     private string BuildLeagueOverview()

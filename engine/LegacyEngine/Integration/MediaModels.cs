@@ -17,7 +17,9 @@ public enum MediaArticleType
     StaffFeature,
     OwnerFrontOffice,
     Rumor,
-    Analysis
+    Analysis,
+    Award,
+    Record
 }
 
 public enum MediaTone

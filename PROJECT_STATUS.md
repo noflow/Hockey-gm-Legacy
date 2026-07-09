@@ -111,14 +111,15 @@ The five foundation pillars remain:
 - Alpha 6.12 - Franchise Identity & Culture v1
 - Alpha 6.13 - Living Story Engine v1
 - Alpha 6.14 - Media & News v1
+- Alpha 6.15 - Awards & Records v1
 
 ## Current Milestone
 
-Alpha 6.14 - Media & News v1
+Alpha 6.15 - Awards & Records v1
 
 ## Current Goal
 
-Turn Living Story Engine output, major transactions, draft stories, milestones, injuries, owner/front-office pressure, staff movement, and franchise identity changes into short fictional media articles. Media now lives as a separate story/article layer from League News transaction wire, appears on the dashboard, Reports / History, player dossiers, and Organization Command Center, and is preserved through save/load without adding social media, press conferences, or real media brands.
+Add lasting accomplishment tracking so seasons, careers, and playoff runs can produce basic league/team awards and record-book entries. Awards and records now use public season, goalie, team, playoff, staff, GM, and story context; winners and broken records create timeline/media history; Reports / History, player dossiers, and Organization Command Center expose the results; save/load preserves the history without adding Hall of Fame, jersey retirement, real trophies, or a full voting system.
 
 ## Why Living Story Engine Was Next
 

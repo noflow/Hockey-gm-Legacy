@@ -54,6 +54,7 @@ public sealed class MediaService
         articles.AddRange(FromLeagueTransactions(scenario, leagueTransactions));
         articles.AddRange(FromDraftContext(scenario));
         articles.AddRange(FromMilestones(scenario));
+        articles.AddRange(FromAwardsAndRecords(scenario));
         articles.AddRange(FromRumors(scenario));
 
         var output = articles
@@ -331,6 +332,53 @@ public sealed class MediaService
                 null,
                 null,
                 MediaRumorConfidence.Low);
+        }
+    }
+
+    private IEnumerable<MediaArticle> FromAwardsAndRecords(NewGmScenarioSnapshot scenario)
+    {
+        foreach (var award in scenario.AwardHistory.Awards
+            .Where(award => award.IsMajor)
+            .OrderByDescending(award => award.AwardDate)
+            .Take(8))
+        {
+            yield return Article(
+                $"media:award:{award.AwardId}",
+                award.AwardDate,
+                scenario,
+                award.Category is AwardCategory.Rookie or AwardCategory.Development or AwardCategory.Scouting ? ProspectCentral : HockeyDaily,
+                MediaArticleType.Award,
+                MediaTone.Celebratory,
+                MediaImportance.Major,
+                $"{award.Winner.RecipientName} named {Readable(award.AwardType)}",
+                award.Reasoning,
+                $"{award.Winner.RecipientName} received {Readable(award.AwardType)} recognition after a deterministic review of public stats, team context, role, reputation, and story importance.",
+                award.Winner.OrganizationId is null ? Array.Empty<string>() : new[] { award.Winner.OrganizationId },
+                award.Winner.OrganizationName is null ? Array.Empty<string>() : new[] { award.Winner.OrganizationName },
+                award.Winner.RecipientKind is "Player" or "Staff" or "GM" ? new[] { award.Winner.RecipientId } : Array.Empty<string>(),
+                award.Winner.RecipientKind is "Player" or "Staff" or "GM" ? new[] { award.Winner.RecipientName } : Array.Empty<string>());
+        }
+
+        foreach (var record in scenario.RecordBook.Records
+            .Where(record => record.WasBrokenThisUpdate)
+            .OrderByDescending(record => record.DateSet)
+            .Take(8))
+        {
+            yield return Article(
+                $"media:record:{record.RecordId}:{record.SeasonYear}",
+                record.DateSet,
+                scenario,
+                HockeyDaily,
+                MediaArticleType.Record,
+                MediaTone.Celebratory,
+                MediaImportance.Major,
+                $"{record.HolderName} sets {Readable(record.RecordType)} record",
+                record.Summary,
+                $"{record.Summary} This is tracked in the record book and connected to long-term history.",
+                record.OrganizationId is null ? Array.Empty<string>() : new[] { record.OrganizationId },
+                record.OrganizationName is null ? Array.Empty<string>() : new[] { record.OrganizationName },
+                record.HolderKind == "Player" ? new[] { record.HolderId } : Array.Empty<string>(),
+                record.HolderKind == "Player" ? new[] { record.HolderName } : Array.Empty<string>());
         }
     }
 

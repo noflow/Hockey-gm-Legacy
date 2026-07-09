@@ -42,6 +42,8 @@ public sealed class SeasonRolloverService
             Season = scenario.Season with { Status = SeasonStatus.Completed }
         });
         var reportScenario = endReview.Success ? endReview.ScenarioSnapshot : scenario;
+        reportScenario = new AwardService().EnsureAwards(reportScenario);
+        reportScenario = new RecordService().EnsureRecordBook(reportScenario);
         var transition = BuildTransition(reportScenario, archive);
         var nextSeason = registry.SeasonEngine.CreateSeason(
             transition.ToSeasonId,

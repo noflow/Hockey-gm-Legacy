@@ -134,6 +134,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public MediaFeed MediaFeed { get; init; } = MediaFeed.Empty;
 
+    public AwardHistory AwardHistory { get; init; } = AwardHistory.Empty;
+
+    public RecordBook RecordBook { get; init; } = RecordBook.Empty;
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -433,6 +437,9 @@ public sealed record NewGmScenarioSnapshot(
         {
             MediaFeed.Validate();
         }
+
+        AwardHistory.Validate();
+        RecordBook.Validate();
 
         foreach (var state in PlayerCareerStates)
         {

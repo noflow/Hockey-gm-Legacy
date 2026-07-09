@@ -47,6 +47,7 @@ public sealed class PlayerDossierService
             BuildOrganizationFit(scenario, personId),
             BuildStories(scenario, personId),
             BuildMediaCoverage(scenario, personId),
+            BuildAwardsAndRecords(scenario, personId),
             BuildStaffOpinions(scenario, personId),
             BuildRelationships(scenario, personId),
             BuildCareerHistory(scenario, personId),
@@ -470,6 +471,19 @@ public sealed class PlayerDossierService
     {
         var lines = new MediaService().BuildPlayerDossierLines(scenario, personId);
         return new PlayerDossierSection("Media Coverage", lines);
+    }
+
+    private static PlayerDossierSection BuildAwardsAndRecords(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new AwardService().BuildPlayerDossierLines(scenario, personId).ToList();
+        var recordLines = new RecordService().BuildPlayerDossierLines(scenario, personId);
+        if (recordLines.Count > 0)
+        {
+            lines.Add("Record book:");
+            lines.AddRange(recordLines.Select(line => $"  {line}"));
+        }
+
+        return new PlayerDossierSection("Awards & Records", lines);
     }
 
     private static PlayerDossierSection BuildStaffOpinions(NewGmScenarioSnapshot scenario, string personId)

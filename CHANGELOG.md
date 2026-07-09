@@ -1,6 +1,43 @@
 # Changelog
 
-## Current - Alpha 6.14
+## Current - Alpha 6.15
+
+### Added
+
+- Awards model for `Award`, `AwardType`, `AwardCategory`, `AwardRecipient`, `AwardHistory`, and `AwardService`.
+- Record model for `RecordBook`, `RecordEntry`, `RecordType`, `RecordScope`, and `RecordService`.
+- Deterministic season-end award selection for MVP, Top Scorer, Best Defenseman, Best Goalie, Rookie of the Year, Team MVP, Most Improved, Coach of the Year, GM of the Year, Playoff MVP, Top Scout placeholder, and Development Staff Award placeholder.
+- Public-stat record tracking for goals, assists, points, goalie wins, shutouts, games played, team wins, championships, and playoff points placeholder.
+- Career timeline entries for award winners and broken player records.
+- Media / News articles for major award winners and broken records.
+- Player Dossier Awards & Records section.
+- Reports / History screens for Awards, Record Book, Team Records, and League Records.
+- Organization Command Center Team Awards & Records card.
+- Save/load preservation through `NewGmScenarioSnapshot.AwardHistory` and `NewGmScenarioSnapshot.RecordBook`.
+- Alpha 6.15 tests covering awards, record updates, broken-record history/media, dossier/report UI exposure, save/load, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.15.
+- Season completion and completed-schedule daily advancement now ensure awards and records before media feed generation.
+- Media / News now supports Award and Record article types while League News remains the raw transaction wire.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Hall of Fame.
+- No jersey retirement.
+- No full voting system.
+- No real NHL trophy names.
+- No Godot.
+- No social media expansion.
+
+## Previous - Alpha 6.14
 
 ### Added
 
