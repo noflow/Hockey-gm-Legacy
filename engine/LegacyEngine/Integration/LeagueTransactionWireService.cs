@@ -107,7 +107,13 @@ public sealed class LeagueTransactionWireService
         type switch
         {
             LeagueTransactionType.PlayerSigned or LeagueTransactionType.ContractOffered or LeagueTransactionType.ContractSigned => LeagueNewsCategory.Signings,
-            LeagueTransactionType.PlayerAddedToRoster or LeagueTransactionType.PlayerReleased or LeagueTransactionType.PlayerAssigned => LeagueNewsCategory.RosterMoves,
+            LeagueTransactionType.PlayerAddedToRoster
+                or LeagueTransactionType.PlayerReleased
+                or LeagueTransactionType.PlayerAssigned
+                or LeagueTransactionType.PlayerRecalled
+                or LeagueTransactionType.WaiverPlaced
+                or LeagueTransactionType.WaiverClaimed
+                or LeagueTransactionType.WaiverCleared => LeagueNewsCategory.RosterMoves,
             LeagueTransactionType.Injury => LeagueNewsCategory.Injuries,
             LeagueTransactionType.DraftPick => LeagueNewsCategory.Draft,
             LeagueTransactionType.StaffHired or LeagueTransactionType.StaffReleased => LeagueNewsCategory.Staff,
@@ -133,7 +139,14 @@ public sealed class LeagueTransactionWireService
             LegacyEventType.ProspectSigned => LeagueTransactionType.PlayerSigned,
             LegacyEventType.PlayerAddedToRoster => LeagueTransactionType.PlayerAddedToRoster,
             LegacyEventType.PlayerRemovedFromRoster or LegacyEventType.PlayerReleased => LeagueTransactionType.PlayerReleased,
-            LegacyEventType.PlayerMovedToInjuredReserve or LegacyEventType.TrainingCampPlayerAssigned or LegacyEventType.ProspectAssignedToAffiliate => LeagueTransactionType.PlayerAssigned,
+            LegacyEventType.PlayerMovedToInjuredReserve
+                or LegacyEventType.TrainingCampPlayerAssigned
+                or LegacyEventType.ProspectAssignedToAffiliate
+                or LegacyEventType.PlayerAssignedToAffiliate => LeagueTransactionType.PlayerAssigned,
+            LegacyEventType.PlayerRecalledFromAffiliate => LeagueTransactionType.PlayerRecalled,
+            LegacyEventType.PlayerPlacedOnWaivers => LeagueTransactionType.WaiverPlaced,
+            LegacyEventType.PlayerClaimedOnWaivers => LeagueTransactionType.WaiverClaimed,
+            LegacyEventType.PlayerClearedWaivers => LeagueTransactionType.WaiverCleared,
             LegacyEventType.PlayerInjured or LegacyEventType.InjuryReAggravated or LegacyEventType.InjuryCareerThreatening => LeagueTransactionType.Injury,
             LegacyEventType.PlayerDrafted => LeagueTransactionType.DraftPick,
             LegacyEventType.StaffHired => LeagueTransactionType.StaffHired,
@@ -160,6 +173,10 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.PlayerAddedToRoster => $"{teamName} added {personName} to the roster.",
             LeagueTransactionType.PlayerReleased => $"{teamName} released {personName}.",
             LeagueTransactionType.PlayerAssigned => $"{teamName} assigned {personName}.",
+            LeagueTransactionType.PlayerRecalled => $"{teamName} recalled {personName}.",
+            LeagueTransactionType.WaiverPlaced => $"{teamName} placed {personName} on waivers.",
+            LeagueTransactionType.WaiverClaimed => $"{teamName} waiver claim involving {personName}.",
+            LeagueTransactionType.WaiverCleared => $"{personName} cleared waivers for {teamName}.",
             LeagueTransactionType.Injury => $"{teamName} reported an injury update for {personName}.",
             LeagueTransactionType.DraftPick => $"{teamName} drafted {personName}.",
             LeagueTransactionType.StaffHired => $"{teamName} hired {personName}.",

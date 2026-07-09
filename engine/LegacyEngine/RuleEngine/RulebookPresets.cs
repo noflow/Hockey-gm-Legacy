@@ -118,7 +118,8 @@ public static class RulebookPresets
             StaffRules = CreateJuniorStaffRules(),
             AffiliateRules = affiliateRules,
             PlayerAssignmentRules = CreatePlayerAssignmentRules(leagueType),
-            SalaryCapRules = CreateSalaryCapRules(leagueType, activeRoster)
+            SalaryCapRules = CreateSalaryCapRules(leagueType, activeRoster),
+            WaiverRules = CreateWaiverRules(leagueType)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -197,6 +198,18 @@ public static class RulebookPresets
             OffseasonCapRulesPlaceholder = IsProfessionalLeague(leagueType)
                 ? "Offseason cap cushion is a placeholder in Alpha 5.6; hard cap validation is used for explicit moves."
                 : "Junior leagues use operating budgets instead of a salary cap."
+        };
+
+    private static WaiverRules CreateWaiverRules(string leagueType) =>
+        new()
+        {
+            WaiversEnabled = IsProfessionalLeague(leagueType),
+            ClaimWindowHours = IsProfessionalLeague(leagueType) ? 24 : 0,
+            WaiverOrder = IsProfessionalLeague(leagueType) ? "reverse_standings" : "disabled",
+            ExemptAgeCutoff = 21,
+            ExemptProfessionalSeasons = 3,
+            ExemptGamesPlayed = 80,
+            AllowCancelBeforeClaimWindow = true
         };
 
     private static bool IsProfessionalLeague(string leagueType) =>

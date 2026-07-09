@@ -225,7 +225,8 @@ public sealed class HockeyIntelligenceRatingService
             PlayerRatingColor.Black => 1,
             _ => 10
         };
-        var offset = color == PlayerRatingColor.Black ? StableOffset(personId, key, 1) : StableOffset(personId, key, spread);
+        var rawOffset = StableOffset(personId, key, 8);
+        var offset = (int)Math.Round(rawOffset * (spread / 8.0), MidpointRounding.AwayFromZero);
         var estimate = Math.Clamp(trueValue + offset, 0, 100);
         return new PlayerRatingRange(Math.Clamp(estimate - spread, 0, 100), Math.Clamp(estimate + spread, 0, 100));
     }

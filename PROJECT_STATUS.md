@@ -115,29 +115,30 @@ The five foundation pillars remain:
 - Alpha 6.16 - Draft V4: War Room & Amateur Scouting
 - Alpha 6.17 - Player Ratings & Potential v1
 - Alpha 7.0 - Hockey Intelligence Rating Engine v1
+- Alpha 7.1 - Waivers & Roster Transactions v1
 
 ## Current Milestone
 
-Alpha 7.0 - Hockey Intelligence Rating Engine v1
+Alpha 7.1 - Waivers & Roster Transactions v1
 
 ## Current Goal
 
-Add a full hockey intelligence rating layer under the existing visible OVR/POT system. The engine now stores hidden true ratings separately from scouted estimates, supports Offensive, Defensive, Skating, Physical, Skill, Mental, Team, and Goalie attribute categories, and uses Unknown/Red/Green/Blue/Black confidence colors so unscouted or low-confidence players show uncertainty instead of truth. Repeated scouting improves confidence, elite scouts improve it faster, development changes hidden truth first, and dossiers/lists show scouted estimates without exposing internal ratings.
+Add a rulebook-driven waiver and roster transaction layer for professional leagues. NHL/AHL-style leagues now support waiver eligibility, exemption checks, waiver placement, claims, clears, affiliate assignment, recalls, waiver history, player dossier status, League News transaction entries, and AlphaDesktop waiver controls. Junior-style rulebooks keep waivers disabled.
 
-## Why Hockey Intelligence Was Next
+## Why Waivers Were Next
 
-Alpha 6.17 made ratings readable at a glance. Alpha 7.0 gives those numbers a stronger hockey backbone so scouting, development, and dossiers can describe what scouts think they know, what they are unsure about, and how that picture improves over time.
+Alpha 5.4 and Alpha 5.6 established the NHL/AHL player pipeline, roster compliance, and salary cap context. Alpha 7.1 makes professional roster movement safer and more realistic by requiring waiver decisions before eligible players are assigned away from the main roster.
 
 ## Next Build Target
 
-Alpha 7.1 - TBD
+Alpha 7.2 - TBD
 
 ## Next Milestones
 
-1. Alpha 7.1 - TBD
+1. Alpha 7.2 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, LTIR, emergency recalls, conditional waivers, buyouts, CBA edge cases, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

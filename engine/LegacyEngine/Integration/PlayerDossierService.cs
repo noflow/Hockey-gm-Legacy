@@ -46,6 +46,7 @@ public sealed class PlayerDossierService
             BuildTactics(scenario, personId),
             BuildMedical(scenario, personId),
             BuildContractRights(scenario, personId),
+            BuildWaivers(scenario, personId),
             BuildAgentRepresentation(scenario, personId),
             BuildOrganizationFit(scenario, personId),
             BuildStories(scenario, personId),
@@ -461,6 +462,12 @@ public sealed class PlayerDossierService
         lines.AddRange(recentOffers);
 
         return new PlayerDossierSection("Agent / Representation", lines);
+    }
+
+    private static PlayerDossierSection BuildWaivers(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new WaiverService().BuildDossierLines(scenario, personId, scenario.LeagueProfile.Rulebook);
+        return new PlayerDossierSection("Waivers / Assignments", lines);
     }
 
     private static PlayerDossierSection BuildOrganizationFit(NewGmScenarioSnapshot scenario, string personId)

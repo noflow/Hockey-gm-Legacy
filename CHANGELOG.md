@@ -1,6 +1,40 @@
 # Changelog
 
-## Current - Alpha 7.0
+## Current - Alpha 7.1
+
+### Added
+
+- Rulebook-driven waiver rules for professional leagues, including enable/disable flag, claim window, waiver order, exemption age, exemption seasons, exemption games, and cancellation placeholder.
+- Waiver models for `WaiverStatus`, `WaiverEligibility`, `WaiverTransaction`, `WaiverClaim`, `WaiverWire`, `WaiverPriority`, `WaiverHistory`, and `WaiverResult`.
+- `WaiverService` for eligibility checks, waiver placement, claim submission, waiver processing, cleared-player affiliate assignment, player recall, waiver history, transaction history, and dossier lines.
+- Professional roster transaction events and League News types for waiver placement, waiver claim, waiver clear, affiliate assignment, and recall.
+- AlphaDesktop Waiver Wire screens under League and Hockey Operations, player waiver status in roster/detail views, and player actions for Assign Affiliate, Place On Waivers, and Recall.
+- Player Dossier Waivers / Assignments section.
+- Alpha 7.1 tests covering professional/junior rulebooks, exemption logic, veteran waiver requirements, affiliate assignment, waiver placement, claims, clears, recalls, dossier exposure, save/load preservation, desktop UI exposure, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.1.
+- Professional player assignment now uses waiver state and history instead of treating affiliate assignment as a silent roster status change.
+- League Transaction Wire now categorizes waiver and recall activity as roster moves.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No LTIR.
+- No emergency recalls.
+- No conditional waivers.
+- No buyouts.
+- No full CBA edge-case system.
+- No Godot.
+- No new game simulation engine.
+
+## Previous - Alpha 7.0
 
 ### Added
 

@@ -112,6 +112,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<TransactionHistoryRecord> TransactionHistory { get; init; } = Array.Empty<TransactionHistoryRecord>();
 
+    public WaiverWire WaiverWire { get; init; } = WaiverWire.Empty;
+
+    public WaiverHistory WaiverHistory { get; init; } = WaiverHistory.Empty;
+
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
     public PlayoffState Playoffs { get; init; } = PlayoffState.Empty;
@@ -398,6 +402,9 @@ public sealed record NewGmScenarioSnapshot(
         {
             transaction.Validate();
         }
+
+        WaiverWire.Validate();
+        WaiverHistory.Validate();
 
         SeasonRollover.Validate();
         Playoffs.Validate();

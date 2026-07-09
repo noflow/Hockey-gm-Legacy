@@ -94,6 +94,7 @@ var alpha616DraftWarRoomTests = new Alpha616DraftWarRoomTests();
 var alpha617PlayerRatingsTests = new Alpha617PlayerRatingsTests();
 var alpha617DevelopmentCurveTests = new Alpha617DevelopmentCurveTests();
 var alpha70HockeyIntelligenceRatingTests = new Alpha70HockeyIntelligenceRatingTests();
+var alpha71WaiversRosterTransactionsTests = new Alpha71WaiversRosterTransactionsTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1254,6 +1255,19 @@ runner.Run("alpha 7.0 dossier exposes ratings correctly", alpha70HockeyIntellige
 runner.Run("alpha 7.0 trade draft free agent UI exposes ratings", alpha70HockeyIntelligenceRatingTests.TradeDraftFreeAgentUiExposesRatings);
 runner.Run("alpha 7.0 save load preserves true and scouted knowledge", alpha70HockeyIntelligenceRatingTests.SaveLoadPreservesTrueAndScoutedKnowledge);
 runner.Run("alpha 7.0 AlphaDesktop does not expose true ratings directly", alpha70HockeyIntelligenceRatingTests.AlphaDesktopDoesNotExposeTrueRatingsDirectly);
+runner.Run("alpha 7.1 professional rulebook enables waivers", alpha71WaiversRosterTransactionsTests.ProfessionalRulebookEnablesWaivers);
+runner.Run("alpha 7.1 junior rulebook disables waivers", alpha71WaiversRosterTransactionsTests.JuniorRulebookDisablesWaivers);
+runner.Run("alpha 7.1 young signed player can be waiver exempt", alpha71WaiversRosterTransactionsTests.YoungSignedPlayerCanBeWaiverExempt);
+runner.Run("alpha 7.1 veteran signed player requires waivers", alpha71WaiversRosterTransactionsTests.VeteranSignedPlayerRequiresWaivers);
+runner.Run("alpha 7.1 exempt assignment moves player to affiliate", alpha71WaiversRosterTransactionsTests.ExemptAssignmentMovesPlayerToAffiliate);
+runner.Run("alpha 7.1 required assignment places player on waivers", alpha71WaiversRosterTransactionsTests.RequiredAssignmentPlacesPlayerOnWaivers);
+runner.Run("alpha 7.1 claim moves player to claiming organization", alpha71WaiversRosterTransactionsTests.ClaimMovesPlayerToClaimingOrganization);
+runner.Run("alpha 7.1 clearing waivers assigns to affiliate", alpha71WaiversRosterTransactionsTests.ClearingWaiversAssignsToAffiliate);
+runner.Run("alpha 7.1 recall from affiliate returns player to roster", alpha71WaiversRosterTransactionsTests.RecallFromAffiliateReturnsPlayerToRoster);
+runner.Run("alpha 7.1 player dossier shows waiver status", alpha71WaiversRosterTransactionsTests.PlayerDossierShowsWaiverStatus);
+runner.Run("alpha 7.1 save load preserves waiver wire and history", alpha71WaiversRosterTransactionsTests.SaveLoadPreservesWaiverWireAndHistory);
+runner.Run("alpha 7.1 AlphaDesktop exposes waiver UI", alpha71WaiversRosterTransactionsTests.AlphaDesktopExposesWaiverUi);
+runner.Run("alpha 7.1 no forbidden waiver systems added", alpha71WaiversRosterTransactionsTests.NoForbiddenWaiverSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

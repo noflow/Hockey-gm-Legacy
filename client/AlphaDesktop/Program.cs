@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -516,6 +516,7 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("League Rules", CreateTextScreen("League Rules")),
             new WorkspaceScreen("Teams", CreateSelectablePeopleContent("Teams")),
             new WorkspaceScreen("Transactions", CreateTextScreen("Transactions")),
+            new WorkspaceScreen("Waiver Wire", CreateTextScreen("Waiver Wire")),
             new WorkspaceScreen("League Free Agents", CreateSelectablePeopleContent("League Free Agents")),
             new WorkspaceScreen("League Draft", CreateTextScreen("League Draft")),
             new WorkspaceScreen("League Trade Block", CreateSelectablePeopleContent("League Trade Block")),
@@ -544,6 +545,7 @@ internal sealed class MainWindow : Window
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
             new("Contracts", CreateTextScreen("Contracts")),
+            new("Waivers", CreateTextScreen("Hockey Waivers")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
             new("Trades", CreateSelectablePeopleContent("Trades")),
@@ -627,7 +629,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.0 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.1 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1776,6 +1778,8 @@ internal sealed class MainWindow : Window
         _tabs["League Rules"].Text = BuildLeagueRules();
         RefreshSelectableTab("Teams", BuildTeamRows());
         _tabs["Transactions"].Text = BuildLeagueNews();
+        _tabs["Waiver Wire"].Text = BuildWaiverWire();
+        _tabs["Hockey Waivers"].Text = BuildWaiverWire();
         RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
         _tabs["League Draft"].Text = BuildDraftHistoryReport();
         RefreshSelectableTab("League Trade Block", BuildTradeRows());
@@ -2395,6 +2399,7 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Potential role", State.PotentialLineupRole(row.PersonId));
         AddLine(panel, "Current line", State.CurrentLinePair(row.PersonId));
         AddLine(panel, "Contract / rights", State.ContractRightsStatus(row.PersonId));
+        AddLine(panel, "Waiver status", State.WaiverStatusText(row.PersonId));
         AddLine(panel, "Development", $"{State.DevelopmentStageText(row.PersonId)} | {State.DevelopmentTrend(row.PersonId)}");
         AddLine(panel, "Health", State.InjuryStatus(row.PersonId));
         AddLine(panel, "Scouting confidence", State.ScoutingConfidenceText(row.PersonId));
@@ -3358,7 +3363,7 @@ internal sealed class MainWindow : Window
                     "RosterPlayer",
                     $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {State.RatingText(player.PersonId)} - {player.Status}",
                     $"{State.PlayerType(player.PersonId)} | role {State.CurrentLineupRole(player.PersonId)} | expected {State.ExpectedRoleText(player.PersonId)} | promised {State.PromisedRoleText(player.PersonId)} | {State.CurrentLinePair(player.PersonId)}",
-                    $"Satisfaction: {State.RoleSatisfactionText(player.PersonId)} | Stage: {State.DevelopmentStageText(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Last year: {State.LastSeasonStats(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
+                    $"Satisfaction: {State.RoleSatisfactionText(player.PersonId)} | Stage: {State.DevelopmentStageText(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Waivers: {State.WaiverStatusText(player.PersonId)} | Last year: {State.LastSeasonStats(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
             })
             .ToArray());
 
@@ -4269,6 +4274,7 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Last-season stats", State.LastSeasonStats(row.PersonId));
             AddLine(panel, "Career summary", State.CareerStatSummary(row.PersonId));
             AddLine(panel, "Contract / rights status", State.ContractRightsStatus(row.PersonId));
+            AddLine(panel, "Waiver status", State.WaiverStatusText(row.PersonId));
             AddLine(panel, "Development trend", State.DevelopmentTrend(row.PersonId));
             AddLine(panel, "Injury status", State.InjuryStatus(row.PersonId));
             AddSubHeader(panel, "Health & Medical");
@@ -4833,6 +4839,9 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("More Recovery", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.AdditionalRecovery), State.HasActiveInjury(row.PersonId));
             yield return CreateDetailButton("Conditioning", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.ConditioningAssignment), State.HasActiveInjury(row.PersonId));
             yield return CreateDetailButton("Medical Clearance", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.MedicalClearance), State.HasActiveInjury(row.PersonId));
+            yield return CreateDetailButton("Assign Affiliate", () => State.AssignPlayerToAffiliateFor(row.PersonId), State.CanAssignPlayerToAffiliate(row.PersonId));
+            yield return CreateDetailButton("Place On Waivers", () => State.PlacePlayerOnWaiversFor(row.PersonId), State.CanPlacePlayerOnWaivers(row.PersonId));
+            yield return CreateDetailButton("Recall", () => State.RecallPlayerFromAffiliateFor(row.PersonId), State.CanRecallPlayerFromAffiliate(row.PersonId));
         }
 
         var available = State.AvailableProspectActions(row.PersonId);
@@ -7257,6 +7266,51 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildWaiverWire()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Waiver Wire");
+        builder.AppendLine("===========");
+        builder.AppendLine(State.WaiverRuleSummary);
+        builder.AppendLine();
+        builder.AppendLine("Open Waivers");
+        if (State.WaiverWire.OpenTransactions.Count == 0)
+        {
+            builder.AppendLine("  No players are currently on waivers.");
+        }
+        else
+        {
+            foreach (var transaction in State.WaiverWire.OpenTransactions)
+            {
+                builder.AppendLine($"  {transaction.PlayerName} | {transaction.Position} | age {transaction.Age?.ToString() ?? "unknown"} | {transaction.OriginTeamName}");
+                builder.AppendLine($"    Reason: {transaction.Reason}");
+                builder.AppendLine($"    Deadline: {transaction.ClaimDeadline:yyyy-MM-dd HH:mm} | Claims: {State.WaiverClaimCount(transaction.TransactionId)}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Waiver Priority");
+        foreach (var priority in State.WaiverWire.Priority.Take(16))
+        {
+            builder.AppendLine($"  {priority.Rank}. {priority.TeamName}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Recent Waiver / Assignment History");
+        foreach (var entry in State.ScenarioSnapshot.WaiverHistory.Entries.OrderByDescending(entry => entry.Date).ThenBy(entry => entry.PlayerName, StringComparer.Ordinal).Take(16))
+        {
+            builder.AppendLine($"  {entry.Date:yyyy-MM-dd} | {entry.TeamName} | {entry.PlayerName} | {entry.Status}");
+            builder.AppendLine($"    {entry.Summary}");
+        }
+
+        if (State.ScenarioSnapshot.WaiverHistory.Entries.Count == 0)
+        {
+            builder.AppendLine("  No waiver or affiliate assignment history yet.");
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildMediaNews()
     {
         var feed = State.MediaFeed;
@@ -8720,6 +8774,7 @@ internal sealed class AlphaDesktopState
     private readonly MediaService _media = new();
     private readonly DraftWarRoomService _warRoom = new();
     private readonly PlayerRatingService _ratings = new();
+    private readonly WaiverService _waivers = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8883,6 +8938,38 @@ internal sealed class AlphaDesktopState
             .ToArray();
 
     public bool IsDraftUiEnabled => DraftUiPolicy.IsDraftUiEnabled(_registry.Rulebook);
+
+    public WaiverWire WaiverWire
+    {
+        get
+        {
+            var wire = _waivers.EnsureWire(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+            if (!ReferenceEquals(wire, ScenarioSnapshot.WaiverWire))
+            {
+                ScenarioSnapshot = ScenarioSnapshot with { WaiverWire = wire };
+            }
+
+            return ScenarioSnapshot.WaiverWire;
+        }
+    }
+
+    public string WaiverRuleSummary
+    {
+        get
+        {
+            var rulebook = _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook;
+            var rules = rulebook.WaiverRules;
+            if (rules is null || !rules.WaiversEnabled)
+            {
+                return "Waivers are disabled by this league rulebook. Junior-style leagues do not use the waiver wire.";
+            }
+
+            return $"Waivers enabled | Claim window: {rules.ClaimWindowHours} hour(s) | Order: {rules.WaiverOrder} | Exemptions: age <= {rules.ExemptAgeCutoff}, under {rules.ExemptProfessionalSeasons} pro seasons and {rules.ExemptGamesPlayed} games.";
+        }
+    }
+
+    public int WaiverClaimCount(string transactionId) =>
+        WaiverWire.Claims.Count(claim => claim.TransactionId == transactionId);
 
     public bool IsDraftModalVisible =>
         IsDraftUiEnabled
@@ -10672,6 +10759,48 @@ internal sealed class AlphaDesktopState
 
         var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId);
         return prospect is null ? "No contract/rights record" : $"Draft rights {prospect.Status}";
+    }
+
+    public WaiverEligibility WaiverEligibilityFor(string personId) =>
+        _waivers.EvaluateEligibility(ScenarioSnapshot, personId, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public string WaiverStatusText(string personId)
+    {
+        var eligibility = WaiverEligibilityFor(personId);
+        return $"{eligibility.Status} - {eligibility.Reason}";
+    }
+
+    public bool CanAssignPlayerToAffiliate(string personId)
+    {
+        var eligibility = WaiverEligibilityFor(personId);
+        return eligibility.CanAssignToAffiliate && !eligibility.CanRecallFromAffiliate;
+    }
+
+    public bool CanPlacePlayerOnWaivers(string personId)
+    {
+        var eligibility = WaiverEligibilityFor(personId);
+        return eligibility.WaiversEnabled && eligibility.RequiresWaivers && !ScenarioSnapshot.WaiverWire.OpenTransactions.Any(transaction => transaction.PersonId == personId);
+    }
+
+    public bool CanRecallPlayerFromAffiliate(string personId) =>
+        WaiverEligibilityFor(personId).CanRecallFromAffiliate;
+
+    public void AssignPlayerToAffiliateFor(string personId) =>
+        ApplyWaiverResult(_waivers.AssignToAffiliate(_registry, ScenarioSnapshot, personId, "GM approved affiliate assignment."));
+
+    public void PlacePlayerOnWaiversFor(string personId) =>
+        ApplyWaiverResult(_waivers.PlaceOnWaivers(_registry, ScenarioSnapshot, personId, "GM requested affiliate assignment; rulebook requires waivers."));
+
+    public void RecallPlayerFromAffiliateFor(string personId) =>
+        ApplyWaiverResult(_waivers.RecallFromAffiliate(_registry, ScenarioSnapshot, personId, "GM recalled player from affiliate."));
+
+    private void ApplyWaiverResult(WaiverResult result)
+    {
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        AddInboxItems(result.InboxItems);
+        AddLeagueTransactions(result.LeagueTransactions);
+        LatestSummary = result.Message;
     }
 
     public string LastSeasonStats(string personId)

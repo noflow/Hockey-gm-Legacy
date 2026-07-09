@@ -45,6 +45,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("salary_cap_rules")]
     public SalaryCapRules? SalaryCapRules { get; init; }
+
+    [JsonPropertyName("waiver_rules")]
+    public WaiverRules? WaiverRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -240,6 +243,30 @@ public sealed class SalaryCapRules
 
     [JsonPropertyName("offseason_cap_rules_placeholder")]
     public string? OffseasonCapRulesPlaceholder { get; init; }
+}
+
+public sealed class WaiverRules
+{
+    [JsonPropertyName("waivers_enabled")]
+    public bool WaiversEnabled { get; init; }
+
+    [JsonPropertyName("claim_window_hours")]
+    public int ClaimWindowHours { get; init; } = 24;
+
+    [JsonPropertyName("waiver_order")]
+    public string WaiverOrder { get; init; } = "reverse_standings";
+
+    [JsonPropertyName("exempt_age_cutoff")]
+    public int ExemptAgeCutoff { get; init; } = 21;
+
+    [JsonPropertyName("exempt_professional_seasons")]
+    public int ExemptProfessionalSeasons { get; init; } = 3;
+
+    [JsonPropertyName("exempt_games_played")]
+    public int ExemptGamesPlayed { get; init; } = 80;
+
+    [JsonPropertyName("allow_cancel_before_claim_window")]
+    public bool AllowCancelBeforeClaimWindow { get; init; } = true;
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from
