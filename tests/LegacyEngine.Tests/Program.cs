@@ -91,6 +91,7 @@ var alpha613LivingStoryEngineTests = new Alpha613LivingStoryEngineTests();
 var alpha614MediaNewsTests = new Alpha614MediaNewsTests();
 var alpha615AwardsRecordsTests = new Alpha615AwardsRecordsTests();
 var alpha616DraftWarRoomTests = new Alpha616DraftWarRoomTests();
+var alpha617PlayerRatingsTests = new Alpha617PlayerRatingsTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1212,6 +1213,17 @@ runner.Run("alpha 6.16 original board history stored", alpha616DraftWarRoomTests
 runner.Run("alpha 6.16 Where Are They Now still generated", alpha616DraftWarRoomTests.WhereAreTheyNowStillGenerated);
 runner.Run("alpha 6.16 AlphaDesktop exposes War Room UI", alpha616DraftWarRoomTests.AlphaDesktopExposesWarRoomUi);
 runner.Run("alpha 6.16 no forbidden systems added", alpha616DraftWarRoomTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 6.17 players receive overall and potential", alpha617PlayerRatingsTests.PlayersReceiveOverallAndPotential);
+runner.Run("alpha 6.17 junior players lower OVR than NHL players", alpha617PlayerRatingsTests.JuniorPlayersGenerateLowerOverallThanNhlPlayers);
+runner.Run("alpha 6.17 elite draft prospects can reach low 80s", alpha617PlayerRatingsTests.EliteDraftProspectsCanReachLowEighties);
+runner.Run("alpha 6.17 rare 95+ potential uncommon", alpha617PlayerRatingsTests.RarePotentialNinetyFivePlusExistsButIsUncommon);
+runner.Run("alpha 6.17 low confidence shows ranges", alpha617PlayerRatingsTests.LowScoutingConfidenceShowsRatingRanges);
+runner.Run("alpha 6.17 high confidence tighter rating", alpha617PlayerRatingsTests.HighConfidenceShowsTighterRating);
+runner.Run("alpha 6.17 development can increase overall", alpha617PlayerRatingsTests.DevelopmentCanIncreaseOverall);
+runner.Run("alpha 6.17 plateau can occur below potential", alpha617PlayerRatingsTests.PlateauCanOccurBelowPotential);
+runner.Run("alpha 6.17 injury can reduce overall", alpha617PlayerRatingsTests.InjuryCanReduceOverall);
+runner.Run("alpha 6.17 UI exposes ratings", alpha617PlayerRatingsTests.UiExposesRatings);
+runner.Run("alpha 6.17 low confidence does not show hidden true potential", alpha617PlayerRatingsTests.HiddenTruePotentialNotShownWhenConfidenceLow);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

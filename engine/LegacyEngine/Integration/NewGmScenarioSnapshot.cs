@@ -140,6 +140,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public RecordBook RecordBook { get; init; } = RecordBook.Empty;
 
+    public IReadOnlyList<PlayerRatingSnapshot> PlayerRatings { get; init; } = Array.Empty<PlayerRatingSnapshot>();
+
+    public PlayerRatingHistory PlayerRatingHistory { get; init; } = PlayerRatingHistory.Empty;
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -443,6 +447,12 @@ public sealed record NewGmScenarioSnapshot(
 
         AwardHistory.Validate();
         RecordBook.Validate();
+        foreach (var rating in PlayerRatings)
+        {
+            rating.Validate();
+        }
+
+        PlayerRatingHistory.Validate();
 
         foreach (var state in PlayerCareerStates)
         {

@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.16 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.17 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -627,7 +627,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.16 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.17 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -3356,7 +3356,7 @@ internal sealed class MainWindow : Window
                     player.PersonId,
                     FindPersonName(player.PersonId),
                     "RosterPlayer",
-                    $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {player.Status}",
+                    $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {State.RatingText(player.PersonId)} - {player.Status}",
                     $"{State.PlayerType(player.PersonId)} | role {State.CurrentLineupRole(player.PersonId)} | expected {State.ExpectedRoleText(player.PersonId)} | promised {State.PromisedRoleText(player.PersonId)} | {State.CurrentLinePair(player.PersonId)}",
                     $"Satisfaction: {State.RoleSatisfactionText(player.PersonId)} | Stage: {State.DevelopmentStageText(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Last year: {State.LastSeasonStats(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
             })
@@ -3930,7 +3930,7 @@ internal sealed class MainWindow : Window
                     recruit.RecruitPersonId,
                     RecruitDisplayName(recruit.RecruitPersonId),
                     "Recruit",
-                    $"{profile.Position} - age {profile.Age?.ToString() ?? "unknown"} - {profile.Status}",
+                    $"{profile.Position} - age {profile.Age?.ToString() ?? "unknown"} - {State.RatingText(recruit.RecruitPersonId)} - {profile.Status}",
                     $"Interest {profile.InterestLevel} | top: {State.RecruitPrioritySummary(recruit.RecruitPersonId, 1)} | offers: {State.RecruitOfferState(recruit.RecruitPersonId)}",
                     $"{profile.RegionOrHometown} | {profile.CurrentTeam} | {profile.ProjectionSummary}");
             })
@@ -3945,7 +3945,7 @@ internal sealed class MainWindow : Window
                 agent.PersonId,
                 agent.Name,
                 "FreeAgent",
-                $"{agent.Position} - age {agent.Age} - {agent.Status}",
+                $"{agent.Position} - age {agent.Age} - {State.RatingText(agent.PersonId)} - {agent.Status}",
                 $"{agent.PreviousTeam} | ask {agent.ContractAsk.AnnualAmount:C0} | {State.AgentSummary(agent.PersonId)}",
                 $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
             .ToArray();
@@ -3959,7 +3959,7 @@ internal sealed class MainWindow : Window
                 entry.PersonId,
                 entry.Name,
                 "TradeBlock",
-                $"{entry.TeamName} | {State.PositionShortText(entry.Position)} | age {entry.Age} | {entry.CurrentRole}",
+                $"{entry.TeamName} | {State.PositionShortText(entry.Position)} | age {entry.Age} | {State.RatingText(entry.PersonId)} | {entry.CurrentRole}",
                 $"Salary {entry.SalaryImpact:C0} | Ask: {entry.AskingPriceSummary}",
                 $"{State.TradeTeamNeedsShortText(entry)} | {entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType} | trade target type: {State.TradeTargetType(entry)}"))
             .ToArray();
@@ -3973,7 +3973,7 @@ internal sealed class MainWindow : Window
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "ScoutingProspect",
-                $"Rank #{entry.Rank} | {State.DraftQuickScan(entry)}",
+                $"Rank #{entry.Rank} | {State.DraftQuickScan(entry)} | {State.RatingText(entry.ProspectPersonId)}",
                 $"{State.ScoutingConfidenceSummary(entry.ProspectPersonId)} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
                 $"{State.ScoutingReportHeadline(entry.ProspectPersonId)} | {State.DraftFuturePicture(entry)} | {State.DraftClassContext(entry)}"))
             .ToArray();
@@ -4000,7 +4000,7 @@ internal sealed class MainWindow : Window
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "DraftBoard",
-                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank} | {State.DraftQuickScan(entry)}",
+                $"{(entry.IsStarred ? "Starred " : string.Empty)}Rank #{entry.Rank} | {State.DraftQuickScan(entry)} | {State.RatingText(entry.ProspectPersonId)}",
                 $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Projection: {entry.ProjectionText}",
                 $"{State.DraftCurrentPicture(entry)} | Risk: {State.DraftRiskText(entry)} | {State.DraftClassContext(entry)}"))
             .ToArray();
@@ -4012,7 +4012,7 @@ internal sealed class MainWindow : Window
                 prospect.ProspectPersonId,
                 prospect.ProspectName,
                 "Prospect",
-                $"{prospect.Position} - {prospect.Status} | {State.PipelineText(prospect.ProspectPersonId)}",
+                $"{prospect.Position} - {State.RatingText(prospect.ProspectPersonId)} - {prospect.Status} | {State.PipelineText(prospect.ProspectPersonId)}",
                 $"Age {prospect.Age} | {prospect.CurrentTeam} {prospect.CurrentLeague} | Signed? {State.PipelineSignedText(prospect.ProspectPersonId)} | AHL eligible? {State.PipelineAhlEligibleText(prospect.ProspectPersonId)}",
                 $"Recommended assignment: {State.PipelineRecommendationText(prospect.ProspectPersonId)} | Projection: {prospect.ProjectionText}"))
             .ToArray();
@@ -4247,6 +4247,8 @@ internal sealed class MainWindow : Window
             AddParagraph(panel, "Drafted prospects stay on the prospect/draft-rights list until you explicitly offer a contract, invite them to camp, return them to junior/youth while retaining rights where allowed, assign them to an affiliate where valid, or release their rights.");
             return panel;
         }
+
+        AddLine(panel, "Ratings", State.RatingContextText(row.PersonId));
 
         if (tab == "Roster")
         {
@@ -5290,7 +5292,7 @@ internal sealed class MainWindow : Window
 
     private string BuildLiveDraftMiddleRow(DraftBoardEntry entry)
     {
-        return $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {State.DraftQuickScan(entry)} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | {entry.ProjectionText}";
+        return $"{entry.Rank}. {FindPersonName(entry.ProspectPersonId)} | {State.DraftQuickScan(entry)} | {State.RatingText(entry.ProspectPersonId)} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | {entry.ProjectionText}";
     }
 
     private string BuildLiveDraftProspectCard(string? prospectId)
@@ -5309,6 +5311,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Name: {FindPersonName(entry.ProspectPersonId)}");
         builder.AppendLine($"Position: {State.DraftPositionText(entry)}");
         builder.AppendLine($"Age: {State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown"}");
+        builder.AppendLine($"Ratings: {State.RatingContextText(entry.ProspectPersonId)}");
         if (entry.Bio is not null)
         {
             builder.AppendLine($"Shoots/Catches: {entry.Bio.ShootsCatches}");
@@ -8716,6 +8719,7 @@ internal sealed class AlphaDesktopState
     private readonly StoryService _stories = new();
     private readonly MediaService _media = new();
     private readonly DraftWarRoomService _warRoom = new();
+    private readonly PlayerRatingService _ratings = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8748,6 +8752,7 @@ internal sealed class AlphaDesktopState
         prepared = _lineChemistry.EnsureChemistry(prepared);
         prepared = _gameUsage.EnsureGameUsage(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
+        prepared = _ratings.EnsureRatings(prepared);
         prepared = _tactics.EnsureTactics(prepared);
         ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
@@ -10693,6 +10698,33 @@ internal sealed class AlphaDesktopState
         var plan = DevelopmentPlanFor(personId);
         var planText = plan is null ? "no plan" : $"{string.Join("/", plan.FocusAreas)}; {plan.IceTimeRole}; morale {plan.Morale}";
         return $"{profile.Stage}, last updated {profile.LastUpdated:yyyy-MM-dd}; {planText}";
+    }
+
+    public PlayerRatingSnapshot RatingFor(string personId)
+    {
+        var rating = ScenarioSnapshot.PlayerRatings.FirstOrDefault(item => item.PersonId == personId);
+        if (rating is not null)
+        {
+            return rating;
+        }
+
+        var updated = _ratings.EnsureRatings(ScenarioSnapshot);
+        ScenarioSnapshot = updated;
+        Snapshot = updated.AlphaSnapshot;
+        return updated.PlayerRatings.FirstOrDefault(item => item.PersonId == personId)
+            ?? _ratings.BuildSnapshot(updated, personId);
+    }
+
+    public string RatingText(string personId)
+    {
+        var rating = RatingFor(personId);
+        return $"OVR {rating.Overall.Display} | POT {rating.Potential.Display}";
+    }
+
+    public string RatingContextText(string personId)
+    {
+        var rating = RatingFor(personId);
+        return $"{rating.ShortDisplay} | {rating.RoleLabel} | source {rating.RatingSource}";
     }
 
     public int DevelopmentActionCount =>
@@ -12856,6 +12888,7 @@ internal sealed class AlphaDesktopState
         updated = _media.EnsureMediaFeed(updated, LeagueTransactions, _registry);
         updated = _lineups.EnsureLineup(updated);
         updated = _warRoom.EnsureWarRoom(updated);
+        updated = _ratings.EnsureRatings(updated);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

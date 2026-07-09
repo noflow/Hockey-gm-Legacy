@@ -36,6 +36,7 @@ public sealed class PlayerDossierService
         {
             BuildOverview(scenario, person, position, status, teamOrRights, resolvedSource),
             BuildFacts(scenario, person, resolvedSource),
+            BuildRatings(scenario, personId),
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
             BuildRoleUsage(scenario, personId),
@@ -200,6 +201,12 @@ public sealed class PlayerDossierService
                 $"Active roles: {string.Join(", ", roles)}",
                 $"Dossier opened from: {source}"
             });
+    }
+
+    private static PlayerDossierSection BuildRatings(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new PlayerRatingService().BuildDossierLines(scenario, personId);
+        return new PlayerDossierSection("Ratings", lines);
     }
 
     private static PlayerDossierSection BuildScoutingReports(NewGmScenarioSnapshot scenario, string personId)

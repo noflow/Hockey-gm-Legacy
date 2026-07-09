@@ -1,6 +1,36 @@
 # Changelog
 
-## Current - Alpha 6.16
+## Current - Alpha 6.17
+
+### Added
+
+- Public player rating model with `PlayerRating`, `PlayerPotential`, confidence bands, rating snapshots, rating history, and `PlayerRatingService`.
+- Visible 0-100 OVR/POT estimates across roster, recruits, prospects, scouting, draft board, live draft, free agents, trade rows, player details, and player dossier ratings.
+- Scouting-confidence-driven rating uncertainty: high confidence shows tighter estimates while low-confidence prospects show ranges instead of hidden truth.
+- Rating history and dossier trend text for visible OVR/POT movement, peak visible OVR, potential estimate changes, plateau notes, and injury impact.
+- Alpha 6.17 tests covering player ratings, junior/NHL scale differences, elite draft prospects, rare 95+ potential, confidence ranges, development gains, plateau, injury impact, UI exposure, and hidden-potential privacy.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.17.
+- Draft prospect rating estimates now support elite low-80s OVR at the top of a class while keeping most draft players lower.
+- Roster ratings now respond to development profile changes and active injury penalties.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No full attribute system.
+- No editable ratings.
+- No real player database.
+- No Godot.
+- No new game simulation engine.
+
+## Previous - Alpha 6.16
 
 ### Added
 

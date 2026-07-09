@@ -118,6 +118,7 @@ public sealed class SeasonRolloverService
             SeasonRollover = state
         };
         updated = new DraftWarRoomService().EnsureWarRoom(updated);
+        updated = new PlayerRatingService().EnsureRatings(updated);
 
         QueueSeasonEnded(registry, updated, archive);
         var inbox = BuildInbox(updated, archive, expiredContracts.Length);
