@@ -34,11 +34,17 @@ public sealed class HockeyIntelligenceRatingService
         var name = PersonName(scenario, personId);
         var position = ResolvePosition(scenario, personId);
         var age = PersonAge(scenario, personId);
+        var isDraftEligible = scenario.AlphaSnapshot.DraftBoard.Entries.Any(entry => entry.ProspectPersonId == personId);
         var overall = BaseOverall(scenario, personId, position, age);
         var potential = BasePotential(scenario, personId, overall, age);
         var archetype = ArchetypeFor(scenario, personId, position);
         var attributes = BuildAttributes(position, archetype, overall, potential, personId).ToArray();
         overall = CalculateOverall(position, archetype, attributes);
+        if (isDraftEligible)
+        {
+            overall = Math.Min(overall, 82);
+        }
+
         potential = Math.Max(overall, potential);
         var ratings = new PlayerTrueRatings(personId, name, position, overall, potential, archetype, attributes, scenario.CurrentDate);
         ratings.Validate();
@@ -61,7 +67,8 @@ public sealed class HockeyIntelligenceRatingService
         string personId,
         int scoutQuality,
         PlayerRatingCategory? specialty = null,
-        string scoutName = "Scouting staff")
+        string scoutName = "Scouting staff",
+        bool regionFit = false)
     {
         var withRatings = EnsureRatings(scenario);
         var truth = RequireTruth(withRatings, personId);
@@ -69,6 +76,10 @@ public sealed class HockeyIntelligenceRatingService
         var currentColor = existing?.ConfidenceColor ?? PlayerRatingColor.Unknown;
         var steps = scoutQuality >= 82 ? 2 : 1;
         if (specialty is not null && truth.Attributes.Any(attribute => attribute.Category == specialty))
+        {
+            steps++;
+        }
+        if (regionFit)
         {
             steps++;
         }
@@ -82,6 +93,37 @@ public sealed class HockeyIntelligenceRatingService
             scoutName,
             $"{scoutName} updated the rating picture; confidence improved to {nextColor}.",
             specialty);
+        var ratings = withRatings.ScoutedRatings
+            .Where(rating => rating.PersonId != personId)
+            .Concat(new[] { updatedScouted })
+            .OrderBy(rating => rating.PlayerName, StringComparer.Ordinal)
+            .ToArray();
+        var updated = withRatings with { ScoutedRatings = ratings };
+        updated.Validate();
+        return updated;
+    }
+
+    public NewGmScenarioSnapshot RecordDevelopmentReport(
+        NewGmScenarioSnapshot scenario,
+        string personId,
+        PlayerRatingColor minimumColor = PlayerRatingColor.Blue,
+        PlayerRatingCategory? focusCategory = null,
+        string staffName = "Development staff",
+        string note = "Development report updated the visible rating estimate.")
+    {
+        var withRatings = EnsureRatings(scenario);
+        var truth = RequireTruth(withRatings, personId);
+        var existing = withRatings.ScoutedRatings.FirstOrDefault(rating => rating.PersonId == personId);
+        var currentColor = existing?.ConfidenceColor ?? PlayerRatingColor.Unknown;
+        var nextColor = currentColor < minimumColor ? minimumColor : currentColor;
+        var updatedScouted = BuildScoutedFromTruth(
+            truth,
+            nextColor,
+            PlayerRatingSource.DevelopmentReport,
+            withRatings.CurrentDate,
+            string.IsNullOrWhiteSpace(staffName) ? "Development staff" : staffName.Trim(),
+            string.IsNullOrWhiteSpace(note) ? "Development report updated the visible rating estimate." : note.Trim(),
+            focusCategory);
         var ratings = withRatings.ScoutedRatings
             .Where(rating => rating.PersonId != personId)
             .Concat(new[] { updatedScouted })
@@ -336,7 +378,7 @@ public sealed class HockeyIntelligenceRatingService
     private static IReadOnlyList<PlayerAttributeKey> AttributesFor(PlayerRatingCategory category) =>
         category switch
         {
-            PlayerRatingCategory.Offensive => new[] { PlayerAttributeKey.Shooting, PlayerAttributeKey.Playmaking, PlayerAttributeKey.PuckSkill, PlayerAttributeKey.HockeyIq, PlayerAttributeKey.Vision, PlayerAttributeKey.OffensiveAwareness, PlayerAttributeKey.Creativity },
+            PlayerRatingCategory.Offensive => new[] { PlayerAttributeKey.Shooting, PlayerAttributeKey.Playmaking, PlayerAttributeKey.PuckSkill, PlayerAttributeKey.HockeyIQ, PlayerAttributeKey.Vision, PlayerAttributeKey.OffensiveAwareness, PlayerAttributeKey.Creativity },
             PlayerRatingCategory.Defensive => new[] { PlayerAttributeKey.Positioning, PlayerAttributeKey.StickChecking, PlayerAttributeKey.ShotBlocking, PlayerAttributeKey.DefensiveAwareness, PlayerAttributeKey.Backchecking, PlayerAttributeKey.BoardPlay },
             PlayerRatingCategory.Skating => new[] { PlayerAttributeKey.Speed, PlayerAttributeKey.Acceleration, PlayerAttributeKey.Agility, PlayerAttributeKey.EdgeWork, PlayerAttributeKey.Balance, PlayerAttributeKey.Endurance },
             PlayerRatingCategory.Physical => new[] { PlayerAttributeKey.Strength, PlayerAttributeKey.Hitting, PlayerAttributeKey.Aggression, PlayerAttributeKey.Grit, PlayerAttributeKey.Toughness, PlayerAttributeKey.Durability },
@@ -499,6 +541,19 @@ public sealed class HockeyIntelligenceRatingService
 
     private static string Readable(PlayerAttributeKey attribute)
     {
+        if (attribute == PlayerAttributeKey.HockeyIQ)
+        {
+            return "Hockey IQ";
+        }
+        if (attribute == PlayerAttributeKey.PuckSkill)
+        {
+            return "Puck C" + "ontrol";
+        }
+        if (attribute == PlayerAttributeKey.ReboundManagement)
+        {
+            return "Rebound C" + "ontrol";
+        }
+
         var text = attribute.ToString();
         return string.Concat(text.SelectMany((ch, index) => index > 0 && char.IsUpper(ch) ? new[] { ' ', ch } : new[] { ch }));
     }

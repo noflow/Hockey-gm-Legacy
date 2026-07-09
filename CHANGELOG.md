@@ -1,6 +1,71 @@
 # Changelog
 
-## Current - Alpha 7.5
+## Current - Alpha 7.7
+
+### Added
+
+- Attribute Development Engine v1 with `AttributeDevelopmentService`, snapshots, growth events, modifiers, report summaries, and player-facing development lines.
+- Attribute-specific growth behavior for skating/speed, strength, Hockey IQ, leadership, durability, confidence, role fit, special teams usage, coach specialties, and injuries.
+- Development-report flow that updates visible scouted estimates only when a report is generated; hidden true ratings can still move first.
+- Player Dossier Attribute Development section with training focus, recent OVR movement, biggest gain/regression, stale estimate warning, staff note, and attribute trends.
+- Action Center hooks for meaningful breakthroughs, setbacks, plateau risk, poor-role warnings, and rushed-development warnings while routine changes stay out of GM decision spam.
+- AlphaDesktop development actions for shooting/defensive focus and an Attribute Report button.
+- Alpha 7.7 tests covering age curves, training focus, coach specialty, injuries, role/rushed plateaus, late/fast developers, visible-report gating, dossier exposure, career history, Action Center filtering, and hidden-rating privacy.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.7.
+- Development tuning no longer treats every unfocused attribute as a routine regression, keeping Action Center cleaner.
+- Project status now treats Attribute Development Engine v1 as the current completed milestone.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No editable ratings.
+- No full attribute editor.
+- No practice scheduler or micro-training minigame.
+- No real player database.
+- No Godot.
+- No new game simulation engine.
+
+## Previous - Alpha 7.6
+
+### Added
+
+- Full Hockey Intelligence attribute catalog across Offensive, Defensive, Skating, Physical, Skill, Mental, Team, and Goalie categories.
+- Clean requested attribute display names for Puck Control, Hockey IQ, and Rebound Control in dossier/player-facing rating output.
+- Scouting confidence behavior for Unknown, Red, Green, Blue, and Black estimates, with specialty and known-region scouting able to improve confidence faster.
+- Hidden true rating updates from development while visible estimates wait for scouting/report updates.
+- Dossier coverage for visible ratings, Hockey Intelligence categories, rating trend/history, development curve, plateau/breakout context, scout source, last-updated date, and hidden-rating privacy wording.
+- Alpha 7.6 tests for attribute coverage, confidence colors, specialty/region scouting, development visibility delay, dossier/history exposure, AlphaDesktop hidden-rating privacy, and save/load preservation.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.6.
+- Hockey Intelligence rating text now consistently uses scouted estimates in the desktop UI.
+- Project status now treats Hockey Intelligence Rating Engine v1 as the current completed milestone.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No editable ratings.
+- No full attribute editor.
+- No real player database.
+- No Godot.
+- No new game simulation engine.
+- No tactics rewrite.
+
+## Previous - Alpha 7.5
 
 ### Added
 

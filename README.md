@@ -105,6 +105,8 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 7.3 Salary Arbitration v1
 - Alpha 7.4 Contract Buyouts v1
 - Alpha 7.5 Offer Sheets v1
+- Alpha 7.6 Hockey Intelligence Rating Engine v1
+- Alpha 7.7 Attribute Development Engine v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -123,6 +125,10 @@ Alpha 2.0 - Player Dossier v1 + Name Cleanup adds clean player display names and
 Alpha 7.4 - Contract Buyouts v1 adds rulebook-driven buyout windows and penalty calculations for NHL-style teams. The GM can calculate, confirm, or cancel buyouts from AlphaDesktop; confirmed buyouts release the player to free agency, terminate the contract, record future cap/budget penalties, update relationship/history state, and persist through save/load.
 
 Alpha 7.5 - Offer Sheets v1 adds rulebook-driven RFA offer-sheet pressure for NHL-style teams. Eligible RFAs can receive offer sheets with AAV-based compensation, required draft-pick ownership checks, cap validation, player/agent interest, urgent Action Center items, inbox messages, League News, dossier/history lines, and explicit Match Offer or Take Compensation decisions.
+
+Alpha 7.6 - Hockey Intelligence Rating Engine v1 completes the current player-evaluation backbone. Players carry hidden true OVR/POT and attribute ratings while the GM sees scouted estimates, Unknown/Red/Green/Blue/Black confidence colors, ranges for uncertain information, category and sub-attribute reports, scouting source/date notes, rating history, development-curve context, and save/load preservation. AlphaDesktop uses scouted rating text only and does not expose hidden true ratings.
+
+Alpha 7.7 - Attribute Development Engine v1 makes player growth attribute-specific. Speed, strength, Hockey IQ, leadership, durability, confidence, and role-related attributes now respond differently to age, training focus, coach specialty, injury drag, role fit, rushed usage, and development curve. Development reports can update visible estimates, routine changes stay in development history, and meaningful breakthroughs/setbacks surface in dossiers and Action Center without exposing hidden true ratings.
 
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
 

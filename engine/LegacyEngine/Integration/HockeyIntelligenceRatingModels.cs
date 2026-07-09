@@ -38,7 +38,7 @@ public enum PlayerAttributeKey
     Shooting,
     Playmaking,
     PuckSkill,
-    HockeyIq,
+    HockeyIQ,
     Vision,
     OffensiveAwareness,
     Creativity,

@@ -170,6 +170,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<PlayerDevelopmentCurve> DevelopmentCurves { get; init; } = Array.Empty<PlayerDevelopmentCurve>();
 
+    public IReadOnlyList<AttributeDevelopmentSnapshot> AttributeDevelopmentSnapshots { get; init; } = Array.Empty<AttributeDevelopmentSnapshot>();
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -521,6 +523,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var curve in DevelopmentCurves)
         {
             curve.Validate();
+        }
+
+        foreach (var snapshot in AttributeDevelopmentSnapshots)
+        {
+            snapshot.Validate();
         }
 
         foreach (var state in PlayerCareerStates)

@@ -41,6 +41,7 @@ public sealed class PlayerDossierService
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
             BuildDevelopmentCurve(scenario, personId),
+            BuildAttributeDevelopment(scenario, personId),
             BuildRoleUsage(scenario, personId),
             BuildGameUsage(scenario, personId),
             BuildTactics(scenario, personId),
@@ -361,6 +362,12 @@ public sealed class PlayerDossierService
     {
         var lines = new DevelopmentCurveService().BuildDossierLines(scenario, personId);
         return new PlayerDossierSection("Development Curve", lines);
+    }
+
+    private static PlayerDossierSection BuildAttributeDevelopment(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new AttributeDevelopmentService().BuildDossierLines(scenario, personId);
+        return new PlayerDossierSection("Attribute Development", lines);
     }
 
     private static PlayerDossierSection BuildMedical(NewGmScenarioSnapshot scenario, string personId)

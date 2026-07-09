@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -633,7 +633,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.5 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.7 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -4838,7 +4838,10 @@ internal sealed class MainWindow : Window
         {
             yield return CreateDetailButton("Balanced Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Balanced));
             yield return CreateDetailButton("Skating Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Skating));
+            yield return CreateDetailButton("Shooting Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Shooting));
+            yield return CreateDetailButton("Defensive Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Defensive));
             yield return CreateDetailButton("Confidence Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Confidence));
+            yield return CreateDetailButton("Attribute Report", () => State.GenerateAttributeReportFor(row.PersonId));
             yield return CreateDetailButton("Increase Ice Time", () => State.SetDevelopmentRoleFor(row.PersonId, DevelopmentIceTimeRole.TopSix));
             yield return CreateDetailButton("Yearly Review", () => MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information));
             yield return CreateDetailButton("Medical Report", () => MessageBox.Show(State.MedicalReportText(row.PersonId), "Medical Report", MessageBoxButton.OK, MessageBoxImage.Information));
@@ -11411,6 +11414,12 @@ internal sealed class AlphaDesktopState
             builder.AppendLine($"Coach recommendation: {recommendation.RecommendedAction}");
         }
 
+        var attributeLines = new AttributeDevelopmentService().BuildDossierLines(ScenarioSnapshot, personId);
+        foreach (var line in attributeLines.Take(7))
+        {
+            builder.AppendLine(line);
+        }
+
         return builder.ToString().Trim();
     }
 
@@ -11447,6 +11456,39 @@ internal sealed class AlphaDesktopState
         var focus = existing?.FocusAreas ?? new[] { DevelopmentPlanFocus.Balanced, DevelopmentPlanFocus.Confidence };
         var result = _developmentPlanning.SetPlan(_registry, ScenarioSnapshot, personId, focus, role, $"GM adjusted development role to {role}.");
         ApplyDevelopmentResult(result);
+    }
+
+    public void GenerateAttributeReportFor(string personId)
+    {
+        var result = new AttributeDevelopmentService().ApplyMonthlyDevelopment(
+            _registry,
+            ScenarioSnapshot,
+            personId,
+            new AttributeDevelopmentModifier(
+                PersonAge(personId) ?? 18,
+                Math.Max(0, ScenarioSnapshot.Season.Year - 2026),
+                ScenarioSnapshot.LeagueProfile.Experience,
+                DevelopmentPlanFor(personId)?.IceTimeRole ?? DevelopmentIceTimeRole.MiddleSix,
+                PowerPlayUsage: false,
+                PenaltyKillUsage: false,
+                CoachSpecialty: null,
+                DevelopmentStaffQuality: 65,
+                Morale: 60,
+                RelationshipTrust: 55,
+                InjuryPenalty: HasActiveInjury(personId) ? 20 : 0,
+                FatiguePenalty: 0,
+                WorkEthic: 65,
+                Coachability: 65,
+                Professionalism: 60,
+                TeamCulture: 60,
+                RushedTooEarly: false,
+                PoorRole: false,
+                UpdateVisibleEstimate: true));
+        ScenarioSnapshot = result.ScenarioSnapshot;
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        AddInboxItems(result.InboxItems);
+        LatestSummary = result.Summary;
+        EnsureSelectedDossierStillExists();
     }
 
     public void ApplyMedicalDecisionFor(string personId, ReturnToPlayOption option)

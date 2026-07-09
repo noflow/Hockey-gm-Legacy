@@ -30,6 +30,7 @@ public sealed class ActionCenterService
         AddScoutingCompletions(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
         AddDevelopmentCurveItems(scenario, items);
+        AddAttributeDevelopmentItems(scenario, items);
         AddLineupRecommendations(scenario, items);
         AddGameUsageRecommendations(scenario, items);
         AddTacticalRecommendations(scenario, items);
@@ -530,6 +531,11 @@ public sealed class ActionCenterService
     private static void AddDevelopmentCurveItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
         items.AddRange(new DevelopmentCurveService().BuildActionCenterItems(scenario));
+    }
+
+    private static void AddAttributeDevelopmentItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new AttributeDevelopmentService().BuildActionItems(scenario));
     }
 
     private static void AddLineupRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

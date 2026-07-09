@@ -716,10 +716,10 @@ public sealed class DevelopmentPlanningService
             (DevelopmentCoachSpecialty.Skating, DevelopmentPlanFocus.Skating) => true,
             (DevelopmentCoachSpecialty.Shooting, DevelopmentPlanFocus.Shooting or DevelopmentPlanFocus.Offensive) => true,
             (DevelopmentCoachSpecialty.Defense, DevelopmentPlanFocus.Defensive) => true,
-            (DevelopmentCoachSpecialty.Goalies, DevelopmentPlanFocus.Goaltending) => true,
+            (DevelopmentCoachSpecialty.Goalies, DevelopmentPlanFocus.Goaltending or DevelopmentPlanFocus.GoalieReflexes or DevelopmentPlanFocus.GoaliePositioning) => true,
             (DevelopmentCoachSpecialty.Confidence, DevelopmentPlanFocus.Confidence or DevelopmentPlanFocus.Character) => true,
             (DevelopmentCoachSpecialty.Leadership, DevelopmentPlanFocus.Leadership or DevelopmentPlanFocus.Character) => true,
-            (DevelopmentCoachSpecialty.Conditioning, DevelopmentPlanFocus.Physical or DevelopmentPlanFocus.Recovery) => true,
+            (DevelopmentCoachSpecialty.Conditioning, DevelopmentPlanFocus.Physical or DevelopmentPlanFocus.Strength or DevelopmentPlanFocus.Conditioning or DevelopmentPlanFocus.Recovery) => true,
             (DevelopmentCoachSpecialty.SpecialTeams, DevelopmentPlanFocus.Offensive or DevelopmentPlanFocus.Defensive or DevelopmentPlanFocus.HockeyIQ) => true,
             _ => false
         };
@@ -780,6 +780,9 @@ public sealed class DevelopmentPlanningService
         focus switch
         {
             DevelopmentPlanFocus.HockeyIQ => "hockey IQ",
+            DevelopmentPlanFocus.PuckSkills => "puck skills",
+            DevelopmentPlanFocus.GoalieReflexes => "goalie reflexes",
+            DevelopmentPlanFocus.GoaliePositioning => "goalie positioning",
             _ => focus.ToString().ToLowerInvariant()
         };
 
