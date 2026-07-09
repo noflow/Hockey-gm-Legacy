@@ -15,6 +15,18 @@ public sealed record GameRecap(
     IReadOnlyList<string> DevelopmentNotes,
     string NarrativeSummary)
 {
+    public string TopLineSummary { get; init; } = "Top line summary not available.";
+
+    public string SpecialTeamsNote { get; init; } = "Special teams note not available.";
+
+    public string TacticalNote { get; init; } = "Tactical note not available.";
+
+    public string ChemistryNote { get; init; } = "Chemistry note not available.";
+
+    public string GoalieUsageNote { get; init; } = "Goalie usage note not available.";
+
+    public string KeyConcern { get; init; } = "No key concern recorded.";
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(GameId) || string.IsNullOrWhiteSpace(WinnerOrganizationId) || string.IsNullOrWhiteSpace(WinnerTeam))
@@ -26,6 +38,14 @@ public sealed record GameRecap(
         if (ThreeStars.Count == 0 || string.IsNullOrWhiteSpace(NarrativeSummary))
         {
             throw new ArgumentException("Game recap requires three stars and narrative summary.", nameof(ThreeStars));
+        }
+
+        foreach (var text in new[] { TopLineSummary, SpecialTeamsNote, TacticalNote, ChemistryNote, GoalieUsageNote, KeyConcern })
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new ArgumentException("Game recap v2 notes must be readable.");
+            }
         }
 
         foreach (var player in NotablePlayers)

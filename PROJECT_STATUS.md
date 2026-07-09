@@ -104,29 +104,30 @@ The five foundation pillars remain:
 - Alpha 6.5 - Line Chemistry v1
 - Alpha 6.6 - Special Teams & Game Usage v1
 - Alpha 6.7 - Tactics & Coaching Style v1
+- Alpha 6.8 - Game Simulation v2
 
 ## Current Milestone
 
-Alpha 6.7 - Tactics & Coaching Style v1
+Alpha 6.8 - Game Simulation v2
 
 ## Current Goal
 
-Add team tactical identity and coaching style: forecheck, neutral zone, defensive zone, breakout, shot preference, physicality, risk, PP/PK tactical style, coach-derived defaults, fit reports, player impact notes, and Action Center warnings without building play-by-play, line matching, or a full tactical simulator.
+Upgrade scheduled game simulation so results, recaps, and stats are influenced by roster usage, lineups, chemistry, special teams, tactics, goaltending, injuries, coaching, home/away, and public team strength bands without building play-by-play, shift simulation, line matching, or a visual game engine.
 
-## Why Tactics Was Next
+## Why Game Simulation Was Next
 
-Lineup Management decided who plays, Line Chemistry explained who fits together, and Game Usage decided when players are deployed. The next GM layer is defining how the team plays: system identity, risk profile, special-teams style, coach philosophy fit, and modest player/development context.
+Lineup Management decided who plays, Line Chemistry explained who fits together, Game Usage decided when players are deployed, and Tactics defined how the club plays. The next playable layer is making daily game results respect those GM choices in readable boxscores, recaps, and stat distribution.
 
 ## Next Build Target
 
-Alpha 6.8 - TBD
+Alpha 6.9 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.8 - TBD
+1. Alpha 6.9 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, media systems, Hall of Fame, full playoff systems, full awards, full retirement systems, or advanced gameplay simulation yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, media systems, Hall of Fame, full playoff systems, full awards, full retirement systems, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

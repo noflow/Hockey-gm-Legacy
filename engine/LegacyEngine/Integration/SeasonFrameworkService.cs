@@ -49,7 +49,7 @@ public sealed class SeasonFrameworkService
         var schedule = current.Schedule!;
         var standings = current.Standings!;
         var stats = new SeasonStatsService();
-        var simulator = new BasicGameSimulator();
+        var simulator = new GameSimulationService();
         var recapService = new GameRecapService();
         var simulated = new List<ScheduledGame>();
         var recaps = new List<GameRecap>();
@@ -58,16 +58,26 @@ public sealed class SeasonFrameworkService
         var goalieStats = current.GoalieStats;
         var teamStats = current.TeamStats;
         var gameRecaps = current.GameRecaps.ToList();
+        var milestones = current.PlayerMilestones.ToList();
 
         foreach (var game in schedule.GamesOn(current.CurrentDate).Where(game => game.Status == GameStatus.Scheduled))
         {
-            var result = simulator.Simulate(game);
+            var gameSimulation = simulator.Simulate(current, game);
+            var result = gameSimulation.Result;
             var completed = game.Complete(result);
             schedule = schedule.ReplaceGame(completed);
             standings = stats.ApplyStandings(standings, completed, result);
             teamStats = stats.ApplyTeamStats(teamStats, completed, result);
-            playerStats = stats.ApplyPlayerStats(current.AlphaSnapshot, playerStats, completed, result);
-            goalieStats = stats.ApplyGoalieStats(current.AlphaSnapshot, goalieStats, completed, result);
+            playerStats = stats.ApplyPlayerStats(current.AlphaSnapshot, playerStats, completed, gameSimulation);
+            goalieStats = stats.ApplyGoalieStats(current.AlphaSnapshot, goalieStats, completed, gameSimulation);
+            foreach (var milestone in gameSimulation.NewMilestones)
+            {
+                if (!milestones.Any(existing => existing.MilestoneId == milestone.MilestoneId))
+                {
+                    milestones.Add(milestone);
+                }
+            }
+
             simulated.Add(completed);
 
             var recapScenario = current with
@@ -77,9 +87,10 @@ public sealed class SeasonFrameworkService
                 TeamStats = teamStats,
                 PlayerStats = playerStats,
                 GoalieStats = goalieStats,
-                GameRecaps = gameRecaps
+                GameRecaps = gameRecaps,
+                PlayerMilestones = milestones
             };
-            var recap = recapService.CreateRecap(recapScenario, completed);
+            var recap = recapService.CreateRecap(recapScenario, completed, gameSimulation);
             recaps.Add(recap);
             gameRecaps.Add(recap);
 
@@ -98,7 +109,8 @@ public sealed class SeasonFrameworkService
             TeamStats = teamStats,
             PlayerStats = playerStats,
             GoalieStats = goalieStats,
-            GameRecaps = gameRecaps
+            GameRecaps = gameRecaps,
+            PlayerMilestones = milestones
         };
         var summary = simulated.Count == 0
             ? "No scheduled games today."

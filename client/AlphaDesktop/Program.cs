@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -601,7 +601,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.7 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.8 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1762,6 +1762,8 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Staff vacancies", State.StaffVacancySummary);
         AddLine(summary, "Season readiness", readiness.RosterStatus);
         AddLine(summary, "Last game", lastGame is null ? "No completed game" : lastGame.BoxScore.FinalScore);
+        AddLine(summary, "Last top performer", lastGame?.TopLineSummary ?? "No game report yet");
+        AddLine(summary, "Last game concern", lastGame?.KeyConcern ?? "No game concern yet");
         AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
         AddLine(summary, "Team record", record);
         AddLine(summary, "Standings rank", State.StandingsRankText);
@@ -6557,6 +6559,12 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"  Winner: {recap.WinnerTeam}");
             builder.AppendLine($"  Three stars: {string.Join("; ", recap.ThreeStars)}");
             builder.AppendLine($"  {recap.NarrativeSummary}");
+            builder.AppendLine($"  Top line: {recap.TopLineSummary}");
+            builder.AppendLine($"  Special teams: {recap.SpecialTeamsNote}");
+            builder.AppendLine($"  Tactics: {recap.TacticalNote}");
+            builder.AppendLine($"  Chemistry: {recap.ChemistryNote}");
+            builder.AppendLine($"  Goalie usage: {recap.GoalieUsageNote}");
+            builder.AppendLine($"  Key concern: {recap.KeyConcern}");
             if (recap.InjuryNotes.Count > 0)
             {
                 builder.AppendLine($"  Medical: {string.Join(" ", recap.InjuryNotes)}");

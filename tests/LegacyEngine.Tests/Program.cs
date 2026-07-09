@@ -82,6 +82,7 @@ var alpha64RosterLineupTests = new Alpha64RosterLineupTests();
 var alpha65LineChemistryTests = new Alpha65LineChemistryTests();
 var alpha66SpecialTeamsGameUsageTests = new Alpha66SpecialTeamsGameUsageTests();
 var alpha67TacticsCoachingStyleTests = new Alpha67TacticsCoachingStyleTests();
+var alpha68GameSimulationV2Tests = new Alpha68GameSimulationV2Tests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1108,6 +1109,20 @@ runner.Run("alpha 6.7 Action Center only shows major tactic issues", alpha67Tact
 runner.Run("alpha 6.7 AlphaDesktop exposes Tactics view", alpha67TacticsCoachingStyleTests.AlphaDesktopExposesTacticsView);
 runner.Run("alpha 6.7 save load preserves tactics", alpha67TacticsCoachingStyleTests.SaveLoadPreservesTactics);
 runner.Run("alpha 6.7 no full tactics engine play-by-play or Godot added", alpha67TacticsCoachingStyleTests.NoFullTacticsEnginePlayByPlayOrGodotAdded);
+runner.Run("alpha 6.8 game simulation context created", alpha68GameSimulationV2Tests.GameSimulationContextCreated);
+runner.Run("alpha 6.8 lineup affects simulation profile", alpha68GameSimulationV2Tests.LineupAffectsSimulationProfile);
+runner.Run("alpha 6.8 chemistry affects simulation profile", alpha68GameSimulationV2Tests.ChemistryAffectsSimulationProfile);
+runner.Run("alpha 6.8 special teams affect result", alpha68GameSimulationV2Tests.SpecialTeamsAffectResult);
+runner.Run("alpha 6.8 tactics affect result tendencies", alpha68GameSimulationV2Tests.TacticsAffectResultTendencies);
+runner.Run("alpha 6.8 injured players excluded", alpha68GameSimulationV2Tests.InjuredPlayersExcluded);
+runner.Run("alpha 6.8 goalie usage affects recap", alpha68GameSimulationV2Tests.GoalieUsageAffectsRecap);
+runner.Run("alpha 6.8 top line gets more scoring opportunity", alpha68GameSimulationV2Tests.TopLinePlayersReceiveMoreScoringOpportunityThanDepthPlayers);
+runner.Run("alpha 6.8 power play players can receive PP points", alpha68GameSimulationV2Tests.PowerPlayPlayersCanReceivePowerPlayPoints);
+runner.Run("alpha 6.8 recap includes tactical chemistry and special teams notes", alpha68GameSimulationV2Tests.GameRecapIncludesTacticalChemistryAndSpecialTeamsNotes);
+runner.Run("alpha 6.8 player milestone triggered from game", alpha68GameSimulationV2Tests.PlayerMilestoneTriggeredFromGame);
+runner.Run("alpha 6.8 standings and stats still update", alpha68GameSimulationV2Tests.StandingsAndStatsStillUpdate);
+runner.Run("alpha 6.8 AlphaDesktop exposes enhanced recap", alpha68GameSimulationV2Tests.AlphaDesktopExposesEnhancedRecap);
+runner.Run("alpha 6.8 no forbidden game systems added", alpha68GameSimulationV2Tests.NoForbiddenGameSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

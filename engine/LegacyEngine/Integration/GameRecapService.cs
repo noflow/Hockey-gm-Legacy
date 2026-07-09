@@ -5,7 +5,10 @@ namespace LegacyEngine.Integration;
 
 public sealed class GameRecapService
 {
-    public GameRecap CreateRecap(NewGmScenarioSnapshot scenario, ScheduledGame completedGame)
+    public GameRecap CreateRecap(NewGmScenarioSnapshot scenario, ScheduledGame completedGame) =>
+        CreateRecap(scenario, completedGame, null);
+
+    public GameRecap CreateRecap(NewGmScenarioSnapshot scenario, ScheduledGame completedGame, GameSimulationResultV2? simulation)
     {
         if (completedGame.Status != GameStatus.Completed || completedGame.Result is null)
         {
@@ -13,10 +16,10 @@ public sealed class GameRecapService
         }
 
         var result = completedGame.Result;
-        var home = TeamSummary(scenario, completedGame.HomeOrganizationId, completedGame.HomeOrganizationId == result.WinnerOrganizationId, result.HomeGoals, completedGame.GameId);
-        var away = TeamSummary(scenario, completedGame.AwayOrganizationId, completedGame.AwayOrganizationId == result.WinnerOrganizationId, result.AwayGoals, completedGame.GameId);
-        var notablePlayers = NotablePlayers(scenario, completedGame).ToArray();
-        var goalieSummaries = GoalieSummaries(scenario, completedGame).ToArray();
+        var home = TeamSummary(scenario, completedGame.HomeOrganizationId, completedGame.HomeOrganizationId == result.WinnerOrganizationId, result.HomeGoals, completedGame.GameId, simulation);
+        var away = TeamSummary(scenario, completedGame.AwayOrganizationId, completedGame.AwayOrganizationId == result.WinnerOrganizationId, result.AwayGoals, completedGame.GameId, simulation);
+        var notablePlayers = NotablePlayers(scenario, completedGame, simulation).ToArray();
+        var goalieSummaries = GoalieSummaries(scenario, completedGame, simulation).ToArray();
         var threeStars = ThreeStars(scenario, completedGame, notablePlayers, goalieSummaries).ToArray();
         var winnerTeam = TeamName(scenario, result.WinnerOrganizationId);
         var loserTeam = TeamName(scenario, result.LoserOrganizationId);
@@ -43,7 +46,15 @@ public sealed class GameRecapService
             KeyMoments: KeyMoments(winnerTeam, loserTeam, topSkater),
             InjuryNotes: injuryNotes,
             DevelopmentNotes: developmentNotes,
-            NarrativeSummary: $"{winnerTeam} defeated {loserTeam} {WinningGoals(result)}-{LosingGoals(result)} behind a strong performance from {topSkater} and {goalieSummaries.FirstOrDefault(goalie => goalie.Won)?.Saves ?? 0} saves from {topGoalie}.");
+            NarrativeSummary: simulation?.NarrativeSummary ?? $"{winnerTeam} defeated {loserTeam} {WinningGoals(result)}-{LosingGoals(result)} behind a strong performance from {topSkater} and {goalieSummaries.FirstOrDefault(goalie => goalie.Won)?.Saves ?? 0} saves from {topGoalie}.")
+        {
+            TopLineSummary = simulation?.TopLineSummary ?? "Top-line impact was not tracked for this game.",
+            SpecialTeamsNote = simulation?.SpecialTeamsNote ?? $"Power play: {home.PowerPlay}; {away.PowerPlay}.",
+            TacticalNote = simulation?.TacticalNote ?? "Tactical note not tracked for this game.",
+            ChemistryNote = simulation?.ChemistryNote ?? "Chemistry note not tracked for this game.",
+            GoalieUsageNote = simulation?.GoalieUsageNote ?? "Goalie usage note not tracked for this game.",
+            KeyConcern = simulation?.KeyConcern ?? "No key concern recorded."
+        };
         recap.Validate();
         return recap;
     }
@@ -59,7 +70,7 @@ public sealed class GameRecapService
             ?? recap.GoalieSummaries.FirstOrDefault(goalie => goalie.TeamName == playerTeam.TeamName)?.PlayerName
             ?? "No standout logged";
         var concern = recap.InjuryNotes.FirstOrDefault()
-            ?? (playerTeam.GoalDifferentialAgainst(opponent) < -2 ? "Concern: staff flagged the defensive gap." : "Concern: none from the game report.");
+            ?? (recap.KeyConcern == "No key concern recorded." ? (playerTeam.GoalDifferentialAgainst(opponent) < -2 ? "Concern: staff flagged the defensive gap." : "Concern: none from the game report.") : $"Concern: {recap.KeyConcern}");
         var nextGame = scenario.Schedule?.NextGameFor(playerTeamId, recap.Date.AddDays(1));
         var nextGameText = nextGame is null
             ? "Next game: none scheduled."
@@ -74,7 +85,7 @@ public sealed class GameRecapService
             EventType: LegacyEventType.GamePlayed,
             Severity: recap.InjuryNotes.Count > 0 ? LegacyEventSeverity.Warning : LegacyEventSeverity.Notice,
             Title: $"{resultText}: {playerTeam.TeamName} {playerTeam.Goals}, {opponent.TeamName} {opponent.Goals}",
-            Summary: $"Opponent: {opponent.TeamName}. Score: {playerTeam.Goals}-{opponent.Goals}. Result: {resultText}. {recordText} Top performer: {topPerformer}. {concern} {nextGameText} {recap.NarrativeSummary}",
+            Summary: $"Opponent: {opponent.TeamName}. Score: {playerTeam.Goals}-{opponent.Goals}. Result: {resultText}. {recordText} Top performer: {topPerformer}. {concern} {nextGameText} {recap.NarrativeSummary} {recap.SpecialTeamsNote} {recap.GoalieUsageNote}",
             PrimaryPersonId: recap.NotablePlayers.FirstOrDefault()?.PersonId);
     }
 
@@ -103,8 +114,23 @@ public sealed class GameRecapService
             .ToArray()
         ?? Array.Empty<ScheduledGame>();
 
-    private static GameTeamSummary TeamSummary(NewGmScenarioSnapshot scenario, string organizationId, bool won, int goals, string gameId)
+    private static GameTeamSummary TeamSummary(NewGmScenarioSnapshot scenario, string organizationId, bool won, int goals, string gameId, GameSimulationResultV2? simulation)
     {
+        if (simulation is not null)
+        {
+            var isHome = organizationId == simulation.Context.Game.HomeOrganizationId;
+            var simulationShots = isHome ? simulation.HomeShots : simulation.AwayShots;
+            var simulationPowerPlayGoals = isHome ? simulation.HomePowerPlayGoals : simulation.AwayPowerPlayGoals;
+            var simulationPowerPlayChances = isHome ? simulation.HomePowerPlayChances : simulation.AwayPowerPlayChances;
+            return new GameTeamSummary(
+                organizationId,
+                TeamName(scenario, organizationId),
+                goals,
+                simulationShots,
+                $"{simulationPowerPlayGoals}/{simulationPowerPlayChances}",
+                won);
+        }
+
         var seed = Math.Abs(HashCode.Combine(gameId, organizationId));
         var shots = 24 + seed % 16 + goals;
         var powerPlayChances = 2 + seed % 4;
@@ -118,11 +144,31 @@ public sealed class GameRecapService
             won);
     }
 
-    private static IEnumerable<GamePlayerSummary> NotablePlayers(NewGmScenarioSnapshot scenario, ScheduledGame game)
+    private static IEnumerable<GamePlayerSummary> NotablePlayers(NewGmScenarioSnapshot scenario, ScheduledGame game, GameSimulationResultV2? simulation)
     {
         if (!InvolvesPlayerTeam(scenario, game))
         {
             return Array.Empty<GamePlayerSummary>();
+        }
+
+        if (simulation is not null)
+        {
+            return simulation.PlayerTeamSkaterStats
+                .Where(stat => stat.Points > 0)
+                .OrderByDescending(stat => stat.Points)
+                .ThenByDescending(stat => stat.Goals)
+                .ThenByDescending(stat => stat.OpportunityWeight)
+                .Take(6)
+                .Select(stat => new GamePlayerSummary(
+                    stat.PersonId,
+                    stat.PlayerName,
+                    scenario.Organization.Name,
+                    stat.Goals,
+                    stat.Assists,
+                    stat.Points,
+                    stat.PlusMinus,
+                    stat.IncludedPowerPlayPoint ? $"{stat.UsageNote} Added special-teams offense." : stat.UsageNote))
+                .ToArray();
         }
 
         var playerTeamGoals = game.HomeOrganizationId == scenario.Organization.OrganizationId
@@ -153,11 +199,28 @@ public sealed class GameRecapService
             .ToArray();
     }
 
-    private static IEnumerable<GameGoalieSummary> GoalieSummaries(NewGmScenarioSnapshot scenario, ScheduledGame game)
+    private static IEnumerable<GameGoalieSummary> GoalieSummaries(NewGmScenarioSnapshot scenario, ScheduledGame game, GameSimulationResultV2? simulation)
     {
         if (!InvolvesPlayerTeam(scenario, game))
         {
             return Array.Empty<GameGoalieSummary>();
+        }
+
+        if (simulation?.PlayerTeamGoalieStats is { } goalieStat)
+        {
+            var simulationSavePercentage = goalieStat.Saves + goalieStat.GoalsAgainst == 0 ? 0m : Math.Round((decimal)goalieStat.Saves / (goalieStat.Saves + goalieStat.GoalsAgainst), 3);
+            return new[]
+            {
+                new GameGoalieSummary(
+                    goalieStat.PersonId,
+                    goalieStat.PlayerName,
+                    scenario.Organization.Name,
+                    goalieStat.Saves,
+                    goalieStat.GoalsAgainst,
+                    simulationSavePercentage,
+                    goalieStat.Won,
+                    goalieStat.UsageNote)
+            };
         }
 
         var goalie = scenario.AlphaSnapshot.Roster.ActivePlayers.FirstOrDefault(player => player.Position == RosterPosition.Goalie);

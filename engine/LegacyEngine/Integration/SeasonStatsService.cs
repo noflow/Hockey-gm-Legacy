@@ -71,6 +71,32 @@ public sealed class SeasonStatsService
         }).ToArray();
     }
 
+    public IReadOnlyList<PlayerSeasonStatLine> ApplyPlayerStats(
+        AlphaWorldSnapshot snapshot,
+        IReadOnlyList<PlayerSeasonStatLine> playerStats,
+        ScheduledGame game,
+        GameSimulationResultV2 simulation)
+    {
+        if (!InvolvesPlayerTeam(snapshot, game))
+        {
+            return playerStats;
+        }
+
+        var allocations = simulation.PlayerTeamSkaterStats.ToDictionary(stat => stat.PersonId, StringComparer.Ordinal);
+        var activeSkaters = snapshot.Roster.ActivePlayers.Where(player => player.Position != RosterPosition.Goalie).Select(player => player.PersonId).ToHashSet(StringComparer.Ordinal);
+        return playerStats.Select(line =>
+        {
+            if (!activeSkaters.Contains(line.PersonId))
+            {
+                return line;
+            }
+
+            return allocations.TryGetValue(line.PersonId, out var allocation)
+                ? line.ApplyGame(allocation.Goals, allocation.Assists, allocation.PlusMinus, allocation.PenaltyMinutes)
+                : line.ApplyGame(0, 0, 0);
+        }).ToArray();
+    }
+
     public IReadOnlyList<GoalieSeasonStatLine> ApplyGoalieStats(
         AlphaWorldSnapshot snapshot,
         IReadOnlyList<GoalieSeasonStatLine> goalieStats,
@@ -87,6 +113,24 @@ public sealed class SeasonStatsService
         var saves = 24 + Math.Abs(HashCode.Combine(game.GameId, snapshot.OrganizationId)) % 13;
         var starter = goalieStats[0].ApplyGame(won, goalsAgainst, saves);
         return goalieStats.Select((line, index) => index == 0 ? starter : line).ToArray();
+    }
+
+    public IReadOnlyList<GoalieSeasonStatLine> ApplyGoalieStats(
+        AlphaWorldSnapshot snapshot,
+        IReadOnlyList<GoalieSeasonStatLine> goalieStats,
+        ScheduledGame game,
+        GameSimulationResultV2 simulation)
+    {
+        if (!InvolvesPlayerTeam(snapshot, game) || goalieStats.Count == 0 || simulation.PlayerTeamGoalieStats is null)
+        {
+            return goalieStats;
+        }
+
+        var allocation = simulation.PlayerTeamGoalieStats;
+        return goalieStats.Select(line =>
+            line.PersonId == allocation.PersonId
+                ? line.ApplyGame(allocation.Won, allocation.GoalsAgainst, allocation.Saves)
+                : line).ToArray();
     }
 
     private static bool InvolvesPlayerTeam(AlphaWorldSnapshot snapshot, ScheduledGame game) =>

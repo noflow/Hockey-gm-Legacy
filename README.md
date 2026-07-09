@@ -89,6 +89,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 6.5 Line Chemistry v1
 - Alpha 6.6 Special Teams & Game Usage v1
 - Alpha 6.7 Tactics & Coaching Style v1
+- Alpha 6.8 Game Simulation v2
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -147,6 +148,8 @@ Alpha 6.5 - Line Chemistry v1 adds explainable fit grades for forward lines, def
 Alpha 6.6 - Special Teams & Game Usage v1 expands lineup management into personnel deployment. The GM can now review and adjust PP1/PP2, PK1/PK2, goalie workload, extra attacker, three-on-three placeholder, and shootout order from the Lineup workspace. Player dossiers include a Game Usage section, development context receives small usage modifiers, coach recommendations flag PP/PK/goalie concerns, and Action Center only surfaces important usage issues without adding tactics, line matching, or game simulation changes.
 
 Alpha 6.7 - Tactics & Coaching Style v1 defines how the team plays without becoming a full tactics simulator. Hockey Operations now includes a Tactics view for style, forecheck, neutral-zone pressure, defensive-zone structure, breakout, shot preference, physicality, risk, PP style, PK style, coach philosophy, tactical fit, recommendations, and small player/development impact notes. Action Center only surfaces major tactical mismatches such as high-risk tactics on a young roster.
+
+Alpha 6.8 - Game Simulation v2 upgrades the scheduled-game simulator while staying boxscore-based. Daily games now build explainable team profiles from lineup roles, line chemistry, special-teams usage, tactics, coach fit, goalie workload, injuries, home/away context, and public strength bands. Recaps now show top-line, special teams, tactical, chemistry, goalie usage, key concern, injury, development, and milestone context without adding play-by-play, line matching, shift simulation, or Godot.
 
 Alpha 6.4 - Lineup & Role Management v1 makes lineup roles playable. Hockey Operations now includes a selectable Lineup workspace where the GM can assign, remove, swap, and auto-fill slots across four forward lines, three defense pairs, and starter/backup goalie depth. Roster rows and dossiers show current, expected, promised, coach-recommended, and potential roles, plus promise status, satisfaction, morale notes, and development usage context. Contract offer evaluation now warns when a role promise conflicts with lineup capacity, while invalid placements warn instead of crashing. This does not add special teams, tactics, line chemistry, Godot, or game simulation changes.
 

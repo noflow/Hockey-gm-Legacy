@@ -1,6 +1,45 @@
 # Changelog
 
-## Current - Alpha 6.7
+## Current - Alpha 6.8
+
+### Added
+
+- GameSimulationContext, TeamSimulationProfile, LineSimulationProfile, GoalieSimulationProfile, SpecialTeamsSimulationProfile, TacticalSimulationProfile, GameSimulationResultV2, and GameSimulationService.
+- Public team strength bands for offense, defense, goaltending, special teams, coaching, and chemistry.
+- Boxscore-based game simulation that considers lineup roles, top-line usage, defense pairs, starter goalie, special teams, tactics, coach fit, chemistry, active injuries, home/away, and team profile estimates.
+- V2 stat allocation where top-line players receive more scoring opportunity, power-play players can receive power-play points, defensemen receive realistic supporting point share, and the tracked starter receives saves/goals-against.
+- Enhanced game recaps with top-line summary, special-teams note, tactical note, chemistry note, goalie usage note, key concern, injury note, development note, and milestone context.
+- First tracked game milestones for goals, points, and shutouts where the game creates a valid first.
+- AlphaDesktop schedule recap text for special teams, tactics, chemistry, goalie usage, top-line impact, and key concern.
+- Dashboard last-game top performer and last-game concern lines.
+- Alpha 6.8 tests covering simulation context, lineup impact, chemistry impact, special teams, tactics, injury exclusion, goalie usage, top-line opportunity, PP point allocation, enhanced recaps, game milestones, standings/stats continuity, UI exposure, and forbidden-system boundaries.
+
+### Changed
+
+- Daily season simulation now uses GameSimulationService instead of the old basic goal-only simulator.
+- Season stats now have v2 overloads that apply player and goalie allocations from the simulation result.
+- GameRecapService can build recaps from the v2 simulation result while keeping the legacy recap path available.
+- AlphaDesktop version label updated to Alpha 6.8.
+- The older Alpha 2.4 staff-budget guard now checks staff budget files instead of banning later game-simulation work across the whole engine.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No play-by-play engine.
+- No shift simulation.
+- No shot-by-shot simulation.
+- No line matching.
+- No 2D/3D game view.
+- No advanced fatigue engine.
+- No advanced injury model expansion.
+
+## Previous - Alpha 6.7
 
 ### Added
 

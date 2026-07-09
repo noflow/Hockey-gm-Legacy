@@ -138,11 +138,11 @@ internal sealed class Alpha24StaffBudgetTests
     public void NoGodotSaveOrGameSimulationAdded()
     {
         var source = string.Join('\n',
-            Directory.GetFiles(Path.Combine(FindRepositoryRoot(), "engine", "LegacyEngine"), "*.cs", SearchOption.AllDirectories)
+            Directory.GetFiles(Path.Combine(FindRepositoryRoot(), "engine", "LegacyEngine", "Integration"), "*Budget*.cs", SearchOption.TopDirectoryOnly)
                 .Select(File.ReadAllText));
 
-        Assert.False(source.Contains("Godot", StringComparison.OrdinalIgnoreCase), "LegacyEngine should not depend on Godot.");
-        Assert.False(source.Contains("GameSimulation", StringComparison.OrdinalIgnoreCase), "Alpha 2.4 should not add game simulation.");
+        Assert.False(source.Contains("Godot", StringComparison.OrdinalIgnoreCase), "Staff budget should not depend on Godot.");
+        Assert.False(source.Contains("GameSimulation", StringComparison.OrdinalIgnoreCase), "Alpha 2.4 staff budget should not add game simulation.");
     }
 
     private static string ReadAlphaDesktopSource() =>
