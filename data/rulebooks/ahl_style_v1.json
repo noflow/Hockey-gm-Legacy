@@ -88,5 +88,15 @@
       "Morale",
       "VeteranLeadership"
     ]
+  },
+  "offer_sheet_rules": {
+    "offer_sheets_enabled": false,
+    "eligible_rights_statuses": [],
+    "compensation_thresholds": [],
+    "response_window_days": 0,
+    "required_draft_pick_ownership": false,
+    "matching_rules": "disabled_for_ahl_style_v1",
+    "cap_validation_enabled": false,
+    "arbitration_blocks_offer_sheets": true
   }
 }

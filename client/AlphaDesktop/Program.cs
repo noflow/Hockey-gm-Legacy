@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -548,6 +548,7 @@ internal sealed class MainWindow : Window
             new("Contract Rights", CreateTextScreen("Contract Rights")),
             new("Arbitration", CreateTextScreen("Arbitration")),
             new("Buyouts", CreateTextScreen("Buyouts")),
+            new("Offer Sheets", CreateTextScreen("Offer Sheets")),
             new("Waivers", CreateTextScreen("Hockey Waivers")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
@@ -632,7 +633,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.4 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.5 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1799,6 +1800,7 @@ internal sealed class MainWindow : Window
         _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
         _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
         _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
+        _tabs["Offer Sheets"].Text = BuildOfferSheetWorkspace();
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         RefreshSelectableTab("Trades", BuildTradeRows());
@@ -4860,6 +4862,9 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Calculate Buyout", () => State.CalculateBuyoutFor(row.PersonId), State.CanCalculateBuyout(row.PersonId));
         yield return CreateDetailButton("Confirm Buyout", () => State.ConfirmBuyoutFor(row.PersonId), State.CanConfirmBuyout(row.PersonId));
         yield return CreateDetailButton("Cancel Buyout", () => State.CancelBuyoutFor(row.PersonId), State.CanCancelBuyout(row.PersonId));
+        yield return CreateDetailButton("Submit Offer Sheet", () => State.SubmitOfferSheetFor(row.PersonId), State.CanSubmitOfferSheet(row.PersonId));
+        yield return CreateDetailButton("Match Offer", () => State.MatchOfferSheetFor(row.PersonId), State.CanMatchOfferSheet(row.PersonId));
+        yield return CreateDetailButton("Take Compensation", () => State.DeclineOfferSheetFor(row.PersonId), State.CanDeclineOfferSheet(row.PersonId));
 
         var available = State.AvailableProspectActions(row.PersonId);
         yield return CreateDetailButton("Offer Contract", () => State.OfferProspectContractFor(row.PersonId), available.Contains(ProspectDecisionType.OfferContract));
@@ -6145,12 +6150,64 @@ internal sealed class MainWindow : Window
         builder.AppendLine(BuildContractRightsWorkspace());
         builder.AppendLine(BuildArbitrationWorkspace());
         builder.AppendLine(BuildBuyoutWorkspace());
+        builder.AppendLine(BuildOfferSheetWorkspace());
 
         builder.AppendLine("Offer Builder Guidance");
         builder.AppendLine("----------------------");
         builder.AppendLine("Offer inputs supported by the engine: salary, term, role promise, development promise, camp invite promise, staff role/focus promise, and notes.");
         builder.AppendLine("Evaluation output includes total cost, annual cost, common expiry date, budget before/after, likelihood, risk warning, and plain-language reasons.");
         builder.AppendLine("Use Free Agents, Prospects, Recruits, Staff, or Pending Decisions to pick the person, then approve only the deals you actually want signed.");
+        return builder.ToString();
+    }
+
+    private string BuildOfferSheetWorkspace()
+    {
+        var eligibility = State.OfferSheetEligibility;
+        var sheets = State.OfferSheets;
+        var builder = new StringBuilder();
+        builder.AppendLine("Offer Sheets");
+        builder.AppendLine("============");
+        builder.AppendLine(State.OfferSheetRuleSummary);
+        builder.AppendLine();
+        builder.AppendLine("Use selected player detail panels to Submit Offer Sheet, Match Offer, Take Compensation, or View Dossier.");
+        builder.AppendLine("Offer sheets do not auto-complete: the rights holder must explicitly match or decline.");
+        builder.AppendLine();
+
+        builder.AppendLine("Eligible RFAs");
+        builder.AppendLine("-------------");
+        var eligible = eligibility.Where(item => item.Status == OfferSheetStatus.Eligible).ToArray();
+        if (eligible.Length == 0)
+        {
+            builder.AppendLine("  No eligible RFAs are currently available for offer-sheet pressure.");
+        }
+        else
+        {
+            foreach (var item in eligible)
+            {
+                builder.AppendLine($"  {item.PlayerName} | {State.PositionShortText(item.Position)} | age {item.Age?.ToString() ?? "unknown"} | rights: {item.RightsHolderTeamName}");
+                builder.AppendLine($"    Offering team: {item.OfferingTeamName} | agent: {item.AgentInterest}");
+                builder.AppendLine($"    Recommendation: {item.Recommendation}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Active / Historical Offer Sheets");
+        builder.AppendLine("--------------------------------");
+        if (sheets.Count == 0)
+        {
+            builder.AppendLine("  No offer sheets are active or recorded.");
+            return builder.ToString();
+        }
+
+        foreach (var sheet in sheets.OrderByDescending(item => item.IsActive).ThenBy(item => item.ResponseDeadline).ThenBy(item => item.PlayerName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"  {sheet.PlayerName} | {State.DisplayOfferSheetStatus(sheet.Status)} | {sheet.AnnualSalary:C0} x {sheet.TermYears}");
+            builder.AppendLine($"    Offer: {sheet.OfferingTeamName} -> rights holder {sheet.RightsHolderTeamName} | deadline {sheet.ResponseDeadline:yyyy-MM-dd}");
+            builder.AppendLine($"    Compensation: {sheet.Compensation.Summary}");
+            builder.AppendLine($"    Agent: {sheet.AgentComment}");
+            builder.AppendLine($"    Recommendation: {sheet.RightsHolderRecommendation}");
+        }
+
         return builder.ToString();
     }
 
@@ -8947,6 +9004,7 @@ internal sealed class AlphaDesktopState
     private readonly RfaUfaService _rfaUfa = new();
     private readonly ArbitrationService _arbitration = new();
     private readonly BuyoutService _buyouts = new();
+    private readonly OfferSheetService _offerSheets = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -9317,6 +9375,14 @@ internal sealed class AlphaDesktopState
     public string BuyoutRuleSummary =>
         _buyouts.BuildRuleSummary(_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
 
+    public IReadOnlyList<OfferSheetEligibility> OfferSheetEligibility =>
+        _offerSheets.BuildEligibility(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public IReadOnlyList<OfferSheet> OfferSheets => ScenarioSnapshot.OfferSheets;
+
+    public string OfferSheetRuleSummary =>
+        _offerSheets.BuildRuleSummary(_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
 
     public GameRecap? LastGameRecap => _seasonFramework.LastPlayerTeamRecap(ScenarioSnapshot);
@@ -9436,7 +9502,8 @@ internal sealed class AlphaDesktopState
         + ContractManagement.AcceptedOffersAwaitingApproval.Count
         + ContractRightsDecisions.Count(decision => decision.IsOpenDecision)
         + ArbitrationCases.Count(item => item.IsOpen)
-        + ContractBuyouts.Count(item => item.Status == BuyoutStatus.PendingConfirmation);
+        + ContractBuyouts.Count(item => item.Status == BuyoutStatus.PendingConfirmation)
+        + OfferSheets.Count(item => item.IsActive);
 
     public int ScoutingReportCount => ScenarioSnapshot.CompletedScoutingReports.Count;
 
@@ -11055,6 +11122,15 @@ internal sealed class AlphaDesktopState
     public bool CanCancelBuyout(string personId) =>
         CanConfirmBuyout(personId);
 
+    public bool CanSubmitOfferSheet(string personId) =>
+        OfferSheetEligibility.Any(item => item.PersonId == personId && item.Status == OfferSheetStatus.Eligible);
+
+    public bool CanMatchOfferSheet(string personId) =>
+        OfferSheets.Any(item => item.PersonId == personId && item.IsActive && item.RightsHolderOrganizationId == ScenarioSnapshot.Organization.OrganizationId);
+
+    public bool CanDeclineOfferSheet(string personId) =>
+        CanMatchOfferSheet(personId);
+
     public string DisplayRightsStatus(FreeAgentRightsStatus status) =>
         status switch
         {
@@ -11089,6 +11165,17 @@ internal sealed class AlphaDesktopState
             BuyoutStatus.NotEligible => "Not Eligible",
             BuyoutStatus.PendingConfirmation => "Pending Confirmation",
             BuyoutStatus.ExpiredWindow => "Expired Window",
+            _ => status.ToString()
+        };
+
+    public string DisplayOfferSheetStatus(OfferSheetStatus status) =>
+        status switch
+        {
+            OfferSheetStatus.NotEligible => "Not Eligible",
+            OfferSheetStatus.AcceptedByPlayer => "Accepted By Player",
+            OfferSheetStatus.MatchedByTeam => "Matched By Team",
+            OfferSheetStatus.DeclinedByPlayer => "Declined By Player",
+            OfferSheetStatus.CompensationRequired => "Compensation Required",
             _ => status.ToString()
         };
 
@@ -11152,6 +11239,15 @@ internal sealed class AlphaDesktopState
     public void CancelBuyoutFor(string personId) =>
         ApplyBuyoutResult(_buyouts.CancelBuyout(_registry, ScenarioSnapshot, personId));
 
+    public void SubmitOfferSheetFor(string personId) =>
+        ApplyOfferSheetResult(_offerSheets.SubmitOfferSheet(_registry, ScenarioSnapshot, personId));
+
+    public void MatchOfferSheetFor(string personId) =>
+        ApplyOfferSheetResult(_offerSheets.MatchOffer(_registry, ScenarioSnapshot, personId));
+
+    public void DeclineOfferSheetFor(string personId) =>
+        ApplyOfferSheetResult(_offerSheets.DeclineAndTakeCompensation(_registry, ScenarioSnapshot, personId));
+
     private void ApplyRightsResult(RightsDecisionResult result)
     {
         if (result.Success)
@@ -11183,6 +11279,21 @@ internal sealed class AlphaDesktopState
     }
 
     private void ApplyBuyoutResult(BuyoutResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            AddInboxItems(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyOfferSheetResult(OfferSheetResult result)
     {
         if (result.Success)
         {

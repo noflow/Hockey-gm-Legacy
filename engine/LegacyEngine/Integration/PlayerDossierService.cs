@@ -407,6 +407,7 @@ public sealed class PlayerDossierService
         lines.AddRange(new RfaUfaService().BuildDossierLines(scenario, personId, scenario.LeagueProfile.Rulebook));
         lines.AddRange(new ArbitrationService().BuildDossierLines(scenario, personId, scenario.LeagueProfile.Rulebook));
         lines.AddRange(new BuyoutService().BuildDossierLines(scenario, personId, scenario.LeagueProfile.Rulebook));
+        lines.AddRange(new OfferSheetService().BuildDossierLines(scenario, personId, scenario.LeagueProfile.Rulebook));
 
         var pipeline = scenario.PlayerPipeline.FirstOrDefault(record => record.PersonId == personId);
         if (pipeline is not null)

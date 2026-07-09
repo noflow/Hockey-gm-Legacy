@@ -117,7 +117,12 @@ public sealed class LeagueTransactionWireService
                 or LeagueTransactionType.ArbitrationAwardIssued
                 or LeagueTransactionType.ArbitrationSettled
                 or LeagueTransactionType.ArbitrationWalkAway
-                or LeagueTransactionType.ContractBoughtOut => LeagueNewsCategory.Signings,
+                or LeagueTransactionType.ContractBoughtOut
+                or LeagueTransactionType.OfferSheetSubmitted
+                or LeagueTransactionType.OfferSheetAccepted
+                or LeagueTransactionType.OfferSheetMatched
+                or LeagueTransactionType.OfferSheetDeclined
+                or LeagueTransactionType.OfferSheetCompleted => LeagueNewsCategory.Signings,
             LeagueTransactionType.PlayerAddedToRoster
                 or LeagueTransactionType.PlayerReleased
                 or LeagueTransactionType.PlayerAssigned
@@ -154,6 +159,11 @@ public sealed class LeagueTransactionWireService
             LegacyEventType.ArbitrationSettled => LeagueTransactionType.ArbitrationSettled,
             LegacyEventType.ArbitrationWalkAway => LeagueTransactionType.ArbitrationWalkAway,
             LegacyEventType.ContractBoughtOut => LeagueTransactionType.ContractBoughtOut,
+            LegacyEventType.OfferSheetSubmitted => LeagueTransactionType.OfferSheetSubmitted,
+            LegacyEventType.OfferSheetAccepted => LeagueTransactionType.OfferSheetAccepted,
+            LegacyEventType.OfferSheetMatched => LeagueTransactionType.OfferSheetMatched,
+            LegacyEventType.OfferSheetDeclined => LeagueTransactionType.OfferSheetDeclined,
+            LegacyEventType.OfferSheetCompleted => LeagueTransactionType.OfferSheetCompleted,
             LegacyEventType.FreeAgentSigned => LeagueTransactionType.PlayerSigned,
             LegacyEventType.FreeAgentSignedElsewhere => LeagueTransactionType.PlayerSigned,
             LegacyEventType.ProspectSigned => LeagueTransactionType.PlayerSigned,
@@ -206,6 +216,11 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.ArbitrationSettled => $"{teamName} settled arbitration with {personName}.",
             LeagueTransactionType.ArbitrationWalkAway => $"{teamName} walked away from arbitration with {personName}.",
             LeagueTransactionType.ContractBoughtOut => $"{teamName} bought out {personName}'s contract.",
+            LeagueTransactionType.OfferSheetSubmitted => $"{teamName} received an offer-sheet filing involving {personName}.",
+            LeagueTransactionType.OfferSheetAccepted => $"{personName} accepted an offer sheet; {teamName} must match or take compensation.",
+            LeagueTransactionType.OfferSheetMatched => $"{teamName} matched the offer sheet for {personName}.",
+            LeagueTransactionType.OfferSheetDeclined => $"{teamName} declined the offer sheet for {personName}.",
+            LeagueTransactionType.OfferSheetCompleted => $"{personName}'s offer sheet was completed.",
             LeagueTransactionType.Injury => $"{teamName} reported an injury update for {personName}.",
             LeagueTransactionType.DraftPick => $"{teamName} drafted {personName}.",
             LeagueTransactionType.StaffHired => $"{teamName} hired {personName}.",

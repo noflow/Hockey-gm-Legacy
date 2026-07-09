@@ -566,6 +566,7 @@ public sealed class MultiLeagueCareerService
             FreeAgentRightsRules = source.FreeAgentRightsRules,
             ArbitrationRules = source.ArbitrationRules,
             BuyoutRules = source.BuyoutRules,
+            OfferSheetRules = source.OfferSheetRules,
             AffiliateRules = source.AffiliateRules is null
                 ? null
                 : new AffiliateRules

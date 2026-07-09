@@ -78,7 +78,7 @@ public static class RulebookPresets
                 NoTradeClausesEnabled = false,
                 NoMoveClausesEnabled = false,
                 ArbitrationEnabled = false,
-                OfferSheetsEnabled = false
+                OfferSheetsEnabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase)
             },
             DraftRules = new DraftRules
             {
@@ -122,7 +122,8 @@ public static class RulebookPresets
             WaiverRules = CreateWaiverRules(leagueType),
             FreeAgentRightsRules = CreateFreeAgentRightsRules(leagueType),
             ArbitrationRules = CreateArbitrationRules(leagueType),
-            BuyoutRules = CreateBuyoutRules(leagueType)
+            BuyoutRules = CreateBuyoutRules(leagueType),
+            OfferSheetRules = CreateOfferSheetRules(leagueType)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -263,6 +264,42 @@ public static class RulebookPresets
             MinimumContractRemainingYears = enabled ? 1 : 0
         };
     }
+
+    private static OfferSheetRules CreateOfferSheetRules(string leagueType)
+    {
+        var enabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase);
+        return new OfferSheetRules
+        {
+            OfferSheetsEnabled = enabled,
+            EligibleRightsStatuses = enabled
+                ? new[] { "Qualified", "RestrictedFreeAgent", "RightsHeld" }
+                : Array.Empty<string>(),
+            CompensationThresholds = enabled
+                ? new[]
+                {
+                    Compensation(0m, 1_500_000m, Array.Empty<int>(), "No compensation tier."),
+                    Compensation(1_500_001m, 3_000_000m, new[] { 3 }, "One third-round pick."),
+                    Compensation(3_000_001m, 5_000_000m, new[] { 2 }, "One second-round pick."),
+                    Compensation(5_000_001m, 7_500_000m, new[] { 1, 3 }, "One first-round pick and one third-round pick."),
+                    Compensation(7_500_001m, null, new[] { 1, 2, 3 }, "One first-, second-, and third-round pick.")
+                }
+                : Array.Empty<OfferSheetCompensationThreshold>(),
+            ResponseWindowDays = enabled ? 7 : 0,
+            RequiredDraftPickOwnership = enabled,
+            MatchingRules = enabled ? "rights_holder_can_match_or_decline" : "disabled",
+            CapValidationEnabled = enabled,
+            ArbitrationBlocksOfferSheets = true
+        };
+    }
+
+    private static OfferSheetCompensationThreshold Compensation(decimal min, decimal? max, IReadOnlyList<int> rounds, string description) =>
+        new()
+        {
+            MinimumAav = min,
+            MaximumAav = max,
+            RequiredRounds = rounds,
+            Description = description
+        };
 
     private static bool IsProfessionalLeague(string leagueType) =>
         leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase)

@@ -234,13 +234,33 @@ internal sealed class Alpha621TradesV3Tests
     private static TradeOffer BuildAcceptedOffer(NewGmScenarioSnapshot scenario)
     {
         var service = new TradeService();
-        var entry = scenario.TradeBlock!.Entries.OrderBy(entry => entry.AssetValue).First();
-        var receive = service.CreateRosterPlayerAsset(scenario, entry.PersonId, TradeSide.OtherOrganization);
-        var outgoing = service.BuildPlayerOrganizationAssets(scenario)
+        var outgoingAssets = service.BuildPlayerOrganizationAssets(scenario);
+        var bestPlayer = outgoingAssets
             .Where(asset => asset.AssetType == TradeAssetType.Player)
             .OrderByDescending(asset => asset.Value)
             .First();
-        return service.CreateOffer(scenario, entry.OrganizationId, entry.TeamName, new[] { outgoing }, new[] { receive });
+        var bestPick = outgoingAssets
+            .Where(asset => asset.AssetType == TradeAssetType.DraftPick)
+            .OrderByDescending(asset => asset.Value)
+            .FirstOrDefault();
+
+        foreach (var entry in scenario.TradeBlock!.Entries.OrderBy(entry => entry.AssetValue))
+        {
+            var receive = service.CreateRosterPlayerAsset(scenario, entry.PersonId, TradeSide.OtherOrganization);
+            var packages = bestPick is null
+                ? new[] { new[] { bestPlayer } }
+                : new[] { new[] { bestPlayer }, new[] { bestPlayer, bestPick } };
+            foreach (var package in packages)
+            {
+                var offer = service.CreateOffer(scenario, entry.OrganizationId, entry.TeamName, package, new[] { receive });
+                if (service.EvaluateTrade(scenario, offer).Decision == TradeOfferStatus.Accepted)
+                {
+                    return offer;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("Could not find deterministic accepted trade test case.");
     }
 
     private static TradeOffer BuildAcceptedMultiAssetOffer(NewGmScenarioSnapshot scenario)

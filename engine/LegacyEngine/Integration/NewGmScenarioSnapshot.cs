@@ -128,6 +128,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public BuyoutHistory BuyoutHistory { get; init; } = BuyoutHistory.Empty;
 
+    public IReadOnlyList<OfferSheet> OfferSheets { get; init; } = Array.Empty<OfferSheet>();
+
+    public OfferSheetHistory OfferSheetHistory { get; init; } = OfferSheetHistory.Empty;
+
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
     public PlayoffState Playoffs { get; init; } = PlayoffState.Empty;
@@ -416,6 +420,12 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         BuyoutHistory.Validate();
+        foreach (var offerSheet in OfferSheets)
+        {
+            offerSheet.Validate();
+        }
+
+        OfferSheetHistory.Validate();
 
         GmCareerHistory?.Validate();
         foreach (var season in OrganizationSeasonHistory)

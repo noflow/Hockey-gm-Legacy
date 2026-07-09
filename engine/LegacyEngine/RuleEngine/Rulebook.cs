@@ -57,6 +57,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("buyout_rules")]
     public BuyoutRules? BuyoutRules { get; init; }
+
+    [JsonPropertyName("offer_sheet_rules")]
+    public OfferSheetRules? OfferSheetRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -363,6 +366,48 @@ public sealed class BuyoutRules
 
     [JsonPropertyName("minimum_contract_remaining_years")]
     public int MinimumContractRemainingYears { get; init; } = 1;
+}
+
+public sealed class OfferSheetRules
+{
+    [JsonPropertyName("offer_sheets_enabled")]
+    public bool OfferSheetsEnabled { get; init; }
+
+    [JsonPropertyName("eligible_rights_statuses")]
+    public IReadOnlyList<string> EligibleRightsStatuses { get; init; } = Array.Empty<string>();
+
+    [JsonPropertyName("compensation_thresholds")]
+    public IReadOnlyList<OfferSheetCompensationThreshold> CompensationThresholds { get; init; } = Array.Empty<OfferSheetCompensationThreshold>();
+
+    [JsonPropertyName("response_window_days")]
+    public int ResponseWindowDays { get; init; } = 7;
+
+    [JsonPropertyName("required_draft_pick_ownership")]
+    public bool RequiredDraftPickOwnership { get; init; } = true;
+
+    [JsonPropertyName("matching_rules")]
+    public string MatchingRules { get; init; } = "rights_holder_can_match_or_decline";
+
+    [JsonPropertyName("cap_validation_enabled")]
+    public bool CapValidationEnabled { get; init; } = true;
+
+    [JsonPropertyName("arbitration_blocks_offer_sheets")]
+    public bool ArbitrationBlocksOfferSheets { get; init; } = true;
+}
+
+public sealed class OfferSheetCompensationThreshold
+{
+    [JsonPropertyName("minimum_aav")]
+    public decimal MinimumAav { get; init; }
+
+    [JsonPropertyName("maximum_aav")]
+    public decimal? MaximumAav { get; init; }
+
+    [JsonPropertyName("required_rounds")]
+    public IReadOnlyList<int> RequiredRounds { get; init; } = Array.Empty<int>();
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; } = string.Empty;
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

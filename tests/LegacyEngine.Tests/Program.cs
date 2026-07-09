@@ -98,6 +98,7 @@ var alpha71WaiversRosterTransactionsTests = new Alpha71WaiversRosterTransactions
 var alpha72RfaUfaContractRightsTests = new Alpha72RfaUfaContractRightsTests();
 var alpha73SalaryArbitrationTests = new Alpha73SalaryArbitrationTests();
 var alpha74ContractBuyoutTests = new Alpha74ContractBuyoutTests();
+var alpha75OfferSheetTests = new Alpha75OfferSheetTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1311,6 +1312,21 @@ runner.Run("alpha 7.4 Action Center shows buyout window", alpha74ContractBuyoutT
 runner.Run("alpha 7.4 desktop exposes buyout UI", alpha74ContractBuyoutTests.AlphaDesktopExposesBuyoutUi);
 runner.Run("alpha 7.4 save load preserves buyout penalties", alpha74ContractBuyoutTests.SaveLoadPreservesBuyoutPenalties);
 runner.Run("alpha 7.4 no LTIR retained salary or Godot added", alpha74ContractBuyoutTests.NoLtirRetainedSalaryOrGodotAdded);
+runner.Run("alpha 7.5 eligible RFA can receive offer sheet", alpha75OfferSheetTests.EligibleRfaCanReceiveOfferSheet);
+runner.Run("alpha 7.5 ineligible player cannot receive offer sheet", alpha75OfferSheetTests.IneligiblePlayerCannotReceiveOfferSheet);
+runner.Run("alpha 7.5 rulebook controls offer sheet enablement", alpha75OfferSheetTests.RulebookControlsOfferSheetEnablement);
+runner.Run("alpha 7.5 compensation calculated from AAV", alpha75OfferSheetTests.CompensationCalculatedFromAav);
+runner.Run("alpha 7.5 missing required picks blocks submission", alpha75OfferSheetTests.MissingRequiredPicksBlocksSubmission);
+runner.Run("alpha 7.5 cap validation blocks impossible offer", alpha75OfferSheetTests.CapValidationBlocksImpossibleOffer);
+runner.Run("alpha 7.5 accepted offer sheet creates rights holder decision", alpha75OfferSheetTests.AcceptedOfferSheetCreatesRightsHolderDecision);
+runner.Run("alpha 7.5 match offer keeps player and creates contract", alpha75OfferSheetTests.MatchOfferKeepsPlayerAndCreatesContract);
+runner.Run("alpha 7.5 decline moves player and records compensation", alpha75OfferSheetTests.DeclineMovesPlayerAndRecordsCompensation);
+runner.Run("alpha 7.5 AI offer sheets are rare", alpha75OfferSheetTests.AiOfferSheetsAreRare);
+runner.Run("alpha 7.5 Action Center shows urgent offer sheet", alpha75OfferSheetTests.ActionCenterShowsUrgentOfferSheet);
+runner.Run("alpha 7.5 dossier exposes offer sheet state", alpha75OfferSheetTests.DossierExposesOfferSheetState);
+runner.Run("alpha 7.5 save load preserves active offer sheet", alpha75OfferSheetTests.SaveLoadPreservesActiveOfferSheet);
+runner.Run("alpha 7.5 desktop exposes offer sheet UI", alpha75OfferSheetTests.AlphaDesktopExposesOfferSheetUi);
+runner.Run("alpha 7.5 no full CBA offer sheet edges or Godot added", alpha75OfferSheetTests.NoFullCbaOfferSheetEdgesOrGodotAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

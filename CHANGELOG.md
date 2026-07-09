@@ -1,6 +1,43 @@
 # Changelog
 
-## Current - Alpha 7.4
+## Current - Alpha 7.5
+
+### Added
+
+- Rulebook-driven offer-sheet rules, including enable/disable flag, eligible RFA rights statuses, compensation thresholds, response window, required draft-pick ownership, matching rules, cap validation, and arbitration-block behavior.
+- Offer-sheet models for `OfferSheet`, `OfferSheetEligibility`, `OfferSheetCompensation`, `OfferSheetStatus`, `OfferSheetDecision`, `OfferSheetResult`, and `OfferSheetHistory`.
+- `OfferSheetService` to evaluate eligibility, calculate compensation from AAV, submit offer sheets, create rights-holder decisions, match offers, decline and take compensation, record history, and queue events/messages.
+- AAV-based compensation pick records using existing trade asset draft-pick structures.
+- Action Center items and inbox messages for urgent rights-holder offer-sheet decisions.
+- Player Dossier offer-sheet status, eligibility, compensation risk, and history lines.
+- League News transaction/event support for submitted, accepted, matched, declined, and completed offer sheets.
+- AlphaDesktop Offer Sheets screen under Hockey Operations, plus selected-player actions for Submit Offer Sheet, Match Offer, and Take Compensation.
+- Alpha 7.5 tests covering eligibility, ineligible players, rulebook enablement, compensation tiers, missing picks, cap validation, rights-holder decisions, matching, compensation completion, rare AI behavior, Action Center, dossier, save/load, desktop exposure, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.5.
+- Contract decision count now includes active offer sheets.
+- Rulebook presets now include NHL-style offer-sheet rules while junior/AHL-style rulebooks stay disabled unless explicitly enabled.
+- League profile rulebook copies preserve offer-sheet rules.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No full CBA edge-case system.
+- No front-loaded offer-sheet rules.
+- No real NHL offer-sheet formulas.
+- No offer-sheet arbitration expansion.
+- No trade protection clauses.
+- No Godot.
+- No new game simulation logic.
+
+## Previous - Alpha 7.4
 
 ### Added
 
