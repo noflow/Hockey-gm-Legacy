@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -633,7 +633,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.7 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.8 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2419,6 +2419,7 @@ internal sealed class MainWindow : Window
         AddParagraph(panel, State.PlayerCoachFitText(row.PersonId));
         AddParagraph(panel, State.RoleSatisfactionText(row.PersonId));
         AddSubHeader(panel, "Scout Reports");
+        AddParagraph(panel, State.ScoutingKnowledgeText(row.PersonId));
         AddParagraph(panel, State.ScoutingReportHeadline(row.PersonId));
         AddParagraph(panel, State.ScoutingComparisonText(row.PersonId));
         AddSubHeader(panel, "Development");
@@ -4389,6 +4390,7 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Analytics", string.IsNullOrWhiteSpace(entry.AnalyticsSummary) ? "not available" : entry.AnalyticsSummary);
                 AddLine(panel, "GM notes", string.IsNullOrWhiteSpace(entry.PersonalNotes) ? "none" : entry.PersonalNotes);
                 AddSubHeader(panel, "Scouting Intelligence");
+                AddParagraph(panel, State.ScoutingKnowledgeText(row.PersonId));
                 AddParagraph(panel, State.ScoutingReportsText(row.PersonId));
                 AddSubHeader(panel, "Report Comparison");
                 AddParagraph(panel, State.ScoutingComparisonText(row.PersonId));
@@ -9041,6 +9043,7 @@ internal sealed class AlphaDesktopState
         prepared = _gameUsage.EnsureGameUsage(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
         prepared = new HockeyIntelligenceRatingService().EnsureRatings(prepared);
+        prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
         prepared = new DevelopmentCurveService().EnsureCurves(prepared);
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _tactics.EnsureTactics(prepared);
@@ -11658,6 +11661,14 @@ internal sealed class AlphaDesktopState
             .OrderByDescending(report => report.CreatedOn)
             .FirstOrDefault();
         return report is null ? "No intelligence report yet; assign a scout for evidence." : $"{report.Source}: {report.Recommendation}";
+    }
+
+    public string ScoutingKnowledgeText(string personId)
+    {
+        var lines = _scoutingIntelligence.BuildKnowledgeDossierLines(ScenarioSnapshot, personId)
+            .Take(7)
+            .ToArray();
+        return string.Join(Environment.NewLine, lines);
     }
 
     public string ScoutingReportsText(string personId)

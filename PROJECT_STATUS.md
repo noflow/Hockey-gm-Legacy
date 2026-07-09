@@ -122,29 +122,30 @@ The five foundation pillars remain:
 - Alpha 7.5 - Offer Sheets v1
 - Alpha 7.6 - Hockey Intelligence Rating Engine v1
 - Alpha 7.7 - Attribute Development Engine v1
+- Alpha 7.8 - Scouting Intelligence v2
 
 ## Current Milestone
 
-Alpha 7.7 - Attribute Development Engine v1
+Alpha 7.8 - Scouting Intelligence v2
 
 ## Current Goal
 
-Make Hockey Intelligence attributes develop through hockey context. Attribute growth now considers age, training focus, coaching specialty, role usage, morale/risk flags, injury drag, development curve, and report timing while keeping hidden truth separate from visible GM estimates.
+Make scouting the main way the GM discovers rating truth. Scouting now builds organization-specific knowledge profiles with known/unknown attributes, estimate ranges, confidence colors, scout bias, scout disagreement, stale report flags, consensus summaries, and scout accuracy history while keeping hidden true ratings internal.
 
-## Why Attribute Development Was Next
+## Why Scouting Intelligence Was Next
 
-Alpha 7.6 completed the hidden/scouted player-evaluation backbone. Alpha 7.7 connects that backbone to development so speed, strength, Hockey IQ, leadership, durability, role fit, coaching, and injuries can move differently over time instead of every player improving as a flat overall number.
+Alpha 7.6 added hidden true ratings and visible scouted estimates, and Alpha 7.7 made attributes develop over time. Alpha 7.8 connects the scouting staff to that backbone so reports improve confidence, reveal attribute ranges, capture scout-specific opinions, and surface only meaningful intelligence alerts.
 
 ## Next Build Target
 
-Alpha 7.8 - TBD
+Alpha 7.9 - TBD
 
 ## Next Milestones
 
-1. Alpha 7.8 - TBD
+1. Alpha 7.9 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, full holdout systems, full CBA edge cases, front-loaded offer-sheet rules, real NHL offer-sheet formulas, LTIR, retained salary, emergency recalls, conditional waivers, compliance buyouts, contract termination appeals, editable ratings, a full attribute editor, practice scheduler, micro-training minigame, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, real scouting databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, full holdout systems, full CBA edge cases, front-loaded offer-sheet rules, real NHL offer-sheet formulas, LTIR, retained salary, emergency recalls, conditional waivers, compliance buyouts, contract termination appeals, editable ratings, a full attribute editor, practice scheduler, micro-training minigame, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

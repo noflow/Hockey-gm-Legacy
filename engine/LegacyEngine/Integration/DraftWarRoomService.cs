@@ -116,16 +116,17 @@ public sealed class DraftWarRoomService
         var entry = scenario.AlphaSnapshot.DraftBoard.Entries.FirstOrDefault(item => item.ProspectPersonId == prospectPersonId);
         var name = PersonName(scenario, prospectPersonId);
         var intelligence = new ScoutingIntelligenceService();
+        var knowledge = intelligence.BuildConsensusFromKnowledge(scenario, prospectPersonId);
         var reports = intelligence.BuildReportCards(scenario, prospectPersonId, scenario.LeagueProfile.Rulebook);
         var confidence = entry?.ScoutingConfidence ?? reports.OrderByDescending(report => report.Confidence).FirstOrDefault()?.Confidence ?? ScoutingConfidenceLevel.Unknown;
         var opinions = new[]
         {
-            Opinion("Head Scout", prospectPersonId, name, reports.FirstOrDefault()?.Recommendation ?? "Keep in the draft-day group.", confidence),
+            Opinion("Head Scout", prospectPersonId, name, reports.FirstOrDefault()?.Recommendation ?? $"Consensus OVR {knowledge.OverallEstimate.Display}, POT {knowledge.PotentialEstimate.Display}.", confidence),
             Opinion("Regional Scout", prospectPersonId, name, reports.Skip(1).FirstOrDefault()?.CurrentPicture ?? RegionOpinion(entry), confidence),
-            Opinion("Development Scout", prospectPersonId, name, DevelopmentOpinion(entry), confidence),
+            Opinion("Development Scout", prospectPersonId, name, $"{DevelopmentOpinion(entry)} {knowledge.Summary}", confidence),
             Opinion("Medical", prospectPersonId, name, MedicalOpinion(entry), confidence),
             Opinion("Character", prospectPersonId, name, entry?.Bio?.CharacterSummary ?? "Character picture incomplete.", confidence),
-            Opinion("Analytics", prospectPersonId, name, entry?.AnalyticsSummary ?? "Analytics sees public production indicators only.", confidence)
+            Opinion("Analytics", prospectPersonId, name, entry?.AnalyticsSummary ?? $"Attribute knowledge: {knowledge.ScoutOpinions.Count} scout-specific opinions.", confidence)
         };
         var varied = opinions.Select(opinion => opinion.Opinion).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         var score = Math.Clamp((int)confidence * 20 + reports.Count * 6 - Math.Max(0, varied - 3) * 5, 0, 100);
@@ -180,7 +181,8 @@ public sealed class DraftWarRoomService
     {
         var prepared = EnsureWarRoom(scenario);
         var board = prepared.DraftWarRoom;
-        return $"Draft War Room: {board.BoardEntries.Count(entry => !entry.IsRemoved)} active board entries, {board.BoardEntries.Count(entry => entry.Tags.Count > 0)} flagged, {board.Needs.Count} needs, {board.Storylines.Count} storylines.";
+        var intelligence = string.Join(" ", new ScoutingIntelligenceService().BuildWarRoomKnowledgeLines(prepared));
+        return $"Draft War Room: {board.BoardEntries.Count(entry => !entry.IsRemoved)} active board entries, {board.BoardEntries.Count(entry => entry.Tags.Count > 0)} flagged, {board.Needs.Count} needs, {board.Storylines.Count} storylines. Scouting intelligence: {intelligence}";
     }
 
     public int ScoreAiDraftFit(NewGmScenarioSnapshot scenario, string organizationId, DraftBoardEntry entry, int fallbackRank)

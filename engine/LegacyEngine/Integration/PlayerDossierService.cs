@@ -223,6 +223,7 @@ public sealed class PlayerDossierService
     {
         var lines = new List<string>();
         var intelligence = new ScoutingIntelligenceService();
+        lines.AddRange(intelligence.BuildKnowledgeDossierLines(scenario, personId));
         var boardEntry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(entry => entry.ProspectPersonId == personId);
         if (boardEntry is not null)
         {

@@ -121,6 +121,7 @@ public sealed class ScoutingOperationsService
         var updatedAssignments = new List<ScoutingOperationAssignment>();
         var reports = new List<ScoutingReport>(scenario.CompletedScoutingReports);
         var inbox = new List<AlphaInboxItem>();
+        var completedAssignments = new List<ScoutingOperationAssignment>();
         var completed = 0;
 
         foreach (var assignment in scenario.ScoutingOperations)
@@ -160,6 +161,7 @@ public sealed class ScoutingOperationsService
             };
             completedAssignment.Validate();
             updatedAssignments.Add(completedAssignment);
+            completedAssignments.Add(completedAssignment);
             completed++;
 
             QueueEvent(registry, scenario, LegacyEventType.ScoutAssignmentCompleted, "Scouting assignment completed", $"{assignment.ScoutName} completed a report on {assignment.TargetName}.", assignment.ScoutPersonId, report.PlayerId);
@@ -190,6 +192,17 @@ public sealed class ScoutingOperationsService
                 .ThenBy(report => report.ReportId, StringComparer.Ordinal)
                 .ToArray()
         };
+        var intelligence = new ScoutingIntelligenceService();
+        foreach (var assignment in completedAssignments)
+        {
+            var report = updated.CompletedScoutingReports.FirstOrDefault(item => item.ReportId == assignment.ReportId);
+            if (report is null)
+            {
+                continue;
+            }
+
+            updated = intelligence.UpdateKnowledgeFromReport(updated, report, assignment).ScenarioSnapshot;
+        }
 
         return Result(true, updated, null, null, inbox, completed == 0 ? "No scouting assignments completed today." : $"Completed {completed} scouting assignment(s).");
     }

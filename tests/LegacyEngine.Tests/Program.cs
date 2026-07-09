@@ -101,6 +101,7 @@ var alpha74ContractBuyoutTests = new Alpha74ContractBuyoutTests();
 var alpha75OfferSheetTests = new Alpha75OfferSheetTests();
 var alpha76HockeyIntelligenceRatingTests = new Alpha76HockeyIntelligenceRatingTests();
 var alpha77AttributeDevelopmentTests = new Alpha77AttributeDevelopmentTests();
+var alpha78ScoutingIntelligenceTests = new Alpha78ScoutingIntelligenceTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1355,6 +1356,19 @@ runner.Run("alpha 7.7 Action Center only shows meaningful events", alpha77Attrib
 runner.Run("alpha 7.7 dossier exposes attribute trends", alpha77AttributeDevelopmentTests.DossierExposesAttributeTrends);
 runner.Run("alpha 7.7 history records breakthrough or setback", alpha77AttributeDevelopmentTests.HistoryRecordsBreakthroughOrSetback);
 runner.Run("alpha 7.7 hidden true ratings are not rendered directly", alpha77AttributeDevelopmentTests.HiddenTrueRatingsAreNotRenderedDirectly);
+runner.Run("alpha 7.8 scouting knowledge profile created", alpha78ScoutingIntelligenceTests.ScoutingKnowledgeProfileCreated);
+runner.Run("alpha 7.8 unscouted attributes remain unknown", alpha78ScoutingIntelligenceTests.UnscoutedAttributesRemainUnknown);
+runner.Run("alpha 7.8 scouting assignment updates attributes", alpha78ScoutingIntelligenceTests.ScoutingAssignmentUpdatesSomeAttributes);
+runner.Run("alpha 7.8 repeated scouting improves confidence", alpha78ScoutingIntelligenceTests.RepeatedScoutingImprovesConfidence);
+runner.Run("alpha 7.8 scout specialty improves matching attributes", alpha78ScoutingIntelligenceTests.ScoutSpecialtyImprovesMatchingAttributesFaster);
+runner.Run("alpha 7.8 scout bias affects estimate", alpha78ScoutingIntelligenceTests.ScoutBiasAffectsEstimate);
+runner.Run("alpha 7.8 multiple scouts can disagree", alpha78ScoutingIntelligenceTests.MultipleScoutsCanDisagree);
+runner.Run("alpha 7.8 consensus generated", alpha78ScoutingIntelligenceTests.ConsensusGenerated);
+runner.Run("alpha 7.8 scout accuracy history updates", alpha78ScoutingIntelligenceTests.ScoutAccuracyHistoryUpdates);
+runner.Run("alpha 7.8 dossier exposes scouting intelligence", alpha78ScoutingIntelligenceTests.DossierExposesScoutingIntelligence);
+runner.Run("alpha 7.8 war room exposes scout consensus", alpha78ScoutingIntelligenceTests.WarRoomExposesScoutConsensus);
+runner.Run("alpha 7.8 stale report flagged", alpha78ScoutingIntelligenceTests.StaleReportFlagged);
+runner.Run("alpha 7.8 no true ratings exposed directly", alpha78ScoutingIntelligenceTests.NoTrueRatingsExposedDirectly);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

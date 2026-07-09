@@ -6,7 +6,7 @@ using LegacyEngine.Draft;
 
 namespace LegacyEngine.Integration;
 
-public sealed class ScoutingIntelligenceService
+public sealed partial class ScoutingIntelligenceService
 {
     public IReadOnlyList<ScoutIntelligenceProfile> BuildScoutProfiles(NewGmScenarioSnapshot scenario, Rulebook? rulebook = null)
     {

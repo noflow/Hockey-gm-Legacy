@@ -172,6 +172,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<AttributeDevelopmentSnapshot> AttributeDevelopmentSnapshots { get; init; } = Array.Empty<AttributeDevelopmentSnapshot>();
 
+    public IReadOnlyList<ScoutingKnowledgeProfile> ScoutingKnowledgeProfiles { get; init; } = Array.Empty<ScoutingKnowledgeProfile>();
+
+    public IReadOnlyList<ScoutAccuracyRecord> ScoutAccuracyHistory { get; init; } = Array.Empty<ScoutAccuracyRecord>();
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -528,6 +532,16 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var snapshot in AttributeDevelopmentSnapshots)
         {
             snapshot.Validate();
+        }
+
+        foreach (var profile in ScoutingKnowledgeProfiles)
+        {
+            profile.Validate();
+        }
+
+        foreach (var record in ScoutAccuracyHistory)
+        {
+            record.Validate();
         }
 
         foreach (var state in PlayerCareerStates)

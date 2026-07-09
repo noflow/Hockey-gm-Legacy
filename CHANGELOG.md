@@ -1,6 +1,40 @@
 # Changelog
 
-## Current - Alpha 7.7
+## Current - Alpha 7.8
+
+### Added
+
+- Scouting Intelligence v2 with `ScoutingKnowledgeProfile`, attribute knowledge states, scout-specific opinions, bias, consensus, stale flags, update records, and scout accuracy history.
+- Organization-specific scouting knowledge that tracks known and unknown attributes, confidence colors, estimate ranges, source scout, last viewed date, disagreement level, and recommended next action.
+- Scouting assignment integration so completed reports improve visible OVR/POT estimates, attribute knowledge, confidence, and consensus based on scout quality, specialty, regional fit, workload, relationship, and communication.
+- Scout bias/tendency handling for optimistic, conservative, size/skating/skill, goalie, character, regional, sleeper, and safe-pick reads; bias affects estimates, not hidden true ratings.
+- Player Dossier scouting intelligence lines with consensus, attribute confidence grid, scout disagreement, stale state, scout-specific opinions, and privacy-safe rating language.
+- Draft War Room scouting intelligence summary with consensus-board status, hidden-gem candidate language, and top-board attribute coverage.
+- Action Center scouting intelligence alerts for major disagreement, stale priority reports, hidden-gem candidates, and bust warnings only.
+- Alpha 7.8 tests covering knowledge profiles, unscouted unknown attributes, report-driven updates, repeated scouting confidence, specialty effects, bias, disagreement, consensus, scout accuracy history, dossier/war-room exposure, stale reports, and no true-rating exposure.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.8.
+- AlphaDesktop player cards now show a concise scouting intelligence block before legacy report/comparison text.
+- Completed scouting assignments now update knowledge state in addition to returning scouting reports and one completion message.
+- Project status now treats Scouting Intelligence v2 as the current completed milestone.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No real scouting database.
+- No editable ratings.
+- No media expansion.
+- No Godot.
+- No new game simulation.
+
+## Previous - Alpha 7.7
 
 ### Added
 

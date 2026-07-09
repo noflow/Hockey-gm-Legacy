@@ -28,6 +28,7 @@ public sealed class ActionCenterService
         AddStaffVacancies(staffVacancies, items);
         AddBudgetWarnings(budget, items);
         AddScoutingCompletions(scenario, items);
+        AddScoutingKnowledgeItems(scenario, items);
         AddDevelopmentRecommendations(scenario, items);
         AddDevelopmentCurveItems(scenario, items);
         AddAttributeDevelopmentItems(scenario, items);
@@ -501,6 +502,11 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+    }
+
+    private static void AddScoutingKnowledgeItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new ScoutingIntelligenceService().BuildActionItems(scenario));
     }
 
     private static void AddDevelopmentRecommendations(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
