@@ -77,7 +77,7 @@ public sealed class AlphaDraftExperienceService
 
         while (state.CurrentPick is { } pick && pick.OwningOrganizationId != state.PlayerOrganizationId)
         {
-            var prospectId = SelectAiProspect(board, draft, pick.PickNumber);
+            var prospectId = SelectAiProspect(scenario, board, draft, pick.OwningOrganizationId, pick.PickNumber);
             var selection = registry.DraftEngine.SelectProspect(
                 draft,
                 pick.RoundNumber,
@@ -309,6 +309,13 @@ public sealed class AlphaDraftExperienceService
             DraftExperience = completedState
         };
         updatedScenario = new DraftTrackingService().RecordDraftCompleted(updatedScenario, selections);
+        var warRoom = new DraftWarRoomService();
+        updatedScenario = warRoom.EnsureWarRoom(updatedScenario);
+        var review = warRoom.BuildPostDraftReview(updatedScenario, selections);
+        updatedScenario = updatedScenario with
+        {
+            DraftWarRoom = updatedScenario.DraftWarRoom with { PostDraftReview = review }
+        };
 
         var inbox = new[]
         {
@@ -316,7 +323,7 @@ public sealed class AlphaDraftExperienceService
                 scenario,
                 LegacyEventType.DraftRecapCreated,
                 "Draft recap",
-                $"{completedState.Recap!.PlayersDrafted} players were drafted. Owner reaction: {completedState.Recap.OwnerReaction}")
+                $"{completedState.Recap!.PlayersDrafted} players were drafted. {review.HeadScoutReview} {review.OwnerReview}")
         };
 
         QueueScenarioEvent(
@@ -443,16 +450,25 @@ public sealed class AlphaDraftExperienceService
             .ToArray();
     }
 
-    private static string SelectAiProspect(DraftBoard board, LegacyEngine.Draft.Draft draft, int pickNumber)
+    private static string SelectAiProspect(NewGmScenarioSnapshot scenario, DraftBoard board, LegacyEngine.Draft.Draft draft, string organizationId, int pickNumber)
     {
         var selected = draft.Picks
             .Where(item => item.Selection is not null)
             .Select(item => item.Selection!.ProspectPersonId)
             .ToHashSet(StringComparer.Ordinal);
 
+        var warRoom = new DraftWarRoomService();
         return board.Entries
-            .OrderBy(item => item.Rank)
-            .FirstOrDefault(item => !selected.Contains(item.ProspectPersonId))
+            .Where(item => !selected.Contains(item.ProspectPersonId))
+            .Select((item, index) => new
+            {
+                Entry = item,
+                Score = warRoom.ScoreAiDraftFit(scenario, organizationId, item, index)
+            })
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Entry.Rank)
+            .FirstOrDefault()
+            ?.Entry
             ?.ProspectPersonId
             ?? $"auto-prospect-{pickNumber:000}";
     }

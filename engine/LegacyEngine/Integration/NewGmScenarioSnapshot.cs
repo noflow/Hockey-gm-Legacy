@@ -28,6 +28,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public DraftClassProfile? CurrentDraftClassProfile { get; init; }
 
+    public DraftWarRoomState DraftWarRoom { get; init; } = DraftWarRoomState.Empty;
+
     public IReadOnlyList<DraftPickSummary> DraftRights { get; init; } = Array.Empty<DraftPickSummary>();
 
     public IReadOnlyList<DraftRightsRecord> ProspectRights { get; init; } = Array.Empty<DraftRightsRecord>();
@@ -272,6 +274,7 @@ public sealed record NewGmScenarioSnapshot(
 
         DraftExperience?.Validate();
         CurrentDraftClassProfile?.Validate();
+        DraftWarRoom.Validate();
         foreach (var prospect in ProspectRights)
         {
             prospect.Validate();

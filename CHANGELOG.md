@@ -1,6 +1,40 @@
 # Changelog
 
-## Current - Alpha 6.15
+## Current - Alpha 6.16
+
+### Added
+
+- Draft War Room state for custom GM board entries, original board snapshot/history, watch-list tags, team needs, draft storylines, department best-player opinions, scout consensus, prospect comparisons, and post-draft reviews.
+- `DraftWarRoomService` to create year-round War Room state, move prospects, move to a rank, pin/favorite/tag/remove players, update GM notes, compare 2-4 prospects, build scout consensus, score AI draft fit, and generate post-draft reviews.
+- Watch-list tags for Watching, Priority, Sleeper, Avoid, Medical Concern, Character Concern, Late Round Target, Favorite, and Pinned.
+- War Room integration into New GM scenario bootstrap and season rollover so each draft class gets a persistent draft prep room.
+- AI draft selection now considers organization AI needs, draft strategy/personality, position fit, and scouting confidence instead of only raw board rank.
+- AlphaDesktop Draft War Room screen under Hockey Operations with My Draft Board, Watch List, Needs Analysis, Draft Class Summary, department opinions, scout consensus, comparison, storylines, draft history, draft rights, original board snapshot, and post-draft review.
+- Live draft controls for Skip, View Dossier, and Compare, with upcoming picks and War Room consensus/tag context in the selected prospect card.
+- Alpha 6.16 tests covering War Room creation, custom rankings, watch-list tags, needs, comparison, consensus, best-player opinions, AI draft fit, post-draft review, original board history, Where Are They Now continuity, UI exposure, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.16.
+- Draft completion now stores a War Room post-draft review and folds head scout/owner review into the final draft recap message.
+- Manual War Room ranking now preserves the GM's selected order instead of re-sorting back to the previous rank.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No mock drafts.
+- No draft lottery.
+- No real player database.
+- No Godot.
+- No media expansion.
+- No save/database/cloud changes.
+
+## Previous - Alpha 6.15
 
 ### Added
 

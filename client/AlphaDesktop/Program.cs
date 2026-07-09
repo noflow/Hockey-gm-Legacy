@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.15 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.16 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -552,6 +552,7 @@ internal sealed class MainWindow : Window
         if (State.IsDraftUiEnabled)
         {
             hockeyOperations.Insert(5, new WorkspaceScreen("Draft Board", CreateSelectablePeopleContent("Draft Board")));
+            hockeyOperations.Insert(5, new WorkspaceScreen("Draft War Room", CreateTextScreen("Draft War Room")));
         }
         AddWorkspaceTab(tabs, "Hockey Operations", hockeyOperations);
 
@@ -626,7 +627,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.15 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.16 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1802,6 +1803,10 @@ internal sealed class MainWindow : Window
         if (_selectableLists.ContainsKey("Draft Board"))
         {
             RefreshSelectableTab("Draft Board", BuildDraftBoardRows());
+        }
+        if (_tabs.ContainsKey("Draft War Room"))
+        {
+            _tabs["Draft War Room"].Text = BuildDraftWarRoom();
         }
         RefreshSelectableTab("Prospect List", BuildProspectRows());
         RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
@@ -4799,6 +4804,14 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Board Down", () => State.MoveDraftBoardPlayer(row.PersonId, 1), State.IsDraftUiEnabled);
             yield return CreateDetailButton("Star", () => State.ToggleStarProspect(row.PersonId), State.IsDraftUiEnabled);
             yield return CreateDetailButton("GM Note", () => State.AddDraftNoteFor(row.PersonId), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Pin", () => State.ToggleDraftWarRoomTag(row.PersonId, DraftWatchTag.Pinned), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Favorite", () => State.ToggleDraftWarRoomTag(row.PersonId, DraftWatchTag.Favorite), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Priority", () => State.ToggleDraftWarRoomTag(row.PersonId, DraftWatchTag.Priority), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Sleeper", () => State.ToggleDraftWarRoomTag(row.PersonId, DraftWatchTag.Sleeper), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Avoid", () => State.ToggleDraftWarRoomTag(row.PersonId, DraftWatchTag.Avoid), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Remove Board", () => State.RemoveFromDraftWarRoom(row.PersonId), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Consensus", () => MessageBox.Show(State.DraftConsensusText(row.PersonId), "Scout Consensus", MessageBoxButton.OK, MessageBoxImage.Information), State.IsDraftUiEnabled);
+            yield return CreateDetailButton("Compare", () => MessageBox.Show(State.CompareWithNearbyProspectsText(row.PersonId), "Prospect Compare", MessageBoxButton.OK, MessageBoxImage.Information), State.IsDraftUiEnabled);
             yield return CreateDetailButton("Assign Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0);
             yield return CreateDetailButton("Scout Again", () => State.ScoutAgainFor(row.PersonId), State.AvailableScoutProfiles.Count > 0);
             yield return CreateDetailButton("Tournament", () => State.TournamentScoutFor(row.PersonId), State.AvailableScoutProfiles.Count > 0);
@@ -5130,6 +5143,31 @@ internal sealed class MainWindow : Window
         }
 
         actionBar.Children.Add(draftButton);
+        var skipButton = CreateButton("Skip", () =>
+        {
+            if (state.IsPlayerTurn)
+            {
+                State.SkipDraftPick();
+            }
+        });
+        skipButton.IsEnabled = state.IsPlayerTurn && state.Status == DraftExperienceStatus.AwaitingPlayerPick && prospectList.Items.Count > 0;
+        actionBar.Children.Add(skipButton);
+        actionBar.Children.Add(CreateButton("View Dossier", () =>
+        {
+            var prospectId = (prospectList.SelectedItem as ListBoxItem)?.Tag as string;
+            if (!string.IsNullOrWhiteSpace(prospectId))
+            {
+                OpenDossierFor(prospectId);
+            }
+        }));
+        actionBar.Children.Add(CreateButton("Compare", () =>
+        {
+            var prospectId = (prospectList.SelectedItem as ListBoxItem)?.Tag as string;
+            if (!string.IsNullOrWhiteSpace(prospectId))
+            {
+                MessageBox.Show(State.CompareWithNearbyProspectsText(prospectId), "Prospect Compare", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }));
         if (State.ScenarioSnapshot.DraftExperience?.Status == DraftExperienceStatus.Completed)
         {
             actionBar.Children.Add(CreateButton("End Draft", State.EndLiveDraftModal));
@@ -5213,6 +5251,17 @@ internal sealed class MainWindow : Window
         }
 
         builder.AppendLine();
+        builder.AppendLine("Upcoming Picks");
+        if (draft.Draft?.Picks is not null)
+        {
+            foreach (var pick in draft.Draft.Picks.Where(item => item.Selection is null).OrderBy(item => item.PickNumber).Take(8))
+            {
+                var name = draft.OrganizationNames.GetValueOrDefault(pick.OwningOrganizationId, pick.OwningOrganizationId);
+                builder.AppendLine($"  #{pick.PickNumber} {name}");
+            }
+        }
+
+        builder.AppendLine();
         builder.AppendLine("Your Selections / Draft Rights");
         var rights = State.ScenarioSnapshot.DraftRights.Count > 0
             ? State.ScenarioSnapshot.DraftRights
@@ -5282,6 +5331,10 @@ internal sealed class MainWindow : Window
         }
 
         builder.AppendLine($"Scouting confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"}");
+        var consensus = State.DraftConsensus(entry.ProspectPersonId);
+        var warRoomEntry = State.DraftWarRoom.BoardEntries.FirstOrDefault(item => item.ProspectPersonId == entry.ProspectPersonId);
+        builder.AppendLine($"War room rank: #{warRoomEntry?.PersonalRank.ToString() ?? entry.Rank.ToString()} | Tags: {(warRoomEntry is null || warRoomEntry.Tags.Count == 0 ? "Watching" : string.Join(", ", warRoomEntry.Tags))}");
+        builder.AppendLine($"Scout consensus: {consensus.Level} ({consensus.AgreementScore}/100)");
         builder.AppendLine($"Current picture: {State.DraftCurrentPicture(entry)}");
         builder.AppendLine($"Future picture: {State.DraftFuturePicture(entry)}");
         builder.AppendLine($"Projection: {entry.ProjectionText}");
@@ -7573,6 +7626,141 @@ internal sealed class MainWindow : Window
             _ => "No automatic change will happen without GM approval."
         };
 
+    private string BuildDraftWarRoom()
+    {
+        var board = State.DraftWarRoom;
+        var builder = new StringBuilder();
+        builder.AppendLine("Draft War Room");
+        builder.AppendLine("==============");
+        builder.AppendLine(State.DraftWarRoomSummaryText);
+        builder.AppendLine();
+
+        builder.AppendLine("Draft Class Summary");
+        builder.AppendLine($"  Theme: {State.DraftClassThemeText}");
+        builder.AppendLine($"  Overview: {State.DraftClassSummaryText}");
+        builder.AppendLine($"  Strengths: {State.DraftClassStrengthText}");
+        builder.AppendLine($"  Weaknesses: {State.DraftClassWeaknessText}");
+        builder.AppendLine($"  Position depth: {State.DraftClassPositionDepthText}");
+        builder.AppendLine($"  Regional mix: {State.DraftClassRegionalText}");
+        builder.AppendLine($"  Scout quote: {State.DraftClassScoutQuoteText}");
+        builder.AppendLine();
+
+        builder.AppendLine("My Draft Board");
+        foreach (var entry in board.BoardEntries.Where(entry => !entry.IsRemoved).OrderBy(entry => entry.PersonalRank).Take(30))
+        {
+            var boardEntry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(item => item.ProspectPersonId == entry.ProspectPersonId);
+            var quick = boardEntry is null ? State.RegionTeamText(entry.ProspectPersonId) : State.DraftQuickScan(boardEntry);
+            var tags = entry.Tags.Count == 0 ? "watching" : string.Join(", ", entry.Tags);
+            builder.AppendLine($"  #{entry.PersonalRank} {entry.ProspectName} | {quick} | tags: {tags}");
+            builder.AppendLine($"     Group: {entry.GroupName} | Notes: {(string.IsNullOrWhiteSpace(entry.GmNotes) ? "none" : entry.GmNotes)}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Watch List");
+        var watched = board.BoardEntries
+            .Where(entry => entry.Tags.Count > 0 && !entry.IsRemoved)
+            .OrderBy(entry => entry.PersonalRank)
+            .Take(20)
+            .ToArray();
+        if (watched.Length == 0)
+        {
+            builder.AppendLine("  No tagged prospects yet. Use Priority, Sleeper, Avoid, Favorite, or Pin from the Scouting/Draft Board detail panel.");
+        }
+        foreach (var entry in watched)
+        {
+            builder.AppendLine($"  {entry.ProspectName}: {string.Join(", ", entry.Tags)}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Needs Analysis");
+        foreach (var need in board.Needs)
+        {
+            builder.AppendLine($"  {need.Priority}: {need.Label} - {need.Reason}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Best Player Available Opinions");
+        foreach (var opinion in board.BestPlayerAvailableOpinions)
+        {
+            builder.AppendLine($"  {opinion.Department}: {opinion.ProspectName} ({opinion.Confidence}) - {opinion.Opinion}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Scout Consensus Snapshot");
+        foreach (var entry in board.BoardEntries.Where(entry => !entry.IsRemoved).OrderBy(entry => entry.PersonalRank).Take(5))
+        {
+            var consensus = State.DraftConsensus(entry.ProspectPersonId);
+            builder.AppendLine($"  {entry.ProspectName}: {consensus.Level} ({consensus.AgreementScore}/100) - {consensus.Summary}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Prospect Compare");
+        builder.AppendLine(State.DraftComparisonText(board.BoardEntries.Where(entry => !entry.IsRemoved).OrderBy(entry => entry.PersonalRank).Take(4).Select(entry => entry.ProspectPersonId).ToArray()));
+        builder.AppendLine();
+
+        builder.AppendLine("Draft Storylines");
+        foreach (var storyline in board.Storylines)
+        {
+            builder.AppendLine($"  {storyline.Headline}: {storyline.Summary}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Team Draft History");
+        var history = State.ScenarioSnapshot.DraftHistory
+            .OrderByDescending(record => record.SeasonYear)
+            .ThenBy(record => record.Round)
+            .ThenBy(record => record.Pick)
+            .Take(8)
+            .ToArray();
+        if (history.Length == 0)
+        {
+            builder.AppendLine("  No completed tracked drafts yet.");
+        }
+        foreach (var record in history)
+        {
+            builder.AppendLine($"  {record.SeasonYear} R{record.Round} #{record.Pick}: {record.ProspectName} - {record.OutcomeSummary}");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Draft Picks / Rights");
+        if (State.ScenarioSnapshot.DraftRights.Count == 0)
+        {
+            builder.AppendLine("  No current player-team selections yet.");
+        }
+        foreach (var right in State.ScenarioSnapshot.DraftRights)
+        {
+            builder.AppendLine($"  R{right.RoundNumber} #{right.PickNumber}: {right.ProspectName} ({right.OrganizationName})");
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("Original Board Snapshot");
+        foreach (var snapshot in board.OriginalBoardSnapshot.Take(12))
+        {
+            builder.AppendLine($"  #{snapshot.Rank} {snapshot.ProspectName} | {State.PositionShortText(snapshot.Position)} | {snapshot.Confidence?.ToString() ?? "Unknown"} | {snapshot.Projection}");
+        }
+        builder.AppendLine();
+
+        if (board.PostDraftReview is not null)
+        {
+            builder.AppendLine("Post-Draft Review");
+            builder.AppendLine($"  Head scout: {board.PostDraftReview.HeadScoutReview}");
+            builder.AppendLine($"  Owner: {board.PostDraftReview.OwnerReview}");
+            builder.AppendLine($"  Coach: {board.PostDraftReview.CoachReview}");
+            builder.AppendLine($"  League grade: {board.PostDraftReview.LeagueGrade}");
+            foreach (var impact in board.PostDraftReview.PlayerImpactSummaries)
+            {
+                builder.AppendLine($"  Impact: {impact}");
+            }
+        }
+        else
+        {
+            builder.AppendLine("Post-Draft Review");
+            builder.AppendLine("  Available after the live draft completes.");
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildDraftBoard()
     {
         var builder = new StringBuilder();
@@ -8527,6 +8715,7 @@ internal sealed class AlphaDesktopState
     private readonly TacticsService _tactics = new();
     private readonly StoryService _stories = new();
     private readonly MediaService _media = new();
+    private readonly DraftWarRoomService _warRoom = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8558,6 +8747,7 @@ internal sealed class AlphaDesktopState
         prepared = _lineups.EnsureLineup(prepared);
         prepared = _lineChemistry.EnsureChemistry(prepared);
         prepared = _gameUsage.EnsureGameUsage(prepared);
+        prepared = _warRoom.EnsureWarRoom(prepared);
         prepared = _tactics.EnsureTactics(prepared);
         ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
@@ -9046,6 +9236,63 @@ internal sealed class AlphaDesktopState
 
             var summary = new DraftClassGenerator().BuildSummary(DraftClassProfile, Snapshot.DraftBoard);
             return summary.PlayersToWatch.Count == 0 ? "none listed" : string.Join(" | ", summary.PlayersToWatch);
+        }
+    }
+
+    public DraftWarRoomState DraftWarRoom
+    {
+        get
+        {
+            var updated = _warRoom.EnsureWarRoom(ScenarioSnapshot);
+            ScenarioSnapshot = updated;
+            Snapshot = updated.AlphaSnapshot;
+            return updated.DraftWarRoom;
+        }
+    }
+
+    public string DraftWarRoomSummaryText => _warRoom.BuildWarRoomSummary(ScenarioSnapshot);
+
+    public DraftScoutConsensus DraftConsensus(string prospectPersonId) =>
+        _warRoom.BuildConsensus(ScenarioSnapshot, prospectPersonId);
+
+    public string DraftConsensusText(string prospectPersonId)
+    {
+        var consensus = DraftConsensus(prospectPersonId);
+        var builder = new StringBuilder();
+        builder.AppendLine($"{consensus.ProspectName}: {consensus.Level} ({consensus.AgreementScore}/100)");
+        builder.AppendLine(consensus.Summary);
+        builder.AppendLine();
+        foreach (var opinion in consensus.Opinions)
+        {
+            builder.AppendLine($"{opinion.Department}: {opinion.Opinion} Confidence: {opinion.Confidence}");
+        }
+
+        return builder.ToString();
+    }
+
+    public string DraftComparisonText(IReadOnlyList<string> prospectIds)
+    {
+        try
+        {
+            var comparison = _warRoom.CompareProspects(ScenarioSnapshot, prospectIds);
+            var builder = new StringBuilder();
+            builder.AppendLine(comparison.Summary);
+            builder.AppendLine();
+            foreach (var item in comparison.Prospects)
+            {
+                builder.AppendLine($"{item.ProspectName} | {PositionShort(item.Position)} | age {item.Age?.ToString() ?? "unknown"} | {item.Height}, {item.Weight} | {item.CurrentTeamLeague}");
+                builder.AppendLine($"  Confidence: {item.Confidence?.ToString() ?? "Unknown"} | Projection: {item.Projection}");
+                builder.AppendLine($"  Character: {item.Character}");
+                builder.AppendLine($"  Development: {item.Development}");
+                builder.AppendLine($"  Medical: {item.Medical}");
+                builder.AppendLine($"  Story: {item.DraftStory}");
+            }
+
+            return builder.ToString();
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
         }
     }
 
@@ -11839,6 +12086,56 @@ internal sealed class AlphaDesktopState
 
         var note = $"GM note added on {Snapshot.CurrentDate:yyyy-MM-dd}: selected prospect review.";
         ApplyAction(_draftExperience.UpdatePersonalNotes(_registry, ScenarioSnapshot, prospectPersonId, note));
+        ScenarioSnapshot = _warRoom.UpdateGmNotes(ScenarioSnapshot, prospectPersonId, note);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+    }
+
+    public void ToggleDraftWarRoomTag(string prospectPersonId, DraftWatchTag tag)
+    {
+        if (Snapshot.DraftBoard.Entries.All(entry => entry.ProspectPersonId != prospectPersonId))
+        {
+            LatestSummary = "Selected prospect is not on the draft board.";
+            return;
+        }
+
+        var current = DraftWarRoom.BoardEntries.FirstOrDefault(entry => entry.ProspectPersonId == prospectPersonId);
+        var enabled = current?.Tags.Contains(tag) != true;
+        ScenarioSnapshot = _warRoom.SetWatchTag(ScenarioSnapshot, prospectPersonId, tag, enabled);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        LatestSummary = $"{FindPersonName(prospectPersonId)} {(enabled ? "tagged" : "untagged")} as {tag}.";
+    }
+
+    public void RemoveFromDraftWarRoom(string prospectPersonId)
+    {
+        ScenarioSnapshot = _warRoom.RemoveFromPersonalBoard(ScenarioSnapshot, prospectPersonId);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        LatestSummary = $"{FindPersonName(prospectPersonId)} removed from your personal draft board.";
+    }
+
+    public string CompareWithNearbyProspectsText(string prospectPersonId)
+    {
+        var ranked = DraftWarRoom.BoardEntries
+            .Where(entry => !entry.IsRemoved)
+            .OrderBy(entry => entry.PersonalRank)
+            .Select(entry => entry.ProspectPersonId)
+            .ToList();
+        if (!ranked.Contains(prospectPersonId, StringComparer.Ordinal))
+        {
+            ranked.Insert(0, prospectPersonId);
+        }
+
+        var index = ranked.FindIndex(id => string.Equals(id, prospectPersonId, StringComparison.Ordinal));
+        var ids = ranked
+            .Skip(Math.Max(0, index - 1))
+            .Take(4)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (ids.Length < 2)
+        {
+            ids = ranked.Take(4).ToArray();
+        }
+
+        return DraftComparisonText(ids);
     }
 
     public void OfferProspectContractFor(string prospectPersonId) =>
@@ -11952,6 +12249,29 @@ internal sealed class AlphaDesktopState
         }
 
         ApplyDraftResult(_draftExperience.MakePlayerSelectionAndContinue(_registry, ScenarioSnapshot, prospectPersonId));
+    }
+
+    public void SkipDraftPick()
+    {
+        if (ScenarioSnapshot.DraftExperience?.IsPlayerTurn != true)
+        {
+            LatestSummary = "Skip is only available when your team is on the clock.";
+            return;
+        }
+
+        var prospect = DraftWarRoom.BoardEntries
+            .Where(entry => !entry.IsRemoved && !entry.Tags.Contains(DraftWatchTag.Avoid))
+            .OrderBy(entry => entry.PersonalRank)
+            .Select(entry => Snapshot.DraftBoard.Entries.FirstOrDefault(board => board.ProspectPersonId == entry.ProspectPersonId))
+            .FirstOrDefault(entry => entry is not null)
+            ?? Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        if (prospect is null)
+        {
+            LatestSummary = "No available prospect remains on the draft board.";
+            return;
+        }
+
+        ApplyDraftResult(_draftExperience.MakePlayerSelectionAndContinue(_registry, ScenarioSnapshot, prospect.ProspectPersonId));
     }
 
     public void EndLiveDraftModal()
@@ -12535,6 +12855,7 @@ internal sealed class AlphaDesktopState
         updated = _stories.EnsureStories(updated, _registry);
         updated = _media.EnsureMediaFeed(updated, LeagueTransactions, _registry);
         updated = _lineups.EnsureLineup(updated);
+        updated = _warRoom.EnsureWarRoom(updated);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

@@ -113,9 +113,11 @@ public sealed class SeasonRolloverService
             TrainingCamp = null,
             DraftExperience = null,
             CurrentDraftClassProfile = draftClass.Profile,
+            DraftWarRoom = DraftWarRoomState.Empty,
             DraftRights = Array.Empty<DraftPickSummary>(),
             SeasonRollover = state
         };
+        updated = new DraftWarRoomService().EnsureWarRoom(updated);
 
         QueueSeasonEnded(registry, updated, archive);
         var inbox = BuildInbox(updated, archive, expiredContracts.Length);

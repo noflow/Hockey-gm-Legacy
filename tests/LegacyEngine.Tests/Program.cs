@@ -90,6 +90,7 @@ var alpha612FranchiseIdentityCultureTests = new Alpha612FranchiseIdentityCulture
 var alpha613LivingStoryEngineTests = new Alpha613LivingStoryEngineTests();
 var alpha614MediaNewsTests = new Alpha614MediaNewsTests();
 var alpha615AwardsRecordsTests = new Alpha615AwardsRecordsTests();
+var alpha616DraftWarRoomTests = new Alpha616DraftWarRoomTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1198,6 +1199,19 @@ runner.Run("alpha 6.15 player dossier exposes awards and records", alpha615Award
 runner.Run("alpha 6.15 Reports History exposes awards and records", alpha615AwardsRecordsTests.ReportsHistoryExposesAwardsAndRecords);
 runner.Run("alpha 6.15 save load preserves awards and records", alpha615AwardsRecordsTests.SaveLoadPreservesAwardsAndRecords);
 runner.Run("alpha 6.15 no Hall of Fame or Godot dependency", alpha615AwardsRecordsTests.NoHallOfFameOrGodotDependency);
+runner.Run("alpha 6.16 War Room created all year", alpha616DraftWarRoomTests.WarRoomCreatedAllYear);
+runner.Run("alpha 6.16 custom rankings can move prospect", alpha616DraftWarRoomTests.CustomRankingsCanMoveProspect);
+runner.Run("alpha 6.16 watch list tags work", alpha616DraftWarRoomTests.WatchListTagsWork);
+runner.Run("alpha 6.16 needs analysis generated", alpha616DraftWarRoomTests.NeedsAnalysisGenerated);
+runner.Run("alpha 6.16 prospect compare works", alpha616DraftWarRoomTests.ProspectCompareWorks);
+runner.Run("alpha 6.16 scout consensus generated", alpha616DraftWarRoomTests.ScoutConsensusGenerated);
+runner.Run("alpha 6.16 best player available opinions generated", alpha616DraftWarRoomTests.BestPlayerAvailableOpinionsGenerated);
+runner.Run("alpha 6.16 AI drafting uses needs and strategy", alpha616DraftWarRoomTests.AiDraftingUsesNeedsAndStrategy);
+runner.Run("alpha 6.16 draft review generated after completion", alpha616DraftWarRoomTests.DraftReviewGeneratedAfterCompletion);
+runner.Run("alpha 6.16 original board history stored", alpha616DraftWarRoomTests.OriginalBoardHistoryStored);
+runner.Run("alpha 6.16 Where Are They Now still generated", alpha616DraftWarRoomTests.WhereAreTheyNowStillGenerated);
+runner.Run("alpha 6.16 AlphaDesktop exposes War Room UI", alpha616DraftWarRoomTests.AlphaDesktopExposesWarRoomUi);
+runner.Run("alpha 6.16 no forbidden systems added", alpha616DraftWarRoomTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

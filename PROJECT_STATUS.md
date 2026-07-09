@@ -112,29 +112,30 @@ The five foundation pillars remain:
 - Alpha 6.13 - Living Story Engine v1
 - Alpha 6.14 - Media & News v1
 - Alpha 6.15 - Awards & Records v1
+- Alpha 6.16 - Draft V4: War Room & Amateur Scouting
 
 ## Current Milestone
 
-Alpha 6.15 - Awards & Records v1
+Alpha 6.16 - Draft V4: War Room & Amateur Scouting
 
 ## Current Goal
 
-Add lasting accomplishment tracking so seasons, careers, and playoff runs can produce basic league/team awards and record-book entries. Awards and records now use public season, goalie, team, playoff, staff, GM, and story context; winners and broken records create timeline/media history; Reports / History, player dossiers, and Organization Command Center expose the results; save/load preserves the history without adding Hall of Fame, jersey retirement, real trophies, or a full voting system.
+Make draft preparation a year-round hockey operations workflow. The Draft War Room now tracks a custom GM board, watch-list tags, team needs, draft class storylines, department best-player opinions, scout consensus, prospect comparison, original board history, smarter AI draft selection, and post-draft review context while preserving Where Are They Now history. AlphaDesktop exposes the War Room in Hockey Operations and improves live draft controls without adding mock drafts, draft lottery, real player databases, Godot, or media expansion.
 
-## Why Living Story Engine Was Next
+## Why Draft War Room Was Next
 
-Alpha 6.0 through 6.12 gave players, staff, owners, relationships, careers, command centers, and franchise identity persistent context. The next layer connects that context into stories the GM can actually read and remember without adding a media engine or junk inbox.
+The draft had player bios and a live modal, but the GM still needed a permanent command space for rankings, scouting opinions, needs, watch-list decisions, and draft-day memory. Alpha 6.16 gives the player a real amateur scouting room before expanding later into deeper draft-year planning.
 
 ## Next Build Target
 
-Alpha 7.0 - TBD
+Alpha 6.17 - TBD
 
 ## Next Milestones
 
-1. Alpha 7.0 - TBD
+1. Alpha 6.17 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, media systems, Hall of Fame, full awards, full retirement systems, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.
