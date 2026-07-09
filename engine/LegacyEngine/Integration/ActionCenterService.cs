@@ -22,6 +22,7 @@ public sealed class ActionCenterService
         var items = new List<ActionCenterItem>();
         AddPendingActions(scenario, items);
         AddPendingFreeAgentResponses(scenario, items);
+        AddContractRightsItems(scenario, items);
         AddUrgentInbox(scenario, inboxMessages, items);
         AddRosterWarnings(scenario, readiness, items);
         AddStaffVacancies(staffVacancies, items);
@@ -234,6 +235,11 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+    }
+
+    private static void AddContractRightsItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        items.AddRange(new RfaUfaService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
     }
 
     private static void AddStaffCoachingItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

@@ -404,6 +404,8 @@ public sealed class PlayerDossierService
             lines.Add($"Pending GM action: {action.Title} - {action.RecommendedAction}");
         }
 
+        lines.AddRange(new RfaUfaService().BuildDossierLines(scenario, personId, scenario.LeagueProfile.Rulebook));
+
         var pipeline = scenario.PlayerPipeline.FirstOrDefault(record => record.PersonId == personId);
         if (pipeline is not null)
         {

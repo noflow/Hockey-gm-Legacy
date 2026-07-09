@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.1 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -545,6 +545,7 @@ internal sealed class MainWindow : Window
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
             new("Contracts", CreateTextScreen("Contracts")),
+            new("Contract Rights", CreateTextScreen("Contract Rights")),
             new("Waivers", CreateTextScreen("Hockey Waivers")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
@@ -1793,6 +1794,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Recruits", BuildRecruitRows());
         RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
         _tabs["Contracts"].Text = BuildContractsWorkspace();
+        _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         RefreshSelectableTab("Trades", BuildTradeRows());
@@ -4844,6 +4846,10 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Recall", () => State.RecallPlayerFromAffiliateFor(row.PersonId), State.CanRecallPlayerFromAffiliate(row.PersonId));
         }
 
+        yield return CreateDetailButton("Qualify", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId));
+        yield return CreateDetailButton("Do Not Qualify", () => State.DeclineRightsFor(row.PersonId), State.CanDeclineRights(row.PersonId));
+        yield return CreateDetailButton("Negotiate Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contracts"), State.HasContractRightsDecision(row.PersonId));
+
         var available = State.AvailableProspectActions(row.PersonId);
         yield return CreateDetailButton("Offer Contract", () => State.OfferProspectContractFor(row.PersonId), available.Contains(ProspectDecisionType.OfferContract));
         yield return CreateDetailButton("Invite Prospect", () => State.InviteProspectToCampFor(row.PersonId), available.Contains(ProspectDecisionType.InviteToCamp));
@@ -6115,12 +6121,46 @@ internal sealed class MainWindow : Window
         AppendContractSection(builder, "Pending Contract Decisions", summary.PendingOffers);
         AppendContractSection(builder, "Accepted Offers Awaiting GM Approval", summary.AcceptedOffersAwaitingApproval);
         AppendContractSection(builder, "Rejected / Walk-Away Log", summary.RejectedOffers);
+        builder.AppendLine(BuildContractRightsWorkspace());
 
         builder.AppendLine("Offer Builder Guidance");
         builder.AppendLine("----------------------");
         builder.AppendLine("Offer inputs supported by the engine: salary, term, role promise, development promise, camp invite promise, staff role/focus promise, and notes.");
         builder.AppendLine("Evaluation output includes total cost, annual cost, common expiry date, budget before/after, likelihood, risk warning, and plain-language reasons.");
         builder.AppendLine("Use Free Agents, Prospects, Recruits, Staff, or Pending Decisions to pick the person, then approve only the deals you actually want signed.");
+        return builder.ToString();
+    }
+
+    private string BuildContractRightsWorkspace()
+    {
+        var decisions = State.ContractRightsDecisions;
+        var builder = new StringBuilder();
+        builder.AppendLine("Contract Rights / Expiring Contracts");
+        builder.AppendLine("====================================");
+        builder.AppendLine(State.ContractRightsRuleSummary);
+        builder.AppendLine();
+        builder.AppendLine("Filters available for this view: All, Pending RFA, RFA, Pending UFA, UFA, Qualified, Not Qualified, Rights Released.");
+        builder.AppendLine("Use player detail panels to Qualify, Do Not Qualify, Negotiate Contract, or View Dossier.");
+        builder.AppendLine();
+        if (decisions.Count == 0)
+        {
+            builder.AppendLine("No RFA/UFA rights decisions are active for this rulebook.");
+            return builder.ToString();
+        }
+
+        foreach (var decision in decisions.OrderBy(decision => decision.ExpiryRule?.Deadline ?? DateOnly.MaxValue).ThenBy(decision => decision.PlayerName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"{decision.PlayerName} | {State.DisplayRightsStatus(decision.RightsStatus)} | {State.PositionShortText(decision.Position)} | age {decision.Age?.ToString() ?? "unknown"} | accrued {decision.AccruedSeasons}");
+            builder.AppendLine($"  Contract expiry: {decision.ContractExpiryDate?.ToString("yyyy-MM-dd") ?? "unknown"} | QO required: {(decision.QualifyingOfferRequired ? "yes" : "no")} | deadline: {decision.ExpiryRule?.Deadline.ToString("yyyy-MM-dd") ?? "n/a"}");
+            if (decision.QualifyingOffer is not null)
+            {
+                builder.AppendLine($"  Qualifying offer: {decision.QualifyingOffer.RequiredSalary:C0} {decision.QualifyingOffer.Currency} | {(decision.QualifyingOffer.IsIssued ? "issued" : "not issued")}");
+            }
+
+            builder.AppendLine($"  Recommendation: {decision.Recommendation}");
+            builder.AppendLine($"  Agent note: {decision.AgentNote}");
+        }
+
         return builder.ToString();
     }
 
@@ -8775,6 +8815,7 @@ internal sealed class AlphaDesktopState
     private readonly DraftWarRoomService _warRoom = new();
     private readonly PlayerRatingService _ratings = new();
     private readonly WaiverService _waivers = new();
+    private readonly RfaUfaService _rfaUfa = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8811,6 +8852,7 @@ internal sealed class AlphaDesktopState
         prepared = new DevelopmentCurveService().EnsureCurves(prepared);
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _tactics.EnsureTactics(prepared);
+        prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
@@ -9070,6 +9112,35 @@ internal sealed class AlphaDesktopState
 
     public ContractManagementSummary ContractManagement => _contracts.BuildSummary(ScenarioSnapshot, _registry.Rulebook);
 
+    public IReadOnlyList<PlayerRightsDecision> ContractRightsDecisions
+    {
+        get
+        {
+            var updated = _rfaUfa.EnsureRights(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+            if (!ReferenceEquals(updated, ScenarioSnapshot))
+            {
+                ScenarioSnapshot = updated;
+                Snapshot = updated.AlphaSnapshot;
+            }
+
+            return ScenarioSnapshot.PlayerRightsDecisions;
+        }
+    }
+
+    public string ContractRightsRuleSummary
+    {
+        get
+        {
+            var rules = (_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook).FreeAgentRightsRules;
+            if (rules is null || !rules.RfaUfaSystemEnabled)
+            {
+                return "RFA/UFA rights are disabled by this rulebook. Junior-style leagues do not use NHL-style rights unless enabled.";
+            }
+
+            return $"RFA/UFA enabled | UFA age {rules.UfaAge} | UFA accrued seasons {rules.UfaAccruedSeasonsThreshold} | QO deadline +{rules.QualifyingOfferDeadlineDaysAfterExpiry} day(s) | tender window {rules.ContractTenderWindowDays} day(s).";
+        }
+    }
+
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
 
     public GameRecap? LastGameRecap => _seasonFramework.LastPlayerTeamRecap(ScenarioSnapshot);
@@ -9186,7 +9257,8 @@ internal sealed class AlphaDesktopState
     public int ContractDecisionCount => ContractManagement.ExpiringPlayers.Count
         + ContractManagement.ExpiringStaff.Count
         + ContractManagement.UnsignedProspects.Count
-        + ContractManagement.AcceptedOffersAwaitingApproval.Count;
+        + ContractManagement.AcceptedOffersAwaitingApproval.Count
+        + ContractRightsDecisions.Count(decision => decision.IsOpenDecision);
 
     public int ScoutingReportCount => ScenarioSnapshot.CompletedScoutingReports.Count;
 
@@ -10737,6 +10809,14 @@ internal sealed class AlphaDesktopState
 
     public string ContractRightsStatus(string personId)
     {
+        var rights = ContractRightsDecisions.FirstOrDefault(decision => decision.PersonId == personId);
+        if (rights is not null)
+        {
+            var deadline = rights.ExpiryRule is null ? "no deadline" : $"deadline {rights.ExpiryRule.Deadline:yyyy-MM-dd}";
+            var offer = rights.QualifyingOffer is null ? string.Empty : $" | QO {rights.QualifyingOffer.RequiredSalary:C0}";
+            return $"{DisplayRightsStatus(rights.RightsStatus)} | holder {rights.RightsHolderTeamName} | {deadline}{offer}";
+        }
+
         var contract = ScenarioSnapshot.Contracts.Concat(Snapshot.Contracts)
             .DistinctBy(contract => contract.ContractId)
             .Where(contract => contract.PersonId == personId)
@@ -10760,6 +10840,32 @@ internal sealed class AlphaDesktopState
         var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId);
         return prospect is null ? "No contract/rights record" : $"Draft rights {prospect.Status}";
     }
+
+    public bool HasContractRightsDecision(string personId) =>
+        ContractRightsDecisions.Any(decision => decision.PersonId == personId);
+
+    public bool CanQualifyRights(string personId) =>
+        ContractRightsDecisions.Any(decision => decision.PersonId == personId
+            && decision.RightsStatus is FreeAgentRightsStatus.PendingRfa or FreeAgentRightsStatus.RestrictedFreeAgent or FreeAgentRightsStatus.RightsHeld);
+
+    public bool CanDeclineRights(string personId) =>
+        ContractRightsDecisions.Any(decision => decision.PersonId == personId
+            && decision.RightsStatus is FreeAgentRightsStatus.PendingRfa or FreeAgentRightsStatus.PendingUfa or FreeAgentRightsStatus.RestrictedFreeAgent);
+
+    public string DisplayRightsStatus(FreeAgentRightsStatus status) =>
+        status switch
+        {
+            FreeAgentRightsStatus.UnderContract => "Under Contract",
+            FreeAgentRightsStatus.PendingRfa => "Pending RFA",
+            FreeAgentRightsStatus.RestrictedFreeAgent => "Restricted Free Agent",
+            FreeAgentRightsStatus.PendingUfa => "Pending UFA",
+            FreeAgentRightsStatus.UnrestrictedFreeAgent => "Unrestricted Free Agent",
+            FreeAgentRightsStatus.NotQualified => "Not Qualified",
+            FreeAgentRightsStatus.RightsHeld => "Rights Held",
+            FreeAgentRightsStatus.RightsReleased => "Rights Released",
+            FreeAgentRightsStatus.SignedElsewhere => "Signed Elsewhere",
+            _ => status.ToString()
+        };
 
     public WaiverEligibility WaiverEligibilityFor(string personId) =>
         _waivers.EvaluateEligibility(ScenarioSnapshot, personId, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
@@ -10793,6 +10899,27 @@ internal sealed class AlphaDesktopState
 
     public void RecallPlayerFromAffiliateFor(string personId) =>
         ApplyWaiverResult(_waivers.RecallFromAffiliate(_registry, ScenarioSnapshot, personId, "GM recalled player from affiliate."));
+
+    public void QualifyRightsFor(string personId) =>
+        ApplyRightsResult(_rfaUfa.IssueQualifyingOffer(_registry, ScenarioSnapshot, personId));
+
+    public void DeclineRightsFor(string personId) =>
+        ApplyRightsResult(_rfaUfa.DeclineQualifyingOffer(_registry, ScenarioSnapshot, personId));
+
+    private void ApplyRightsResult(RightsDecisionResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            AddInboxItems(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
 
     private void ApplyWaiverResult(WaiverResult result)
     {
@@ -13025,6 +13152,7 @@ internal sealed class AlphaDesktopState
         updated = new HockeyIntelligenceRatingService().EnsureRatings(updated);
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = _ratings.EnsureRatings(updated);
+        updated = _rfaUfa.EnsureRights(updated, _registry.Rulebook ?? updated.LeagueProfile.Rulebook);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

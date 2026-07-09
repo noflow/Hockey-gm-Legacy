@@ -48,6 +48,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("waiver_rules")]
     public WaiverRules? WaiverRules { get; init; }
+
+    [JsonPropertyName("free_agent_rights_rules")]
+    public FreeAgentRightsRules? FreeAgentRightsRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -267,6 +270,36 @@ public sealed class WaiverRules
 
     [JsonPropertyName("allow_cancel_before_claim_window")]
     public bool AllowCancelBeforeClaimWindow { get; init; } = true;
+}
+
+public sealed class FreeAgentRightsRules
+{
+    [JsonPropertyName("rfa_ufa_system_enabled")]
+    public bool RfaUfaSystemEnabled { get; init; }
+
+    [JsonPropertyName("ufa_age")]
+    public int UfaAge { get; init; } = 27;
+
+    [JsonPropertyName("ufa_accrued_seasons_threshold")]
+    public int UfaAccruedSeasonsThreshold { get; init; } = 7;
+
+    [JsonPropertyName("qualifying_offer_required")]
+    public bool QualifyingOfferRequired { get; init; } = true;
+
+    [JsonPropertyName("qualifying_offer_deadline_days_after_expiry")]
+    public int QualifyingOfferDeadlineDaysAfterExpiry { get; init; } = 7;
+
+    [JsonPropertyName("qualifying_offer_salary_multiplier")]
+    public decimal QualifyingOfferSalaryMultiplier { get; init; } = 1.05m;
+
+    [JsonPropertyName("minimum_qualifying_offer")]
+    public decimal MinimumQualifyingOffer { get; init; } = 775_000m;
+
+    [JsonPropertyName("rights_expiry_rule")]
+    public string RightsExpiryRule { get; init; } = "qualify_by_deadline_or_release";
+
+    [JsonPropertyName("contract_tender_window_days")]
+    public int ContractTenderWindowDays { get; init; } = 30;
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

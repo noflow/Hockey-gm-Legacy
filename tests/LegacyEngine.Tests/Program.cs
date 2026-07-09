@@ -95,6 +95,7 @@ var alpha617PlayerRatingsTests = new Alpha617PlayerRatingsTests();
 var alpha617DevelopmentCurveTests = new Alpha617DevelopmentCurveTests();
 var alpha70HockeyIntelligenceRatingTests = new Alpha70HockeyIntelligenceRatingTests();
 var alpha71WaiversRosterTransactionsTests = new Alpha71WaiversRosterTransactionsTests();
+var alpha72RfaUfaContractRightsTests = new Alpha72RfaUfaContractRightsTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1268,6 +1269,19 @@ runner.Run("alpha 7.1 player dossier shows waiver status", alpha71WaiversRosterT
 runner.Run("alpha 7.1 save load preserves waiver wire and history", alpha71WaiversRosterTransactionsTests.SaveLoadPreservesWaiverWireAndHistory);
 runner.Run("alpha 7.1 AlphaDesktop exposes waiver UI", alpha71WaiversRosterTransactionsTests.AlphaDesktopExposesWaiverUi);
 runner.Run("alpha 7.1 no forbidden waiver systems added", alpha71WaiversRosterTransactionsTests.NoForbiddenWaiverSystemsAdded);
+runner.Run("alpha 7.2 expiring young player becomes pending RFA", alpha72RfaUfaContractRightsTests.ExpiringYoungPlayerBecomesPendingRfa);
+runner.Run("alpha 7.2 expiring older player becomes pending UFA", alpha72RfaUfaContractRightsTests.ExpiringOlderPlayerBecomesPendingUfa);
+runner.Run("alpha 7.2 rulebook controls RFA UFA thresholds", alpha72RfaUfaContractRightsTests.RulebookControlsThresholds);
+runner.Run("alpha 7.2 qualifying offer preserves rights", alpha72RfaUfaContractRightsTests.QualifyingOfferPreservesRights);
+runner.Run("alpha 7.2 declining qualifying offer releases rights", alpha72RfaUfaContractRightsTests.DecliningQualifyingOfferReleasesRights);
+runner.Run("alpha 7.2 UFA enters free agent market", alpha72RfaUfaContractRightsTests.UfaEntersFreeAgentMarket);
+runner.Run("alpha 7.2 RFA remains tied to rights holder", alpha72RfaUfaContractRightsTests.RfaRemainsTiedToRightsHolder);
+runner.Run("alpha 7.2 contract screen exposes rights", alpha72RfaUfaContractRightsTests.ContractScreenExposesRights);
+runner.Run("alpha 7.2 player dossier exposes RFA UFA status", alpha72RfaUfaContractRightsTests.PlayerDossierExposesRfaUfaStatus);
+runner.Run("alpha 7.2 Action Center warns before qualifying deadline", alpha72RfaUfaContractRightsTests.ActionCenterWarnsBeforeQualifyingDeadline);
+runner.Run("alpha 7.2 League News records not qualified player", alpha72RfaUfaContractRightsTests.LeagueNewsRecordsNotQualifiedPlayer);
+runner.Run("alpha 7.2 save load preserves rights status", alpha72RfaUfaContractRightsTests.SaveLoadPreservesRightsStatus);
+runner.Run("alpha 7.2 no offer sheets arbitration or Godot added", alpha72RfaUfaContractRightsTests.NoOfferSheetsArbitrationOrGodotAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
@@ -1392,7 +1406,8 @@ internal sealed class RuleEngineTests
             ContractRules = contractRules,
             DraftRules = source.DraftRules,
             PlayoffRules = source.PlayoffRules,
-            BudgetRules = source.BudgetRules
+            BudgetRules = source.BudgetRules,
+            FreeAgentRightsRules = source.FreeAgentRightsRules
         };
 
     private static Rulebook WithDraftRules(Rulebook source, DraftRules draftRules) =>
@@ -1406,7 +1421,8 @@ internal sealed class RuleEngineTests
             ContractRules = source.ContractRules,
             DraftRules = draftRules,
             PlayoffRules = source.PlayoffRules,
-            BudgetRules = source.BudgetRules
+            BudgetRules = source.BudgetRules,
+            FreeAgentRightsRules = source.FreeAgentRightsRules
         };
 
     private static Rulebook WithBudgetRules(Rulebook source, BudgetRules budgetRules) =>
@@ -1420,7 +1436,8 @@ internal sealed class RuleEngineTests
             ContractRules = source.ContractRules,
             DraftRules = source.DraftRules,
             PlayoffRules = source.PlayoffRules,
-            BudgetRules = budgetRules
+            BudgetRules = budgetRules,
+            FreeAgentRightsRules = source.FreeAgentRightsRules
         };
 
     private static string FindRepositoryRoot()

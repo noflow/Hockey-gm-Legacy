@@ -119,7 +119,8 @@ public static class RulebookPresets
             AffiliateRules = affiliateRules,
             PlayerAssignmentRules = CreatePlayerAssignmentRules(leagueType),
             SalaryCapRules = CreateSalaryCapRules(leagueType, activeRoster),
-            WaiverRules = CreateWaiverRules(leagueType)
+            WaiverRules = CreateWaiverRules(leagueType),
+            FreeAgentRightsRules = CreateFreeAgentRightsRules(leagueType)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -210,6 +211,20 @@ public static class RulebookPresets
             ExemptProfessionalSeasons = 3,
             ExemptGamesPlayed = 80,
             AllowCancelBeforeClaimWindow = true
+        };
+
+    private static FreeAgentRightsRules CreateFreeAgentRightsRules(string leagueType) =>
+        new()
+        {
+            RfaUfaSystemEnabled = IsProfessionalLeague(leagueType),
+            UfaAge = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase) ? 27 : 26,
+            UfaAccruedSeasonsThreshold = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase) ? 7 : 6,
+            QualifyingOfferRequired = IsProfessionalLeague(leagueType),
+            QualifyingOfferDeadlineDaysAfterExpiry = IsProfessionalLeague(leagueType) ? 7 : 0,
+            QualifyingOfferSalaryMultiplier = 1.05m,
+            MinimumQualifyingOffer = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase) ? 775_000m : 80_000m,
+            RightsExpiryRule = IsProfessionalLeague(leagueType) ? "qualify_by_deadline_or_release" : "disabled",
+            ContractTenderWindowDays = IsProfessionalLeague(leagueType) ? 30 : 0
         };
 
     private static bool IsProfessionalLeague(string leagueType) =>

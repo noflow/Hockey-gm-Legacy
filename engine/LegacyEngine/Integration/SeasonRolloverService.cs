@@ -121,6 +121,7 @@ public sealed class SeasonRolloverService
         updated = new HockeyIntelligenceRatingService().EnsureRatings(updated);
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = new PlayerRatingService().EnsureRatings(updated);
+        updated = new RfaUfaService().EnsureRights(updated, registry.Rulebook ?? updated.LeagueProfile.Rulebook);
 
         QueueSeasonEnded(registry, updated, archive);
         var inbox = BuildInbox(updated, archive, expiredContracts.Length);

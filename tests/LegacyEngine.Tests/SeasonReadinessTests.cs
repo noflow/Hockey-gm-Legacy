@@ -199,7 +199,8 @@ internal sealed class SeasonReadinessTests
             PlayoffRules = source.PlayoffRules,
             BudgetRules = source.BudgetRules,
             SeasonRules = source.SeasonRules,
-            AffiliateRules = source.AffiliateRules
+            AffiliateRules = source.AffiliateRules,
+            FreeAgentRightsRules = source.FreeAgentRightsRules
         };
 
     private static string FindRepositoryRoot()

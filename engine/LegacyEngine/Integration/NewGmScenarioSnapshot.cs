@@ -116,6 +116,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public WaiverHistory WaiverHistory { get; init; } = WaiverHistory.Empty;
 
+    public IReadOnlyList<PlayerRightsDecision> PlayerRightsDecisions { get; init; } = Array.Empty<PlayerRightsDecision>();
+
+    public RightsHistory RightsHistory { get; init; } = RightsHistory.Empty;
+
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
     public PlayoffState Playoffs { get; init; } = PlayoffState.Empty;
@@ -405,6 +409,12 @@ public sealed record NewGmScenarioSnapshot(
 
         WaiverWire.Validate();
         WaiverHistory.Validate();
+        foreach (var decision in PlayerRightsDecisions)
+        {
+            decision.Validate();
+        }
+
+        RightsHistory.Validate();
 
         SeasonRollover.Validate();
         Playoffs.Validate();

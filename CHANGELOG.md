@@ -1,6 +1,42 @@
 # Changelog
 
-## Current - Alpha 7.1
+## Current - Alpha 7.2
+
+### Added
+
+- Rulebook-driven RFA/UFA contract-rights rules, including enable/disable flag, UFA age threshold, UFA accrued-season threshold, qualifying-offer requirement, qualifying-offer deadline, rights expiry rule, qualifying-offer multiplier, minimum qualifying offer, and contract tender window.
+- Rights models for `FreeAgentRightsStatus`, `ContractRightsStatus`, `PlayerRightsDecision`, `RightsDecisionResult`, `QualifyingOffer`, `RightsExpiryRule`, and `RightsHistory`.
+- `RfaUfaService` to classify expiring NHL-style contracts as pending RFA or pending UFA, issue qualifying offers, decline qualifying offers, release rights, move UFAs/not-qualified players into the free-agent market, and preserve rights history.
+- Action Center contract-rights warnings before qualifying-offer deadlines.
+- Player Dossier RFA/UFA status, rights holder, qualifying-offer deadline/amount, agent note, recommendation, and rights history lines.
+- League News transaction types and events for RFA qualification, not-qualified players, UFA market entry, and rights release.
+- AlphaDesktop Contract Rights / Expiring Contracts screen under Hockey Operations, plus player-detail actions for Qualify, Do Not Qualify, Negotiate Contract, and View Dossier.
+- Alpha 7.2 tests covering young pending RFA, older pending UFA, rulebook thresholds, qualifying offer retention, rights release, UFA market entry, RFA rights holder, desktop rights exposure, dossier exposure, Action Center warning, League News, save/load preservation, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.2.
+- Season rollover now ensures expiring professional contracts are classified into RFA/UFA rights decisions.
+- Rulebook copy helpers now preserve free-agent rights rules so tests and generated league profiles do not accidentally drop professional rights behavior.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No offer sheets.
+- No arbitration.
+- No full holdout system.
+- No full CBA edge-case system.
+- No LTIR.
+- No buyouts.
+- No Godot.
+- No new game simulation logic.
+
+## Previous - Alpha 7.1
 
 ### Added
 

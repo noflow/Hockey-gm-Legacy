@@ -106,7 +106,13 @@ public sealed class LeagueTransactionWireService
     public static LeagueNewsCategory CategoryFor(LeagueTransactionType type) =>
         type switch
         {
-            LeagueTransactionType.PlayerSigned or LeagueTransactionType.ContractOffered or LeagueTransactionType.ContractSigned => LeagueNewsCategory.Signings,
+            LeagueTransactionType.PlayerSigned
+                or LeagueTransactionType.ContractOffered
+                or LeagueTransactionType.ContractSigned
+                or LeagueTransactionType.RfaQualified
+                or LeagueTransactionType.RfaNotQualified
+                or LeagueTransactionType.PlayerBecameUfa
+                or LeagueTransactionType.RightsReleased => LeagueNewsCategory.Signings,
             LeagueTransactionType.PlayerAddedToRoster
                 or LeagueTransactionType.PlayerReleased
                 or LeagueTransactionType.PlayerAssigned
@@ -134,6 +140,10 @@ public sealed class LeagueTransactionWireService
             LegacyEventType.ContractSigned => LeagueTransactionType.ContractSigned,
             LegacyEventType.ContractOfferSubmitted => LeagueTransactionType.ContractOffered,
             LegacyEventType.ContractApprovedByGM => LeagueTransactionType.ContractSigned,
+            LegacyEventType.PlayerQualifiedAsRfa => LeagueTransactionType.RfaQualified,
+            LegacyEventType.PlayerNotQualified => LeagueTransactionType.RfaNotQualified,
+            LegacyEventType.PlayerBecameUfa => LeagueTransactionType.PlayerBecameUfa,
+            LegacyEventType.PlayerRightsReleased => LeagueTransactionType.RightsReleased,
             LegacyEventType.FreeAgentSigned => LeagueTransactionType.PlayerSigned,
             LegacyEventType.FreeAgentSignedElsewhere => LeagueTransactionType.PlayerSigned,
             LegacyEventType.ProspectSigned => LeagueTransactionType.PlayerSigned,
@@ -177,6 +187,10 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.WaiverPlaced => $"{teamName} placed {personName} on waivers.",
             LeagueTransactionType.WaiverClaimed => $"{teamName} waiver claim involving {personName}.",
             LeagueTransactionType.WaiverCleared => $"{personName} cleared waivers for {teamName}.",
+            LeagueTransactionType.RfaQualified => $"{teamName} issued a qualifying offer to {personName}.",
+            LeagueTransactionType.RfaNotQualified => $"{teamName} did not qualify {personName}; rights were released.",
+            LeagueTransactionType.PlayerBecameUfa => $"{personName} became an unrestricted free agent.",
+            LeagueTransactionType.RightsReleased => $"{teamName} released contract rights to {personName}.",
             LeagueTransactionType.Injury => $"{teamName} reported an injury update for {personName}.",
             LeagueTransactionType.DraftPick => $"{teamName} drafted {personName}.",
             LeagueTransactionType.StaffHired => $"{teamName} hired {personName}.",
