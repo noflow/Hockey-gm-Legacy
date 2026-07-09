@@ -93,6 +93,7 @@ var alpha615AwardsRecordsTests = new Alpha615AwardsRecordsTests();
 var alpha616DraftWarRoomTests = new Alpha616DraftWarRoomTests();
 var alpha617PlayerRatingsTests = new Alpha617PlayerRatingsTests();
 var alpha617DevelopmentCurveTests = new Alpha617DevelopmentCurveTests();
+var alpha70HockeyIntelligenceRatingTests = new Alpha70HockeyIntelligenceRatingTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1236,6 +1237,23 @@ runner.Run("alpha 6.17 injury reduces growth chance", alpha617DevelopmentCurveTe
 runner.Run("alpha 6.17 proper role improves growth chance", alpha617DevelopmentCurveTests.ProperRoleImprovesGrowthChance);
 runner.Run("alpha 6.17 dossier exposes development curve", alpha617DevelopmentCurveTests.DossierExposesDevelopmentCurve);
 runner.Run("alpha 6.17 Action Center warns on major development risk", alpha617DevelopmentCurveTests.ActionCenterWarnsOnMajorDevelopmentRisk);
+runner.Run("alpha 7.0 players receive hidden true ratings", alpha70HockeyIntelligenceRatingTests.PlayersReceiveHiddenTrueRatings);
+runner.Run("alpha 7.0 scouted ratings do not expose true ratings directly", alpha70HockeyIntelligenceRatingTests.ScoutedRatingsDoNotExposeTrueRatingsDirectly);
+runner.Run("alpha 7.0 unscouted player shows unknown attributes", alpha70HockeyIntelligenceRatingTests.UnscoutedPlayerShowsUnknownForManyAttributes);
+runner.Run("alpha 7.0 scouting reveals red uncertain ranges", alpha70HockeyIntelligenceRatingTests.ScoutingRevealsRedUncertainRanges);
+runner.Run("alpha 7.0 repeated scouting improves confidence", alpha70HockeyIntelligenceRatingTests.RepeatedScoutingImprovesConfidence);
+runner.Run("alpha 7.0 elite scout improves confidence faster", alpha70HockeyIntelligenceRatingTests.EliteScoutImprovesConfidenceFaster);
+runner.Run("alpha 7.0 wrong estimates converge toward true value", alpha70HockeyIntelligenceRatingTests.WrongEstimatesConvergeTowardTrueValue);
+runner.Run("alpha 7.0 attribute families are implemented", alpha70HockeyIntelligenceRatingTests.AttributeFamiliesAreImplemented);
+runner.Run("alpha 7.0 junior ratings lower than NHL ratings", alpha70HockeyIntelligenceRatingTests.JuniorRatingsLowerThanNhlRatings);
+runner.Run("alpha 7.0 elite draft prospects can reach low eighties", alpha70HockeyIntelligenceRatingTests.EliteDraftProspectsCanReachLowEighties);
+runner.Run("alpha 7.0 rare 95+ potential uncommon", alpha70HockeyIntelligenceRatingTests.RarePotentialNinetyFivePlusUncommon);
+runner.Run("alpha 7.0 development changes true attributes", alpha70HockeyIntelligenceRatingTests.DevelopmentChangesTrueAttributes);
+runner.Run("alpha 7.0 visible ratings do not update until report or scouting", alpha70HockeyIntelligenceRatingTests.VisibleRatingsDoNotUpdateUntilReportOrScouting);
+runner.Run("alpha 7.0 dossier exposes ratings correctly", alpha70HockeyIntelligenceRatingTests.DossierExposesRatingsCorrectly);
+runner.Run("alpha 7.0 trade draft free agent UI exposes ratings", alpha70HockeyIntelligenceRatingTests.TradeDraftFreeAgentUiExposesRatings);
+runner.Run("alpha 7.0 save load preserves true and scouted knowledge", alpha70HockeyIntelligenceRatingTests.SaveLoadPreservesTrueAndScoutedKnowledge);
+runner.Run("alpha 7.0 AlphaDesktop does not expose true ratings directly", alpha70HockeyIntelligenceRatingTests.AlphaDesktopDoesNotExposeTrueRatingsDirectly);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

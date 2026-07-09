@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.17 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.0 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -627,7 +627,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.17 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.0 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -8752,6 +8752,7 @@ internal sealed class AlphaDesktopState
         prepared = _lineChemistry.EnsureChemistry(prepared);
         prepared = _gameUsage.EnsureGameUsage(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
+        prepared = new HockeyIntelligenceRatingService().EnsureRatings(prepared);
         prepared = new DevelopmentCurveService().EnsureCurves(prepared);
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _tactics.EnsureTactics(prepared);
@@ -10709,7 +10710,7 @@ internal sealed class AlphaDesktopState
             return rating;
         }
 
-        var updated = _ratings.EnsureRatings(new DevelopmentCurveService().EnsureCurves(ScenarioSnapshot));
+        var updated = _ratings.EnsureRatings(new DevelopmentCurveService().EnsureCurves(new HockeyIntelligenceRatingService().EnsureRatings(ScenarioSnapshot)));
         ScenarioSnapshot = updated;
         Snapshot = updated.AlphaSnapshot;
         return updated.PlayerRatings.FirstOrDefault(item => item.PersonId == personId)
@@ -10719,7 +10720,10 @@ internal sealed class AlphaDesktopState
     public string RatingText(string personId)
     {
         var rating = RatingFor(personId);
-        return $"OVR {rating.Overall.Display} | POT {rating.Potential.Display}";
+        var intelligence = ScenarioSnapshot.ScoutedRatings.FirstOrDefault(item => item.PersonId == personId);
+        return intelligence is null
+            ? $"OVR {rating.Overall.Display} | POT {rating.Potential.Display}"
+            : $"OVR {intelligence.Overall.Display} | POT {intelligence.Potential.Display} | {intelligence.ConfidenceColor}";
     }
 
     public string RatingContextText(string personId)
@@ -12889,6 +12893,7 @@ internal sealed class AlphaDesktopState
         updated = _media.EnsureMediaFeed(updated, LeagueTransactions, _registry);
         updated = _lineups.EnsureLineup(updated);
         updated = _warRoom.EnsureWarRoom(updated);
+        updated = new HockeyIntelligenceRatingService().EnsureRatings(updated);
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = _ratings.EnsureRatings(updated);
         if (!ReferenceEquals(updated, ScenarioSnapshot))

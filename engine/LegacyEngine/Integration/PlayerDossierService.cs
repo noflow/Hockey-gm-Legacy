@@ -37,6 +37,7 @@ public sealed class PlayerDossierService
             BuildOverview(scenario, person, position, status, teamOrRights, resolvedSource),
             BuildFacts(scenario, person, resolvedSource),
             BuildRatings(scenario, personId),
+            BuildHockeyIntelligenceRatings(scenario, personId),
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
             BuildDevelopmentCurve(scenario, personId),
@@ -208,6 +209,12 @@ public sealed class PlayerDossierService
     {
         var lines = new PlayerRatingService().BuildDossierLines(scenario, personId);
         return new PlayerDossierSection("Ratings", lines);
+    }
+
+    private static PlayerDossierSection BuildHockeyIntelligenceRatings(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new HockeyIntelligenceRatingService().BuildDossierLines(scenario, personId);
+        return new PlayerDossierSection("Hockey Intelligence Ratings", lines);
     }
 
     private static PlayerDossierSection BuildScoutingReports(NewGmScenarioSnapshot scenario, string personId)

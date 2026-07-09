@@ -1,6 +1,38 @@
 # Changelog
 
-## Current - Alpha 6.17
+## Current - Alpha 7.0
+
+### Added
+
+- Hockey Intelligence Rating model with hidden `PlayerTrueRatings`, visible `PlayerScoutedRatings`, 0-100 attribute ranges, confidence colors, scout sources, and rating notes.
+- Attribute categories for Offensive, Defensive, Skating, Physical, Skill, Mental, Team, and Goalie ratings.
+- Confidence color workflow: Unknown, Red, Green, Blue, and Black, with uncertain players showing `???` or ranges instead of hidden truth.
+- `HockeyIntelligenceRatingService` to seed true ratings, create initial scouted estimates, record scouting updates, improve confidence over repeated reports, and apply development changes to hidden truth without automatically updating visible estimates.
+- Player dossier Hockey Intelligence section showing category ratings, scout source, last update, confidence, and notes while explicitly keeping true internal ratings private.
+- Alpha 7.0 tests covering hidden true ratings, scouted privacy, unscouted unknowns, red uncertainty, repeated scouting, elite scout confidence gains, convergence toward truth, all attribute families, junior/NHL scale differences, elite draft prospects, rare high potential, hidden development updates, dossier exposure, UI rating hooks, save/load preservation, and AlphaDesktop privacy.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.0.
+- Existing visible OVR/POT snapshots now consume Hockey Intelligence scouted ranges directly instead of re-spreading estimates.
+- Development and daily scenario preparation now ensure Hockey Intelligence ratings before curve and visible-rating snapshots.
+- Save/load now preserves true and scouted rating knowledge through the scenario snapshot.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No editable rating editor.
+- No real player database.
+- No Godot.
+- No new game simulation engine.
+- No full tactical simulation rewrite.
+
+## Previous - Alpha 6.17
 
 ### Added
 
@@ -546,4 +578,4 @@
 
 ## Next
 
-- Alpha 7.0 - TBD.
+- Alpha 7.1 - TBD.

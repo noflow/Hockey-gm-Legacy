@@ -65,6 +65,7 @@ public sealed class DailySimulationCoordinator
             .Concat(report?.InboxItems ?? Array.Empty<AlphaInboxItem>())
             .ToArray();
         var leagueTransactions = simulation.LeagueTransactions.Concat(deadline.LeagueTransactions).Concat(playoffs.LeagueNews).ToArray();
+        finalScenario = new HockeyIntelligenceRatingService().EnsureRatings(finalScenario);
         finalScenario = new DevelopmentCurveService().EnsureCurves(finalScenario);
         finalScenario = new PlayerRatingService().EnsureRatings(finalScenario);
         finalScenario = new MediaService().EnsureMediaFeed(finalScenario, leagueTransactions, registry);

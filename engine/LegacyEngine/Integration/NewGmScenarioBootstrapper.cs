@@ -233,6 +233,7 @@ public sealed class NewGmScenarioBootstrapper
         scenarioSnapshot = new MediaService().EnsureMediaFeed(scenarioSnapshot, Array.Empty<LeagueTransaction>(), registry);
         scenarioSnapshot = new LineupService().EnsureLineup(scenarioSnapshot);
         scenarioSnapshot = new DraftWarRoomService().EnsureWarRoom(scenarioSnapshot);
+        scenarioSnapshot = new HockeyIntelligenceRatingService().EnsureRatings(scenarioSnapshot);
         scenarioSnapshot = new DevelopmentCurveService().EnsureCurves(scenarioSnapshot);
         scenarioSnapshot = new PlayerRatingService().EnsureRatings(scenarioSnapshot);
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");

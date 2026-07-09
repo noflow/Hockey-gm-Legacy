@@ -42,10 +42,44 @@ public sealed class PlayerRatingService
             .Where(report => report.PlayerId == personId)
             .OrderByDescending(report => report.CreatedOn)
             .FirstOrDefault();
+        var scouted = scenario.ScoutedRatings.FirstOrDefault(rating => rating.PersonId == personId);
+        if (scouted is not null && draft?.ScoutingConfidence is { } draftConfidence && ConfidenceFromColor(scouted.ConfidenceColor) != MapConfidence(draftConfidence))
+        {
+            scouted = null;
+        }
         var confidence = ResolveConfidence(scenario, personId, draft, latestReport);
-        var raw = EstimateRawRatings(scenario, personId, position, age, profile, draft, latestReport);
-        var curve = scenario.DevelopmentCurves.FirstOrDefault(curve => curve.PersonId == personId);
         var injuryPenalty = ActiveInjuryPenalty(scenario, personId);
+        if (scouted is not null && !scouted.Overall.IsUnknown && !scouted.Potential.IsUnknown)
+        {
+            confidence = ConfidenceFromColor(scouted.ConfidenceColor);
+            var scoutedOverall = ToVisibleOverall(scouted.Overall, injuryPenalty);
+            var scoutedPotential = ToVisiblePotential(scouted.Potential, scoutedOverall.Low);
+            var scoutedBand = BandFor(scoutedOverall.Midpoint, scoutedPotential.Midpoint, scenario.LeagueProfile.Experience, draft is not null);
+            var scoutedSnapshot = new PlayerRatingSnapshot(
+                personId,
+                name,
+                position,
+                age,
+                scoutedOverall,
+                scoutedPotential,
+                scoutedBand,
+                confidence,
+                scenario.CurrentDate,
+                $"Hockey Intelligence scouted estimate ({scouted.ConfidenceColor})",
+                RoleLabelFor(scoutedOverall.Midpoint, position),
+                DevelopmentNoteFor(profile, (Overall: scoutedOverall.Midpoint, Potential: scoutedPotential.Midpoint, Source: scouted.ScoutSource), injuryPenalty, scoutedOverall, scoutedPotential));
+            scoutedSnapshot.Validate();
+            return scoutedSnapshot;
+        }
+
+        var raw = scouted is null
+            ? EstimateRawRatings(scenario, personId, position, age, profile, draft, latestReport)
+            : (Overall: scouted.Overall.IsUnknown ? 0 : scouted.Overall.Midpoint, Potential: scouted.Potential.IsUnknown ? 0 : scouted.Potential.Midpoint, Source: $"Hockey Intelligence scouted estimate ({scouted.ConfidenceColor})");
+        if (scouted is not null)
+        {
+            confidence = ConfidenceFromColor(scouted.ConfidenceColor);
+        }
+        var curve = scenario.DevelopmentCurves.FirstOrDefault(curve => curve.PersonId == personId);
         var adjustedOverall = Math.Clamp(raw.Overall - injuryPenalty, 0, 100);
         var curveCeiling = curve?.Variance.CurrentEstimatedCeiling ?? raw.Potential;
         var adjustedPotential = Math.Clamp(Math.Max(Math.Max(raw.Potential, curveCeiling), adjustedOverall), 0, 100);
@@ -306,6 +340,30 @@ public sealed class PlayerRatingService
         return scenario.AlphaSnapshot.Roster.FindPlayer(personId) is not null
             ? PlayerRatingConfidence.High
             : PlayerRatingConfidence.Medium;
+    }
+
+    private static PlayerRatingConfidence ConfidenceFromColor(PlayerRatingColor color) =>
+        color switch
+        {
+            PlayerRatingColor.Black => PlayerRatingConfidence.VeryHigh,
+            PlayerRatingColor.Blue => PlayerRatingConfidence.High,
+            PlayerRatingColor.Green => PlayerRatingConfidence.Medium,
+            PlayerRatingColor.Red => PlayerRatingConfidence.Low,
+            _ => PlayerRatingConfidence.Unknown
+        };
+
+    private static PlayerRating ToVisibleOverall(PlayerRatingRange range, int injuryPenalty)
+    {
+        var low = Math.Clamp((range.Low ?? 0) - injuryPenalty, 0, 100);
+        var high = Math.Clamp((range.High ?? low) - injuryPenalty, low, 100);
+        return new PlayerRating(low, high);
+    }
+
+    private static PlayerPotential ToVisiblePotential(PlayerRatingRange range, int minimumOverall)
+    {
+        var low = Math.Clamp(Math.Max(range.Low ?? minimumOverall, minimumOverall), 0, 100);
+        var high = Math.Clamp(Math.Max(range.High ?? low, low), 0, 100);
+        return new PlayerPotential(low, high);
     }
 
     private static PlayerRatingConfidence MapConfidence(ScoutingConfidenceLevel confidence) =>

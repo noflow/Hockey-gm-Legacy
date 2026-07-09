@@ -114,26 +114,27 @@ The five foundation pillars remain:
 - Alpha 6.15 - Awards & Records v1
 - Alpha 6.16 - Draft V4: War Room & Amateur Scouting
 - Alpha 6.17 - Player Ratings & Potential v1
+- Alpha 7.0 - Hockey Intelligence Rating Engine v1
 
 ## Current Milestone
 
-Alpha 6.17 - Player Ratings & Potential v1
+Alpha 7.0 - Hockey Intelligence Rating Engine v1
 
 ## Current Goal
 
-Make players easier to read at a glance with visible 0-100 Overall and Potential estimates while preserving scouting uncertainty, reports, roles, dossiers, and hidden development truth. Ratings now expose exact numbers only when confidence is high enough, use ranges for uncertain prospects, update with development/injury context, and appear across key player lists, cards, dossiers, draft views, free agents, and trade contexts. The new Development Curve layer explains pace, ETA, plateau risk, breakout chance, staff notes, and best path so potential is no longer treated as fixed destiny.
+Add a full hockey intelligence rating layer under the existing visible OVR/POT system. The engine now stores hidden true ratings separately from scouted estimates, supports Offensive, Defensive, Skating, Physical, Skill, Mental, Team, and Goalie attribute categories, and uses Unknown/Red/Green/Blue/Black confidence colors so unscouted or low-confidence players show uncertainty instead of truth. Repeated scouting improves confidence, elite scouts improve it faster, development changes hidden truth first, and dossiers/lists show scouted estimates without exposing internal ratings.
 
-## Why Player Ratings Were Next
+## Why Hockey Intelligence Was Next
 
-The game had rich scouting language and dossiers, but the GM still needed fast visible OVR/POT signals to compare players without reading every report. Alpha 6.17 adds that readable layer while keeping uncertainty and deeper reports meaningful.
+Alpha 6.17 made ratings readable at a glance. Alpha 7.0 gives those numbers a stronger hockey backbone so scouting, development, and dossiers can describe what scouts think they know, what they are unsure about, and how that picture improves over time.
 
 ## Next Build Target
 
-Alpha 6.18 - TBD
+Alpha 7.1 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.18 - TBD
+1. Alpha 7.1 - TBD
 
 ## Build Rule
 

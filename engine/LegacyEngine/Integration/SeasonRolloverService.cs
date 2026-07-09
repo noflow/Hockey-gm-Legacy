@@ -118,6 +118,7 @@ public sealed class SeasonRolloverService
             SeasonRollover = state
         };
         updated = new DraftWarRoomService().EnsureWarRoom(updated);
+        updated = new HockeyIntelligenceRatingService().EnsureRatings(updated);
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = new PlayerRatingService().EnsureRatings(updated);
 
