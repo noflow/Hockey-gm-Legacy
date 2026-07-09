@@ -54,6 +54,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("arbitration_rules")]
     public ArbitrationRules? ArbitrationRules { get; init; }
+
+    [JsonPropertyName("buyout_rules")]
+    public BuyoutRules? BuyoutRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -333,6 +336,33 @@ public sealed class ArbitrationRules
 
     [JsonPropertyName("maximum_award")]
     public decimal MaximumAward { get; init; } = 8_000_000m;
+}
+
+public sealed class BuyoutRules
+{
+    [JsonPropertyName("buyouts_enabled")]
+    public bool BuyoutsEnabled { get; init; }
+
+    [JsonPropertyName("buyout_window_start_offset_days")]
+    public int BuyoutWindowStartOffsetDays { get; init; }
+
+    [JsonPropertyName("buyout_window_end_offset_days")]
+    public int BuyoutWindowEndOffsetDays { get; init; }
+
+    [JsonPropertyName("buyout_cost_percentage")]
+    public decimal BuyoutCostPercentage { get; init; } = 0.6667m;
+
+    [JsonPropertyName("penalty_years_multiplier")]
+    public int PenaltyYearsMultiplier { get; init; } = 2;
+
+    [JsonPropertyName("age_based_cost_rule_placeholder")]
+    public string? AgeBasedCostRulePlaceholder { get; init; }
+
+    [JsonPropertyName("cap_penalty_enabled")]
+    public bool CapPenaltyEnabled { get; init; } = true;
+
+    [JsonPropertyName("minimum_contract_remaining_years")]
+    public int MinimumContractRemainingYears { get; init; } = 1;
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

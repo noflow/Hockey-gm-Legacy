@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -547,6 +547,7 @@ internal sealed class MainWindow : Window
             new("Contracts", CreateTextScreen("Contracts")),
             new("Contract Rights", CreateTextScreen("Contract Rights")),
             new("Arbitration", CreateTextScreen("Arbitration")),
+            new("Buyouts", CreateTextScreen("Buyouts")),
             new("Waivers", CreateTextScreen("Hockey Waivers")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
@@ -631,7 +632,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.3 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.4 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1797,6 +1798,7 @@ internal sealed class MainWindow : Window
         _tabs["Contracts"].Text = BuildContractsWorkspace();
         _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
         _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
+        _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         RefreshSelectableTab("Trades", BuildTradeRows());
@@ -4855,6 +4857,9 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Settle Arbitration", () => State.SettleArbitrationFor(row.PersonId), State.CanSettleArbitration(row.PersonId));
         yield return CreateDetailButton("Accept Award", () => State.AcceptArbitrationAwardFor(row.PersonId), State.CanAcceptArbitrationAward(row.PersonId));
         yield return CreateDetailButton("Walk Away", () => State.WalkAwayArbitrationFor(row.PersonId), State.CanWalkAwayArbitration(row.PersonId));
+        yield return CreateDetailButton("Calculate Buyout", () => State.CalculateBuyoutFor(row.PersonId), State.CanCalculateBuyout(row.PersonId));
+        yield return CreateDetailButton("Confirm Buyout", () => State.ConfirmBuyoutFor(row.PersonId), State.CanConfirmBuyout(row.PersonId));
+        yield return CreateDetailButton("Cancel Buyout", () => State.CancelBuyoutFor(row.PersonId), State.CanCancelBuyout(row.PersonId));
 
         var available = State.AvailableProspectActions(row.PersonId);
         yield return CreateDetailButton("Offer Contract", () => State.OfferProspectContractFor(row.PersonId), available.Contains(ProspectDecisionType.OfferContract));
@@ -6080,7 +6085,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Contract count: {cap.ContractCount}/{(cap.Profile.MaximumContracts == int.MaxValue ? "unlimited" : cap.Profile.MaximumContracts.ToString())}");
         builder.AppendLine($"Expiring contracts: {cap.ExpiringSalary:C0}");
         builder.AppendLine($"Future commitments: {cap.CommittedFutureSalary:C0}");
-        builder.AppendLine($"Dead cap placeholder: {cap.DeadCapPlaceholder:C0}");
+        builder.AppendLine($"Buyout/dead cap penalties: {cap.DeadCapPlaceholder:C0}");
         foreach (var warning in cap.Warnings)
         {
             builder.AppendLine($"Warning: {warning}");
@@ -6097,6 +6102,16 @@ internal sealed class MainWindow : Window
             foreach (var contract in cap.ContractCommitments.OrderByDescending(item => item.CapHit).ThenBy(item => item.PersonName))
             {
                 builder.AppendLine($"{contract.PersonName}: {contract.CapHit:C0} cap hit | {contract.YearsRemaining} year(s) | expires {contract.ExpiresOn:yyyy-MM-dd}");
+            }
+        }
+
+        if (cap.BuyoutPenalties.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Buyout Penalty Schedule");
+            foreach (var penalty in cap.BuyoutPenalties.OrderBy(item => item.SeasonYear).ThenBy(item => item.Description, StringComparer.Ordinal))
+            {
+                builder.AppendLine($"{penalty.SeasonYear}: {penalty.Amount:C0} - {penalty.Description}");
             }
         }
 
@@ -6129,12 +6144,64 @@ internal sealed class MainWindow : Window
         AppendContractSection(builder, "Rejected / Walk-Away Log", summary.RejectedOffers);
         builder.AppendLine(BuildContractRightsWorkspace());
         builder.AppendLine(BuildArbitrationWorkspace());
+        builder.AppendLine(BuildBuyoutWorkspace());
 
         builder.AppendLine("Offer Builder Guidance");
         builder.AppendLine("----------------------");
         builder.AppendLine("Offer inputs supported by the engine: salary, term, role promise, development promise, camp invite promise, staff role/focus promise, and notes.");
         builder.AppendLine("Evaluation output includes total cost, annual cost, common expiry date, budget before/after, likelihood, risk warning, and plain-language reasons.");
         builder.AppendLine("Use Free Agents, Prospects, Recruits, Staff, or Pending Decisions to pick the person, then approve only the deals you actually want signed.");
+        return builder.ToString();
+    }
+
+    private string BuildBuyoutWorkspace()
+    {
+        var eligibility = State.BuyoutEligibility;
+        var buyouts = State.ContractBuyouts;
+        var window = State.BuyoutWindow;
+        var builder = new StringBuilder();
+        builder.AppendLine("Contract Buyouts");
+        builder.AppendLine("================");
+        builder.AppendLine(State.BuyoutRuleSummary);
+        builder.AppendLine(window.Summary);
+        builder.AppendLine();
+        builder.AppendLine("Use selected contracted player detail panels to Calculate Buyout, Confirm Buyout, Cancel, or View Dossier.");
+        builder.AppendLine();
+
+        builder.AppendLine("Eligible / Contracted Players");
+        builder.AppendLine("-----------------------------");
+        if (eligibility.Count == 0)
+        {
+            builder.AppendLine("  No signed player contracts are currently available for buyout review.");
+        }
+        else
+        {
+            foreach (var item in eligibility.OrderByDescending(item => item.Status == BuyoutStatus.Eligible).ThenBy(item => item.PlayerName, StringComparer.Ordinal))
+            {
+                builder.AppendLine($"  {item.PlayerName} | {State.PositionShortText(item.Position)} | age {item.Age?.ToString() ?? "unknown"} | {item.YearsRemaining} year(s) | {State.DisplayBuyoutStatus(item.Status)}");
+                builder.AppendLine($"    {item.Reason}");
+                builder.AppendLine($"    Recommendation: {item.Recommendation}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Pending / Completed Buyouts");
+        builder.AppendLine("---------------------------");
+        if (buyouts.Count == 0)
+        {
+            builder.AppendLine("  No buyout calculations or completed buyouts.");
+            return builder.ToString();
+        }
+
+        foreach (var buyout in buyouts.OrderByDescending(item => item.CreatedOn).ThenBy(item => item.PlayerName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"  {buyout.PlayerName} | {State.DisplayBuyoutStatus(buyout.Status)} | cost {buyout.Calculation.BuyoutCost:C0}");
+            builder.AppendLine($"    Annual penalty: {buyout.Calculation.AnnualPenalty:C0} for {buyout.Calculation.PenaltySeasons} season(s) | current cap impact {buyout.Calculation.CurrentSeasonCapImpact:C0}");
+            builder.AppendLine($"    Schedule: {string.Join(", ", buyout.Calculation.Penalties.Select(penalty => $"{penalty.SeasonYear}: {penalty.Amount:C0}"))}");
+            builder.AppendLine($"    Warning: {buyout.Calculation.Warning}");
+            builder.AppendLine($"    Recommendation: {buyout.Recommendation}");
+        }
+
         return builder.ToString();
     }
 
@@ -8879,6 +8946,7 @@ internal sealed class AlphaDesktopState
     private readonly WaiverService _waivers = new();
     private readonly RfaUfaService _rfaUfa = new();
     private readonly ArbitrationService _arbitration = new();
+    private readonly BuyoutService _buyouts = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -9238,6 +9306,17 @@ internal sealed class AlphaDesktopState
     public string ArbitrationRuleSummary =>
         _arbitration.BuildRuleSummary(_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
 
+    public BuyoutWindow BuyoutWindow =>
+        _buyouts.BuildWindow(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public IReadOnlyList<BuyoutEligibility> BuyoutEligibility =>
+        _buyouts.BuildEligibility(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public IReadOnlyList<ContractBuyout> ContractBuyouts => ScenarioSnapshot.ContractBuyouts;
+
+    public string BuyoutRuleSummary =>
+        _buyouts.BuildRuleSummary(_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
 
     public GameRecap? LastGameRecap => _seasonFramework.LastPlayerTeamRecap(ScenarioSnapshot);
@@ -9356,7 +9435,8 @@ internal sealed class AlphaDesktopState
         + ContractManagement.UnsignedProspects.Count
         + ContractManagement.AcceptedOffersAwaitingApproval.Count
         + ContractRightsDecisions.Count(decision => decision.IsOpenDecision)
-        + ArbitrationCases.Count(item => item.IsOpen);
+        + ArbitrationCases.Count(item => item.IsOpen)
+        + ContractBuyouts.Count(item => item.Status == BuyoutStatus.PendingConfirmation);
 
     public int ScoutingReportCount => ScenarioSnapshot.CompletedScoutingReports.Count;
 
@@ -10966,6 +11046,15 @@ internal sealed class AlphaDesktopState
             && ArbitrationCases.Any(item => item.PersonId == personId && item.IsOpen);
     }
 
+    public bool CanCalculateBuyout(string personId) =>
+        BuyoutEligibility.Any(item => item.PersonId == personId && item.Status == BuyoutStatus.Eligible);
+
+    public bool CanConfirmBuyout(string personId) =>
+        ScenarioSnapshot.ContractBuyouts.Any(item => item.PersonId == personId && item.Status == BuyoutStatus.PendingConfirmation);
+
+    public bool CanCancelBuyout(string personId) =>
+        CanConfirmBuyout(personId);
+
     public string DisplayRightsStatus(FreeAgentRightsStatus status) =>
         status switch
         {
@@ -10991,6 +11080,15 @@ internal sealed class AlphaDesktopState
             ArbitrationCaseStatus.SettledBeforeHearing => "Settled Before Hearing",
             ArbitrationCaseStatus.AwardIssued => "Award Issued",
             ArbitrationCaseStatus.WalkedAway => "Walked Away",
+            _ => status.ToString()
+        };
+
+    public string DisplayBuyoutStatus(BuyoutStatus status) =>
+        status switch
+        {
+            BuyoutStatus.NotEligible => "Not Eligible",
+            BuyoutStatus.PendingConfirmation => "Pending Confirmation",
+            BuyoutStatus.ExpiredWindow => "Expired Window",
             _ => status.ToString()
         };
 
@@ -11045,6 +11143,15 @@ internal sealed class AlphaDesktopState
     public void WalkAwayArbitrationFor(string personId) =>
         ApplyArbitrationResult(_arbitration.WalkAway(_registry, ScenarioSnapshot, personId));
 
+    public void CalculateBuyoutFor(string personId) =>
+        ApplyBuyoutResult(_buyouts.CalculateBuyout(_registry, ScenarioSnapshot, personId));
+
+    public void ConfirmBuyoutFor(string personId) =>
+        ApplyBuyoutResult(_buyouts.ConfirmBuyout(_registry, ScenarioSnapshot, personId));
+
+    public void CancelBuyoutFor(string personId) =>
+        ApplyBuyoutResult(_buyouts.CancelBuyout(_registry, ScenarioSnapshot, personId));
+
     private void ApplyRightsResult(RightsDecisionResult result)
     {
         if (result.Success)
@@ -11061,6 +11168,21 @@ internal sealed class AlphaDesktopState
     }
 
     private void ApplyArbitrationResult(ArbitrationResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            AddInboxItems(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyBuyoutResult(BuyoutResult result)
     {
         if (result.Success)
         {

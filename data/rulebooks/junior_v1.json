@@ -130,5 +130,15 @@
     "draft_offset_days": 300,
     "free_agency_open_offset_days": 310,
     "free_agency_close_offset_days": 330
+  },
+  "buyout_rules": {
+    "buyouts_enabled": false,
+    "buyout_window_start_offset_days": 0,
+    "buyout_window_end_offset_days": 0,
+    "buyout_cost_percentage": 0,
+    "penalty_years_multiplier": 0,
+    "age_based_cost_rule_placeholder": "Junior-style rulebook disables contract buyouts unless a custom rulebook enables them.",
+    "cap_penalty_enabled": false,
+    "minimum_contract_remaining_years": 0
   }
 }

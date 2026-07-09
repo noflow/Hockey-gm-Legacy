@@ -121,7 +121,8 @@ public static class RulebookPresets
             SalaryCapRules = CreateSalaryCapRules(leagueType, activeRoster),
             WaiverRules = CreateWaiverRules(leagueType),
             FreeAgentRightsRules = CreateFreeAgentRightsRules(leagueType),
-            ArbitrationRules = CreateArbitrationRules(leagueType)
+            ArbitrationRules = CreateArbitrationRules(leagueType),
+            BuyoutRules = CreateBuyoutRules(leagueType)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -242,6 +243,24 @@ public static class RulebookPresets
             WalkAwayAllowed = enabled,
             MinimumAward = enabled ? 775_000m : 0m,
             MaximumAward = enabled ? 8_000_000m : 0m
+        };
+    }
+
+    private static BuyoutRules CreateBuyoutRules(string leagueType)
+    {
+        var enabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase);
+        return new BuyoutRules
+        {
+            BuyoutsEnabled = enabled,
+            BuyoutWindowStartOffsetDays = enabled ? 258 : 0,
+            BuyoutWindowEndOffsetDays = enabled ? 309 : 0,
+            BuyoutCostPercentage = enabled ? 0.6667m : 0m,
+            PenaltyYearsMultiplier = enabled ? 2 : 0,
+            AgeBasedCostRulePlaceholder = enabled
+                ? "Age-based buyout rates are a placeholder in Alpha 7.4; configured percentage is used for v1."
+                : "Buyouts disabled for this league preset.",
+            CapPenaltyEnabled = enabled,
+            MinimumContractRemainingYears = enabled ? 1 : 0
         };
     }
 

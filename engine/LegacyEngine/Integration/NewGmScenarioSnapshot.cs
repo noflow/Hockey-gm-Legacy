@@ -124,6 +124,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public ArbitrationHistory ArbitrationHistory { get; init; } = ArbitrationHistory.Empty;
 
+    public IReadOnlyList<ContractBuyout> ContractBuyouts { get; init; } = Array.Empty<ContractBuyout>();
+
+    public BuyoutHistory BuyoutHistory { get; init; } = BuyoutHistory.Empty;
+
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
     public PlayoffState Playoffs { get; init; } = PlayoffState.Empty;
@@ -406,6 +410,12 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         ArbitrationHistory.Validate();
+        foreach (var buyout in ContractBuyouts)
+        {
+            buyout.Validate();
+        }
+
+        BuyoutHistory.Validate();
 
         GmCareerHistory?.Validate();
         foreach (var season in OrganizationSeasonHistory)

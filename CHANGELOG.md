@@ -1,6 +1,45 @@
 # Changelog
 
-## Current - Alpha 7.3
+## Current - Alpha 7.4
+
+### Added
+
+- Rulebook-driven contract buyout rules, including enable/disable flag, buyout window offsets, configured cost percentage, penalty-years multiplier, cap-penalty flag, minimum remaining-years rule, and age-rule placeholder.
+- Buyout models for `ContractBuyout`, `BuyoutEligibility`, `BuyoutCalculation`, `BuyoutPenalty`, `BuyoutWindow`, `BuyoutResult`, and `BuyoutHistory`.
+- `BuyoutService` to evaluate eligibility, calculate buyout cost, create pending confirmations, confirm/cancel buyouts, release bought-out players to free agency, record history, and queue events/messages.
+- Confirmed buyouts now create future penalty schedules and feed the salary-cap snapshot as buyout/dead-cap penalties.
+- Player/agent relationship impact for confirmed buyouts.
+- Action Center buyout items for open/closing windows, pending confirmations, and active penalty warnings.
+- Player Dossier buyout status/history lines.
+- League News transaction/event support for completed contract buyouts.
+- AlphaDesktop Contract Buyouts screen under Hockey Operations, plus selected-player actions for Calculate Buyout, Confirm Buyout, Cancel Buyout, and View Dossier.
+- Alpha 7.4 tests covering rulebook eligibility, junior-disabled behavior, outside-window blocking, calculation, future penalties, free-agency release, cap snapshot updates, history, relationship impact, Action Center, UI exposure, save/load preservation, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.4.
+- Contract decision count now includes pending buyout confirmations.
+- Budget/cap views now expose buyout/dead-cap penalty schedule when present.
+- Alpha 5.6 boundary test remains focused on no LTIR, no offer-sheet engine, and no Godot now that buyouts exist in Alpha 7.4.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No LTIR.
+- No retained salary.
+- No compliance buyouts.
+- No contract termination appeals.
+- No offer sheets.
+- No full CBA edge-case system.
+- No Godot.
+- No new game simulation logic.
+
+## Previous - Alpha 7.3
 
 ### Added
 

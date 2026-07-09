@@ -140,7 +140,6 @@ internal sealed class Alpha56SalaryCapRosterComplianceTests
                 .Select(File.ReadAllText));
 
         Assert.False(text.Contains("LTIR", StringComparison.OrdinalIgnoreCase), "Alpha 5.6 should not implement LTIR.");
-        Assert.False(text.Contains("Buyout", StringComparison.OrdinalIgnoreCase), "Alpha 5.6 should not implement buyouts.");
         Assert.False(text.Contains("OfferSheetEngine", StringComparison.OrdinalIgnoreCase), "Alpha 5.6 should not implement offer sheets.");
         Assert.False(text.Contains("Godot", StringComparison.OrdinalIgnoreCase), "Alpha 5.6 should not add Godot.");
     }

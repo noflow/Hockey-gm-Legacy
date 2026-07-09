@@ -20,6 +20,7 @@ public enum LeagueTransactionType
     ArbitrationAwardIssued,
     ArbitrationSettled,
     ArbitrationWalkAway,
+    ContractBoughtOut,
     Injury,
     DraftPick,
     StaffHired,

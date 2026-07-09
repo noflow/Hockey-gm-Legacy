@@ -118,29 +118,30 @@ The five foundation pillars remain:
 - Alpha 7.1 - Waivers & Roster Transactions v1
 - Alpha 7.2 - RFA/UFA Contract Rights v1
 - Alpha 7.3 - Salary Arbitration v1
+- Alpha 7.4 - Contract Buyouts v1
 
 ## Current Milestone
 
-Alpha 7.3 - Salary Arbitration v1
+Alpha 7.4 - Contract Buyouts v1
 
 ## Current Goal
 
-Add rulebook-driven salary arbitration for eligible qualified RFAs. NHL-style rulebooks can now define arbitration eligibility, filing windows, hearing timing, walk-away rules, and award bounds. The GM can file arbitration, negotiate settlement, accept awards, or walk away where allowed, with Action Center items, inbox messages, League News, player dossier history, and save/load preservation.
+Add rulebook-driven contract buyouts for NHL-style teams. The GM can calculate a buyout, review remaining salary, total cost, penalty seasons, annual penalty, cap/budget impact, and then explicitly confirm or cancel. Confirmed buyouts terminate the contract, release the player to free agency, create future penalty records, update cap/budget snapshots, affect player/agent relationships, and preserve history/save-load state.
 
-## Why Salary Arbitration Was Next
+## Why Contract Buyouts Were Next
 
-Alpha 7.2 created explicit RFA/UFA rights decisions. Alpha 7.3 adds the next professional offseason resolution path: qualified RFAs with age/accrued-season eligibility can now enter arbitration instead of being limited to normal negotiation or rights release.
+Alpha 7.3 added salary arbitration as an offseason contract-dispute path. Alpha 7.4 adds the next professional contract-management tool: removing an unwanted contract while keeping future penalties visible and rulebook-controlled.
 
 ## Next Build Target
 
-Alpha 7.4 - TBD
+Alpha 7.5 - TBD
 
 ## Next Milestones
 
-1. Alpha 7.4 - TBD
+1. Alpha 7.5 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, offer sheets, full holdout systems, full CBA edge cases, LTIR, emergency recalls, conditional waivers, buyouts, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, offer sheets, full holdout systems, full CBA edge cases, LTIR, retained salary, emergency recalls, conditional waivers, compliance buyouts, contract termination appeals, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

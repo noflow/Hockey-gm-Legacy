@@ -241,6 +241,7 @@ public sealed class ActionCenterService
     {
         items.AddRange(new RfaUfaService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
         items.AddRange(new ArbitrationService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
+        items.AddRange(new BuyoutService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
     }
 
     private static void AddStaffCoachingItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

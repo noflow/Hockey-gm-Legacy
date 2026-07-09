@@ -48,6 +48,8 @@ public enum LegacyEventType
     ArbitrationAwardIssued,
     ArbitrationSettled,
     ArbitrationWalkAway,
+    BuyoutCalculated,
+    ContractBoughtOut,
     PlayerInjured,
     PlayerRecovered,
     InjuryReAggravated,

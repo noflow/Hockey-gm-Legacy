@@ -26,8 +26,13 @@ public sealed class BudgetOverviewService
         var playerContracts = contracts
             .Where(contract => contract.ContractType == ContractType.JuniorPlayerAgreement)
             .Sum(contract => contract.Money.SalaryOrStipend + contract.Money.SigningBonus);
+        var buyoutPenalty = scenario.ContractBuyouts
+            .Where(buyout => buyout.Status == BuyoutStatus.Completed)
+            .SelectMany(buyout => buyout.Calculation.Penalties)
+            .Where(penalty => penalty.SeasonYear == scenario.Season.Year)
+            .Sum(penalty => penalty.Amount);
         var ownerBudget = scenario.AlphaSnapshot.Owner.Budget;
-        var used = hockeyOps.UsedBudget;
+        var used = hockeyOps.UsedBudget + buyoutPenalty;
         var remaining = ownerBudget.Total - used;
         var ratio = ownerBudget.Total == 0 ? 1 : used / ownerBudget.Total;
         var status = remaining < 0
@@ -47,7 +52,7 @@ public sealed class BudgetOverviewService
             TotalBudget: ownerBudget.Total,
             UsedBudget: used,
             RemainingBudget: remaining,
-            PlayerContractsTotal: playerContracts,
+            PlayerContractsTotal: playerContracts + buyoutPenalty,
             StaffContractsTotal: hockeyOps.StaffTotal + hockeyOps.StaffReleaseObligations,
             ScoutingBudget: ownerBudget.Scouting,
             MedicalAndStaffOperationsBudget: ownerBudget.Staff + ownerBudget.Operations,

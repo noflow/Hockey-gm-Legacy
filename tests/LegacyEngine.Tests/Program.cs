@@ -97,6 +97,7 @@ var alpha70HockeyIntelligenceRatingTests = new Alpha70HockeyIntelligenceRatingTe
 var alpha71WaiversRosterTransactionsTests = new Alpha71WaiversRosterTransactionsTests();
 var alpha72RfaUfaContractRightsTests = new Alpha72RfaUfaContractRightsTests();
 var alpha73SalaryArbitrationTests = new Alpha73SalaryArbitrationTests();
+var alpha74ContractBuyoutTests = new Alpha74ContractBuyoutTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1297,6 +1298,19 @@ runner.Run("alpha 7.3 dossier and history record arbitration", alpha73SalaryArbi
 runner.Run("alpha 7.3 save load preserves active case", alpha73SalaryArbitrationTests.SaveLoadPreservesActiveCase);
 runner.Run("alpha 7.3 desktop exposes arbitration UI", alpha73SalaryArbitrationTests.AlphaDesktopExposesArbitrationUi);
 runner.Run("alpha 7.3 no offer sheets or Godot added", alpha73SalaryArbitrationTests.NoOfferSheetsOrGodotAdded);
+runner.Run("alpha 7.4 buyout eligibility from rulebook", alpha74ContractBuyoutTests.BuyoutEligibilityComesFromRulebook);
+runner.Run("alpha 7.4 junior league buyouts disabled", alpha74ContractBuyoutTests.JuniorLeagueBuyoutsDisabled);
+runner.Run("alpha 7.4 buyout blocked outside window", alpha74ContractBuyoutTests.BuyoutBlockedOutsideWindow);
+runner.Run("alpha 7.4 buyout calculation generated", alpha74ContractBuyoutTests.BuyoutCalculationGenerated);
+runner.Run("alpha 7.4 buyout creates future penalty", alpha74ContractBuyoutTests.BuyoutCreatesFuturePenalty);
+runner.Run("alpha 7.4 buyout releases player to free agency", alpha74ContractBuyoutTests.BuyoutReleasesPlayerToFreeAgency);
+runner.Run("alpha 7.4 buyout updates cap snapshot", alpha74ContractBuyoutTests.BuyoutUpdatesCapSnapshot);
+runner.Run("alpha 7.4 buyout creates history entry", alpha74ContractBuyoutTests.BuyoutCreatesHistoryEntry);
+runner.Run("alpha 7.4 buyout records relationship impact", alpha74ContractBuyoutTests.BuyoutRecordsRelationshipImpact);
+runner.Run("alpha 7.4 Action Center shows buyout window", alpha74ContractBuyoutTests.ActionCenterShowsBuyoutWindow);
+runner.Run("alpha 7.4 desktop exposes buyout UI", alpha74ContractBuyoutTests.AlphaDesktopExposesBuyoutUi);
+runner.Run("alpha 7.4 save load preserves buyout penalties", alpha74ContractBuyoutTests.SaveLoadPreservesBuyoutPenalties);
+runner.Run("alpha 7.4 no LTIR retained salary or Godot added", alpha74ContractBuyoutTests.NoLtirRetainedSalaryOrGodotAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

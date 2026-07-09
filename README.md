@@ -103,6 +103,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 7.1 Waivers & Roster Transactions v1
 - Alpha 7.2 RFA/UFA Contract Rights v1
 - Alpha 7.3 Salary Arbitration v1
+- Alpha 7.4 Contract Buyouts v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -117,6 +118,8 @@ Alpha 1.8.1 - Executive Reports adds permanent in-memory career reports for each
 Alpha 1.9 - Staff & Scouting Operations v1 deepens daily scouting. The GM can review scout profiles, relationships, workload, strengths, weaknesses, and conflict warnings; assign scouts to regions or specific prospects; advance days to complete reports; and use basic staff controls to reassign, release, or hire a placeholder staff candidate. Report confidence now reflects scout fit, workload, and relationship/communication quality.
 
 Alpha 2.0 - Player Dossier v1 + Name Cleanup adds clean player display names and a GM-facing dossier. The desktop can open player/prospect dossiers from roster, recruits, scouting, draft board, prospect list, and training camp contexts, with facts, scouting language, development summary, medical context, contract/rights status, staff opinions, relationships, and editable GM notes. Dossiers keep internal ability and potential values private.
+
+Alpha 7.4 - Contract Buyouts v1 adds rulebook-driven buyout windows and penalty calculations for NHL-style teams. The GM can calculate, confirm, or cancel buyouts from AlphaDesktop; confirmed buyouts release the player to free agency, terminate the contract, record future cap/budget penalties, update relationship/history state, and persist through save/load.
 
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
 

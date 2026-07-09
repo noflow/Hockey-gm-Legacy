@@ -49,6 +49,7 @@ public sealed class SalaryCapService
                 0m,
                 PlayerContracts(scenario).Count,
                 Array.Empty<SalaryCapContractCommitment>(),
+                Array.Empty<BuyoutPenalty>(),
                 SalaryCapStatus.Disabled,
                 new[] { "Salary cap disabled by rulebook; use operating budget instead." });
             disabled.Validate();
@@ -58,7 +59,9 @@ public sealed class SalaryCapService
         var commitments = PlayerContracts(scenario)
             .Select(contract => CommitmentFor(scenario, contract))
             .ToArray();
-        var used = commitments.Sum(commitment => commitment.CapHit);
+        var buyoutPenalties = BuyoutPenaltiesFor(scenario).ToArray();
+        var currentBuyoutPenalty = buyoutPenalties.Where(penalty => penalty.SeasonYear == scenario.Season.Year).Sum(penalty => penalty.Amount);
+        var used = commitments.Sum(commitment => commitment.CapHit) + currentBuyoutPenalty;
         var remaining = profile.CapAmount - used;
         var floorRemaining = Math.Max(0m, profile.SalaryFloor - used);
         var percent = profile.CapAmount <= 0 ? 0m : Math.Round(used / profile.CapAmount * 100m, 2);
@@ -69,11 +72,12 @@ public sealed class SalaryCapService
             new SalaryCapSpace(profile.CapAmount, used, remaining, profile.SalaryFloor, floorRemaining, percent),
             used,
             Math.Max(0m, remaining),
-            commitments.Sum(commitment => commitment.TotalRemainingValue),
+            commitments.Sum(commitment => commitment.TotalRemainingValue) + buyoutPenalties.Where(penalty => penalty.SeasonYear > scenario.Season.Year).Sum(penalty => penalty.Amount),
             commitments.Where(commitment => commitment.ExpiresOn <= scenario.CurrentDate.AddDays(365)).Sum(commitment => commitment.CapHit),
-            0m,
+            currentBuyoutPenalty,
             commitments.Length,
             commitments,
+            buyoutPenalties,
             status,
             warnings);
         snapshot.Validate();
@@ -165,6 +169,7 @@ public sealed class SalaryCapService
             0m,
             contractCount,
             Array.Empty<SalaryCapContractCommitment>(),
+            Array.Empty<BuyoutPenalty>(),
             status,
             warnings);
         snapshot.Validate();
@@ -215,6 +220,14 @@ public sealed class SalaryCapService
 
     private static bool IsPlayerContract(Contract contract) =>
         contract.ContractType == ContractType.JuniorPlayerAgreement;
+
+    private static IReadOnlyList<BuyoutPenalty> BuyoutPenaltiesFor(NewGmScenarioSnapshot scenario) =>
+        scenario.ContractBuyouts
+            .Where(buyout => buyout.Status == BuyoutStatus.Completed)
+            .SelectMany(buyout => buyout.Calculation.Penalties)
+            .GroupBy(penalty => penalty.PenaltyId, StringComparer.Ordinal)
+            .Select(group => group.Last())
+            .ToArray();
 
     private static SalaryCapContractCommitment CommitmentFor(NewGmScenarioSnapshot scenario, Contract contract)
     {

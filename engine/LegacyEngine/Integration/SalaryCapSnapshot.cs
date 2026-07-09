@@ -10,6 +10,7 @@ public sealed record SalaryCapSnapshot(
     decimal DeadCapPlaceholder,
     int ContractCount,
     IReadOnlyList<SalaryCapContractCommitment> ContractCommitments,
+    IReadOnlyList<BuyoutPenalty> BuyoutPenalties,
     SalaryCapStatus Status,
     IReadOnlyList<string> Warnings)
 {
@@ -33,6 +34,11 @@ public sealed record SalaryCapSnapshot(
         foreach (var commitment in ContractCommitments)
         {
             commitment.Validate();
+        }
+
+        foreach (var penalty in BuyoutPenalties)
+        {
+            penalty.Validate();
         }
     }
 }
