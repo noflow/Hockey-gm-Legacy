@@ -110,14 +110,15 @@ The five foundation pillars remain:
 - Alpha 6.11 - Organization Command Center
 - Alpha 6.12 - Franchise Identity & Culture v1
 - Alpha 6.13 - Living Story Engine v1
+- Alpha 6.14 - Media & News v1
 
 ## Current Milestone
 
-Alpha 6.13 - Living Story Engine v1
+Alpha 6.14 - Media & News v1
 
 ## Current Goal
 
-Transform isolated events into readable long-term stories for players, the GM, staff, owners, and organizations. Stories now connect related milestones, relationships, franchise identity, careers, and reports into visible arcs across dossiers, Organization Command Center, Action Center, League News, monthly summaries, executive reports, and save/load.
+Turn Living Story Engine output, major transactions, draft stories, milestones, injuries, owner/front-office pressure, staff movement, and franchise identity changes into short fictional media articles. Media now lives as a separate story/article layer from League News transaction wire, appears on the dashboard, Reports / History, player dossiers, and Organization Command Center, and is preserved through save/load without adding social media, press conferences, or real media brands.
 
 ## Why Living Story Engine Was Next
 

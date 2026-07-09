@@ -46,6 +46,7 @@ public sealed class PlayerDossierService
             BuildAgentRepresentation(scenario, personId),
             BuildOrganizationFit(scenario, personId),
             BuildStories(scenario, personId),
+            BuildMediaCoverage(scenario, personId),
             BuildStaffOpinions(scenario, personId),
             BuildRelationships(scenario, personId),
             BuildCareerHistory(scenario, personId),
@@ -463,6 +464,12 @@ public sealed class PlayerDossierService
     {
         var lines = new StoryService().BuildPlayerDossierLines(scenario, personId);
         return new PlayerDossierSection("Stories", lines);
+    }
+
+    private static PlayerDossierSection BuildMediaCoverage(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new MediaService().BuildPlayerDossierLines(scenario, personId);
+        return new PlayerDossierSection("Media Coverage", lines);
     }
 
     private static PlayerDossierSection BuildStaffOpinions(NewGmScenarioSnapshot scenario, string personId)

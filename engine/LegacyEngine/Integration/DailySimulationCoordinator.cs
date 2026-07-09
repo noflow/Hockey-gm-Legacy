@@ -59,6 +59,7 @@ public sealed class DailySimulationCoordinator
             .Concat(report?.InboxItems ?? Array.Empty<AlphaInboxItem>())
             .ToArray();
         var leagueTransactions = simulation.LeagueTransactions.Concat(deadline.LeagueTransactions).Concat(playoffs.LeagueNews).ToArray();
+        finalScenario = new MediaService().EnsureMediaFeed(finalScenario, leagueTransactions, registry);
         var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && deadline.InboxItems.Count == 0 && games.SimulatedGames.Count == 0 && playoffs.GameRecaps.Count == 0 && report?.Success != true
             ? simulation.Summary
             : $"{simulation.Summary} {camp.Summary} {scouting.Message} {deadline.Summary} {games.Summary} {playoffs.Message}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";

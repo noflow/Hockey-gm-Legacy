@@ -230,6 +230,7 @@ public sealed class NewGmScenarioBootstrapper
         scenarioSnapshot = new OwnerLifeCycleService().EnsureLifeCycle(scenarioSnapshot, registry);
         scenarioSnapshot = new RelationshipExpansionService().EnsureExpansion(scenarioSnapshot, registry);
         scenarioSnapshot = new StoryService().EnsureStories(scenarioSnapshot, registry);
+        scenarioSnapshot = new MediaService().EnsureMediaFeed(scenarioSnapshot, Array.Empty<LeagueTransaction>(), registry);
         scenarioSnapshot = new LineupService().EnsureLineup(scenarioSnapshot);
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.TradeBlockUpdated, "League trade block updated", $"{tradeBlock.Entries.Count} players are available on the league trade block.");

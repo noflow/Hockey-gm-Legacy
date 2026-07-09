@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.13 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.14 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -578,6 +578,7 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Player Career Timelines", CreateTextScreen("Player Career Timelines")),
             new WorkspaceScreen("Career Milestones", CreateTextScreen("Career Milestones")),
             new WorkspaceScreen("Player Stories", CreateTextScreen("Player Stories")),
+            new WorkspaceScreen("Media / News", CreateTextScreen("Media / News")),
             new WorkspaceScreen("Staff History", CreateTextScreen("Staff History")),
             new WorkspaceScreen("Staff Careers", CreateTextScreen("Staff Careers")),
             new WorkspaceScreen("Coaching Trees", CreateTextScreen("Coaching Trees")),
@@ -621,7 +622,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.13 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.14 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1817,6 +1818,7 @@ internal sealed class MainWindow : Window
         _tabs["Player Career Timelines"].Text = BuildPlayerCareerTimelinesReport();
         _tabs["Career Milestones"].Text = BuildCareerMilestonesReport();
         _tabs["Player Stories"].Text = BuildPlayerStoriesReport();
+        _tabs["Media / News"].Text = BuildMediaNews();
         _tabs["Staff History"].Text = BuildStaffHistoryReport();
         _tabs["Staff Careers"].Text = BuildStaffCareersReport();
         _tabs["Coaching Trees"].Text = BuildCoachingTreesReport();
@@ -1886,6 +1888,11 @@ internal sealed class MainWindow : Window
         metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
         metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
         metrics.Children.Add(CreateDashboardMetric("League News", State.LeagueNewsCount.ToString(), "notable league items", false));
+        metrics.Children.Add(CreateDashboardMetric(
+            "Top Headline",
+            State.TopMediaHeadline?.Source.Name ?? "None",
+            State.TopMediaHeadline?.Headline ?? "No major media headline yet",
+            State.TopMediaHeadline?.Importance >= MediaImportance.Breaking));
         metrics.Children.Add(CreateDashboardMetric("Journal", State.JournalEntries.Count.ToString(), "routine updates archived", false));
         if (State.TradeDeadlineWindow.Status != TradeDeadlineStatus.NotStarted)
         {
@@ -1949,6 +1956,7 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Team record", record);
         AddLine(summary, "Standings rank", State.StandingsRankText);
         AddLine(summary, "Playoffs", State.PlayoffDashboardSummary);
+        AddLine(summary, "Top Headline", State.TopMediaHeadline?.Headline ?? "No major headline yet.");
         AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
         AddLine(summary, "Open actions", $"{State.OpenActionCount} open / {State.UrgentActionCount} urgent");
         AddLine(summary, "Inbox focus", State.InboxFocusSummary);
@@ -2653,6 +2661,7 @@ internal sealed class MainWindow : Window
 
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Franchise Overview", BuildFranchiseOverviewLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Current Organization Story", BuildOrganizationStoryLines());
+        AddOrganizationCommandCard(_organizationCommandCenterPanel, "Media Coverage", BuildOrganizationMediaLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Needs", BuildOrganizationNeedsLines());
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Department Health", BuildDepartmentHealthLines(_organizationCommandDepartment));
         AddOrganizationCommandCard(_organizationCommandCenterPanel, "Organization Chart", BuildOrganizationChartLines());
@@ -2729,6 +2738,14 @@ internal sealed class MainWindow : Window
     private IEnumerable<string> BuildOrganizationStoryLines()
     {
         foreach (var line in new StoryService().BuildOrganizationLines(State.ScenarioSnapshot))
+        {
+            yield return line;
+        }
+    }
+
+    private IEnumerable<string> BuildOrganizationMediaLines()
+    {
+        foreach (var line in new MediaService().BuildOrganizationLines(State.ScenarioSnapshot, State.LeagueTransactions))
         {
             yield return line;
         }
@@ -7146,6 +7163,79 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildMediaNews()
+    {
+        var feed = State.MediaFeed;
+        var builder = new StringBuilder();
+        builder.AppendLine("Media / News");
+        builder.AppendLine("============");
+        builder.AppendLine("Media is the short article/story layer. League News remains the raw transaction/event wire.");
+        builder.AppendLine("Filters available in engine: type, source, team, player, and importance.");
+        builder.AppendLine();
+        builder.AppendLine("Sources");
+        foreach (var source in feed.Sources.OrderBy(source => source.Name, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"  {source.Name} | Focus: {source.Focus} | Tone: {source.ToneBias} | Credibility: {source.Credibility}/100");
+        }
+
+        builder.AppendLine();
+        if (feed.Articles.Count == 0)
+        {
+            builder.AppendLine("No media articles have been generated yet.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine("Top Headlines");
+        foreach (var article in feed.Articles
+            .Where(article => article.Importance >= MediaImportance.Major)
+            .OrderByDescending(article => article.Importance)
+            .ThenByDescending(article => article.Date)
+            .Take(5))
+        {
+            AppendArticle(builder, article);
+        }
+
+        builder.AppendLine();
+        foreach (var group in feed.Articles
+            .GroupBy(article => article.ArticleType)
+            .OrderBy(group => group.Key))
+        {
+            builder.AppendLine(group.Key.ToString());
+            foreach (var article in group
+                .OrderByDescending(article => article.Date)
+                .ThenByDescending(article => article.Importance)
+                .Take(8))
+            {
+                AppendArticle(builder, article);
+            }
+
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendArticle(StringBuilder builder, MediaArticle article)
+    {
+        builder.AppendLine($"  {article.Date:yyyy-MM-dd} | {article.Source.Name} | {article.Importance} | {article.Tone}");
+        builder.AppendLine($"  {article.Headline}");
+        builder.AppendLine($"    {article.ShortSummary}");
+        if (article.ArticleType == MediaArticleType.Rumor)
+        {
+            builder.AppendLine($"    Rumor confidence: {article.RumorConfidence}");
+        }
+
+        if (article.TeamNames.Count > 0)
+        {
+            builder.AppendLine($"    Teams: {string.Join(", ", article.TeamNames)}");
+        }
+
+        if (article.PersonNames.Count > 0)
+        {
+            builder.AppendLine($"    People: {string.Join(", ", article.PersonNames)}");
+        }
+    }
+
     private string BuildLeagueOverview()
     {
         var profile = State.ScenarioSnapshot.LeagueProfile;
@@ -8286,6 +8376,7 @@ internal sealed class AlphaDesktopState
     private readonly GameUsageService _gameUsage = new();
     private readonly TacticsService _tactics = new();
     private readonly StoryService _stories = new();
+    private readonly MediaService _media = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8313,6 +8404,7 @@ internal sealed class AlphaDesktopState
         prepared = _ownerLifeCycle.EnsureLifeCycle(prepared, registry);
         prepared = _relationships.EnsureExpansion(prepared, registry);
         prepared = _stories.EnsureStories(prepared, registry);
+        prepared = _media.EnsureMediaFeed(prepared, Array.Empty<LeagueTransaction>(), registry);
         prepared = _lineups.EnsureLineup(prepared);
         prepared = _lineChemistry.EnsureChemistry(prepared);
         prepared = _gameUsage.EnsureGameUsage(prepared);
@@ -8510,6 +8602,10 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
     public int LeagueNewsCount => LeagueTransactions.Count + LeagueIdentityNews.Count;
+
+    public MediaFeed MediaFeed => _media.BuildFeed(ScenarioSnapshot, LeagueTransactions, _registry);
+
+    public MediaArticle? TopMediaHeadline => _media.TopHeadline(ScenarioSnapshot, LeagueTransactions, _registry);
 
     public string PlayoffStatusText => ScenarioSnapshot.Playoffs.Bracket?.Status.ToString() ?? "Not Started";
 
@@ -9116,6 +9212,8 @@ internal sealed class AlphaDesktopState
 
     public SaveLoadResult SaveCareer(string? filePath = null)
     {
+        ScenarioSnapshot = _media.EnsureMediaFeed(ScenarioSnapshot, LeagueTransactions, _registry);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
         var result = _saveGameService.SaveCareer(
             ScenarioSnapshot,
             InboxManager.AllMessages,
@@ -12285,6 +12383,7 @@ internal sealed class AlphaDesktopState
         updated = _ownerLifeCycle.EnsureLifeCycle(updated, _registry);
         updated = _relationships.EnsureExpansion(updated, _registry);
         updated = _stories.EnsureStories(updated, _registry);
+        updated = _media.EnsureMediaFeed(updated, LeagueTransactions, _registry);
         updated = _lineups.EnsureLineup(updated);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {

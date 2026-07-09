@@ -88,6 +88,7 @@ var alpha610HockeyOperationsCommandCenterTests = new Alpha610HockeyOperationsCom
 var alpha611OrganizationCommandCenterTests = new Alpha611OrganizationCommandCenterTests();
 var alpha612FranchiseIdentityCultureTests = new Alpha612FranchiseIdentityCultureTests();
 var alpha613LivingStoryEngineTests = new Alpha613LivingStoryEngineTests();
+var alpha614MediaNewsTests = new Alpha614MediaNewsTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1172,6 +1173,16 @@ runner.Run("alpha 6.13 organization reports and action center include stories", 
 runner.Run("alpha 6.13 monthly reports reference stories", alpha613LivingStoryEngineTests.MonthlyReportsReferenceStories);
 runner.Run("alpha 6.13 save load preserves stories", alpha613LivingStoryEngineTests.SaveLoadPreservesStories);
 runner.Run("alpha 6.13 no forbidden systems added", alpha613LivingStoryEngineTests.NoForbiddenSystemsAdded);
+runner.Run("alpha 6.14 media article generated from major trade", alpha614MediaNewsTests.MediaArticleGeneratedFromMajorTrade);
+runner.Run("alpha 6.14 media article generated from draft pick", alpha614MediaNewsTests.MediaArticleGeneratedFromDraftPick);
+runner.Run("alpha 6.14 media article generated from milestone", alpha614MediaNewsTests.MediaArticleGeneratedFromMilestone);
+runner.Run("alpha 6.14 rumor article generated", alpha614MediaNewsTests.RumorArticleGenerated);
+runner.Run("alpha 6.14 article has required metadata", alpha614MediaNewsTests.ArticleHasRequiredMetadata);
+runner.Run("alpha 6.14 media feed filters by type team and player", alpha614MediaNewsTests.MediaFeedFiltersByTypeTeamAndPlayer);
+runner.Run("alpha 6.14 dashboard and dossier expose media", alpha614MediaNewsTests.DashboardAndDossierExposeMedia);
+runner.Run("alpha 6.14 league news and media remain separate", alpha614MediaNewsTests.LeagueNewsAndMediaRemainSeparate);
+runner.Run("alpha 6.14 save load preserves media feed", alpha614MediaNewsTests.SaveLoadPreservesMediaFeed);
+runner.Run("alpha 6.14 no real brands social media or Godot", alpha614MediaNewsTests.NoRealBrandsSocialMediaOrGodot);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

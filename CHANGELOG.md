@@ -1,6 +1,45 @@
 # Changelog
 
-## Current - Alpha 6.13
+## Current - Alpha 6.14
+
+### Added
+
+- Media & News models for `MediaArticle`, `MediaArticleType`, `MediaSource`, `MediaTone`, `MediaImportance`, `MediaFeed`, and `MediaService`.
+- Fictional media source pool: League Wire, Hockey Daily, Prospect Central, Front Office Report, Local Beat, and Draft Desk.
+- Short readable media articles generated from Living Story arcs, major trades/signings, draft picks, prospect rights, player/staff/owner milestones, and trade-deadline rumors.
+- Rumor support with Low, Medium, and High confidence labels.
+- Media feed filtering by article type, team, player/person, importance, and source.
+- Dashboard top headline card.
+- Reports / History Media / News screen with sources, top headlines, and grouped article coverage.
+- Player Dossier Media Coverage section.
+- Organization Command Center Media Coverage card.
+- Save/load preservation through `NewGmScenarioSnapshot.MediaFeed`.
+- Alpha 6.14 tests covering major trade articles, draft articles, milestone articles, rumors, article metadata, feed filters, dashboard/dossier UI exposure, separation from League News, save/load, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 6.14.
+- New GM scenario, daily advancement, loaded desktop state, and save flow now ensure media feed state alongside stories, franchise identity, life-cycle, relationship, lineup, chemistry, usage, and tactics state.
+- League News remains the raw transaction wire, while Media / News is the article/story layer.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No social media system.
+- No full media pressure engine.
+- No press conferences.
+- No interviews.
+- No long-form generated articles.
+- No real media brands.
+- No voice/commentary system.
+- No Godot.
+
+## Previous - Alpha 6.13
 
 ### Added
 

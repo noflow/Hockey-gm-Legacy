@@ -132,6 +132,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<Story> Stories { get; init; } = Array.Empty<Story>();
 
+    public MediaFeed MediaFeed { get; init; } = MediaFeed.Empty;
+
     public IReadOnlyList<PlayerCareerState> PlayerCareerStates { get; init; } = Array.Empty<PlayerCareerState>();
 
     public IReadOnlyList<PlayerCareerSummary> PlayerCareerSummaries { get; init; } = Array.Empty<PlayerCareerSummary>();
@@ -425,6 +427,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var story in Stories)
         {
             story.Validate();
+        }
+
+        if (MediaFeed.Sources.Count > 0 || MediaFeed.Articles.Count > 0)
+        {
+            MediaFeed.Validate();
         }
 
         foreach (var state in PlayerCareerStates)
