@@ -1,6 +1,48 @@
 # Changelog
 
-## Current - Alpha 6.8
+## Current - Alpha 6.9
+
+### Added
+
+- PlayoffFormat, PlayoffBracket, PlayoffRound, PlayoffSeries, PlayoffSeriesResult, PlayoffTeamSeed, PlayoffGame, PlayoffStatus, PlayoffState, PlayoffSimulationResult, and PlayoffService.
+- Rulebook-aware playoff format support with safe Top 8 best-of-7 defaults when playoff rules are missing.
+- Standings-based playoff seeding, missed-playoff tracking, first-round bracket creation, series score tracking, round advancement, and champion/runner-up recording.
+- Playoff games simulated through the existing GameSimulationService and GameRecapService.
+- Separate playoff skater, goalie, and team stats so regular-season stats are not overwritten.
+- Playoff qualification, series, champion, league-news, inbox, Action Center, career-timeline, and organization-history hooks.
+- AlphaDesktop Season > Playoffs screen with seeds, bracket, series status, recent recaps, and playoff stat leaders.
+- AlphaDesktop Reports / History > Playoff Archive and Champions screens.
+- Dashboard playoff status card and summary line.
+- Save/load preservation of playoff bracket, recaps, stats, and history through NewGmScenarioSnapshot.
+- Alpha 6.9 tests covering default format, seeding, qualification inbox, game simulation, separate stats, champion recording, player playoff debut, daily pipeline integration, save/load preservation, desktop exposure, and forbidden-system boundaries.
+
+### Changed
+
+- DailySimulationCoordinator now advances playoffs after the regular-season schedule is complete and waits until a champion is crowned before generating the end-of-season executive review.
+- Season rollover archives now prefer the playoff champion when a completed bracket exists instead of using the old standings-leader fallback.
+- Season archive and organization history language now uses championship/playoff result wording.
+- AlphaDesktop version label updated to Alpha 6.9.
+- The older Alpha 4.0 guard no longer bans playoff bracket code now that playoffs are intentionally implemented.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No Godot.
+- No play-by-play engine.
+- No shift simulation.
+- No shot-by-shot simulation.
+- No line matching.
+- No 2D/3D game view.
+- No full awards system.
+- No Hall of Fame.
+- No full retirement system.
+
+## Previous - Alpha 6.8
 
 ### Added
 
@@ -227,4 +269,4 @@
 
 ## Next
 
-- Alpha 6.8 - TBD.
+- Alpha 7.0 - TBD.

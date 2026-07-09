@@ -105,29 +105,30 @@ The five foundation pillars remain:
 - Alpha 6.6 - Special Teams & Game Usage v1
 - Alpha 6.7 - Tactics & Coaching Style v1
 - Alpha 6.8 - Game Simulation v2
+- Alpha 6.9 - Playoffs & Championship Framework v1
 
 ## Current Milestone
 
-Alpha 6.8 - Game Simulation v2
+Alpha 6.9 - Playoffs & Championship Framework v1
 
 ## Current Goal
 
-Upgrade scheduled game simulation so results, recaps, and stats are influenced by roster usage, lineups, chemistry, special teams, tactics, goaltending, injuries, coaching, home/away, and public team strength bands without building play-by-play, shift simulation, line matching, or a visual game engine.
+Add a basic playoff path after the regular season: seed teams from standings, generate a bracket, simulate playoff series with the existing boxscore game engine, track playoff stats separately, crown a champion, and preserve playoff history in reports and save/load.
 
-## Why Game Simulation Was Next
+## Why Playoffs Were Next
 
-Lineup Management decided who plays, Line Chemistry explained who fits together, Game Usage decided when players are deployed, and Tactics defined how the club plays. The next playable layer is making daily game results respect those GM choices in readable boxscores, recaps, and stat distribution.
+Alpha 6.8 made games readable enough to matter. The next playable season layer is giving those results a destination: qualification, series pressure, championship history, and a clear offseason transition.
 
 ## Next Build Target
 
-Alpha 6.9 - TBD
+Alpha 7.0 - TBD
 
 ## Next Milestones
 
-1. Alpha 6.9 - TBD
+1. Alpha 7.0 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, media systems, Hall of Fame, full playoff systems, full awards, full retirement systems, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, media systems, Hall of Fame, full awards, full retirement systems, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

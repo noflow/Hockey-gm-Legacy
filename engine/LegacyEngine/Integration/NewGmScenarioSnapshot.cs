@@ -112,6 +112,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
+    public PlayoffState Playoffs { get; init; } = PlayoffState.Empty;
+
     public IReadOnlyList<PlayerDevelopmentPlan> DevelopmentPlans { get; init; } = Array.Empty<PlayerDevelopmentPlan>();
 
     public IReadOnlyList<DevelopmentReview> DevelopmentReviews { get; init; } = Array.Empty<DevelopmentReview>();
@@ -375,6 +377,7 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         SeasonRollover.Validate();
+        Playoffs.Validate();
         foreach (var plan in DevelopmentPlans)
         {
             plan.Validate();

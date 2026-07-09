@@ -34,6 +34,7 @@ public sealed class ActionCenterService
         AddStaffCoachingItems(scenario, items);
         AddOwnerOfficeItems(scenario, budget, items);
         AddUpcomingGames(scenario, items);
+        AddPlayoffItems(scenario, items);
         AddInjuryIssues(scenario, items);
         AddSeasonReadiness(readiness, items);
         AddTradeDeadlineItems(scenario, items);
@@ -702,6 +703,74 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+    }
+
+    private static void AddPlayoffItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var bracket = scenario.Playoffs.Bracket;
+        if (bracket is null)
+        {
+            return;
+        }
+
+        if (bracket.Status == PlayoffStatus.Completed)
+        {
+            if (bracket.ChampionOrganizationId == scenario.Organization.OrganizationId)
+            {
+                items.Add(new ActionCenterItem(
+                    $"action-center:playoffs:champion:{bracket.BracketId}",
+                    "Championship won",
+                    ActionCenterCategory.League,
+                    ActionCenterPriority.Important,
+                    scenario.CurrentDate,
+                    null,
+                    null,
+                    scenario.Organization.OrganizationId,
+                    scenario.Organization.Name,
+                    $"{scenario.Organization.Name} won the championship.",
+                    "The season can now be archived and the offseason plan can begin.",
+                    "Review Reports / History champions and complete the season rollover when ready.",
+                    null,
+                    null,
+                    null));
+            }
+
+            return;
+        }
+
+        var series = bracket.CurrentSeries;
+        if (series is null)
+        {
+            return;
+        }
+
+        var playerTeamInSeries = series.HigherSeed.OrganizationId == scenario.Organization.OrganizationId || series.LowerSeed.OrganizationId == scenario.Organization.OrganizationId;
+        if (!playerTeamInSeries)
+        {
+            return;
+        }
+
+        var playerWins = series.HigherSeed.OrganizationId == scenario.Organization.OrganizationId ? series.HigherSeedWins : series.LowerSeedWins;
+        var opponentWins = series.HigherSeed.OrganizationId == scenario.Organization.OrganizationId ? series.LowerSeedWins : series.HigherSeedWins;
+        var opponent = series.HigherSeed.OrganizationId == scenario.Organization.OrganizationId ? series.LowerSeed.TeamName : series.HigherSeed.TeamName;
+        var elimination = opponentWins == series.WinsRequired - 1;
+        var clinch = playerWins == series.WinsRequired - 1;
+        items.Add(new ActionCenterItem(
+            $"action-center:playoffs:series:{series.SeriesId}",
+            elimination ? $"Elimination playoff game vs {opponent}" : clinch ? $"Clinching chance vs {opponent}" : $"Playoff series vs {opponent}",
+            ActionCenterCategory.GameDay,
+            elimination ? ActionCenterPriority.Urgent : clinch ? ActionCenterPriority.Important : ActionCenterPriority.Normal,
+            scenario.CurrentDate,
+            null,
+            null,
+            scenario.Organization.OrganizationId,
+            scenario.Organization.Name,
+            $"Series score: {scenario.Organization.Name} {playerWins}, {opponent} {opponentWins}.",
+            "Playoff outcomes affect owner confidence, history, and the offseason story.",
+            "Review lineup, medical status, special teams, and the Playoffs screen before advancing.",
+            null,
+            null,
+            null));
     }
 
     private static void AddSeasonReadiness(SeasonReadinessReport readiness, List<ActionCenterItem> items)

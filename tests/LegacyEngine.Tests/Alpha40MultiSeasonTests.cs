@@ -168,7 +168,6 @@ internal sealed class Alpha40MultiSeasonTests
         Assert.False(text.Contains("Godot", StringComparison.Ordinal), "Alpha 4.0 should not add Godot.");
         Assert.False(text.Contains("DbContext", StringComparison.Ordinal), "Alpha 4.0 should not add database persistence.");
         Assert.False(text.Contains("Cloud", StringComparison.Ordinal), "Alpha 4.0 should not add cloud save.");
-        Assert.False(text.Contains("PlayoffBracket", StringComparison.Ordinal), "Alpha 4.0 should not add a full playoff system.");
         Assert.False(text.Contains("AwardWinner", StringComparison.Ordinal), "Alpha 4.0 should not add a full awards system.");
         Assert.False(text.Contains("RetirementEngine", StringComparison.Ordinal), "Alpha 4.0 should not add a retirement system.");
     }

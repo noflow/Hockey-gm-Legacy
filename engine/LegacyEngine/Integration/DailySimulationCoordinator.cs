@@ -27,11 +27,14 @@ public sealed class DailySimulationCoordinator
         var games = deadline.ScenarioSnapshot.SeasonReadiness.SeasonBegun
             ? new SeasonFrameworkService().SimulateScheduledGamesForCurrentDate(registry, deadline.ScenarioSnapshot)
             : new SeasonSimulationResult(deadline.ScenarioSnapshot, Array.Empty<ScheduledGame>(), Array.Empty<GameRecap>(), Array.Empty<AlphaInboxItem>(), "Season has not begun.");
-        var report = games.ScenarioSnapshot.Season.Status == LegacyEngine.Seasons.SeasonStatus.Completed
-            && games.ScenarioSnapshot.ExecutiveReports.Find($"executive-report:{games.ScenarioSnapshot.Season.SeasonId}:{ExecutiveReportKind.EndOfSeasonExecutiveReview}") is null
-            ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, games.ScenarioSnapshot)
+        var playoffs = games.ScenarioSnapshot.SeasonReadiness.SeasonBegun
+            ? new PlayoffService().AdvanceForCurrentDate(registry, games.ScenarioSnapshot)
+            : new PlayoffSimulationResult(true, games.ScenarioSnapshot, games.ScenarioSnapshot.Playoffs.Bracket, Array.Empty<GameRecap>(), Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), "Season has not begun.");
+        var report = playoffs.ScenarioSnapshot.Playoffs.Bracket?.Status == PlayoffStatus.Completed
+            && playoffs.ScenarioSnapshot.ExecutiveReports.Find($"executive-report:{playoffs.ScenarioSnapshot.Season.SeasonId}:{ExecutiveReportKind.EndOfSeasonExecutiveReview}") is null
+            ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, playoffs.ScenarioSnapshot)
             : null;
-        var finalScenario = report?.Success == true ? report.ScenarioSnapshot : games.ScenarioSnapshot;
+        var finalScenario = report?.Success == true ? report.ScenarioSnapshot : playoffs.ScenarioSnapshot;
         finalScenario = new DevelopmentPlanningService().EnsureScenarioPlans(finalScenario);
         if (finalScenario.CurrentDate.Day == 1)
         {
@@ -51,12 +54,13 @@ public sealed class DailySimulationCoordinator
             .Concat(scouting.InboxItems)
             .Concat(deadline.InboxItems)
             .Concat(games.InboxItems)
+            .Concat(playoffs.InboxItems)
             .Concat(report?.InboxItems ?? Array.Empty<AlphaInboxItem>())
             .ToArray();
-        var leagueTransactions = simulation.LeagueTransactions.Concat(deadline.LeagueTransactions).ToArray();
-        var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && deadline.InboxItems.Count == 0 && games.SimulatedGames.Count == 0 && report?.Success != true
+        var leagueTransactions = simulation.LeagueTransactions.Concat(deadline.LeagueTransactions).Concat(playoffs.LeagueNews).ToArray();
+        var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && deadline.InboxItems.Count == 0 && games.SimulatedGames.Count == 0 && playoffs.GameRecaps.Count == 0 && report?.Success != true
             ? simulation.Summary
-            : $"{simulation.Summary} {camp.Summary} {scouting.Message} {deadline.Summary} {games.Summary}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
+            : $"{simulation.Summary} {camp.Summary} {scouting.Message} {deadline.Summary} {games.Summary} {playoffs.Message}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
 
         return new NewGmDailySimulationResult(finalScenario, simulation, inbox, leagueTransactions, summary);
     }

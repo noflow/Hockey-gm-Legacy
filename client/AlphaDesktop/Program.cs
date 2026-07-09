@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.8 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 6.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -542,6 +542,7 @@ internal sealed class MainWindow : Window
         {
             new WorkspaceScreen("Schedule", CreateTextScreen("Schedule")),
             new WorkspaceScreen("Standings", CreateTextScreen("Standings")),
+            new WorkspaceScreen("Playoffs", CreateTextScreen("Playoffs")),
             new WorkspaceScreen("Stats", CreateTextScreen("Stats")),
             new WorkspaceScreen("Monthly Summary", CreateTextScreen("Monthly Summary")),
             new WorkspaceScreen("Season Archive", CreateTextScreen("Season Archive")),
@@ -570,6 +571,8 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Job Security History", CreateTextScreen("Job Security History")),
             new WorkspaceScreen("Expectation Results", CreateTextScreen("Expectation Results")),
             new WorkspaceScreen("Transaction History", CreateTextScreen("Transaction History")),
+            new WorkspaceScreen("Playoff Archive", CreateTextScreen("Playoff Archive")),
+            new WorkspaceScreen("Champions", CreateTextScreen("Champions")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
             new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
             new WorkspaceScreen("Career History", CreateTextScreen("Career History")),
@@ -601,7 +604,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 6.8 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 6.9 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1626,6 +1629,7 @@ internal sealed class MainWindow : Window
         _tabs["Season Readiness"].Text = BuildSeasonReadiness();
         _tabs["Schedule"].Text = BuildSchedule();
         _tabs["Standings"].Text = BuildStandings();
+        _tabs["Playoffs"].Text = BuildPlayoffs();
         _tabs["Stats"].Text = BuildStats();
         _tabs["Monthly Summary"].Text = BuildMonthlySummary();
         _tabs["Season Archive"].Text = BuildSeasonArchive();
@@ -1649,6 +1653,8 @@ internal sealed class MainWindow : Window
         _tabs["Job Security History"].Text = BuildJobSecurityHistoryReport();
         _tabs["Expectation Results"].Text = BuildExpectationResultsReport();
         _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
+        _tabs["Playoff Archive"].Text = BuildPlayoffArchive();
+        _tabs["Champions"].Text = BuildChampionsReport();
         _tabs["Draft Recaps"].Text = BuildDraftRecaps();
         _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
         _tabs["Career History"].Text = BuildCareerHistory();
@@ -1734,6 +1740,7 @@ internal sealed class MainWindow : Window
             lastGame is not null && lastGame.WinnerOrganizationId != State.ScenarioSnapshot.Organization.OrganizationId));
         metrics.Children.Add(CreateDashboardMetric("Team Record", record, "regular season", false));
         metrics.Children.Add(CreateDashboardMetric("Standings Rank", State.StandingsRankText, "league table", false));
+        metrics.Children.Add(CreateDashboardMetric("Playoffs", State.PlayoffStatusText, State.PlayoffDashboardSummary, State.ScenarioSnapshot.Playoffs.Bracket?.Status == PlayoffStatus.InProgress));
         _dashboardPanel.Children.Add(metrics);
 
         var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
@@ -1767,6 +1774,7 @@ internal sealed class MainWindow : Window
         AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
         AddLine(summary, "Team record", record);
         AddLine(summary, "Standings rank", State.StandingsRankText);
+        AddLine(summary, "Playoffs", State.PlayoffDashboardSummary);
         AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
         AddLine(summary, "Open actions", $"{State.OpenActionCount} open / {State.UrgentActionCount} urgent");
         AddLine(summary, "Inbox focus", State.InboxFocusSummary);
@@ -4239,6 +4247,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Draft status: {State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft"}");
         builder.AppendLine($"Training camp: {State.TrainingCampStatusText}");
         builder.AppendLine($"Season readiness: {State.SeasonReadinessReport.RosterStatus}");
+        builder.AppendLine($"Playoffs: {State.PlayoffDashboardSummary}");
         builder.AppendLine($"Executive reports archived: {State.ScenarioSnapshot.ExecutiveReports.Reports.Count}");
         builder.AppendLine($"Scouting assignments: {State.ScenarioSnapshot.ScoutingOperations.Count}");
         builder.AppendLine($"Completed scouting reports: {State.ScenarioSnapshot.CompletedScoutingReports.Count}");
@@ -5110,6 +5119,69 @@ internal sealed class MainWindow : Window
         builder.AppendLine();
         builder.AppendLine($"Biggest steal: {DraftPickSummaryText(recap.BiggestSteal)}");
         builder.AppendLine($"Biggest surprise: {DraftPickSummaryText(recap.BiggestSurprise)}");
+        return builder.ToString();
+    }
+
+    private string BuildPlayoffArchive()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Playoff Archive");
+        builder.AppendLine("===============");
+        var bracket = State.ScenarioSnapshot.Playoffs.Bracket;
+        if (bracket is null)
+        {
+            builder.AppendLine("No playoff bracket has been archived for the current season yet.");
+        }
+        else
+        {
+            builder.AppendLine($"{bracket.SeasonYear} {bracket.Format.FormatType} | Status: {bracket.Status}");
+            builder.AppendLine($"Champion: {bracket.ChampionTeamName ?? "pending"}");
+            builder.AppendLine($"Runner-up: {bracket.RunnerUpTeamName ?? "pending"}");
+            builder.AppendLine($"MVP placeholder: {bracket.PlayoffMvpPlaceholder ?? "pending"}");
+            builder.AppendLine();
+            builder.AppendLine("Series Results");
+            if (bracket.Results.Count == 0)
+            {
+                builder.AppendLine("  No series has been decided yet.");
+            }
+
+            foreach (var result in bracket.Results.OrderBy(result => result.RoundNumber).ThenBy(result => result.SeriesId, StringComparer.Ordinal))
+            {
+                builder.AppendLine($"  Round {result.RoundNumber}: {result.Summary}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Archived Season Champions");
+        foreach (var archive in State.ScenarioSnapshot.SeasonRollover.SeasonArchives.OrderByDescending(archive => archive.SeasonYear))
+        {
+            builder.AppendLine($"  {archive.SeasonYear}: {archive.ChampionTeamName}");
+        }
+
+        return builder.ToString();
+    }
+
+    private string BuildChampionsReport()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Champions");
+        builder.AppendLine("=========");
+        var bracket = State.ScenarioSnapshot.Playoffs.Bracket;
+        if (bracket?.Status == PlayoffStatus.Completed)
+        {
+            builder.AppendLine($"{bracket.SeasonYear}: {bracket.ChampionTeamName} defeated {bracket.RunnerUpTeamName}");
+            builder.AppendLine($"Playoff MVP: {bracket.PlayoffMvpPlaceholder ?? "pending"}");
+        }
+        else
+        {
+            builder.AppendLine("Current season champion: pending.");
+        }
+
+        foreach (var archive in State.ScenarioSnapshot.SeasonRollover.SeasonArchives.OrderByDescending(archive => archive.SeasonYear))
+        {
+            builder.AppendLine($"{archive.SeasonYear}: {archive.ChampionTeamName}");
+        }
+
         return builder.ToString();
     }
 
@@ -6608,6 +6680,97 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildPlayoffs()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Playoffs");
+        builder.AppendLine("========");
+        var state = State.ScenarioSnapshot.Playoffs;
+        var bracket = state.Bracket;
+        if (bracket is null)
+        {
+            builder.AppendLine("No playoff bracket has been generated yet.");
+            builder.AppendLine("Once the regular-season schedule is complete, the daily loop seeds the bracket from the standings.");
+            return builder.ToString();
+        }
+
+        builder.AppendLine($"Status: {bracket.Status}");
+        builder.AppendLine($"Format: {bracket.Format.FormatType} | {bracket.Seeds.Count} team(s) | best-of-{bracket.Format.BestOf}");
+        if (!string.IsNullOrWhiteSpace(bracket.ChampionTeamName))
+        {
+            builder.AppendLine($"Champion: {bracket.ChampionTeamName}");
+            builder.AppendLine($"Runner-up: {bracket.RunnerUpTeamName ?? "not recorded"}");
+            builder.AppendLine($"Playoff MVP: {bracket.PlayoffMvpPlaceholder ?? "pending"}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Seeds");
+        foreach (var seed in bracket.Seeds.OrderBy(seed => seed.Seed))
+        {
+            var marker = seed.OrganizationId == State.ScenarioSnapshot.Organization.OrganizationId ? "*" : " ";
+            builder.AppendLine($"{marker}#{seed.Seed} {seed.TeamName} - {seed.RegularSeasonPoints} pts, {seed.Wins} win(s)");
+        }
+
+        if (bracket.MissedPlayoffs.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Missed Playoffs");
+            foreach (var seed in bracket.MissedPlayoffs.OrderBy(seed => seed.Seed))
+            {
+                builder.AppendLine($"  #{seed.Seed} {seed.TeamName}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Bracket");
+        foreach (var round in bracket.Rounds.OrderBy(round => round.RoundNumber))
+        {
+            builder.AppendLine($"{round.Name} - {round.Status}");
+            foreach (var series in round.Series.OrderBy(series => series.SeriesNumber))
+            {
+                builder.AppendLine($"  {series.HigherSeed.TeamName} vs {series.LowerSeed.TeamName} | {series.HigherSeedWins}-{series.LowerSeedWins} | {series.Status}");
+                foreach (var game in series.GamesOrEmpty.OrderBy(game => game.GameNumber))
+                {
+                    var score = game.Result is null ? "scheduled" : $"{game.Result.HomeGoals}-{game.Result.AwayGoals}";
+                    builder.AppendLine($"    Game {game.GameNumber}: {game.Date:yyyy-MM-dd} | {TeamName(game.HomeOrganizationId)} vs {TeamName(game.AwayOrganizationId)} | {score}");
+                }
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Upcoming / Current");
+        var current = bracket.CurrentSeries;
+        if (current is null)
+        {
+            builder.AppendLine(bracket.Status == PlayoffStatus.Completed ? "Playoffs complete." : "No active series.");
+        }
+        else
+        {
+            var nextGame = current.GamesOrEmpty.Count + 1;
+            builder.AppendLine($"{current.HigherSeed.TeamName} vs {current.LowerSeed.TeamName}");
+            builder.AppendLine($"Series score: {current.HigherSeed.TeamName} {current.HigherSeedWins}, {current.LowerSeed.TeamName} {current.LowerSeedWins}");
+            builder.AppendLine($"Next playoff game: Game {nextGame}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Recent Playoff Recaps");
+        foreach (var recap in state.PlayoffGameRecaps.OrderByDescending(recap => recap.Date).ThenByDescending(recap => recap.GameId, StringComparer.Ordinal).Take(8))
+        {
+            builder.AppendLine($"{recap.Date:yyyy-MM-dd} | {recap.BoxScore.FinalScore}");
+            builder.AppendLine($"  {recap.NarrativeSummary}");
+            builder.AppendLine($"  Three stars: {string.Join("; ", recap.ThreeStars)}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Playoff Stat Leaders");
+        foreach (var stat in state.PlayoffSkaterStats.OrderByDescending(stat => stat.Points).ThenByDescending(stat => stat.Goals).Take(8))
+        {
+            builder.AppendLine($"  {stat.PlayerName}: {stat.Goals}-{stat.Assists}-{stat.Points} in {stat.GamesPlayed} GP");
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildStats()
     {
         var builder = new StringBuilder();
@@ -6797,7 +6960,7 @@ internal sealed class MainWindow : Window
             builder.AppendLine($"{archive.SeasonYear} - {archive.OrganizationName}");
             builder.AppendLine($"  Completed: {archive.CompletedOn:yyyy-MM-dd}");
             builder.AppendLine($"  Record: {(standing is null ? "not available" : $"{standing.Wins}-{standing.Losses}-{standing.OvertimeLosses}, {standing.Points} pts")}");
-            builder.AppendLine($"  Champion placeholder: {archive.ChampionTeamName}");
+            builder.AppendLine($"  Champion: {archive.ChampionTeamName}");
             builder.AppendLine($"  Games archived: {archive.GameResults.Count}");
             builder.AppendLine($"  Player stat lines: {archive.PlayerStats.Count}");
             builder.AppendLine($"  Goalie stat lines: {archive.GoalieStats.Count}");
@@ -7123,6 +7286,7 @@ internal sealed class AlphaDesktopState
             .Concat(ScenarioSnapshot.PlayerLifeCycleNews)
             .Concat(ScenarioSnapshot.StaffLifeCycleNews)
             .Concat(ScenarioSnapshot.OwnerLifeCycleNews)
+            .Concat(ScenarioSnapshot.Playoffs.PlayoffLeagueNews)
             .OrderByDescending(transaction => transaction.Date)
             .ThenBy(transaction => transaction.TeamName, StringComparer.Ordinal)
             .ThenBy(transaction => transaction.PersonName, StringComparer.Ordinal)
@@ -7274,6 +7438,30 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<LeagueTransaction> LeagueIdentityNews => LeagueAiReport.LeagueNews;
 
     public int LeagueNewsCount => LeagueTransactions.Count + LeagueIdentityNews.Count;
+
+    public string PlayoffStatusText => ScenarioSnapshot.Playoffs.Bracket?.Status.ToString() ?? "Not Started";
+
+    public string PlayoffDashboardSummary
+    {
+        get
+        {
+            var bracket = ScenarioSnapshot.Playoffs.Bracket;
+            if (bracket is null)
+            {
+                return "Bracket pending regular-season completion.";
+            }
+
+            if (bracket.Status == PlayoffStatus.Completed)
+            {
+                return $"Champion: {bracket.ChampionTeamName}; runner-up: {bracket.RunnerUpTeamName}.";
+            }
+
+            var current = bracket.CurrentSeries;
+            return current is null
+                ? $"{bracket.Status}: {bracket.Seeds.Count} qualified team(s)."
+                : $"{current.HigherSeed.TeamName} vs {current.LowerSeed.TeamName}, series {current.HigherSeedWins}-{current.LowerSeedWins}.";
+        }
+    }
 
     public string InboxFocusSummary =>
         $"{Inbox.Count} decision-focused inbox item(s), {JournalEntries.Count} routine item(s) journaled.";

@@ -83,6 +83,7 @@ var alpha65LineChemistryTests = new Alpha65LineChemistryTests();
 var alpha66SpecialTeamsGameUsageTests = new Alpha66SpecialTeamsGameUsageTests();
 var alpha67TacticsCoachingStyleTests = new Alpha67TacticsCoachingStyleTests();
 var alpha68GameSimulationV2Tests = new Alpha68GameSimulationV2Tests();
+var alpha69PlayoffsChampionshipTests = new Alpha69PlayoffsChampionshipTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1123,6 +1124,16 @@ runner.Run("alpha 6.8 player milestone triggered from game", alpha68GameSimulati
 runner.Run("alpha 6.8 standings and stats still update", alpha68GameSimulationV2Tests.StandingsAndStatsStillUpdate);
 runner.Run("alpha 6.8 AlphaDesktop exposes enhanced recap", alpha68GameSimulationV2Tests.AlphaDesktopExposesEnhancedRecap);
 runner.Run("alpha 6.8 no forbidden game systems added", alpha68GameSimulationV2Tests.NoForbiddenGameSystemsAdded);
+runner.Run("alpha 6.9 safe default playoff format is top eight best of seven", alpha69PlayoffsChampionshipTests.SafeDefaultPlayoffFormatIsTopEightBestOfSeven);
+runner.Run("alpha 6.9 bracket seeds generated from standings", alpha69PlayoffsChampionshipTests.BracketSeedsGeneratedFromStandings);
+runner.Run("alpha 6.9 player team qualification creates inbox message", alpha69PlayoffsChampionshipTests.PlayerTeamQualificationCreatesInboxMessage);
+runner.Run("alpha 6.9 playoff game uses simulation and separate stats", alpha69PlayoffsChampionshipTests.PlayoffGameUsesSimulationAndSeparateStats);
+runner.Run("alpha 6.9 series can advance and champion is recorded", alpha69PlayoffsChampionshipTests.SeriesCanAdvanceAndChampionIsRecorded);
+runner.Run("alpha 6.9 player timeline records playoff debut", alpha69PlayoffsChampionshipTests.PlayerTimelineRecordsPlayoffDebut);
+runner.Run("alpha 6.9 daily pipeline creates playoff bracket after regular season", alpha69PlayoffsChampionshipTests.DailyPipelineCreatesPlayoffBracketAfterRegularSeason);
+runner.Run("alpha 6.9 save load preserves playoff state", alpha69PlayoffsChampionshipTests.SaveLoadPreservesPlayoffState);
+runner.Run("alpha 6.9 AlphaDesktop exposes playoff views", alpha69PlayoffsChampionshipTests.AlphaDesktopExposesPlayoffViews);
+runner.Run("alpha 6.9 no forbidden systems added", alpha69PlayoffsChampionshipTests.NoForbiddenSystemsAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

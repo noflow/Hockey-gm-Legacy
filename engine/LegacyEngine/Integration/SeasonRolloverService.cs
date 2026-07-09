@@ -103,6 +103,7 @@ public sealed class SeasonRolloverService
             PlayerStats = resetPlayerStats,
             GoalieStats = resetGoalieStats,
             GameRecaps = Array.Empty<GameRecap>(),
+            Playoffs = PlayoffState.Empty,
             PriorSeasonStats = MergePriorStats(reportScenario.PriorSeasonStats, priorStats),
             CareerStatSummaries = careerStats,
             OrganizationSeasonHistory = organizationHistory,
@@ -127,7 +128,9 @@ public sealed class SeasonRolloverService
                 archive.ChampionTeamName,
                 LeagueTransactionType.SeasonCompleted,
                 LeagueNewsCategory.League,
-                $"{archive.ChampionTeamName} finished as the Alpha standings leader for {archive.SeasonYear}.")
+                scenario.Playoffs.Bracket?.Status == PlayoffStatus.Completed
+                    ? $"{archive.ChampionTeamName} won the {archive.SeasonYear} championship."
+                    : $"{archive.ChampionTeamName} finished as the tracked regular-season leader for {archive.SeasonYear}.")
         };
         updated.Validate();
         return Result(true, updated, archive, inbox.Concat(endReview.InboxItems).ToArray(), transactions, $"Season {archive.SeasonYear} archived. Offseason for {transition.ToSeasonYear} is ready.");
@@ -137,10 +140,18 @@ public sealed class SeasonRolloverService
     {
         var standings = scenario.Standings ?? new SeasonStatsService().CreateStandings(scenario.Season.LeagueId, SeasonFrameworkService.LeagueTeams(scenario));
         var champion = standings.OrderedTeams().FirstOrDefault();
+        var playoffChampion = scenario.Playoffs.Bracket?.Status == PlayoffStatus.Completed
+            ? scenario.Playoffs.Bracket.ChampionTeamName
+            : null;
         var playerStanding = standings.Teams.FirstOrDefault(team => team.OrganizationId == scenario.Organization.OrganizationId);
         var summary = playerStanding is null
             ? $"{scenario.Organization.Name} completed the {scenario.Season.Year} season."
             : $"{scenario.Organization.Name} finished {playerStanding.Wins}-{playerStanding.Losses}-{playerStanding.OvertimeLosses} with {playerStanding.Points} point(s).";
+        if (scenario.Playoffs.Bracket?.Status == PlayoffStatus.Completed)
+        {
+            summary = $"{summary} Champion: {scenario.Playoffs.Bracket.ChampionTeamName}.";
+        }
+
         var archive = new SeasonArchive(
             ArchiveId: $"season-archive:{scenario.Season.SeasonId}",
             SeasonId: scenario.Season.SeasonId,
@@ -155,7 +166,7 @@ public sealed class SeasonRolloverService
             GoalieStats: scenario.GoalieStats,
             GameResults: scenario.Schedule?.Games.Where(game => game.Status == GameStatus.Completed).ToArray() ?? Array.Empty<ScheduledGame>(),
             GameRecaps: scenario.GameRecaps,
-            ChampionTeamName: champion?.TeamName ?? "standings leader unavailable",
+            ChampionTeamName: playoffChampion ?? champion?.TeamName ?? "champion unavailable",
             Summary: summary);
         archive.Validate();
         return archive;
@@ -395,17 +406,30 @@ public sealed class SeasonRolloverService
     {
         var standing = archive.PlayerTeamStanding;
         var record = standing is null ? "0-0-0" : $"{standing.Wins}-{standing.Losses}-{standing.OvertimeLosses}, {standing.Points} pts";
+        var bracket = scenario.Playoffs.Bracket;
+        var playoffResult = bracket?.Status == PlayoffStatus.Completed
+            ? bracket.ChampionOrganizationId == archive.OrganizationId
+                ? "Won championship"
+                : bracket.RunnerUpOrganizationId == archive.OrganizationId
+                    ? "Lost in final"
+                    : bracket.Results.Any(result => result.LoserOrganizationId == archive.OrganizationId)
+                        ? "Eliminated in playoffs"
+                        : "Missed playoffs"
+            : "No tracked playoff bracket.";
+        var championships = bracket?.Status == PlayoffStatus.Completed && bracket.ChampionOrganizationId == archive.OrganizationId
+            ? "1 championship"
+            : "None.";
         var history = new OrganizationSeasonHistory(
             archive.SeasonYear,
             archive.OrganizationId,
             archive.OrganizationName,
             record,
-            "Playoffs skipped in Alpha 4.0 placeholder.",
+            playoffResult,
             scenario.DraftClassHistory.OrderByDescending(item => item.Year).FirstOrDefault()?.Summary ?? "Draft class tracked in history.",
             TopPlayerSummary(scenario),
             $"{scenario.StaffMembers.Count} staff members carried into the offseason.",
             "No owner change.",
-            archive.ChampionTeamName == archive.OrganizationName ? "Standings leader placeholder." : "None.",
+            championships,
             archive.Summary);
         history.Validate();
         return scenario.OrganizationSeasonHistory
@@ -459,8 +483,8 @@ public sealed class SeasonRolloverService
             new Dictionary<string, object?>
             {
                 ["season_year"] = archive.SeasonYear,
-                ["champion_placeholder"] = archive.ChampionTeamName,
-                ["alpha_4_0"] = true
+                ["champion"] = archive.ChampionTeamName,
+                ["alpha_6_9"] = true
             });
         registry.EventEngine.QueueEvent(legacyEvent);
     }
