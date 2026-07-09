@@ -102,6 +102,7 @@ var alpha75OfferSheetTests = new Alpha75OfferSheetTests();
 var alpha76HockeyIntelligenceRatingTests = new Alpha76HockeyIntelligenceRatingTests();
 var alpha77AttributeDevelopmentTests = new Alpha77AttributeDevelopmentTests();
 var alpha78ScoutingIntelligenceTests = new Alpha78ScoutingIntelligenceTests();
+var alpha79DraftIntelligenceTests = new Alpha79DraftIntelligenceTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1369,6 +1370,21 @@ runner.Run("alpha 7.8 dossier exposes scouting intelligence", alpha78ScoutingInt
 runner.Run("alpha 7.8 war room exposes scout consensus", alpha78ScoutingIntelligenceTests.WarRoomExposesScoutConsensus);
 runner.Run("alpha 7.8 stale report flagged", alpha78ScoutingIntelligenceTests.StaleReportFlagged);
 runner.Run("alpha 7.8 no true ratings exposed directly", alpha78ScoutingIntelligenceTests.NoTrueRatingsExposedDirectly);
+runner.Run("alpha 7.9 war room created", alpha79DraftIntelligenceTests.WarRoomCreated);
+runner.Run("alpha 7.9 my board supports custom ranking", alpha79DraftIntelligenceTests.MyBoardSupportsCustomRanking);
+runner.Run("alpha 7.9 scout board generated", alpha79DraftIntelligenceTests.ScoutBoardGenerated);
+runner.Run("alpha 7.9 consensus board generated", alpha79DraftIntelligenceTests.ConsensusBoardGenerated);
+runner.Run("alpha 7.9 prospect ratings show confidence colors", alpha79DraftIntelligenceTests.ProspectRatingsShowConfidenceColors);
+runner.Run("alpha 7.9 unscouted draft attributes show unknown", alpha79DraftIntelligenceTests.UnscoutedDraftAttributesShowUnknown);
+runner.Run("alpha 7.9 compare prospects works", alpha79DraftIntelligenceTests.CompareProspectsWorks);
+runner.Run("alpha 7.9 team needs generated", alpha79DraftIntelligenceTests.TeamNeedsGenerated);
+runner.Run("alpha 7.9 hidden gem alert generated", alpha79DraftIntelligenceTests.HiddenGemAlertGenerated);
+runner.Run("alpha 7.9 bust risk alert generated", alpha79DraftIntelligenceTests.BustRiskAlertGenerated);
+runner.Run("alpha 7.9 AI draft uses needs and strategy", alpha79DraftIntelligenceTests.AiDraftUsesNeedsAndStrategy);
+runner.Run("alpha 7.9 post-draft review stores original estimates", alpha79DraftIntelligenceTests.PostDraftReviewStoresOriginalEstimates);
+runner.Run("alpha 7.9 draft history preserves board ranks", alpha79DraftIntelligenceTests.DraftHistoryPreservesBoardRanks);
+runner.Run("alpha 7.9 no true ratings exposed", alpha79DraftIntelligenceTests.NoTrueRatingsExposed);
+runner.Run("alpha 7.9 AlphaDesktop exposes War Room", alpha79DraftIntelligenceTests.AlphaDesktopExposesWarRoom);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

@@ -123,26 +123,27 @@ The five foundation pillars remain:
 - Alpha 7.6 - Hockey Intelligence Rating Engine v1
 - Alpha 7.7 - Attribute Development Engine v1
 - Alpha 7.8 - Scouting Intelligence v2
+- Alpha 7.9 - Draft Intelligence V4: War Room + Attribute Scouting
 
 ## Current Milestone
 
-Alpha 7.8 - Scouting Intelligence v2
+Alpha 7.9 - Draft Intelligence V4: War Room + Attribute Scouting
 
 ## Current Goal
 
-Make scouting the main way the GM discovers rating truth. Scouting now builds organization-specific knowledge profiles with known/unknown attributes, estimate ranges, confidence colors, scout bias, scout disagreement, stale report flags, consensus summaries, and scout accuracy history while keeping hidden true ratings internal.
+Make the draft the main showcase for Hockey Intelligence. The War Room now combines custom GM boards, scout boards, consensus boards, team needs, visible OVR/POT ranges, attribute confidence, scout disagreement, development curves, risk alerts, hidden-gem/bust warnings, and draft-time history without exposing hidden true ratings.
 
-## Why Scouting Intelligence Was Next
+## Why Draft Intelligence Was Next
 
-Alpha 7.6 added hidden true ratings and visible scouted estimates, and Alpha 7.7 made attributes develop over time. Alpha 7.8 connects the scouting staff to that backbone so reports improve confidence, reveal attribute ranges, capture scout-specific opinions, and surface only meaningful intelligence alerts.
+Alpha 7.6 added hidden true ratings and visible scouted estimates, Alpha 7.7 made attributes develop over time, and Alpha 7.8 made scouting improve the GM's knowledge. Alpha 7.9 brings those systems together on draft day so the GM can compare prospects by visible estimates, attribute uncertainty, development path, team fit, staff consensus, and risk.
 
 ## Next Build Target
 
-Alpha 7.9 - TBD
+Alpha 8.0 - TBD
 
 ## Next Milestones
 
-1. Alpha 7.9 - TBD
+1. Alpha 8.0 - TBD
 
 ## Build Rule
 

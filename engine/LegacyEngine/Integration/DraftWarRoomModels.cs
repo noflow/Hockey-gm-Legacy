@@ -216,6 +216,10 @@ public sealed record DraftWarRoomState(
     IReadOnlyList<DraftWarRoomBoardSnapshot> OriginalBoardSnapshot,
     DraftPostDraftReview? PostDraftReview)
 {
+    public IReadOnlyList<DraftWarRoomBoardView> BoardViews { get; init; } = Array.Empty<DraftWarRoomBoardView>();
+
+    public IReadOnlyList<DraftIntelligenceAlert> IntelligenceAlerts { get; init; } = Array.Empty<DraftIntelligenceAlert>();
+
     public static DraftWarRoomState Empty { get; } = new(
         string.Empty,
         0,
@@ -261,6 +265,16 @@ public sealed record DraftWarRoomState(
         foreach (var snapshot in OriginalBoardSnapshot)
         {
             snapshot.Validate();
+        }
+
+        foreach (var view in BoardViews)
+        {
+            view.Validate();
+        }
+
+        foreach (var alert in IntelligenceAlerts)
+        {
+            alert.Validate();
         }
 
         PostDraftReview?.Validate();

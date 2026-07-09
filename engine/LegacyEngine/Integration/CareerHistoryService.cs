@@ -270,10 +270,13 @@ public sealed class CareerHistoryService
 
     private static DraftPickHistory BuildDraftPickHistory(NewGmScenarioSnapshot scenario, DraftPickSummary selection)
     {
+        var intelligence = new DraftIntelligenceService();
+        var card = intelligence.BuildProspectCard(scenario, selection.ProspectPersonId);
         var boardEntry = scenario.AlphaSnapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == selection.ProspectPersonId);
+        var original = scenario.DraftWarRoom.OriginalBoardSnapshot.FirstOrDefault(entry => entry.ProspectPersonId == selection.ProspectPersonId);
         var prospect = scenario.ProspectRights.FirstOrDefault(item => item.ProspectPersonId == selection.ProspectPersonId);
-        var position = boardEntry?.Bio?.Position ?? prospect?.Position ?? RosterPosition.Unknown;
-        var team = boardEntry?.Bio is null ? "Unknown draft team" : $"{boardEntry.Bio.CurrentTeam} ({boardEntry.Bio.League})";
+        var position = boardEntry?.Bio?.Position ?? prospect?.Position ?? original?.Position ?? card.Position;
+        var team = boardEntry?.Bio is null ? card.CurrentTeamLeague : $"{boardEntry.Bio.CurrentTeam} ({boardEntry.Bio.League})";
         var currentStatus = prospect?.Status.ToString() ?? "DraftRightsHeld";
         var stat = scenario.CareerStatSummaries.FirstOrDefault(item => item.PersonId == selection.ProspectPersonId);
         var outcome = currentStatus == "Signed" ? DraftPickOutcome.Developing : DraftPickOutcome.Unknown;
@@ -285,9 +288,9 @@ public sealed class CareerHistoryService
             selection.ProspectName,
             position,
             team,
-            boardEntry?.ProjectionText ?? "Projection not recorded.",
-            boardEntry?.ScoutingConfidence,
-            boardEntry?.PersonalNotes is { Length: > 0 } ? boardEntry.PersonalNotes : "No GM draft note recorded.",
+            boardEntry?.ProjectionText ?? original?.Projection ?? card.Projection,
+            boardEntry?.ScoutingConfidence ?? original?.Confidence ?? card.ScoutingConfidence,
+            card.GmNotes is { Length: > 0 } ? card.GmNotes : "No GM draft note recorded.",
             currentStatus,
             stat?.GamesPlayed ?? 0,
             stat?.Points ?? 0,
@@ -295,10 +298,22 @@ public sealed class CareerHistoryService
             outcome,
             outcome == DraftPickOutcome.Unknown ? "Too early to evaluate. Outcome remains Unknown/Developing." : "Developing in organization.")
         {
-            OriginalBoardRank = boardEntry?.Rank ?? selection.PickNumber,
-            DraftClassContext = boardEntry?.ClassContextNote
-                ?? scenario.CurrentDraftClassProfile?.PreviewText
-                ?? "Draft class context not recorded."
+            OriginalBoardRank = original?.Rank ?? boardEntry?.Rank ?? card.MyBoardRank,
+            ScoutBoardRank = card.ScoutBoardRank,
+            ConsensusBoardRank = card.ConsensusBoardRank,
+            OverallEstimateAtDraft = $"OVR {card.OverallEstimate.Display} {card.RatingConfidenceColor}",
+            PotentialEstimateAtDraft = $"POT {card.PotentialEstimate.Display} {card.RatingConfidenceColor}",
+            AttributeConfidenceAtDraft = intelligence.BuildDraftTimeAttributeSnapshot(scenario, selection.ProspectPersonId),
+            ScoutNotesAtDraft = card.ScoutRecommendation,
+            TeamNeedsAtDraft = scenario.DraftWarRoom.Needs.Count == 0
+                ? "Team needs not recorded."
+                : string.Join("; ", scenario.DraftWarRoom.Needs.Take(4).Select(need => $"{need.Priority} {need.Label}")),
+            DraftClassContext = !string.IsNullOrWhiteSpace(boardEntry?.ClassContextNote)
+                ? boardEntry!.ClassContextNote
+                : !string.IsNullOrWhiteSpace(original?.Notes)
+                    ? original!.Notes
+                    : scenario.CurrentDraftClassProfile?.PreviewText
+                    ?? "Draft class context not recorded."
         };
     }
 

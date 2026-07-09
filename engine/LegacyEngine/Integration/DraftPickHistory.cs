@@ -23,6 +23,20 @@ public sealed record DraftPickHistory(
 {
     public int OriginalBoardRank { get; init; }
 
+    public int ScoutBoardRank { get; init; }
+
+    public int ConsensusBoardRank { get; init; }
+
+    public string OverallEstimateAtDraft { get; init; } = "OVR estimate not recorded.";
+
+    public string PotentialEstimateAtDraft { get; init; } = "POT estimate not recorded.";
+
+    public string AttributeConfidenceAtDraft { get; init; } = "Attribute confidence not recorded.";
+
+    public string ScoutNotesAtDraft { get; init; } = "Scout notes not recorded.";
+
+    public string TeamNeedsAtDraft { get; init; } = "Team needs not recorded.";
+
     public string DraftClassContext { get; init; } = "Draft class context not recorded.";
 
     public void Validate()
@@ -35,6 +49,11 @@ public sealed record DraftPickHistory(
             || string.IsNullOrWhiteSpace(CurrentStatus)
             || string.IsNullOrWhiteSpace(GoaltendingStats)
             || string.IsNullOrWhiteSpace(OutcomeSummary)
+            || string.IsNullOrWhiteSpace(OverallEstimateAtDraft)
+            || string.IsNullOrWhiteSpace(PotentialEstimateAtDraft)
+            || string.IsNullOrWhiteSpace(AttributeConfidenceAtDraft)
+            || string.IsNullOrWhiteSpace(ScoutNotesAtDraft)
+            || string.IsNullOrWhiteSpace(TeamNeedsAtDraft)
             || string.IsNullOrWhiteSpace(DraftClassContext))
         {
             throw new ArgumentException("Draft pick history requires player identity and readable context.");
@@ -48,6 +67,11 @@ public sealed record DraftPickHistory(
         if (OriginalBoardRank < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(OriginalBoardRank), "Original board rank cannot be negative.");
+        }
+
+        if (ScoutBoardRank < 0 || ConsensusBoardRank < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(ScoutBoardRank), "Draft board ranks cannot be negative.");
         }
     }
 }

@@ -29,7 +29,10 @@ public sealed class DraftWarRoomService
             existing.OriginalBoardSnapshot.Count > 0 ? existing.OriginalBoardSnapshot : BuildOriginalBoardSnapshot(scenario),
             existing.PostDraftReview);
         state.Validate();
-        return scenario with { DraftWarRoom = state };
+        var withState = scenario with { DraftWarRoom = state };
+        return ShouldEnrichDraftIntelligence(withState)
+            ? new DraftIntelligenceService().EnsureDraftIntelligence(withState)
+            : withState;
     }
 
     public NewGmScenarioSnapshot MoveProspect(NewGmScenarioSnapshot scenario, string prospectPersonId, int direction)
@@ -161,18 +164,30 @@ public sealed class DraftWarRoomService
     {
         var yourSelections = selections.Where(selection => selection.IsPlayerSelection).ToArray();
         var first = yourSelections.FirstOrDefault();
+        var intelligence = new DraftIntelligenceService();
+        var cards = yourSelections
+            .Select(selection => intelligence.BuildProspectCard(scenario, selection.ProspectPersonId))
+            .ToArray();
+        var bestValue = cards.OrderByDescending(card => card.ConsensusBoardRank == 0 ? 0 : card.MyBoardRank - card.ConsensusBoardRank).FirstOrDefault();
+        var riskiest = cards
+            .OrderByDescending(card => card.Alerts.Any(alert => alert.AlertType == DraftIntelligenceAlertType.BustRisk) ? 2 : card.Alerts.Count)
+            .ThenByDescending(card => card.RiskSummary.Length)
+            .FirstOrDefault();
+        var needsFit = cards.Length == 0 ? "No team-needs fit recorded." : $"Team-needs fit average {cards.Average(card => card.TeamFitScore):0}/100.";
         var review = new DraftPostDraftReview(
             scenario.Season.Year,
             scenario.CurrentDate,
             yourSelections.Length == 0
                 ? "Head scout: no player-team selections were made."
-                : $"Head scout: the room stayed close to the board and added {yourSelections.Length} prospect(s), led by {first!.ProspectName}.",
+                : $"Head scout: the room stayed close to the board and added {yourSelections.Length} prospect(s), led by {first!.ProspectName}. Best value: {bestValue?.ProspectName ?? first.ProspectName}. {needsFit}",
             yourSelections.Length == 0
                 ? "Owner: no draft-rights impact yet."
                 : $"Owner: expects patience with {first!.ProspectName} and wants development runway protected.",
             "Coach: drafted players are future camp and development decisions, not automatic roster adds.",
             GradeForDraft(yourSelections),
-            yourSelections.Select(selection => $"{selection.ProspectName}: projected impact tracked through draft rights, prospect list, and Where Are They Now.").ToArray());
+            cards.Length == 0
+                ? yourSelections.Select(selection => $"{selection.ProspectName}: projected impact tracked through draft rights, prospect list, and Where Are They Now.").ToArray()
+                : cards.Select(card => $"{card.ProspectName}: {card.RatingDisplay}; curve {card.DevelopmentCurve}; ETA {card.Eta}; risk {(riskiest?.ProspectPersonId == card.ProspectPersonId ? "highest class risk among your picks" : ShortRisk(card))}.").ToArray());
         review.Validate();
         return review;
     }
@@ -182,7 +197,7 @@ public sealed class DraftWarRoomService
         var prepared = EnsureWarRoom(scenario);
         var board = prepared.DraftWarRoom;
         var intelligence = string.Join(" ", new ScoutingIntelligenceService().BuildWarRoomKnowledgeLines(prepared));
-        return $"Draft War Room: {board.BoardEntries.Count(entry => !entry.IsRemoved)} active board entries, {board.BoardEntries.Count(entry => entry.Tags.Count > 0)} flagged, {board.Needs.Count} needs, {board.Storylines.Count} storylines. Scouting intelligence: {intelligence}";
+        return $"Draft War Room: {board.BoardEntries.Count(entry => !entry.IsRemoved)} active board entries, {board.BoardEntries.Count(entry => entry.Tags.Count > 0)} flagged, {board.Needs.Count} needs, {board.BoardViews.Count} views, {board.IntelligenceAlerts.Count} alerts. Scouting intelligence: {intelligence}";
     }
 
     public int ScoreAiDraftFit(NewGmScenarioSnapshot scenario, string organizationId, DraftBoardEntry entry, int fallbackRank)
@@ -216,6 +231,26 @@ public sealed class DraftWarRoomService
             ScoutingConfidenceLevel.Low => -5,
             _ => 0
         };
+        foreach (var need in scenario.DraftWarRoom.Needs)
+        {
+            score += NeedPositionMatch(need.NeedType, position) ? PriorityScore(need.Priority) / 2 : 0;
+        }
+
+        if (entry.RiskSummary.Contains("medical", StringComparison.OrdinalIgnoreCase))
+        {
+            score -= ai?.Personality == OrganizationAiPersonality.RiskTaker ? 4 : 18;
+        }
+
+        if (entry.RiskSummary.Contains("boom", StringComparison.OrdinalIgnoreCase))
+        {
+            score += ai?.Personality == OrganizationAiPersonality.RiskTaker ? 18 : 4;
+        }
+
+        if (entry.Bio?.PotentialLineupProjection.Contains("upside", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            score += ai?.Personality is OrganizationAiPersonality.DraftAndDevelop or OrganizationAiPersonality.ProspectHoarder ? 16 : 6;
+        }
+
         return score;
     }
 
@@ -226,7 +261,31 @@ public sealed class DraftWarRoomService
             .ToArray();
         var state = scenario.DraftWarRoom with { BoardEntries = normalized };
         state.Validate();
-        return scenario with { DraftWarRoom = state };
+        var withState = scenario with { DraftWarRoom = state };
+        return ShouldEnrichDraftIntelligence(withState)
+            ? new DraftIntelligenceService().EnsureDraftIntelligence(withState)
+            : withState;
+    }
+
+    private static bool ShouldEnrichDraftIntelligence(NewGmScenarioSnapshot scenario) =>
+        scenario.PlayerRatings.Count > 0
+        || scenario.ScoutedRatings.Count > 0
+        || scenario.DevelopmentCurves.Count > 0
+        || scenario.ScoutingKnowledgeProfiles.Count > 0;
+
+    private static string ShortRisk(DraftProspectIntelligenceCard card)
+    {
+        if (card.Alerts.Any(alert => alert.AlertType == DraftIntelligenceAlertType.BustRisk))
+        {
+            return "bust risk";
+        }
+
+        if (card.Alerts.Any(alert => alert.AlertType == DraftIntelligenceAlertType.MedicalRisk))
+        {
+            return "medical risk";
+        }
+
+        return card.PotentialEstimate.IsUnknown ? "uncertain" : "manageable";
     }
 
     private DraftWarRoomEntry BuildEntry(NewGmScenarioSnapshot scenario, DraftBoardEntry boardEntry, DraftWarRoomEntry? existing)

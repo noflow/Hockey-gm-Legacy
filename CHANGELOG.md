@@ -1,6 +1,39 @@
 # Changelog
 
-## Current - Alpha 7.8
+## Current - Alpha 7.9
+
+### Added
+
+- Draft Intelligence V4 with permanent War Room board views for My Board, Scout Board, Consensus Board, Watch List, Team Needs, Picks, Compare Prospects, Draft Class Summary, and Hidden Gems / Avoid List.
+- `DraftIntelligenceService` and draft intelligence models for prospect cards, visible OVR/POT estimates, confidence colors, attribute intelligence lines, team-fit scores, development curve context, ETA, scout consensus, and risk alerts.
+- Draft intelligence alerts for hidden-gem candidates, bust risk, high-ceiling/low-floor profiles, safe picks, patience warnings, team-fit concerns, medical risk, and character risk.
+- Draft-time history snapshots for original board rank, scout board rank, consensus board rank, OVR/POT estimate at draft, attribute confidence at draft, scout notes, GM notes, class context, and team needs.
+- Alpha 7.9 tests for War Room creation, custom ranking, scout/consensus boards, confidence colors, unscouted `???` attributes, prospect comparison, team needs, hidden-gem and bust-risk alerts, AI needs/strategy drafting, draft history snapshots, no true-rating exposure, and AlphaDesktop War Room exposure.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.9.
+- Draft Board, Scouting list, Prospect List, Draft War Room, and live Draft Day modal now use the same intelligence-backed prospect summaries.
+- Live draft rows retain basic public bio and confidence wording while adding visible rating ranges, risk, consensus, and fit.
+- AI draft scoring now uses lightweight needs/strategy/risk context, keeping the draft fast while avoiding random-only drafting.
+- War Room intelligence enrichment is lazy so normal scenario bootstrapping stays fast and full draft intelligence loads when ratings/scouting/curves are available.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No real player database.
+- No mock draft media engine.
+- No draft lottery.
+- No Godot.
+- No new game simulation.
+- No editable ratings.
+
+## Previous - Alpha 7.8
 
 ### Added
 
