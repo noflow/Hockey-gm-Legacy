@@ -120,6 +120,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public RightsHistory RightsHistory { get; init; } = RightsHistory.Empty;
 
+    public IReadOnlyList<ArbitrationCase> ArbitrationCases { get; init; } = Array.Empty<ArbitrationCase>();
+
+    public ArbitrationHistory ArbitrationHistory { get; init; } = ArbitrationHistory.Empty;
+
     public SeasonRolloverState SeasonRollover { get; init; } = new();
 
     public PlayoffState Playoffs { get; init; } = PlayoffState.Empty;
@@ -395,6 +399,13 @@ public sealed record NewGmScenarioSnapshot(
         {
             staff.Validate();
         }
+
+        foreach (var arbitrationCase in ArbitrationCases)
+        {
+            arbitrationCase.Validate();
+        }
+
+        ArbitrationHistory.Validate();
 
         GmCareerHistory?.Validate();
         foreach (var season in OrganizationSeasonHistory)

@@ -102,6 +102,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 7.0 Hockey Intelligence Rating Engine v1
 - Alpha 7.1 Waivers & Roster Transactions v1
 - Alpha 7.2 RFA/UFA Contract Rights v1
+- Alpha 7.3 Salary Arbitration v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -160,6 +161,8 @@ Alpha 6.5 - Line Chemistry v1 adds explainable fit grades for forward lines, def
 Alpha 6.6 - Special Teams & Game Usage v1 expands lineup management into personnel deployment. The GM can now review and adjust PP1/PP2, PK1/PK2, goalie workload, extra attacker, three-on-three placeholder, and shootout order from the Lineup workspace. Player dossiers include a Game Usage section, development context receives small usage modifiers, coach recommendations flag PP/PK/goalie concerns, and Action Center only surfaces important usage issues without adding tactics, line matching, or game simulation changes.
 
 Alpha 7.2 - RFA/UFA Contract Rights v1 adds rulebook-driven expiring-contract rights for professional leagues. NHL-style teams now classify expiring players as pending RFA or pending UFA, show qualifying-offer deadlines and amounts, let the GM qualify or decline rights, retain RFAs when qualified, move UFAs/not-qualified players into the free-agent market, record rights history, update dossiers, create Action Center warnings, and expose a Contract Rights view in AlphaDesktop. Junior-style rulebooks keep NHL-style RFA/UFA rules disabled unless enabled.
+
+Alpha 7.3 - Salary Arbitration v1 adds the first rulebook-driven arbitration path for qualified RFAs. NHL-style leagues can define eligibility age, accrued-season threshold, filing window, hearing timing, walk-away permission, and award bounds. Eligible cases show in Hockey Operations / Arbitration, player dossiers, Action Center, inbox, and League News; the GM can file arbitration, negotiate a settlement, accept an award, or walk away where the rulebook allows. This does not add offer sheets or full CBA edge cases.
 
 Alpha 6.7 - Tactics & Coaching Style v1 defines how the team plays without becoming a full tactics simulator. Hockey Operations now includes a Tactics view for style, forecheck, neutral-zone pressure, defensive-zone structure, breakout, shot preference, physicality, risk, PP style, PK style, coach philosophy, tactical fit, recommendations, and small player/development impact notes. Action Center only surfaces major tactical mismatches such as high-risk tactics on a young roster.
 

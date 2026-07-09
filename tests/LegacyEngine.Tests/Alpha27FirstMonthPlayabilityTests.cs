@@ -293,7 +293,8 @@ internal sealed class Alpha27FirstMonthPlayabilityTests
             BudgetRules = source.BudgetRules,
             SeasonRules = source.SeasonRules,
             AffiliateRules = source.AffiliateRules,
-            FreeAgentRightsRules = source.FreeAgentRightsRules
+            FreeAgentRightsRules = source.FreeAgentRightsRules,
+            ArbitrationRules = source.ArbitrationRules
         };
 
     private static string FindRepositoryRoot()

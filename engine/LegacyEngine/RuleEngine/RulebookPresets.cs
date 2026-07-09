@@ -120,7 +120,8 @@ public static class RulebookPresets
             PlayerAssignmentRules = CreatePlayerAssignmentRules(leagueType),
             SalaryCapRules = CreateSalaryCapRules(leagueType, activeRoster),
             WaiverRules = CreateWaiverRules(leagueType),
-            FreeAgentRightsRules = CreateFreeAgentRightsRules(leagueType)
+            FreeAgentRightsRules = CreateFreeAgentRightsRules(leagueType),
+            ArbitrationRules = CreateArbitrationRules(leagueType)
         };
 
     private static AffiliateRules CreateAhlAffiliateRules() =>
@@ -226,6 +227,23 @@ public static class RulebookPresets
             RightsExpiryRule = IsProfessionalLeague(leagueType) ? "qualify_by_deadline_or_release" : "disabled",
             ContractTenderWindowDays = IsProfessionalLeague(leagueType) ? 30 : 0
         };
+
+    private static ArbitrationRules CreateArbitrationRules(string leagueType)
+    {
+        var enabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase);
+        return new ArbitrationRules
+        {
+            ArbitrationEnabled = enabled,
+            EligibilityAge = 22,
+            AccruedSeasonsThreshold = 4,
+            FilingWindowDaysAfterQualifyingOffer = enabled ? 7 : 0,
+            HearingStartDaysAfterFiling = enabled ? 14 : 0,
+            HearingEndDaysAfterFiling = enabled ? 28 : 0,
+            WalkAwayAllowed = enabled,
+            MinimumAward = enabled ? 775_000m : 0m,
+            MaximumAward = enabled ? 8_000_000m : 0m
+        };
+    }
 
     private static bool IsProfessionalLeague(string leagueType) =>
         leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase)

@@ -51,6 +51,9 @@ public sealed class Rulebook
 
     [JsonPropertyName("free_agent_rights_rules")]
     public FreeAgentRightsRules? FreeAgentRightsRules { get; init; }
+
+    [JsonPropertyName("arbitration_rules")]
+    public ArbitrationRules? ArbitrationRules { get; init; }
 }
 
 public sealed class RosterRules
@@ -300,6 +303,36 @@ public sealed class FreeAgentRightsRules
 
     [JsonPropertyName("contract_tender_window_days")]
     public int ContractTenderWindowDays { get; init; } = 30;
+}
+
+public sealed class ArbitrationRules
+{
+    [JsonPropertyName("arbitration_enabled")]
+    public bool ArbitrationEnabled { get; init; }
+
+    [JsonPropertyName("eligibility_age")]
+    public int EligibilityAge { get; init; } = 22;
+
+    [JsonPropertyName("accrued_seasons_threshold")]
+    public int AccruedSeasonsThreshold { get; init; } = 4;
+
+    [JsonPropertyName("filing_window_days_after_qualifying_offer")]
+    public int FilingWindowDaysAfterQualifyingOffer { get; init; } = 7;
+
+    [JsonPropertyName("hearing_start_days_after_filing")]
+    public int HearingStartDaysAfterFiling { get; init; } = 14;
+
+    [JsonPropertyName("hearing_end_days_after_filing")]
+    public int HearingEndDaysAfterFiling { get; init; } = 28;
+
+    [JsonPropertyName("walk_away_allowed")]
+    public bool WalkAwayAllowed { get; init; } = true;
+
+    [JsonPropertyName("minimum_award")]
+    public decimal MinimumAward { get; init; } = 775_000m;
+
+    [JsonPropertyName("maximum_award")]
+    public decimal MaximumAward { get; init; } = 8_000_000m;
 }
 
 // Optional season timing. When present, the Season engine derives its calendar from

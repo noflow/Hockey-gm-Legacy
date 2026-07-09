@@ -1,6 +1,42 @@
 # Changelog
 
-## Current - Alpha 7.2
+## Current - Alpha 7.3
+
+### Added
+
+- Rulebook-driven salary arbitration rules, including enable/disable flag, eligibility age, accrued-season threshold, filing window, hearing date range, walk-away permission, and award bounds.
+- Arbitration models for `ArbitrationEligibility`, `ArbitrationCase`, `ArbitrationFiling`, `ArbitrationAward`, `ArbitrationResult`, `ArbitrationDecisionType`, and `ArbitrationHistory`.
+- `ArbitrationService` to build eligible qualified RFA cases, file team/player arbitration, schedule hearings, estimate awards, negotiate settlements, accept awards, walk away where allowed, and record arbitration history.
+- Award estimates using previous salary, recent/career production, role, budget/cap context, comparable-contract placeholder, and agent commentary.
+- Action Center arbitration review items for filing/hearing/award decisions.
+- Player Dossier arbitration status, hearing date, award projection, agent comment, recommendation, and arbitration history lines.
+- League News transaction types/events for arbitration filing, awards, settlements, and walk-away decisions.
+- AlphaDesktop Salary Arbitration screen under Hockey Operations, plus selected-player actions for File Arbitration, Settle Arbitration, Accept Award, Walk Away, and View Dossier.
+- Alpha 7.3 tests covering eligibility, ineligible players, rulebook-controlled thresholds, case creation, hearing dates, award estimates, settlement, accepted awards, walk-away release, Action Center, dossier/history, save/load preservation, desktop exposure, and forbidden-system boundaries.
+
+### Changed
+
+- AlphaDesktop version label updated to Alpha 7.3.
+- Contract decision count now includes open arbitration cases.
+- Rulebook copy helpers now preserve arbitration rules so generated league profiles and tests keep professional arbitration behavior.
+- Alpha 7.2 boundary test now remains focused on no offer sheets and no Godot now that arbitration exists in Alpha 7.3.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No offer sheets.
+- No full CBA edge-case system.
+- No court/legal simulation.
+- No media expansion.
+- No Godot.
+- No new game simulation logic.
+
+## Previous - Alpha 7.2
 
 ### Added
 
@@ -28,7 +64,6 @@
 ### Not Added
 
 - No offer sheets.
-- No arbitration.
 - No full holdout system.
 - No full CBA edge-case system.
 - No LTIR.

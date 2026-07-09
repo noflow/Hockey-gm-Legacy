@@ -96,6 +96,7 @@ var alpha617DevelopmentCurveTests = new Alpha617DevelopmentCurveTests();
 var alpha70HockeyIntelligenceRatingTests = new Alpha70HockeyIntelligenceRatingTests();
 var alpha71WaiversRosterTransactionsTests = new Alpha71WaiversRosterTransactionsTests();
 var alpha72RfaUfaContractRightsTests = new Alpha72RfaUfaContractRightsTests();
+var alpha73SalaryArbitrationTests = new Alpha73SalaryArbitrationTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1281,7 +1282,21 @@ runner.Run("alpha 7.2 player dossier exposes RFA UFA status", alpha72RfaUfaContr
 runner.Run("alpha 7.2 Action Center warns before qualifying deadline", alpha72RfaUfaContractRightsTests.ActionCenterWarnsBeforeQualifyingDeadline);
 runner.Run("alpha 7.2 League News records not qualified player", alpha72RfaUfaContractRightsTests.LeagueNewsRecordsNotQualifiedPlayer);
 runner.Run("alpha 7.2 save load preserves rights status", alpha72RfaUfaContractRightsTests.SaveLoadPreservesRightsStatus);
-runner.Run("alpha 7.2 no offer sheets arbitration or Godot added", alpha72RfaUfaContractRightsTests.NoOfferSheetsArbitrationOrGodotAdded);
+runner.Run("alpha 7.2 no offer sheets or Godot added", alpha72RfaUfaContractRightsTests.NoOfferSheetsOrGodotAdded);
+runner.Run("alpha 7.3 eligible RFA can file arbitration", alpha73SalaryArbitrationTests.EligibleRfaCanFileArbitration);
+runner.Run("alpha 7.3 ineligible player cannot file arbitration", alpha73SalaryArbitrationTests.IneligiblePlayerCannotFileArbitration);
+runner.Run("alpha 7.3 rulebook controls eligibility", alpha73SalaryArbitrationTests.RulebookControlsEligibility);
+runner.Run("alpha 7.3 arbitration case created", alpha73SalaryArbitrationTests.ArbitrationCaseCreated);
+runner.Run("alpha 7.3 hearing date assigned", alpha73SalaryArbitrationTests.HearingDateAssigned);
+runner.Run("alpha 7.3 award estimate generated", alpha73SalaryArbitrationTests.AwardEstimateGenerated);
+runner.Run("alpha 7.3 settlement resolves case", alpha73SalaryArbitrationTests.SettlementResolvesCase);
+runner.Run("alpha 7.3 accepted award creates contract", alpha73SalaryArbitrationTests.AcceptedAwardCreatesContract);
+runner.Run("alpha 7.3 walk away releases player when allowed", alpha73SalaryArbitrationTests.WalkAwayReleasesPlayerWhenAllowed);
+runner.Run("alpha 7.3 Action Center shows arbitration deadlines", alpha73SalaryArbitrationTests.ActionCenterShowsArbitrationDeadlines);
+runner.Run("alpha 7.3 dossier and history record arbitration", alpha73SalaryArbitrationTests.DossierAndHistoryRecordArbitration);
+runner.Run("alpha 7.3 save load preserves active case", alpha73SalaryArbitrationTests.SaveLoadPreservesActiveCase);
+runner.Run("alpha 7.3 desktop exposes arbitration UI", alpha73SalaryArbitrationTests.AlphaDesktopExposesArbitrationUi);
+runner.Run("alpha 7.3 no offer sheets or Godot added", alpha73SalaryArbitrationTests.NoOfferSheetsOrGodotAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
@@ -1407,7 +1422,8 @@ internal sealed class RuleEngineTests
             DraftRules = source.DraftRules,
             PlayoffRules = source.PlayoffRules,
             BudgetRules = source.BudgetRules,
-            FreeAgentRightsRules = source.FreeAgentRightsRules
+            FreeAgentRightsRules = source.FreeAgentRightsRules,
+            ArbitrationRules = source.ArbitrationRules
         };
 
     private static Rulebook WithDraftRules(Rulebook source, DraftRules draftRules) =>
@@ -1422,7 +1438,8 @@ internal sealed class RuleEngineTests
             DraftRules = draftRules,
             PlayoffRules = source.PlayoffRules,
             BudgetRules = source.BudgetRules,
-            FreeAgentRightsRules = source.FreeAgentRightsRules
+            FreeAgentRightsRules = source.FreeAgentRightsRules,
+            ArbitrationRules = source.ArbitrationRules
         };
 
     private static Rulebook WithBudgetRules(Rulebook source, BudgetRules budgetRules) =>
@@ -1437,7 +1454,8 @@ internal sealed class RuleEngineTests
             DraftRules = source.DraftRules,
             PlayoffRules = source.PlayoffRules,
             BudgetRules = budgetRules,
-            FreeAgentRightsRules = source.FreeAgentRightsRules
+            FreeAgentRightsRules = source.FreeAgentRightsRules,
+            ArbitrationRules = source.ArbitrationRules
         };
 
     private static string FindRepositoryRoot()

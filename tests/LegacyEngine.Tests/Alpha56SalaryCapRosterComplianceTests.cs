@@ -190,6 +190,7 @@ internal sealed class Alpha56SalaryCapRosterComplianceTests
             AffiliateRules = source.AffiliateRules,
             PlayerAssignmentRules = source.PlayerAssignmentRules,
             FreeAgentRightsRules = source.FreeAgentRightsRules,
+            ArbitrationRules = source.ArbitrationRules,
             SalaryCapRules = new SalaryCapRules
             {
                 SalaryCapEnabled = true,

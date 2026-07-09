@@ -117,29 +117,30 @@ The five foundation pillars remain:
 - Alpha 7.0 - Hockey Intelligence Rating Engine v1
 - Alpha 7.1 - Waivers & Roster Transactions v1
 - Alpha 7.2 - RFA/UFA Contract Rights v1
+- Alpha 7.3 - Salary Arbitration v1
 
 ## Current Milestone
 
-Alpha 7.2 - RFA/UFA Contract Rights v1
+Alpha 7.3 - Salary Arbitration v1
 
 ## Current Goal
 
-Add rulebook-driven restricted/unrestricted free-agent rights for expiring professional contracts. NHL-style leagues now classify expiring players as pending RFA or pending UFA based on age/accrued-season thresholds, expose qualifying-offer decisions, preserve or release rights, move UFAs into the free-agent market, record rights history, update dossiers, surface Action Center deadlines, and provide AlphaDesktop Contract Rights controls. Junior-style rulebooks keep NHL-style RFA/UFA rules disabled unless explicitly enabled.
+Add rulebook-driven salary arbitration for eligible qualified RFAs. NHL-style rulebooks can now define arbitration eligibility, filing windows, hearing timing, walk-away rules, and award bounds. The GM can file arbitration, negotiate settlement, accept awards, or walk away where allowed, with Action Center items, inbox messages, League News, player dossier history, and save/load preservation.
 
-## Why RFA/UFA Rights Were Next
+## Why Salary Arbitration Was Next
 
-Alpha 4.1, Alpha 4.2, Alpha 5.6, Alpha 5.7, and Alpha 7.1 established contracts, free agency, cap context, agents, and waiver-safe roster movement. Alpha 7.2 closes the next offseason gap: expiring NHL-style contracts now become explicit rights decisions instead of silent renew/walk-away placeholders.
+Alpha 7.2 created explicit RFA/UFA rights decisions. Alpha 7.3 adds the next professional offseason resolution path: qualified RFAs with age/accrued-season eligibility can now enter arbitration instead of being limited to normal negotiation or rights release.
 
 ## Next Build Target
 
-Alpha 7.3 - TBD
+Alpha 7.4 - TBD
 
 ## Next Milestones
 
-1. Alpha 7.3 - TBD
+1. Alpha 7.4 - TBD
 
 ## Build Rule
 
-Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, offer sheets, arbitration, full holdout systems, full CBA edge cases, LTIR, emergency recalls, conditional waivers, buyouts, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
+Do not build Godot scenes, database persistence, cloud saves, encryption, mod systems, Steam integration, full settings systems, mock drafts, draft lottery, real player databases, Hall of Fame, full awards, full retirement systems, full editable attribute systems, offer sheets, full holdout systems, full CBA edge cases, LTIR, emergency recalls, conditional waivers, buyouts, play-by-play, line matching, shift simulation, shot-by-shot simulation, or visual gameplay yet.
 
 Keep simulation logic inside the standalone LegacyEngine and unit tests. AlphaDesktop may display engine state but must not own simulation logic.

@@ -142,7 +142,7 @@ internal sealed class Alpha72RfaUfaContractRightsTests
         Assert.True(loaded.SaveGame.ScenarioSnapshot.RightsHistory.ForPlayer(prepared.PersonId).Count > 0, "Rights history should survive save/load.");
     }
 
-    public void NoOfferSheetsArbitrationOrGodotAdded()
+    public void NoOfferSheetsOrGodotAdded()
     {
         var root = FindRepositoryRoot();
         var text = string.Join("\n",
@@ -150,7 +150,6 @@ internal sealed class Alpha72RfaUfaContractRightsTests
                 .Select(File.ReadAllText));
 
         Assert.False(text.Contains("OfferSheet", StringComparison.OrdinalIgnoreCase), "Alpha 7.2 should not implement offer sheets.");
-        Assert.False(text.Contains("Arbitration", StringComparison.OrdinalIgnoreCase), "Alpha 7.2 should not implement arbitration.");
         Assert.False(text.Contains("Godot", StringComparison.OrdinalIgnoreCase), "Alpha 7.2 should not add Godot.");
     }
 
@@ -250,7 +249,8 @@ internal sealed class Alpha72RfaUfaContractRightsTests
             PlayerAssignmentRules = source.PlayerAssignmentRules,
             SalaryCapRules = source.SalaryCapRules,
             WaiverRules = source.WaiverRules,
-            FreeAgentRightsRules = rightsRules
+            FreeAgentRightsRules = rightsRules,
+            ArbitrationRules = source.ArbitrationRules
         };
 
     private static string FindRepositoryRoot()

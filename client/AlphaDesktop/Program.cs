@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.2 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -546,6 +546,7 @@ internal sealed class MainWindow : Window
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
             new("Contracts", CreateTextScreen("Contracts")),
             new("Contract Rights", CreateTextScreen("Contract Rights")),
+            new("Arbitration", CreateTextScreen("Arbitration")),
             new("Waivers", CreateTextScreen("Hockey Waivers")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
@@ -630,7 +631,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.1 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.3 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1795,6 +1796,7 @@ internal sealed class MainWindow : Window
         RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
         _tabs["Contracts"].Text = BuildContractsWorkspace();
         _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
+        _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
         RefreshSelectableTab("Scouting", BuildScoutingRows());
         RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
         RefreshSelectableTab("Trades", BuildTradeRows());
@@ -4849,6 +4851,10 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Qualify", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId));
         yield return CreateDetailButton("Do Not Qualify", () => State.DeclineRightsFor(row.PersonId), State.CanDeclineRights(row.PersonId));
         yield return CreateDetailButton("Negotiate Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contracts"), State.HasContractRightsDecision(row.PersonId));
+        yield return CreateDetailButton("File Arbitration", () => State.FileArbitrationFor(row.PersonId), State.CanFileArbitration(row.PersonId));
+        yield return CreateDetailButton("Settle Arbitration", () => State.SettleArbitrationFor(row.PersonId), State.CanSettleArbitration(row.PersonId));
+        yield return CreateDetailButton("Accept Award", () => State.AcceptArbitrationAwardFor(row.PersonId), State.CanAcceptArbitrationAward(row.PersonId));
+        yield return CreateDetailButton("Walk Away", () => State.WalkAwayArbitrationFor(row.PersonId), State.CanWalkAwayArbitration(row.PersonId));
 
         var available = State.AvailableProspectActions(row.PersonId);
         yield return CreateDetailButton("Offer Contract", () => State.OfferProspectContractFor(row.PersonId), available.Contains(ProspectDecisionType.OfferContract));
@@ -6122,12 +6128,68 @@ internal sealed class MainWindow : Window
         AppendContractSection(builder, "Accepted Offers Awaiting GM Approval", summary.AcceptedOffersAwaitingApproval);
         AppendContractSection(builder, "Rejected / Walk-Away Log", summary.RejectedOffers);
         builder.AppendLine(BuildContractRightsWorkspace());
+        builder.AppendLine(BuildArbitrationWorkspace());
 
         builder.AppendLine("Offer Builder Guidance");
         builder.AppendLine("----------------------");
         builder.AppendLine("Offer inputs supported by the engine: salary, term, role promise, development promise, camp invite promise, staff role/focus promise, and notes.");
         builder.AppendLine("Evaluation output includes total cost, annual cost, common expiry date, budget before/after, likelihood, risk warning, and plain-language reasons.");
         builder.AppendLine("Use Free Agents, Prospects, Recruits, Staff, or Pending Decisions to pick the person, then approve only the deals you actually want signed.");
+        return builder.ToString();
+    }
+
+    private string BuildArbitrationWorkspace()
+    {
+        var cases = State.ArbitrationCases;
+        var eligibility = State.ArbitrationEligibility;
+        var builder = new StringBuilder();
+        builder.AppendLine("Salary Arbitration");
+        builder.AppendLine("==================");
+        builder.AppendLine(State.ArbitrationRuleSummary);
+        builder.AppendLine();
+        builder.AppendLine("Use selected player detail panels to File Arbitration, Negotiate Settlement, Accept Award, Walk Away, or View Dossier.");
+        builder.AppendLine();
+
+        builder.AppendLine("Eligible Players");
+        builder.AppendLine("----------------");
+        var eligible = eligibility.Where(item => item.Status == ArbitrationEligibilityStatus.Eligible).ToArray();
+        if (eligible.Length == 0)
+        {
+            builder.AppendLine("  No eligible RFAs are available for arbitration.");
+        }
+        else
+        {
+            foreach (var item in eligible)
+            {
+                builder.AppendLine($"  {item.PlayerName} | {State.PositionShortText(item.Position)} | age {item.Age?.ToString() ?? "unknown"} | accrued {item.AccruedSeasons} | filing deadline {item.FilingDeadline?.ToString("yyyy-MM-dd") ?? "n/a"}");
+                builder.AppendLine($"    {item.Reason}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Filed / Active Cases");
+        builder.AppendLine("--------------------");
+        if (cases.Count == 0)
+        {
+            builder.AppendLine("  No arbitration cases are active.");
+            return builder.ToString();
+        }
+
+        foreach (var arbitrationCase in cases.OrderBy(item => item.HearingDate ?? item.FilingDeadline ?? DateOnly.MaxValue).ThenBy(item => item.PlayerName, StringComparer.Ordinal))
+        {
+            builder.AppendLine($"  {arbitrationCase.PlayerName} | {State.DisplayArbitrationStatus(arbitrationCase.Status)} | {State.PositionShortText(arbitrationCase.Position)}");
+            builder.AppendLine($"    Filing deadline: {arbitrationCase.FilingDeadline?.ToString("yyyy-MM-dd") ?? "n/a"} | hearing: {arbitrationCase.HearingDate?.ToString("yyyy-MM-dd") ?? "not scheduled"}");
+            if (arbitrationCase.Award is not null)
+            {
+                builder.AppendLine($"    Ask: {arbitrationCase.Award.PlayerAsk:C0} | team offer: {arbitrationCase.Award.TeamOffer:C0} | projected: {arbitrationCase.Award.ProjectedAwardLow:C0}-{arbitrationCase.Award.ProjectedAwardHigh:C0} | final: {arbitrationCase.Award.FinalAward:C0}");
+                builder.AppendLine($"    Cap/budget: {arbitrationCase.Award.CapImpact}");
+                builder.AppendLine($"    Explanation: {arbitrationCase.Award.Explanation}");
+            }
+
+            builder.AppendLine($"    Agent: {arbitrationCase.AgentComment}");
+            builder.AppendLine($"    Recommendation: {arbitrationCase.Recommendation}");
+        }
+
         return builder.ToString();
     }
 
@@ -8816,6 +8878,7 @@ internal sealed class AlphaDesktopState
     private readonly PlayerRatingService _ratings = new();
     private readonly WaiverService _waivers = new();
     private readonly RfaUfaService _rfaUfa = new();
+    private readonly ArbitrationService _arbitration = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -8853,6 +8916,7 @@ internal sealed class AlphaDesktopState
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _tactics.EnsureTactics(prepared);
         prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
+        prepared = _arbitration.EnsureArbitration(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
@@ -9141,6 +9205,39 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public IReadOnlyList<ArbitrationEligibility> ArbitrationEligibility
+    {
+        get
+        {
+            var updated = _arbitration.EnsureArbitration(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+            if (!ReferenceEquals(updated, ScenarioSnapshot))
+            {
+                ScenarioSnapshot = updated;
+                Snapshot = updated.AlphaSnapshot;
+            }
+
+            return _arbitration.BuildEligibility(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+        }
+    }
+
+    public IReadOnlyList<ArbitrationCase> ArbitrationCases
+    {
+        get
+        {
+            var updated = _arbitration.EnsureArbitration(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+            if (!ReferenceEquals(updated, ScenarioSnapshot))
+            {
+                ScenarioSnapshot = updated;
+                Snapshot = updated.AlphaSnapshot;
+            }
+
+            return ScenarioSnapshot.ArbitrationCases;
+        }
+    }
+
+    public string ArbitrationRuleSummary =>
+        _arbitration.BuildRuleSummary(_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
     public ScheduledGame? NextGame => _seasonFramework.NextGame(ScenarioSnapshot);
 
     public GameRecap? LastGameRecap => _seasonFramework.LastPlayerTeamRecap(ScenarioSnapshot);
@@ -9258,7 +9355,8 @@ internal sealed class AlphaDesktopState
         + ContractManagement.ExpiringStaff.Count
         + ContractManagement.UnsignedProspects.Count
         + ContractManagement.AcceptedOffersAwaitingApproval.Count
-        + ContractRightsDecisions.Count(decision => decision.IsOpenDecision);
+        + ContractRightsDecisions.Count(decision => decision.IsOpenDecision)
+        + ArbitrationCases.Count(item => item.IsOpen);
 
     public int ScoutingReportCount => ScenarioSnapshot.CompletedScoutingReports.Count;
 
@@ -10852,6 +10950,22 @@ internal sealed class AlphaDesktopState
         ContractRightsDecisions.Any(decision => decision.PersonId == personId
             && decision.RightsStatus is FreeAgentRightsStatus.PendingRfa or FreeAgentRightsStatus.PendingUfa or FreeAgentRightsStatus.RestrictedFreeAgent);
 
+    public bool CanFileArbitration(string personId) =>
+        ArbitrationCases.Any(item => item.PersonId == personId && item.Status == ArbitrationCaseStatus.Eligible);
+
+    public bool CanSettleArbitration(string personId) =>
+        ArbitrationCases.Any(item => item.PersonId == personId && item.IsOpen);
+
+    public bool CanAcceptArbitrationAward(string personId) =>
+        ArbitrationCases.Any(item => item.PersonId == personId && item.IsOpen && item.Award is not null);
+
+    public bool CanWalkAwayArbitration(string personId)
+    {
+        var rules = (_registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook).ArbitrationRules;
+        return rules?.WalkAwayAllowed == true
+            && ArbitrationCases.Any(item => item.PersonId == personId && item.IsOpen);
+    }
+
     public string DisplayRightsStatus(FreeAgentRightsStatus status) =>
         status switch
         {
@@ -10864,6 +10978,19 @@ internal sealed class AlphaDesktopState
             FreeAgentRightsStatus.RightsHeld => "Rights Held",
             FreeAgentRightsStatus.RightsReleased => "Rights Released",
             FreeAgentRightsStatus.SignedElsewhere => "Signed Elsewhere",
+            _ => status.ToString()
+        };
+
+    public string DisplayArbitrationStatus(ArbitrationCaseStatus status) =>
+        status switch
+        {
+            ArbitrationCaseStatus.NotEligible => "Not Eligible",
+            ArbitrationCaseStatus.PlayerFiled => "Player Filed",
+            ArbitrationCaseStatus.TeamFiled => "Team Filed",
+            ArbitrationCaseStatus.HearingScheduled => "Hearing Scheduled",
+            ArbitrationCaseStatus.SettledBeforeHearing => "Settled Before Hearing",
+            ArbitrationCaseStatus.AwardIssued => "Award Issued",
+            ArbitrationCaseStatus.WalkedAway => "Walked Away",
             _ => status.ToString()
         };
 
@@ -10906,7 +11033,34 @@ internal sealed class AlphaDesktopState
     public void DeclineRightsFor(string personId) =>
         ApplyRightsResult(_rfaUfa.DeclineQualifyingOffer(_registry, ScenarioSnapshot, personId));
 
+    public void FileArbitrationFor(string personId) =>
+        ApplyArbitrationResult(_arbitration.FileTeamArbitration(_registry, ScenarioSnapshot, personId));
+
+    public void SettleArbitrationFor(string personId) =>
+        ApplyArbitrationResult(_arbitration.NegotiateSettlement(_registry, ScenarioSnapshot, personId));
+
+    public void AcceptArbitrationAwardFor(string personId) =>
+        ApplyArbitrationResult(_arbitration.AcceptAward(_registry, ScenarioSnapshot, personId));
+
+    public void WalkAwayArbitrationFor(string personId) =>
+        ApplyArbitrationResult(_arbitration.WalkAway(_registry, ScenarioSnapshot, personId));
+
     private void ApplyRightsResult(RightsDecisionResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            AddInboxItems(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyArbitrationResult(ArbitrationResult result)
     {
         if (result.Success)
         {
@@ -13153,6 +13307,7 @@ internal sealed class AlphaDesktopState
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = _ratings.EnsureRatings(updated);
         updated = _rfaUfa.EnsureRights(updated, _registry.Rulebook ?? updated.LeagueProfile.Rulebook);
+        updated = _arbitration.EnsureArbitration(updated, _registry.Rulebook ?? updated.LeagueProfile.Rulebook);
         if (!ReferenceEquals(updated, ScenarioSnapshot))
         {
             ScenarioSnapshot = updated;

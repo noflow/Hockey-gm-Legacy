@@ -112,7 +112,11 @@ public sealed class LeagueTransactionWireService
                 or LeagueTransactionType.RfaQualified
                 or LeagueTransactionType.RfaNotQualified
                 or LeagueTransactionType.PlayerBecameUfa
-                or LeagueTransactionType.RightsReleased => LeagueNewsCategory.Signings,
+                or LeagueTransactionType.RightsReleased
+                or LeagueTransactionType.ArbitrationFiled
+                or LeagueTransactionType.ArbitrationAwardIssued
+                or LeagueTransactionType.ArbitrationSettled
+                or LeagueTransactionType.ArbitrationWalkAway => LeagueNewsCategory.Signings,
             LeagueTransactionType.PlayerAddedToRoster
                 or LeagueTransactionType.PlayerReleased
                 or LeagueTransactionType.PlayerAssigned
@@ -144,6 +148,10 @@ public sealed class LeagueTransactionWireService
             LegacyEventType.PlayerNotQualified => LeagueTransactionType.RfaNotQualified,
             LegacyEventType.PlayerBecameUfa => LeagueTransactionType.PlayerBecameUfa,
             LegacyEventType.PlayerRightsReleased => LeagueTransactionType.RightsReleased,
+            LegacyEventType.ArbitrationFiled or LegacyEventType.ArbitrationHearingScheduled => LeagueTransactionType.ArbitrationFiled,
+            LegacyEventType.ArbitrationAwardIssued => LeagueTransactionType.ArbitrationAwardIssued,
+            LegacyEventType.ArbitrationSettled => LeagueTransactionType.ArbitrationSettled,
+            LegacyEventType.ArbitrationWalkAway => LeagueTransactionType.ArbitrationWalkAway,
             LegacyEventType.FreeAgentSigned => LeagueTransactionType.PlayerSigned,
             LegacyEventType.FreeAgentSignedElsewhere => LeagueTransactionType.PlayerSigned,
             LegacyEventType.ProspectSigned => LeagueTransactionType.PlayerSigned,
@@ -191,6 +199,10 @@ public sealed class LeagueTransactionWireService
             LeagueTransactionType.RfaNotQualified => $"{teamName} did not qualify {personName}; rights were released.",
             LeagueTransactionType.PlayerBecameUfa => $"{personName} became an unrestricted free agent.",
             LeagueTransactionType.RightsReleased => $"{teamName} released contract rights to {personName}.",
+            LeagueTransactionType.ArbitrationFiled => $"{teamName} filed or received arbitration involving {personName}.",
+            LeagueTransactionType.ArbitrationAwardIssued => $"{teamName} received an arbitration award for {personName}.",
+            LeagueTransactionType.ArbitrationSettled => $"{teamName} settled arbitration with {personName}.",
+            LeagueTransactionType.ArbitrationWalkAway => $"{teamName} walked away from arbitration with {personName}.",
             LeagueTransactionType.Injury => $"{teamName} reported an injury update for {personName}.",
             LeagueTransactionType.DraftPick => $"{teamName} drafted {personName}.",
             LeagueTransactionType.StaffHired => $"{teamName} hired {personName}.",

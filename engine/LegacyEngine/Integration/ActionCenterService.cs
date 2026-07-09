@@ -240,6 +240,7 @@ public sealed class ActionCenterService
     private static void AddContractRightsItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
         items.AddRange(new RfaUfaService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
+        items.AddRange(new ArbitrationService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
     }
 
     private static void AddStaffCoachingItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
