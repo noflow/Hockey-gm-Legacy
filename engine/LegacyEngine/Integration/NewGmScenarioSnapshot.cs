@@ -230,6 +230,10 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<AssetEvaluation> AssetEvaluations { get; init; } = Array.Empty<AssetEvaluation>();
 
+    public OrganizationPlan? CurrentOrganizationPlan { get; init; }
+
+    public IReadOnlyList<OrganizationPlan> OrganizationPlans { get; init; } = Array.Empty<OrganizationPlan>();
+
     public Lineup? CurrentLineup { get; init; }
 
     public LineChemistryReport? CurrentLineChemistry { get; init; }
@@ -666,6 +670,12 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var evaluation in AssetEvaluations)
         {
             evaluation.Validate();
+        }
+
+        CurrentOrganizationPlan?.Validate();
+        foreach (var plan in OrganizationPlans)
+        {
+            plan.Validate();
         }
 
         CurrentLineup?.Validate();

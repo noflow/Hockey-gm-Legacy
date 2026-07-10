@@ -105,6 +105,7 @@ var alpha78ScoutingIntelligenceTests = new Alpha78ScoutingIntelligenceTests();
 var alpha79DraftIntelligenceTests = new Alpha79DraftIntelligenceTests();
 var alpha710AssetEvaluationTests = new Alpha710AssetEvaluationTests();
 var alpha711DraftBoardRealismTests = new Alpha711DraftBoardRealismTests();
+var alpha712OrganizationPlanningTests = new Alpha712OrganizationPlanningTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1410,6 +1411,17 @@ runner.Run("alpha 7.11 deterministic hundred class variation exists", alpha711Dr
 runner.Run("alpha 7.11 AI draft reach bounded by draft value", alpha711DraftBoardRealismTests.AiDraftReachIsBoundedByDraftValue);
 runner.Run("alpha 7.11 hidden true ratings not exposed", alpha711DraftBoardRealismTests.HiddenTrueRatingsAreNotExposed);
 runner.Run("alpha 7.11 AlphaDesktop exposes draft realism context", alpha711DraftBoardRealismTests.AlphaDesktopExposesDraftRealismContext);
+runner.Run("alpha 7.12 organization plan created", alpha712OrganizationPlanningTests.OrganizationPlanCreated);
+runner.Run("alpha 7.12 depth chart and future lineup generated", alpha712OrganizationPlanningTests.DepthChartAndFutureLineupGenerated);
+runner.Run("alpha 7.12 prospect planning generated", alpha712OrganizationPlanningTests.ProspectPlanningGenerated);
+runner.Run("alpha 7.12 promotion and blocking planning generated", alpha712OrganizationPlanningTests.PromotionAndBlockingPlanningGenerated);
+runner.Run("alpha 7.12 contract planning generated", alpha712OrganizationPlanningTests.ContractPlanningGenerated);
+runner.Run("alpha 7.12 competitive window and needs generated", alpha712OrganizationPlanningTests.CompetitiveWindowAndNeedsGenerated);
+runner.Run("alpha 7.12 trade and free agency planning generated", alpha712OrganizationPlanningTests.TradeAndFreeAgencyPlanningGenerated);
+runner.Run("alpha 7.12 planning report generated", alpha712OrganizationPlanningTests.PlanningReportGenerated);
+runner.Run("alpha 7.12 league organization plans generated", alpha712OrganizationPlanningTests.LeagueOrganizationPlansGenerated);
+runner.Run("alpha 7.12 save load preserves organization plans", alpha712OrganizationPlanningTests.SaveLoadPreservesOrganizationPlans);
+runner.Run("alpha 7.12 AlphaDesktop exposes organization planning", alpha712OrganizationPlanningTests.AlphaDesktopExposesOrganizationPlanning);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

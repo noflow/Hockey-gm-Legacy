@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.11 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.12 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -535,6 +535,7 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Staff Hiring", CreateSelectablePeopleContent("Staff Hiring")),
             new WorkspaceScreen("Vacancies", CreateSelectablePeopleContent("Vacancies")),
             new WorkspaceScreen("Budget", CreateTextScreen("Budget")),
+            new WorkspaceScreen("Planning", CreateTextScreen("Organization Planning")),
             new WorkspaceScreen("Organization Health", CreateTextScreen("Organization Health")),
             new WorkspaceScreen("Relationships", CreateTextScreen("Relationships"))
         });
@@ -580,6 +581,7 @@ internal sealed class MainWindow : Window
         AddWorkspaceTab(tabs, "Reports / History", new[]
         {
             new WorkspaceScreen("Executive Reports", CreateTextScreen("Executive Reports")),
+            new WorkspaceScreen("Organization Planning", CreateTextScreen("Organization Planning Report")),
             new WorkspaceScreen("Archived Seasons", CreateTextScreen("Archived Seasons")),
             new WorkspaceScreen("GM Career", CreateTextScreen("GM Career")),
             new WorkspaceScreen("Organization History", CreateTextScreen("Organization History")),
@@ -645,7 +647,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.11 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.12 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1892,6 +1894,9 @@ internal sealed class MainWindow : Window
             case ("Organization", "Budget"):
                 SetTextTab("Budget", BuildBudgetWorkspace());
                 break;
+            case ("Organization", "Planning"):
+                SetTextTab("Organization Planning", BuildOrganizationPlanning());
+                break;
             case ("Organization", "Organization Health"):
                 SetTextTab("Organization Health", BuildOrganizationHealth());
                 break;
@@ -1990,6 +1995,7 @@ internal sealed class MainWindow : Window
         switch (screen)
         {
             case "Executive Reports": SetTextTab("Executive Reports", BuildExecutiveReports()); break;
+            case "Organization Planning": SetTextTab("Organization Planning Report", BuildOrganizationPlanning()); break;
             case "Archived Seasons": SetTextTab("Archived Seasons", BuildSeasonArchive()); break;
             case "GM Career": SetTextTab("GM Career", BuildGmCareerHistory()); break;
             case "Organization History": SetTextTab("Organization History", BuildOrganizationHistoryReport()); break;
@@ -2079,6 +2085,8 @@ internal sealed class MainWindow : Window
             }
             _tabs["League News"].Text = BuildLeagueNews();
             _tabs["Budget"].Text = BuildBudgetWorkspace();
+            _tabs["Organization Planning"].Text = BuildOrganizationPlanning();
+            _tabs["Organization Planning Report"].Text = BuildOrganizationPlanning();
             _tabs["Organization Health"].Text = BuildOrganizationHealth();
             RefreshSelectableTab("Player Dossier", BuildDossierRows());
             if (_selectableLists.ContainsKey("Draft Board"))
@@ -6698,6 +6706,105 @@ internal sealed class MainWindow : Window
         builder.AppendLine();
     }
 
+    private string BuildOrganizationPlanning()
+    {
+        var plan = State.CurrentOrganizationPlan;
+        var builder = new StringBuilder();
+        builder.AppendLine("Organization Planning");
+        builder.AppendLine("=====================");
+        builder.AppendLine(plan.Summary);
+        builder.AppendLine($"Window: {OrganizationPlanningService.Readable(plan.Window)}");
+        builder.AppendLine($"Horizon: {OrganizationPlanningService.Readable(plan.Horizon)}");
+        builder.AppendLine($"Updated: {plan.LastUpdated:yyyy-MM-dd}");
+        builder.AppendLine();
+
+        builder.AppendLine("Future Needs");
+        foreach (var need in plan.RosterPlan.FutureNeeds.Take(8))
+        {
+            builder.AppendLine($"- {need}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Current Depth Chart");
+        foreach (var slot in plan.DepthPlan.CurrentDepth.Take(14))
+        {
+            builder.AppendLine($"- {slot.Slot}: {slot.PlayerName} | {slot.Position} | {slot.Role} | age {slot.Age?.ToString() ?? "unknown"}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Future Depth Chart");
+        foreach (var slot in plan.DepthPlan.FutureDepth.Take(14))
+        {
+            builder.AppendLine($"- {slot.Year} {slot.Slot}: {slot.PlayerName} | {slot.Position} | {slot.Role}");
+            builder.AppendLine($"  {slot.Summary}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Prospect Pipeline");
+        foreach (var prospect in plan.ProspectPlan.Prospects.Take(10))
+        {
+            builder.AppendLine($"- {prospect.PlayerName} | {prospect.Position} | ETA {prospect.ExpectedArrivalYear} | {prospect.ProjectedRole}");
+            builder.AppendLine($"  Path: {string.Join(" -> ", prospect.Path)}");
+            builder.AppendLine($"  {prospect.Recommendation}");
+        }
+
+        if (plan.ProspectPlan.PipelineRisks.Count > 0)
+        {
+            builder.AppendLine();
+            builder.AppendLine("Pipeline Risks");
+            foreach (var risk in plan.ProspectPlan.PipelineRisks)
+            {
+                builder.AppendLine($"- {risk}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Succession / Blocking");
+        foreach (var line in plan.RosterPlan.SuccessionPlans.Concat(plan.RosterPlan.BlockedProspects).DefaultIfEmpty("No major succession or blocking issue flagged."))
+        {
+            builder.AppendLine($"- {line}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Contract Planning");
+        builder.AppendLine(plan.ContractPlan.Summary);
+        builder.AppendLine(plan.ContractPlan.CapBudgetSummary);
+        foreach (var item in plan.ContractPlan.ExpiringContracts.Take(8))
+        {
+            builder.AppendLine($"- {item.PlayerName}: expires {item.ExpiryYear}, {item.Salary:C0}, {item.Recommendation}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Free Agency Plan");
+        foreach (var line in plan.FreeAgencyTargets.DefaultIfEmpty("No external signing pressure right now."))
+        {
+            builder.AppendLine($"- {line}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Trade Plan");
+        foreach (var line in plan.TradeTargets.DefaultIfEmpty("No urgent trade pressure right now."))
+        {
+            builder.AppendLine($"- {line}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Planning Reports");
+        foreach (var line in plan.Reports)
+        {
+            builder.AppendLine($"- {line}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("League AI Organization Plans");
+        foreach (var leaguePlan in State.OrganizationPlans.Take(8))
+        {
+            builder.AppendLine($"- {leaguePlan.OrganizationName}: {OrganizationPlanningService.Readable(leaguePlan.Window)} | {leaguePlan.RosterPlan.FutureNeeds.FirstOrDefault() ?? leaguePlan.Summary}");
+        }
+
+        return builder.ToString();
+    }
+
     private string BuildOrganizationHealth()
     {
         var readiness = State.SeasonReadinessReport;
@@ -9383,6 +9490,7 @@ internal sealed class AlphaDesktopState
     private readonly OfferSheetService _offerSheets = new();
     private readonly DraftIntelligenceService _draftIntelligence = new();
     private readonly AssetEvaluationService _assetEvaluation = new();
+    private readonly OrganizationPlanningService _organizationPlanning = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -9420,6 +9528,7 @@ internal sealed class AlphaDesktopState
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
         prepared = _assetEvaluation.EnsureEvaluations(prepared);
+        prepared = _organizationPlanning.EnsurePlans(prepared);
         prepared = _tactics.EnsureTactics(prepared);
         prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         prepared = _arbitration.EnsureArbitration(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
@@ -9627,6 +9736,33 @@ internal sealed class AlphaDesktopState
 
     public OrganizationAiProfile PlayerOrganizationAiProfile =>
         OrganizationAiProfileFor(ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name);
+
+    public OrganizationPlan CurrentOrganizationPlan
+    {
+        get
+        {
+            if (ScenarioSnapshot.CurrentOrganizationPlan is null || ScenarioSnapshot.OrganizationPlans.Count == 0)
+            {
+                var prepared = _organizationPlanning.EnsurePlans(ScenarioSnapshot);
+                ScenarioSnapshot = prepared;
+                Snapshot = prepared.AlphaSnapshot;
+            }
+
+            return ScenarioSnapshot.CurrentOrganizationPlan!;
+        }
+    }
+
+    public IReadOnlyList<OrganizationPlan> OrganizationPlans
+    {
+        get
+        {
+            _ = CurrentOrganizationPlan;
+            return ScenarioSnapshot.OrganizationPlans;
+        }
+    }
+
+    public string OrganizationPlanningReportText() =>
+        _organizationPlanning.BuildPlanningReport(ScenarioSnapshot);
 
     public IReadOnlyList<FranchiseIdentity> FranchiseIdentities =>
         ScenarioSnapshot.FranchiseIdentities.Count > 0

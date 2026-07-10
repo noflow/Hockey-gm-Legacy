@@ -125,18 +125,20 @@ The five foundation pillars remain:
 - Alpha 7.8 - Scouting Intelligence v2
 - Alpha 7.9 - Draft Intelligence V4: War Room + Attribute Scouting
 - Alpha 7.10 - Player Value & Asset Evaluation Engine v1
+- Alpha 7.11 - Draft Board Realism & Position Value Engine
+- Alpha 7.12 - AI Roster Builder & Organizational Planning v1
 
 ## Current Milestone
 
-Alpha 7.10 - Player Value & Asset Evaluation Engine v1
+Alpha 7.12 - AI Roster Builder & Organizational Planning v1
 
 ## Current Goal
 
-Give every player, prospect, draft pick, and contract contextual value instead of one hidden number. Values now consider current ability, future value, contract value, organizational fit, trade context, draft-pick uncertainty, and league position scarcity across C, LW, RW, LD, RD, and G.
+Give every organization a multi-year planning layer. AI and player organizations now track future depth, prospect paths, succession planning, contract outlook, roster needs, trade/free-agency targets, and competitive window context.
 
-## Why Asset Evaluation Was Next
+## Why Organization Planning Was Next
 
-Alpha 7.6 through Alpha 7.9 made ratings, development, scouting knowledge, and draft intelligence readable. Alpha 7.10 turns that information into decision support for trades, free agency, contracts, draft picks, team needs, and scouting priorities without exposing hidden true ratings.
+Alpha 7.6 through Alpha 7.11 made ratings, development, scouting knowledge, draft boards, asset value, and position scarcity readable. Alpha 7.12 uses that information to help teams plan beyond the current lineup without auto-making GM decisions.
 
 ## Next Build Target
 
