@@ -764,9 +764,17 @@ internal sealed class MainWindow : Window
         {
             action();
             RefreshAfterAction();
+            QueueRefreshAfterAction();
         };
 
         return button;
+    }
+
+    private void QueueRefreshAfterAction()
+    {
+        Dispatcher.BeginInvoke(
+            new Action(RefreshAfterAction),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private static T? FindAncestor<T>(DependencyObject? source)
@@ -6232,6 +6240,7 @@ internal sealed class MainWindow : Window
         {
             action();
             RefreshAfterAction();
+            QueueRefreshAfterAction();
         };
         return button;
     }
