@@ -4596,6 +4596,8 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Waiver status", State.WaiverStatusText(row.PersonId));
             AddLine(panel, "Development trend", State.DevelopmentTrend(row.PersonId));
             AddLine(panel, "Injury status", State.InjuryStatus(row.PersonId));
+            AddSubHeader(panel, "Contract");
+            AddParagraph(panel, State.PlayerContractDetailsText(row.PersonId));
             AddSubHeader(panel, "Health & Medical");
             AddParagraph(panel, State.HealthProfileText(row.PersonId));
             AddSubHeader(panel, "Development Plan");
@@ -6429,7 +6431,8 @@ internal sealed class MainWindow : Window
         var builder = new StringBuilder();
         builder.AppendLine("Budget");
         builder.AppendLine("======");
-        builder.AppendLine("Operating Budget");
+        builder.AppendLine("Hockey Operations Staff Budget");
+        builder.AppendLine("This budget covers the GM, coaches, scouts, medical/training staff, front office, and released-staff obligations. Player payroll is tracked separately under Salary Cap / Player Payroll.");
         builder.AppendLine($"Owner status: {budget.OwnerBudgetConfidence}");
         builder.AppendLine($"Budget status: {budget.Status}");
         builder.AppendLine($"Total budget: {budget.TotalBudget:C0}");
@@ -6445,11 +6448,12 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Staff contracts: {budget.StaffContractsTotal:C0}");
         builder.AppendLine($"Staff total: {budget.StaffTotal:C0}");
         builder.AppendLine($"Staff release obligations: {budget.StaffReleaseObligations:C0}");
-        builder.AppendLine($"Player contracts: {budget.PlayerContractsTotal:C0}");
+        builder.AppendLine($"Player payroll/cap commitments (separate): {budget.PlayerContractsTotal:C0}");
         builder.AppendLine($"Scouting budget: {budget.ScoutingBudget:C0}");
         builder.AppendLine($"Medical/staff operations: {budget.MedicalAndStaffOperationsBudget:C0}");
         builder.AppendLine();
-        builder.AppendLine("Salary Cap");
+        builder.AppendLine("Salary Cap / Player Payroll");
+        builder.AppendLine("Owner reaction to player spending depends on cap rules, playoff expectations, and team results rather than the staff operating budget.");
         builder.AppendLine($"Cap enabled: {(cap.IsEnabled ? "Yes" : "No - this league uses operating budgets")}");
         builder.AppendLine($"Cap status: {cap.Status}");
         builder.AppendLine($"Cap amount: {cap.Profile.CapAmount:C0}");
@@ -11684,6 +11688,38 @@ internal sealed class AlphaDesktopState
 
         var prospect = ScenarioSnapshot.ProspectRights.FirstOrDefault(prospect => prospect.ProspectPersonId == personId);
         return prospect is null ? "No contract/rights record" : $"Draft rights {prospect.Status}";
+    }
+
+    public string PlayerContractDetailsText(string personId)
+    {
+        var contract = ScenarioSnapshot.Contracts.Concat(Snapshot.Contracts)
+            .DistinctBy(contract => contract.ContractId)
+            .Where(contract => contract.PersonId == personId)
+            .OrderByDescending(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate > Snapshot.CurrentDate)
+            .ThenByDescending(contract => contract.Term.EndDate)
+            .FirstOrDefault();
+
+        var rightsText = ContractRightsStatus(personId);
+        if (contract is null)
+        {
+            return $"No active contract found.\nRights: {rightsText}";
+        }
+
+        var active = contract.Status == ContractStatus.Signed && contract.Term.EndDate > Snapshot.CurrentDate;
+        var status = active
+            ? "Active"
+            : contract.Status == ContractStatus.Signed && contract.Term.EndDate <= Snapshot.CurrentDate
+                ? "Expired"
+                : contract.Status.ToString();
+        var clauses = contract.Clauses.Count == 0
+            ? "none"
+            : string.Join(", ", contract.Clauses.Select(clause => $"{clause.ClauseType}: {clause.Description}"));
+        var bonus = contract.Money.SigningBonus > 0 ? $"\nSigning bonus: {contract.Money.SigningBonus:C0}" : string.Empty;
+        var expiryNote = active
+            ? $"Counts against player payroll/cap through {contract.Term.EndDate:yyyy-MM-dd}."
+            : "Does not count against current player payroll/cap; review FA/RFA rights status.";
+
+        return $"Type: {contract.ContractType}\nStatus: {status}\nStart: {contract.Term.StartDate:yyyy-MM-dd}\nEnd: {contract.Term.EndDate:yyyy-MM-dd}\nSalary/stipend: {contract.Money.SalaryOrStipend:C0} {contract.Money.Currency}{bonus}\nClauses: {clauses}\nRights: {rightsText}\nCap/payroll note: {expiryNote}";
     }
 
     public bool HasContractRightsDecision(string personId) =>

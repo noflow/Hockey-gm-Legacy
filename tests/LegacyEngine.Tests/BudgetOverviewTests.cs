@@ -34,9 +34,39 @@ internal sealed class BudgetOverviewTests
         Assert.True(budget.TotalBudget > 0, "Budget overview should expose owner total budget.");
         Assert.True(budget.PlayerContractsTotal >= 14_000, "Budget overview should include signed player contract totals.");
         Assert.True(budget.StaffContractsTotal >= 55_000, "Budget overview should include signed staff contract totals.");
-        Assert.Equal(budget.PlayerContractsTotal + budget.StaffContractsTotal, budget.UsedBudget);
+        Assert.Equal(budget.StaffContractsTotal, budget.UsedBudget);
         Assert.Equal(budget.TotalBudget - budget.UsedBudget, budget.RemainingBudget);
         Assert.Equal(budget.RemainingBudget, budget.OverUnderBudget);
+    }
+
+    public void ExpiredPlayerContractsDoNotCountAgainstBudgetOrPayroll()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var baseline = new BudgetOverviewService().Build(scenario.ScenarioSnapshot);
+        var date = scenario.ScenarioSnapshot.CurrentDate;
+        var expiredPlayerContract = new Contract(
+            ContractId: "contract-budget-expired-player",
+            PersonId: scenario.ScenarioSnapshot.AlphaSnapshot.Roster.Players.First().PersonId,
+            OrganizationId: scenario.ScenarioSnapshot.Organization.OrganizationId,
+            ContractType: ContractType.JuniorPlayerAgreement,
+            Status: ContractStatus.Signed,
+            Term: new ContractTerm(date.AddYears(-2), date.AddDays(-1)),
+            Money: new ContractMoney(9_999_999, 1, "CAD"),
+            Clauses: Array.Empty<ContractClause>(),
+            OfferedOn: date.AddYears(-2),
+            SignedOn: date.AddYears(-2),
+            RejectedOn: null,
+            TerminatedOn: null,
+            ExpiredOn: null);
+        var snapshot = scenario.ScenarioSnapshot with
+        {
+            Contracts = scenario.ScenarioSnapshot.Contracts.Append(expiredPlayerContract).ToArray()
+        };
+
+        var budget = new BudgetOverviewService().Build(snapshot);
+
+        Assert.Equal(baseline.PlayerContractsTotal, budget.PlayerContractsTotal);
+        Assert.Equal(baseline.UsedBudget, budget.UsedBudget);
     }
 
     public void BudgetOverviewWarnsWhenOverBudget()

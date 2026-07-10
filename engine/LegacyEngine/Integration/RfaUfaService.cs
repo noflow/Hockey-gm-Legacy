@@ -63,6 +63,12 @@ public sealed class RfaUfaService
     {
         var decisions = BuildRightsDecisions(scenario, rulebook);
         var updated = scenario with { PlayerRightsDecisions = decisions };
+        foreach (var decision in decisions.Where(decision => decision.RightsStatus == FreeAgentRightsStatus.UnrestrictedFreeAgent
+            && decision.ContractExpiryDate <= updated.CurrentDate))
+        {
+            updated = AddToFreeAgentMarket(updated, decision);
+        }
+
         updated.Validate();
         return updated;
     }
@@ -234,7 +240,11 @@ public sealed class RfaUfaService
             FreeAgentRightsStatus.Qualified => FreeAgentRightsStatus.Qualified,
             FreeAgentRightsStatus.RestrictedFreeAgent => FreeAgentRightsStatus.RestrictedFreeAgent,
             FreeAgentRightsStatus.UnrestrictedFreeAgent => FreeAgentRightsStatus.UnrestrictedFreeAgent,
-            _ => isUfa ? FreeAgentRightsStatus.PendingUfa : FreeAgentRightsStatus.PendingRfa
+            _ => isUfa
+                ? contract.Term.EndDate <= scenario.CurrentDate || contract.Status == ContractStatus.Expired
+                    ? FreeAgentRightsStatus.UnrestrictedFreeAgent
+                    : FreeAgentRightsStatus.PendingUfa
+                : FreeAgentRightsStatus.PendingRfa
         };
         var contractStatus = rightsStatus switch
         {

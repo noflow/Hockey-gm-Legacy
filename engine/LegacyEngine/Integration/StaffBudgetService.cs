@@ -86,7 +86,7 @@ public sealed class StaffBudgetService
             .Where(contract => contract.ContractType == ContractType.JuniorPlayerAgreement)
             .Sum(contract => contract.Money.SalaryOrStipend + contract.Money.SigningBonus);
         var staffTotal = gmSalary + executive + coaching + scouting + medical + operations;
-        var used = staffTotal + obligations + playerContracts;
+        var used = staffTotal + obligations;
         var remaining = scenario.AlphaSnapshot.Owner.Budget.Total - used;
         var ratio = scenario.AlphaSnapshot.Owner.Budget.Total == 0 ? 1 : used / scenario.AlphaSnapshot.Owner.Budget.Total;
         var status = remaining < 0
@@ -161,7 +161,7 @@ public sealed class StaffBudgetService
     private static IReadOnlyList<Contract> SignedContracts(NewGmScenarioSnapshot scenario) =>
         scenario.Contracts
             .Concat(scenario.AlphaSnapshot.Contracts)
-            .Where(contract => contract.Status == ContractStatus.Signed)
+            .Where(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate > scenario.CurrentDate)
             .GroupBy(contract => contract.ContractId, StringComparer.Ordinal)
             .Select(group => group.Last())
             .ToArray();

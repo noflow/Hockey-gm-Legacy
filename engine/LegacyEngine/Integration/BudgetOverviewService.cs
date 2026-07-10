@@ -18,7 +18,7 @@ public sealed class BudgetOverviewService
         var hockeyOps = new StaffBudgetService().Build(scenario, rulebook);
         var contracts = scenario.Contracts
             .Concat(scenario.AlphaSnapshot.Contracts)
-            .Where(contract => contract.Status == ContractStatus.Signed)
+            .Where(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate > scenario.CurrentDate)
             .GroupBy(contract => contract.ContractId, StringComparer.Ordinal)
             .Select(group => group.Last())
             .ToArray();
@@ -32,7 +32,7 @@ public sealed class BudgetOverviewService
             .Where(penalty => penalty.SeasonYear == scenario.Season.Year)
             .Sum(penalty => penalty.Amount);
         var ownerBudget = scenario.AlphaSnapshot.Owner.Budget;
-        var used = hockeyOps.UsedBudget + buyoutPenalty;
+        var used = hockeyOps.UsedBudget;
         var remaining = ownerBudget.Total - used;
         var ratio = ownerBudget.Total == 0 ? 1 : used / ownerBudget.Total;
         var status = remaining < 0

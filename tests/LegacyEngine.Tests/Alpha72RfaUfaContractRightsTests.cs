@@ -77,6 +77,19 @@ internal sealed class Alpha72RfaUfaContractRightsTests
         Assert.True(result.ScenarioSnapshot.FreeAgentMarket!.Find(prepared.PersonId) is not null, "UFA should enter the free-agent market.");
     }
 
+    public void ExpiredUfaContractIsExpiredAndMovedToFreeAgentMarket()
+    {
+        var prepared = PrepareScenario(age: 29, seasons: 8, daysUntilExpiry: -1);
+
+        var updated = new ContractExpiryService().ProcessExpiredContracts(prepared.Scenario, prepared.Registry.Rulebook);
+        var contract = updated.Contracts.Single(item => item.PersonId == prepared.PersonId);
+        var decision = updated.PlayerRightsDecisions.Single(item => item.PersonId == prepared.PersonId);
+
+        Assert.Equal(ContractStatus.Expired, contract.Status);
+        Assert.Equal(FreeAgentRightsStatus.UnrestrictedFreeAgent, decision.RightsStatus);
+        Assert.True(updated.FreeAgentMarket!.Find(prepared.PersonId) is not null, "Expired UFA should be available in the free-agent market immediately.");
+    }
+
     public void RfaRemainsTiedToRightsHolder()
     {
         var prepared = PrepareScenario(age: 23, seasons: 3);

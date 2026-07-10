@@ -35,6 +35,7 @@ public sealed class DailySimulationCoordinator
             ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, playoffs.ScenarioSnapshot)
             : null;
         var finalScenario = report?.Success == true ? report.ScenarioSnapshot : playoffs.ScenarioSnapshot;
+        finalScenario = new ContractExpiryService().ProcessExpiredContracts(finalScenario, registry.Rulebook ?? finalScenario.LeagueProfile.Rulebook);
         finalScenario = new DevelopmentPlanningService().EnsureScenarioPlans(finalScenario);
         finalScenario = new StoryService().EnsureStories(finalScenario, registry);
         if (finalScenario.Schedule is { Games.Count: > 0 }

@@ -506,6 +506,7 @@ runner.Run("GM note can be added to dossier", playerDossierIntegrationTests.GmNo
 runner.Run("dossier sections populate when data exists", playerDossierIntegrationTests.ScoutingDevelopmentInjuryAndContractSectionsPopulateWhenDataExists);
 runner.Run("budget overview calculates contract totals", budgetOverviewTests.BudgetOverviewCalculatesContractTotals);
 runner.Run("budget overview warns when over budget", budgetOverviewTests.BudgetOverviewWarnsWhenOverBudget);
+runner.Run("budget overview excludes expired player contracts", budgetOverviewTests.ExpiredPlayerContractsDoNotCountAgainstBudgetOrPayroll);
 runner.Run("staff control candidate generated", staffControlTests.StaffCandidateGenerated);
 runner.Run("staff control candidate has role and department fit", staffControlTests.CandidateHasRoleAndDepartmentFit);
 runner.Run("staff control candidate has strengths and weaknesses", staffControlTests.CandidateHasStrengthsAndWeaknesses);
@@ -1286,6 +1287,7 @@ runner.Run("alpha 7.2 rulebook controls RFA UFA thresholds", alpha72RfaUfaContra
 runner.Run("alpha 7.2 qualifying offer preserves rights", alpha72RfaUfaContractRightsTests.QualifyingOfferPreservesRights);
 runner.Run("alpha 7.2 declining qualifying offer releases rights", alpha72RfaUfaContractRightsTests.DecliningQualifyingOfferReleasesRights);
 runner.Run("alpha 7.2 UFA enters free agent market", alpha72RfaUfaContractRightsTests.UfaEntersFreeAgentMarket);
+runner.Run("alpha 7.2 expired UFA contract enters free agent market", alpha72RfaUfaContractRightsTests.ExpiredUfaContractIsExpiredAndMovedToFreeAgentMarket);
 runner.Run("alpha 7.2 RFA remains tied to rights holder", alpha72RfaUfaContractRightsTests.RfaRemainsTiedToRightsHolder);
 runner.Run("alpha 7.2 contract screen exposes rights", alpha72RfaUfaContractRightsTests.ContractScreenExposesRights);
 runner.Run("alpha 7.2 player dossier exposes RFA UFA status", alpha72RfaUfaContractRightsTests.PlayerDossierExposesRfaUfaStatus);
