@@ -751,6 +751,8 @@ internal sealed class MainWindow : Window
         var button = new Button
         {
             Content = text,
+            ClickMode = ClickMode.Press,
+            Focusable = false,
             MinWidth = 92,
             Padding = new Thickness(10, 7, 10, 7),
             Margin = new Thickness(0, 0, 8, 8),
@@ -765,6 +767,22 @@ internal sealed class MainWindow : Window
         };
 
         return button;
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? source)
+        where T : DependencyObject
+    {
+        while (source is not null)
+        {
+            if (source is T match)
+            {
+                return match;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
     }
 
     private void AddTab(TabControl tabs, string title)
@@ -6030,8 +6048,24 @@ internal sealed class MainWindow : Window
                 ? new SolidColorBrush(Color.FromRgb(232, 240, 249))
                 : Brushes.White;
         };
-        row.MouseLeftButtonUp += (_, _) =>
+        row.PreviewMouseLeftButtonDown += (_, args) =>
         {
+            if (FindAncestor<Button>(args.OriginalSource as DependencyObject) is not null)
+            {
+                return;
+            }
+
+            _selectedInboxItemId = message.InboxItemId;
+            RefreshInboxPanels();
+            args.Handled = true;
+        };
+        row.MouseLeftButtonUp += (_, args) =>
+        {
+            if (FindAncestor<Button>(args.OriginalSource as DependencyObject) is not null)
+            {
+                return;
+            }
+
             _selectedInboxItemId = message.InboxItemId;
             RefreshInboxPanels();
         };
@@ -6187,6 +6221,8 @@ internal sealed class MainWindow : Window
         var button = new Button
         {
             Content = text,
+            ClickMode = ClickMode.Press,
+            Focusable = false,
             Padding = new Thickness(7, 4, 7, 4),
             Margin = new Thickness(4, 0, 0, 0),
             FontSize = 11,
