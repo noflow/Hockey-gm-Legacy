@@ -103,6 +103,7 @@ var alpha76HockeyIntelligenceRatingTests = new Alpha76HockeyIntelligenceRatingTe
 var alpha77AttributeDevelopmentTests = new Alpha77AttributeDevelopmentTests();
 var alpha78ScoutingIntelligenceTests = new Alpha78ScoutingIntelligenceTests();
 var alpha79DraftIntelligenceTests = new Alpha79DraftIntelligenceTests();
+var alpha710AssetEvaluationTests = new Alpha710AssetEvaluationTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1385,6 +1386,13 @@ runner.Run("alpha 7.9 post-draft review stores original estimates", alpha79Draft
 runner.Run("alpha 7.9 draft history preserves board ranks", alpha79DraftIntelligenceTests.DraftHistoryPreservesBoardRanks);
 runner.Run("alpha 7.9 no true ratings exposed", alpha79DraftIntelligenceTests.NoTrueRatingsExposed);
 runner.Run("alpha 7.9 AlphaDesktop exposes War Room", alpha79DraftIntelligenceTests.AlphaDesktopExposesWarRoom);
+runner.Run("alpha 7.10 scarcity profile generated", alpha710AssetEvaluationTests.ScarcityProfileGenerated);
+runner.Run("alpha 7.10 weak goalie market increases goalie value", alpha710AssetEvaluationTests.WeakGoalieMarketIncreasesGoalieValue);
+runner.Run("alpha 7.10 scarce RD market increases RD trade value", alpha710AssetEvaluationTests.ScarceRdMarketIncreasesRdTradeValue);
+runner.Run("alpha 7.10 oversupplied winger market lowers winger demand", alpha710AssetEvaluationTests.OversuppliedWingerMarketLowersWingerDemand);
+runner.Run("alpha 7.10 draft class depth affects scarcity", alpha710AssetEvaluationTests.DraftClassDepthAffectsScarcity);
+runner.Run("alpha 7.10 free-agent supply affects scarcity", alpha710AssetEvaluationTests.FreeAgentSupplyAffectsScarcity);
+runner.Run("alpha 7.10 UI exposes position market context", alpha710AssetEvaluationTests.UiExposesPositionMarketContext);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

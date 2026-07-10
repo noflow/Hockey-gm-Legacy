@@ -1,6 +1,38 @@
 # Changelog
 
-## Current - Alpha 7.9
+## Current - Alpha 7.10
+
+### Added
+
+- Player Value & Asset Evaluation Engine v1 with `PlayerAssetValue`, `PlayerMarketValue`, `CurrentValue`, `FutureValue`, `ContractValue`, `TradeValue`, `OrganizationalValue`, `DraftPickValue`, and `AssetEvaluation`.
+- Position scarcity model with `PositionScarcityProfile`, `PositionScarcityService`, `PositionScarcityLevel`, and `PositionMarketContext` for C, LW, RW, LD, RD, and G.
+- Dynamic position market context using league depth, free-agent supply, draft-class depth, injury drag, trade-block supply, and prospect pipeline depth.
+- AlphaDesktop Position Market screen plus asset-value summaries, trade value comparison, position-scarcity notes, free-agent demand context, and draft/team-needs scarcity context.
+- Alpha 7.10 tests for scarcity generation, goalie/RD scarcity effects, winger oversupply, draft-class depth, free-agent supply, and desktop market exposure.
+
+### Changed
+
+- Trade assets now use contextual value from the asset evaluation service instead of only static formulas.
+- Trade value summaries now explain current value, future value, contract value, organizational fit, and position-market pressure.
+- Draft War Room Team Needs and AI draft scoring now include position scarcity.
+- Free-agent asks can move modestly with market scarcity, while NHL entry-level prospect asks remain on the existing draft-slot scale.
+- Scenario snapshots can preserve generated player asset values, draft-pick values, asset evaluations, and position scarcity profiles.
+
+### Verified
+
+- `dotnet build HockeyGmLegacy.slnx --no-restore`
+- `dotnet run --project tests/LegacyEngine.Tests`
+- `dotnet run --project client/AlphaDesktop -- --smoke-test`
+
+### Not Added
+
+- No public trade calculator website.
+- No real player values.
+- No Godot.
+- No real player database.
+- No new game simulation.
+
+## Previous - Alpha 7.9
 
 ### Added
 

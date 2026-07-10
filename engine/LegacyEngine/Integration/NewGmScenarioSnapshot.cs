@@ -222,6 +222,14 @@ public sealed record NewGmScenarioSnapshot(
 
     public RelationshipChemistrySummary? RelationshipChemistry { get; init; }
 
+    public PositionScarcityProfile? PositionScarcity { get; init; }
+
+    public IReadOnlyList<PlayerAssetValue> PlayerAssetValues { get; init; } = Array.Empty<PlayerAssetValue>();
+
+    public IReadOnlyList<DraftPickValue> DraftPickValues { get; init; } = Array.Empty<DraftPickValue>();
+
+    public IReadOnlyList<AssetEvaluation> AssetEvaluations { get; init; } = Array.Empty<AssetEvaluation>();
+
     public Lineup? CurrentLineup { get; init; }
 
     public LineChemistryReport? CurrentLineChemistry { get; init; }
@@ -644,6 +652,22 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         RelationshipChemistry?.Validate();
+        PositionScarcity?.Validate();
+        foreach (var value in PlayerAssetValues)
+        {
+            value.Validate();
+        }
+
+        foreach (var pick in DraftPickValues)
+        {
+            pick.Validate();
+        }
+
+        foreach (var evaluation in AssetEvaluations)
+        {
+            evaluation.Validate();
+        }
+
         CurrentLineup?.Validate();
         CurrentLineChemistry?.Validate();
         CurrentGameUsage?.Validate();

@@ -109,6 +109,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 7.7 Attribute Development Engine v1
 - Alpha 7.8 Scouting Intelligence v2
 - Alpha 7.9 Draft Intelligence V4: War Room + Attribute Scouting
+- Alpha 7.10 Player Value & Asset Evaluation Engine v1
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -135,6 +136,8 @@ Alpha 7.7 - Attribute Development Engine v1 makes player growth attribute-specif
 Alpha 7.8 - Scouting Intelligence v2 makes scouting the GM's main path to better rating truth. Each organization can hold player knowledge profiles with known and unknown attributes, confidence colors, estimate ranges, stale flags, scout-specific opinions, disagreement summaries, consensus OVR/POT estimates, and scout accuracy history. Completed scouting assignments now improve visible estimates and attribute knowledge based on scout quality, fit, workload, relationship, specialty, region, and bias; dossiers, the War Room, Action Center, and AlphaDesktop show this as scouting intelligence without exposing hidden true ratings.
 
 Alpha 7.9 - Draft Intelligence V4 turns the Draft War Room into the main Hockey Intelligence showcase. The GM can review My Board, Scout Board, Consensus Board, watch tags, team needs, picks, prospect comparison, class summary, and Hidden Gems / Avoid List views. Draft rows and live draft cards now show visible OVR/POT ranges, confidence colors, public bio, attribute knowledge with unknown `???` values, scout disagreement, team fit, development curves, ETA, risk alerts, and post-draft history snapshots while keeping hidden true ratings internal.
+
+Alpha 7.10 - Player Value & Asset Evaluation Engine v1 adds contextual asset value for players, prospects, contracts, draft picks, and market positions. The engine now evaluates current value, future value, contract value, trade value, organizational fit, and position scarcity for C, LW, RW, LD, RD, and G. AlphaDesktop exposes Position Market, asset value summaries, trade value comparison, free-agent demand notes, and draft/team-needs scarcity context without creating a public trade calculator or exposing hidden true ratings.
 
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
 

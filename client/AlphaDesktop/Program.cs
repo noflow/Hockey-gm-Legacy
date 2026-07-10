@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.9 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.10 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -519,6 +519,7 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Waiver Wire", CreateTextScreen("Waiver Wire")),
             new WorkspaceScreen("League Free Agents", CreateSelectablePeopleContent("League Free Agents")),
             new WorkspaceScreen("League Draft", CreateTextScreen("League Draft")),
+            new WorkspaceScreen("Position Market", CreateTextScreen("Position Market")),
             new WorkspaceScreen("League Trade Block", CreateSelectablePeopleContent("League Trade Block")),
             new WorkspaceScreen("League Standings", CreateTextScreen("League Standings"))
         });
@@ -633,7 +634,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.9 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.10 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -1786,6 +1787,7 @@ internal sealed class MainWindow : Window
         _tabs["Hockey Waivers"].Text = BuildWaiverWire();
         RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
         _tabs["League Draft"].Text = BuildDraftHistoryReport();
+        _tabs["Position Market"].Text = BuildPositionMarket();
         RefreshSelectableTab("League Trade Block", BuildTradeRows());
         _tabs["League Standings"].Text = BuildStandings();
         RefreshSelectableTab("Staff", BuildStaffRows());
@@ -3961,7 +3963,7 @@ internal sealed class MainWindow : Window
                 "FreeAgent",
                 $"{agent.Position} - age {agent.Age} - {State.RatingText(agent.PersonId)} - {agent.Status}",
                 $"{agent.PreviousTeam} | ask {agent.ContractAsk.AnnualAmount:C0} | {State.AgentSummary(agent.PersonId)}",
-                $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
+                $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.PositionMarketNote(agent.PersonId)} | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildTradeRows() =>
@@ -3975,7 +3977,7 @@ internal sealed class MainWindow : Window
                 "TradeBlock",
                 $"{entry.TeamName} | {State.PositionShortText(entry.Position)} | age {entry.Age} | {State.RatingText(entry.PersonId)} | {entry.CurrentRole}",
                 $"Salary {entry.SalaryImpact:C0} | Ask: {entry.AskingPriceSummary}",
-                $"{State.TradeTeamNeedsShortText(entry)} | {entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType} | trade target type: {State.TradeTargetType(entry)}"))
+                $"{State.TradeTeamNeedsShortText(entry)} | {State.PositionMarketNote(entry.PersonId)} | {entry.ReasonAvailable} | Interest {entry.InterestLevel} | {entry.PlayerType} | trade target type: {State.TradeTargetType(entry)}"))
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
@@ -3988,7 +3990,7 @@ internal sealed class MainWindow : Window
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "ScoutingProspect",
                 State.DraftIntelligenceRowText(entry),
-                $"{State.ScoutingConfidenceSummary(entry.ProspectPersonId)} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
+                $"{State.ScoutingConfidenceSummary(entry.ProspectPersonId)} | {State.PositionMarketNote(entry.ProspectPersonId)} | Scout: {State.AssignedScoutText(entry.ProspectPersonId)}",
                 $"{State.ScoutingReportHeadline(entry.ProspectPersonId)} | {State.DraftFuturePicture(entry)} | {State.DraftClassContext(entry)}"))
             .ToArray();
 
@@ -4015,7 +4017,7 @@ internal sealed class MainWindow : Window
                 ScoutingDisplayName(entry.ProspectPersonId),
                 "DraftBoard",
                 $"{(entry.IsStarred ? "Starred " : string.Empty)}{State.DraftIntelligenceRowText(entry)}",
-                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Projection: {entry.ProjectionText}",
+                $"Confidence {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | {State.PositionMarketNote(entry.ProspectPersonId)} | Projection: {entry.ProjectionText}",
                 $"{State.DraftCurrentPicture(entry)} | Risk: {State.DraftRiskText(entry)} | {State.DraftClassContext(entry)}"))
             .ToArray();
 
@@ -4030,7 +4032,7 @@ internal sealed class MainWindow : Window
                     prospect.ProspectName,
                     "Prospect",
                     $"{prospect.Position} - {card.RatingDisplay} - {prospect.Status} | {State.PipelineText(prospect.ProspectPersonId)}",
-                    $"Age {prospect.Age} | {prospect.CurrentTeam} {prospect.CurrentLeague} | scout #{card.ScoutBoardRank} | consensus #{card.ConsensusBoardRank}",
+                    $"Age {prospect.Age} | {prospect.CurrentTeam} {prospect.CurrentLeague} | {State.PositionMarketNote(prospect.ProspectPersonId)} | scout #{card.ScoutBoardRank} | consensus #{card.ConsensusBoardRank}",
                     $"Recommended assignment: {State.PipelineRecommendationText(prospect.ProspectPersonId)} | Projection: {prospect.ProjectionText} | Fit {card.TeamFitScore}/100");
             })
             .ToArray();
@@ -4267,6 +4269,8 @@ internal sealed class MainWindow : Window
         }
 
         AddLine(panel, "Ratings", State.RatingContextText(row.PersonId));
+        AddLine(panel, "Asset value", State.AssetValueShortText(row.PersonId));
+        AddLine(panel, "Position market", State.PositionMarketNote(row.PersonId));
 
         if (tab == "Roster")
         {
@@ -4622,6 +4626,8 @@ internal sealed class MainWindow : Window
         AddSubHeader(youReceive, "Live Evaluation");
         AddLine(youReceive, "Roster impact", State.CurrentTradeRosterImpact);
         AddLine(youReceive, "Budget / cap impact", State.CurrentTradeBudgetImpact);
+        AddLine(youReceive, "Value comparison", State.CurrentTradeAssetValueComparison);
+        AddLine(youReceive, "Position scarcity", State.CurrentTradeScarcityText);
         AddLine(youReceive, "AI evaluation", State.CurrentTradeEvaluationText);
         AddSubHeader(youReceive, "Reasons");
         var reasons = State.CurrentTradeEvaluationReasons.Take(5).ToArray();
@@ -7803,6 +7809,21 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildPositionMarket()
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Position Market");
+        builder.AppendLine("===============");
+        builder.AppendLine(State.PositionMarketText());
+        builder.AppendLine();
+        builder.AppendLine("Impact");
+        builder.AppendLine("- Trade Builder: scarce positions increase asset demand and value explanations.");
+        builder.AppendLine("- Draft War Room: positional scarcity is included in team-needs context.");
+        builder.AppendLine("- Free Agency: market supply changes demand notes and contract pressure.");
+        builder.AppendLine("- Scouting: thin positions should receive higher scouting priority.");
+        return builder.ToString();
+    }
+
     private string BuildLeagueRules()
     {
         var profile = State.ScenarioSnapshot.LeagueProfile;
@@ -9082,6 +9103,7 @@ internal sealed class AlphaDesktopState
     private readonly BuyoutService _buyouts = new();
     private readonly OfferSheetService _offerSheets = new();
     private readonly DraftIntelligenceService _draftIntelligence = new();
+    private readonly AssetEvaluationService _assetEvaluation = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -9118,6 +9140,7 @@ internal sealed class AlphaDesktopState
         prepared = new DevelopmentCurveService().EnsureCurves(prepared);
         prepared = _ratings.EnsureRatings(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
+        prepared = _assetEvaluation.EnsureEvaluations(prepared);
         prepared = _tactics.EnsureTactics(prepared);
         prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         prepared = _arbitration.EnsureArbitration(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
@@ -12388,6 +12411,7 @@ internal sealed class AlphaDesktopState
     public string TradeValueText(string personId)
     {
         var value = _tradeStrategy.BuildTradeValueSummary(ScenarioSnapshot, personId);
+        var assetText = _assetEvaluation.BuildAssetValueText(ScenarioSnapshot, personId);
         var builder = new StringBuilder();
         builder.AppendLine($"{value.PlayerName}, age {value.Age}");
         builder.AppendLine($"Role: {value.Role}");
@@ -12400,7 +12424,27 @@ internal sealed class AlphaDesktopState
         builder.AppendLine($"Prospect value: {value.ProspectValue}");
         builder.AppendLine($"Estimated league value: {value.EstimatedLeagueValue}");
         builder.AppendLine($"Opinion: {value.Opinion}");
+        builder.AppendLine();
+        builder.AppendLine("Player Value & Asset Evaluation");
+        builder.AppendLine(assetText);
         return builder.ToString().Trim();
+    }
+
+    public string PositionMarketText() =>
+        _assetEvaluation.BuildPositionMarketText(ScenarioSnapshot);
+
+    public string PositionMarketNote(string personId)
+    {
+        var value = ScenarioSnapshot.PlayerAssetValues.FirstOrDefault(item => item.PersonId == personId)
+            ?? _assetEvaluation.BuildPlayerValue(ScenarioSnapshot, personId, ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name);
+        return $"Position Market: {PositionScarcityService.Label(value.Market.MarketPosition)} {value.Market.ScarcityLevel}";
+    }
+
+    public string AssetValueShortText(string personId)
+    {
+        var value = ScenarioSnapshot.PlayerAssetValues.FirstOrDefault(item => item.PersonId == personId)
+            ?? _assetEvaluation.BuildPlayerValue(ScenarioSnapshot, personId, ScenarioSnapshot.Organization.OrganizationId, ScenarioSnapshot.Organization.Name);
+        return $"Current {value.Current.Band} | Future {value.Future.Band} | Trade {value.Trade.Band} | Fit {value.Organizational.Band}";
     }
 
     public IReadOnlyList<TradeAssetRow> YourTradeAssetRows()
@@ -12455,6 +12499,41 @@ internal sealed class AlphaDesktopState
     public string CurrentTradeCounterText => CurrentTradeEvaluation?.CounterSuggestion ?? "No counter request yet.";
 
     public bool HasCurrentTradeCounter => CurrentTradeCounterOffer is not null && CurrentTradeCounterOffer.RequestedAssets.Count > 0;
+
+    public string CurrentTradeAssetValueComparison
+    {
+        get
+        {
+            if (!CanProposeCurrentTrade)
+            {
+                return "Add assets from both teams to compare contextual value.";
+            }
+
+            var give = _tradePlayerGives.Sum(asset => asset.Value);
+            var receive = _tradePlayerReceives.Sum(asset => asset.Value);
+            var gap = give - receive;
+            return $"You Give {give}; You Receive {receive}; gap {gap:+#;-#;0}. Values include current value, future value, contract value, team fit, and position scarcity.";
+        }
+    }
+
+    public string CurrentTradeScarcityText
+    {
+        get
+        {
+            if (!HasTradeProposalAssets)
+            {
+                return "No assets selected yet.";
+            }
+
+            var notes = CurrentTradeProposalAssets
+                .Where(asset => !string.IsNullOrWhiteSpace(asset.AssetId) && asset.AssetType is TradeAssetType.Player or TradeAssetType.ProspectRights)
+                .Select(asset => $"{asset.DisplayName}: {PositionMarketNote(asset.AssetId)}")
+                .Distinct(StringComparer.Ordinal)
+                .Take(4)
+                .ToArray();
+            return notes.Length == 0 ? "Selected assets are picks or future considerations." : string.Join(" | ", notes);
+        }
+    }
 
     private TradeCounterOffer? CurrentTradeCounterOffer
     {
@@ -13359,26 +13438,29 @@ internal sealed class AlphaDesktopState
 
     private void ApplyAction(GmActionResult result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = result.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
         LatestSummary = result.Summary;
     }
 
+    private void SetScenarioSnapshot(NewGmScenarioSnapshot scenario)
+    {
+        ScenarioSnapshot = _assetEvaluation.EnsureEvaluations(scenario);
+        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+    }
+
     private void ApplyAdvanceResult(FirstMonthAdvanceResult result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
         AddLeagueTransactions(result.LeagueTransactions);
         var freeAgency = _freeAgencyV2.ProgressMarket(_registry, ScenarioSnapshot);
         if (freeAgency.Success)
         {
-            ScenarioSnapshot = freeAgency.ScenarioSnapshot;
-            Snapshot = freeAgency.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(freeAgency.ScenarioSnapshot);
             AddInboxItems(freeAgency.InboxItems);
             AddLeagueTransactions(freeAgency.LeagueTransactions);
         }
@@ -13397,8 +13479,7 @@ internal sealed class AlphaDesktopState
 
     private void ApplyRecruitingV2(RecruitingV2Result result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
@@ -13407,8 +13488,7 @@ internal sealed class AlphaDesktopState
 
     private void ApplyDraftResult(DraftExperienceResult result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
@@ -13454,8 +13534,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
         }
@@ -13466,8 +13545,7 @@ internal sealed class AlphaDesktopState
 
     private void ApplyCampResult(TrainingCampResult result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
@@ -13478,8 +13556,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
         }
@@ -13492,8 +13569,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions ?? Array.Empty<LeagueTransaction>());
@@ -13505,8 +13581,7 @@ internal sealed class AlphaDesktopState
 
     private void ApplySeasonReadinessResult(SeasonReadinessResult result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
         LastProcessedEventCount = 0;
@@ -13517,8 +13592,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
         }
@@ -13531,8 +13605,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
@@ -13546,8 +13619,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
         }
@@ -13560,8 +13632,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
@@ -13575,8 +13646,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
@@ -13590,8 +13660,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
@@ -13605,8 +13674,7 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            ScenarioSnapshot = result.ScenarioSnapshot;
-            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+            SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);

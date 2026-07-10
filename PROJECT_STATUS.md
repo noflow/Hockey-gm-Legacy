@@ -124,18 +124,19 @@ The five foundation pillars remain:
 - Alpha 7.7 - Attribute Development Engine v1
 - Alpha 7.8 - Scouting Intelligence v2
 - Alpha 7.9 - Draft Intelligence V4: War Room + Attribute Scouting
+- Alpha 7.10 - Player Value & Asset Evaluation Engine v1
 
 ## Current Milestone
 
-Alpha 7.9 - Draft Intelligence V4: War Room + Attribute Scouting
+Alpha 7.10 - Player Value & Asset Evaluation Engine v1
 
 ## Current Goal
 
-Make the draft the main showcase for Hockey Intelligence. The War Room now combines custom GM boards, scout boards, consensus boards, team needs, visible OVR/POT ranges, attribute confidence, scout disagreement, development curves, risk alerts, hidden-gem/bust warnings, and draft-time history without exposing hidden true ratings.
+Give every player, prospect, draft pick, and contract contextual value instead of one hidden number. Values now consider current ability, future value, contract value, organizational fit, trade context, draft-pick uncertainty, and league position scarcity across C, LW, RW, LD, RD, and G.
 
-## Why Draft Intelligence Was Next
+## Why Asset Evaluation Was Next
 
-Alpha 7.6 added hidden true ratings and visible scouted estimates, Alpha 7.7 made attributes develop over time, and Alpha 7.8 made scouting improve the GM's knowledge. Alpha 7.9 brings those systems together on draft day so the GM can compare prospects by visible estimates, attribute uncertainty, development path, team fit, staff consensus, and risk.
+Alpha 7.6 through Alpha 7.9 made ratings, development, scouting knowledge, and draft intelligence readable. Alpha 7.10 turns that information into decision support for trades, free agency, contracts, draft picks, team needs, and scouting priorities without exposing hidden true ratings.
 
 ## Next Build Target
 

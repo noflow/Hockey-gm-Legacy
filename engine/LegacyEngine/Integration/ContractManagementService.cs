@@ -258,21 +258,24 @@ public sealed class ContractManagementService
         var agent = scenario.FreeAgentMarket?.Find(personId)
             ?? throw new ArgumentException("Free agent was not found.", nameof(personId));
         var relationship = RelationshipWithGm(scenario, personId);
+        var value = new AssetEvaluationService().BuildPlayerValue(scenario, personId, scenario.Organization.OrganizationId, scenario.Organization.Name);
+        var marketModifier = MarketAskModifier(value.Market.ScarcityLevel);
+        var requested = Math.Round(agent.ContractAsk.AnnualAmount * marketModifier, 0);
         return new ContractAsk(
             agent.PersonId,
             agent.Name,
             ContractAskType.FreeAgent,
-            agent.ContractAsk.AnnualAmount,
+            requested,
             agent.ContractAsk.TermYears,
             agent.ProjectedLineupRole,
             StandardPreference(agent.Interest.PlayerOrganizationInterest, role: 75, development: 55),
             agent.Interest.CompetingInterest,
             InterestFor(agent.Interest.PlayerOrganizationInterest),
-            Math.Max(0, budget.RemainingBudget - agent.ContractAsk.AnnualAmount),
+            Math.Max(0, budget.RemainingBudget - requested),
             agent.FitSummary.FitScore,
             relationship,
             agent.DevelopmentTrend,
-            agent.FitSummary.StaffRecommendation);
+            $"{agent.FitSummary.StaffRecommendation} Position market: {PositionScarcityService.Label(value.Market.MarketPosition)} {value.Market.ScarcityLevel}.");
     }
 
     private static ContractAsk BuildProspectAsk(NewGmScenarioSnapshot scenario, string personId, BudgetSnapshot budget)
@@ -283,6 +286,7 @@ public sealed class ContractManagementService
         var requested = scenario.LeagueProfile.Experience == LeagueExperience.Nhl
             ? NhlEntryLevelAsk(prospect)
             : 1_200m + Math.Max(0, 4 - prospect.RoundNumber) * 200m;
+        var value = new AssetEvaluationService().BuildPlayerValue(scenario, personId, scenario.Organization.OrganizationId, scenario.Organization.Name);
         var termYears = scenario.LeagueProfile.Experience == LeagueExperience.Nhl
             ? NhlEntryLevelTerm(prospect.Age)
             : 1;
@@ -300,8 +304,18 @@ public sealed class ContractManagementService
             62,
             50,
             "Wants a believable development path, camp clarity, and a role that matches his age.",
-            $"Scout confidence {confidence}; {prospect.ProjectionText}");
+            $"Scout confidence {confidence}; {prospect.ProjectionText}; position market {PositionScarcityService.Label(value.Market.MarketPosition)} {value.Market.ScarcityLevel}.");
     }
+
+    private static decimal MarketAskModifier(PositionScarcityLevel level) =>
+        level switch
+        {
+            PositionScarcityLevel.Critical => 1.14m,
+            PositionScarcityLevel.Scarce => 1.09m,
+            PositionScarcityLevel.Thin => 1.04m,
+            PositionScarcityLevel.Oversupplied => 0.94m,
+            _ => 1m
+        };
 
     private static decimal NhlEntryLevelAsk(DraftRightsRecord prospect)
     {

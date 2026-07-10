@@ -52,10 +52,11 @@ public sealed class TradeStrategyService
             : age <= 18 ? "Young player with future value" : "Current-roster value";
         var stat = scenario.CareerStatSummaries.FirstOrDefault(summary => summary.PersonId == personId);
         var production = stat is null ? "limited historical production data" : $"{stat.Points} career points in tracked history";
-        var estimated = ValueBand(block?.AssetValue ?? EstimateValue(age, rosterPlayer?.Position ?? rights?.Position ?? block?.Position ?? RosterPosition.Unknown, stat?.Points ?? 0));
+        var assetValue = new AssetEvaluationService().BuildPlayerValue(scenario, personId, scenario.Organization.OrganizationId, scenario.Organization.Name);
+        var estimated = $"{assetValue.Trade.Band} ({assetValue.Trade.Score}) - {assetValue.Market.ScarcityLevel} {PositionScarcityService.Label(assetValue.Market.MarketPosition)} market";
         var opinion = block is not null
-            ? $"{block.TeamName} may move him because {block.ReasonAvailable.ToLowerInvariant()}"
-            : "Internal value depends on roster fit, contract timing, and development path.";
+            ? $"{block.TeamName} may move him because {block.ReasonAvailable.ToLowerInvariant()}. {assetValue.Trade.Summary}"
+            : $"Internal value depends on roster fit, contract timing, development path, and {assetValue.Market.ScarcityLevel} position scarcity.";
 
         var value = new TradeValueSummary(
             personId,
@@ -65,8 +66,8 @@ public sealed class TradeStrategyService
             contract,
             salary,
             yearsRemaining,
-            production,
-            prospectValue,
+            $"{production}; {assetValue.Current.Summary}",
+            $"{prospectValue}; future value {assetValue.Future.Band} ({assetValue.Future.Score})",
             estimated,
             opinion);
         value.Validate();

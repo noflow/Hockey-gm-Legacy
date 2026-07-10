@@ -126,8 +126,13 @@ public sealed class DraftIntelligenceService
                 return $"{card.ProspectName} | {string.Join(", ", tags)} | {card.RatingDisplay}";
             })
             .ToArray();
+        var scarcity = scenario.PositionScarcity ?? new PositionScarcityService().BuildProfile(scenario);
         var needsRows = scenario.DraftWarRoom.Needs
             .Select(need => $"{need.Priority}: {need.Label} - {need.Reason}")
+            .Concat(scarcity.Positions
+                .OrderByDescending(position => position.ScarcityScore)
+                .Take(6)
+                .Select(position => $"Position Market: {PositionScarcityService.Label(position.Position)} {position.ScarcityLevel} - {position.Summary}"))
             .ToArray();
         var pickRows = scenario.DraftExperience?.Draft?.Picks
             .Where(pick => pick.Selection is null)
@@ -463,6 +468,20 @@ public sealed class DraftIntelligenceService
         if (entry?.RiskSummary.Contains("medical", StringComparison.OrdinalIgnoreCase) == true)
         {
             baseScore -= 10;
+        }
+
+        if (entry is not null)
+        {
+            var market = (scenario.PositionScarcity ?? new PositionScarcityService().BuildProfile(scenario))
+                .For(PositionScarcityService.MarketPositionFor(entry));
+            baseScore += market.ScarcityLevel switch
+            {
+                PositionScarcityLevel.Critical => 18,
+                PositionScarcityLevel.Scarce => 12,
+                PositionScarcityLevel.Thin => 6,
+                PositionScarcityLevel.Oversupplied => -8,
+                _ => 0
+            };
         }
 
         return Math.Clamp(baseScore, 0, 100);

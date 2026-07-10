@@ -205,6 +205,16 @@ public sealed class DraftWarRoomService
         var ai = scenario.OrganizationAiProfiles.FirstOrDefault(profile => profile.OrganizationId == organizationId);
         var score = 1000 - (entry.Rank * 10) - fallbackRank;
         var position = entry.Bio?.Position ?? RosterPosition.Unknown;
+        var market = (scenario.PositionScarcity ?? new PositionScarcityService().BuildProfile(scenario))
+            .For(PositionScarcityService.MarketPositionFor(entry));
+        score += market.ScarcityLevel switch
+        {
+            PositionScarcityLevel.Critical => 42,
+            PositionScarcityLevel.Scarce => 28,
+            PositionScarcityLevel.Thin => 14,
+            PositionScarcityLevel.Oversupplied => -18,
+            _ => 0
+        };
         if (ai is not null)
         {
             foreach (var need in ai.CurrentNeeds)

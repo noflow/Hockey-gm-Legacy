@@ -85,6 +85,7 @@ public sealed class TradeService
 
         var prospect = scenario.ProspectRights.FirstOrDefault(item => item.ProspectPersonId == prospectPersonId)
             ?? throw new ArgumentException("Prospect rights are not controlled by the player organization.", nameof(prospectPersonId));
+        var value = new AssetEvaluationService().BuildPlayerValue(scenario, prospect.ProspectPersonId, scenario.Organization.OrganizationId, scenario.Organization.Name);
         return new TradeAsset(
             TradeAssetType.ProspectRights,
             TradeSide.PlayerOrganization,
@@ -95,8 +96,8 @@ public sealed class TradeService
             prospect.Position,
             prospect.Age,
             0m,
-            Math.Clamp(46 - prospect.RoundNumber * 2 + (prospect.ScoutingConfidence >= ScoutingConfidenceLevel.High ? 8 : 0), 18, 75),
-            $"Rights held, round {prospect.RoundNumber}, pick {prospect.PickNumber}");
+            Math.Clamp(value.Trade.Score, 18, 95),
+            $"Rights held, round {prospect.RoundNumber}, pick {prospect.PickNumber}; {value.Future.Band} future value; {value.Market.ScarcityLevel} {PositionScarcityService.Label(value.Market.MarketPosition)} market");
     }
 
     public IReadOnlyList<TradeAsset> BuildPlayerOrganizationAssets(NewGmScenarioSnapshot scenario)
@@ -158,7 +159,9 @@ public sealed class TradeService
 
     public TradeAsset CreateDraftPickAsset(NewGmScenarioSnapshot scenario, TradeSide side, string organizationId, string organizationName, int round, int year)
     {
-        var value = Math.Clamp(60 - round * 5 - Math.Max(0, year - scenario.Season.Year - 1) * 3, 10, 60);
+        var pickValue = new AssetEvaluationService().BuildDraftPickValues(scenario)
+            .FirstOrDefault(pick => pick.Year == year && pick.Round == round);
+        var value = pickValue?.AssetScore ?? Math.Clamp(60 - round * 5 - Math.Max(0, year - scenario.Season.Year - 1) * 3, 10, 60);
         return new TradeAsset(
             TradeAssetType.DraftPick,
             side,
@@ -170,7 +173,7 @@ public sealed class TradeService
             null,
             0m,
             value,
-            $"Original owner: {organizationName}; current owner: {organizationName}; protected: no placeholder protection; estimated value {value}.");
+            $"Original owner: {organizationName}; current owner: {organizationName}; protected: no placeholder protection; estimated value {value}. {pickValue?.FutureProjection ?? "Draft pick value reflects round, year, class strength, and market scarcity."}");
     }
 
     public TradeAsset CreateFutureConsiderationAsset(NewGmScenarioSnapshot scenario, TradeSide side, string organizationId, string organizationName)
@@ -543,11 +546,8 @@ public sealed class TradeService
 
     private static int PlayerAssetValue(NewGmScenarioSnapshot scenario, string personId, RosterPosition position, int age)
     {
-        var stat = scenario.CareerStatSummaries.FirstOrDefault(stat => stat.PersonId == personId);
-        var points = stat?.Points ?? 20;
-        var ageBonus = age <= 17 ? 12 : age >= 20 ? -4 : 4;
-        var positionBonus = position == RosterPosition.Goalie ? 8 : position == RosterPosition.Defense ? 5 : 0;
-        return Math.Clamp(30 + points / 5 + ageBonus + positionBonus, 20, 90);
+        var value = new AssetEvaluationService().BuildPlayerValue(scenario, personId, scenario.Organization.OrganizationId, scenario.Organization.Name);
+        return Math.Clamp(value.Trade.Score, 20, 95);
     }
 
     private static decimal SalaryFor(NewGmScenarioSnapshot scenario, string personId) =>
