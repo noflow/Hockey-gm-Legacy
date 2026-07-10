@@ -110,6 +110,8 @@ internal sealed class MainWindow : Window
     private ListBox? _tradeOtherAssetsList;
     private ListBox? _tradeYouGiveList;
     private ListBox? _tradeYouReceiveList;
+    private bool _layoutReady;
+    private bool _isRefreshing;
 
     public MainWindow()
     {
@@ -478,6 +480,7 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildLayout()
     {
+        _layoutReady = false;
         var root = new Grid();
         var app = new DockPanel();
 
@@ -619,6 +622,14 @@ internal sealed class MainWindow : Window
         app.Children.Add(tabs);
         root.Children.Add(app);
         root.Children.Add(BuildDraftModalOverlay());
+        tabs.SelectionChanged += (_, args) =>
+        {
+            if (ReferenceEquals(args.OriginalSource, tabs))
+            {
+                RefreshAfterAction();
+            }
+        };
+        _layoutReady = true;
         return root;
     }
 
@@ -748,7 +759,7 @@ internal sealed class MainWindow : Window
         button.Click += (_, _) =>
         {
             action();
-            RefreshAll();
+            RefreshAfterAction();
         };
 
         return button;
@@ -1060,6 +1071,10 @@ internal sealed class MainWindow : Window
             if (navigation.SelectedItem is ListBoxItem item && item.Tag is UIElement content)
             {
                 contentHost.Content = content;
+                if (_layoutReady && item.Content is string screen)
+                {
+                    RefreshWorkspaceScreen(title, screen);
+                }
             }
         };
 
@@ -1092,7 +1107,7 @@ internal sealed class MainWindow : Window
         };
 
         _rosterSearchInput = new TextBox { Width = 170, MinHeight = 30, Margin = new Thickness(0, 0, 8, 8) };
-        _rosterSearchInput.TextChanged += (_, _) => RefreshAll();
+        _rosterSearchInput.TextChanged += (_, _) => RefreshVisibleWorkspace();
         panel.Children.Add(LabeledControl("Search", _rosterSearchInput));
 
         _rosterPositionFilter = CreateRosterFilter(Enum.GetNames<RosterPosition>().Prepend("All").ToArray());
@@ -1123,7 +1138,7 @@ internal sealed class MainWindow : Window
             MinHeight = 30,
             Margin = new Thickness(0, 0, 8, 8)
         };
-        combo.SelectionChanged += (_, _) => RefreshAll();
+        combo.SelectionChanged += (_, _) => RefreshVisibleWorkspace();
         return combo;
     }
 
@@ -1529,7 +1544,7 @@ internal sealed class MainWindow : Window
         }
 
         ShowPopup($"Player Dossier - {dossier.PlayerName}", BuildDossierWindowContent(dossier), 760, 680, includeCloseButton: false);
-        RefreshAll();
+        RefreshAfterAction();
     }
 
     private UIElement BuildDossierWindowContent(PlayerDossierView dossier)
@@ -1763,111 +1778,368 @@ internal sealed class MainWindow : Window
         actions.Children.Add(CreateButton("Cancel", window.Close));
         panel.Children.Add(actions);
         window.ShowDialog();
-        RefreshAll();
+        RefreshAfterAction();
     }
 
-    private void RefreshAll()
+    private void RefreshAfterAction()
     {
+        if (!_layoutReady || _state is null || _isRefreshing)
+        {
+            return;
+        }
+
+        RefreshHeaderChrome();
+        RefreshVisibleWorkspace();
+        UpdateTabBadges();
+        RefreshDraftModal();
+    }
+
+    private void RefreshHeaderChrome()
+    {
+        if (_state is null)
+        {
+            return;
+        }
+
         var snapshot = State.Snapshot;
         _dateText.Text = $"Current date: {snapshot.CurrentDate:yyyy-MM-dd}";
         _summaryText.Text = State.LatestSummary;
         _processedText.Text = $"Last processed events: {State.LastProcessedEventCount} | Inbox items: {State.Inbox.Count}";
+    }
 
-        RefreshDashboard();
-        RefreshInboxPanels();
-        RefreshActionCenter();
-        RefreshHockeyOperationsCommandCenter();
-        RefreshOrganizationCommandCenter();
-        _tabs["Owner"].Text = BuildOwner();
-        _tabs["League Overview"].Text = BuildLeagueOverview();
-        _tabs["League Rules"].Text = BuildLeagueRules();
-        RefreshSelectableTab("Teams", BuildTeamRows());
-        _tabs["Transactions"].Text = BuildLeagueNews();
-        _tabs["Waiver Wire"].Text = BuildWaiverWire();
-        _tabs["Hockey Waivers"].Text = BuildWaiverWire();
-        RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
-        _tabs["League Draft"].Text = BuildDraftHistoryReport();
-        _tabs["Position Market"].Text = BuildPositionMarket();
-        RefreshSelectableTab("League Trade Block", BuildTradeRows());
-        _tabs["League Standings"].Text = BuildStandings();
-        RefreshSelectableTab("Staff", BuildStaffRows());
-        RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
-        RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
-        RefreshSelectableTab("Roster", BuildRosterRows());
-        RefreshSelectableTab("Lineup", BuildLineupRows());
-        RefreshSelectableTab("Tactics", BuildTacticsRows());
-        RefreshSelectableTab("Recruits", BuildRecruitRows());
-        RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
-        _tabs["Contracts"].Text = BuildContractsWorkspace();
-        _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
-        _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
-        _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
-        _tabs["Offer Sheets"].Text = BuildOfferSheetWorkspace();
-        RefreshSelectableTab("Scouting", BuildScoutingRows());
-        RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
-        RefreshSelectableTab("Trades", BuildTradeRows());
-        if (_tabs.ContainsKey("Pending Actions"))
+    private void RefreshVisibleWorkspace()
+    {
+        if (_mainTabs?.SelectedItem is not TabItem tab)
         {
-            _tabs["Pending Actions"].Text = BuildPendingActions();
+            return;
         }
-        _tabs["League News"].Text = BuildLeagueNews();
-        _tabs["Budget"].Text = BuildBudgetWorkspace();
-        _tabs["Organization Health"].Text = BuildOrganizationHealth();
-        RefreshSelectableTab("Player Dossier", BuildDossierRows());
-        if (_selectableLists.ContainsKey("Draft Board"))
+
+        var workspace = tab.Header?.ToString() ?? string.Empty;
+        if (_workspaceNavigations.TryGetValue(workspace, out var navigation)
+            && navigation.SelectedItem is ListBoxItem item
+            && item.Content is string screen)
         {
-            RefreshSelectableTab("Draft Board", BuildDraftBoardRows());
+            RefreshWorkspaceScreen(workspace, screen);
         }
-        if (_tabs.ContainsKey("Draft War Room"))
+    }
+
+    private void RefreshWorkspaceScreen(string workspace, string screen)
+    {
+        if (_state is null || _isRefreshing)
         {
-            _tabs["Draft War Room"].Text = BuildDraftWarRoom();
+            return;
         }
-        RefreshSelectableTab("Prospect List", BuildProspectRows());
-        RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
-        _tabs["Season Readiness"].Text = BuildSeasonReadiness();
-        _tabs["Schedule"].Text = BuildSchedule();
-        _tabs["Standings"].Text = BuildStandings();
-        _tabs["Playoffs"].Text = BuildPlayoffs();
-        _tabs["Stats"].Text = BuildStats();
-        _tabs["Monthly Summary"].Text = BuildMonthlySummary();
-        _tabs["Season Archive"].Text = BuildSeasonArchive();
-        _tabs["Executive Reports"].Text = BuildExecutiveReports();
-        _tabs["Archived Seasons"].Text = BuildSeasonArchive();
-        _tabs["GM Career"].Text = BuildGmCareerHistory();
-        _tabs["Organization History"].Text = BuildOrganizationHistoryReport();
-        _tabs["Draft History"].Text = BuildDraftHistoryReport();
-        _tabs["Drafted Players"].Text = BuildDraftedPlayersReport();
-        _tabs["Where Are They Now"].Text = BuildWhereAreTheyNowReport();
-        _tabs["Player Career Timelines"].Text = BuildPlayerCareerTimelinesReport();
-        _tabs["Career Milestones"].Text = BuildCareerMilestonesReport();
-        _tabs["Player Stories"].Text = BuildPlayerStoriesReport();
-        _tabs["Media / News"].Text = BuildMediaNews();
-        _tabs["Awards"].Text = BuildAwardsReport();
-        _tabs["Record Book"].Text = BuildRecordBookReport();
-        _tabs["Team Records"].Text = BuildTeamRecordsReport();
-        _tabs["League Records"].Text = BuildLeagueRecordsReport();
-        _tabs["Staff History"].Text = BuildStaffHistoryReport();
-        _tabs["Staff Careers"].Text = BuildStaffCareersReport();
-        _tabs["Coaching Trees"].Text = BuildCoachingTreesReport();
-        _tabs["Scout History"].Text = BuildScoutHistoryReport();
-        _tabs["Development Staff History"].Text = BuildDevelopmentStaffHistoryReport();
-        _tabs["Owner History"].Text = BuildOwnerHistoryReport();
-        _tabs["Owner Letters"].Text = BuildOwnerLettersReport();
-        _tabs["Job Security History"].Text = BuildJobSecurityHistoryReport();
-        _tabs["Expectation Results"].Text = BuildExpectationResultsReport();
-        _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
-        _tabs["Playoff Archive"].Text = BuildPlayoffArchive();
-        _tabs["Champions"].Text = BuildChampionsReport();
-        _tabs["Draft Recaps"].Text = BuildDraftRecaps();
-        _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
-        _tabs["Career History"].Text = BuildCareerHistory();
-        _tabs["Journal"].Text = BuildJournal();
-        _tabs["Global Search"].Text = BuildGlobalSearch();
-        _tabs["Playtest Checklist"].Text = BuildPlaytestChecklist();
-        _tabs["Settings"].Text = BuildSettings();
-        _tabs["Relationships"].Text = BuildRelationships();
-        UpdateTabBadges();
-        RefreshDraftModal();
+
+        switch (workspace, screen)
+        {
+            case ("Dashboard", "Dashboard"):
+                RefreshDashboard();
+                break;
+            case ("Dashboard", "Action Center / Pending Decisions"):
+                RefreshActionCenter();
+                break;
+            case ("Inbox", "GM Inbox"):
+                RefreshInboxPanels();
+                break;
+            case ("Inbox", "League News / Transaction Wire"):
+                SetTextTab("League News", BuildLeagueNews());
+                break;
+            case ("League", "League Overview"):
+                SetTextTab("League Overview", BuildLeagueOverview());
+                break;
+            case ("League", "League Rules"):
+                SetTextTab("League Rules", BuildLeagueRules());
+                break;
+            case ("League", "Teams"):
+                RefreshSelectableTab("Teams", BuildTeamRows());
+                break;
+            case ("League", "Transactions"):
+                SetTextTab("Transactions", BuildLeagueNews());
+                break;
+            case ("League", "Waiver Wire"):
+                SetTextTab("Waiver Wire", BuildWaiverWire());
+                break;
+            case ("League", "League Free Agents"):
+                RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
+                break;
+            case ("League", "League Draft"):
+                SetTextTab("League Draft", BuildDraftHistoryReport());
+                break;
+            case ("League", "Position Market"):
+                SetTextTab("Position Market", BuildPositionMarket());
+                break;
+            case ("League", "League Trade Block"):
+                RefreshSelectableTab("League Trade Block", BuildTradeRows());
+                break;
+            case ("League", "League Standings"):
+                SetTextTab("League Standings", BuildStandings());
+                break;
+            case ("Organization", "Command Center"):
+                RefreshOrganizationCommandCenter();
+                break;
+            case ("Organization", "Owner"):
+                SetTextTab("Owner", BuildOwner());
+                break;
+            case ("Organization", "Staff"):
+                RefreshSelectableTab("Staff", BuildStaffRows());
+                break;
+            case ("Organization", "Staff Hiring"):
+                RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
+                break;
+            case ("Organization", "Vacancies"):
+                RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
+                break;
+            case ("Organization", "Budget"):
+                SetTextTab("Budget", BuildBudgetWorkspace());
+                break;
+            case ("Organization", "Organization Health"):
+                SetTextTab("Organization Health", BuildOrganizationHealth());
+                break;
+            case ("Organization", "Relationships"):
+                SetTextTab("Relationships", BuildRelationships());
+                break;
+            case ("Hockey Operations", "Command Center"):
+                RefreshHockeyOperationsCommandCenter();
+                break;
+            case ("Hockey Operations", "Roster"):
+                RefreshSelectableTab("Roster", BuildRosterRows());
+                break;
+            case ("Hockey Operations", "Lineup"):
+                RefreshSelectableTab("Lineup", BuildLineupRows());
+                break;
+            case ("Hockey Operations", "Tactics"):
+                RefreshSelectableTab("Tactics", BuildTacticsRows());
+                break;
+            case ("Hockey Operations", "Prospects"):
+                RefreshSelectableTab("Prospect List", BuildProspectRows());
+                break;
+            case ("Hockey Operations", "Recruits"):
+                RefreshSelectableTab("Recruits", BuildRecruitRows());
+                break;
+            case ("Hockey Operations", "Free Agents"):
+                RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
+                break;
+            case ("Hockey Operations", "Contracts"):
+                SetTextTab("Contracts", BuildContractsWorkspace());
+                break;
+            case ("Hockey Operations", "Contract Rights"):
+                SetTextTab("Contract Rights", BuildContractRightsWorkspace());
+                break;
+            case ("Hockey Operations", "Arbitration"):
+                SetTextTab("Arbitration", BuildArbitrationWorkspace());
+                break;
+            case ("Hockey Operations", "Buyouts"):
+                SetTextTab("Buyouts", BuildBuyoutWorkspace());
+                break;
+            case ("Hockey Operations", "Offer Sheets"):
+                SetTextTab("Offer Sheets", BuildOfferSheetWorkspace());
+                break;
+            case ("Hockey Operations", "Waivers"):
+                SetTextTab("Hockey Waivers", BuildWaiverWire());
+                break;
+            case ("Hockey Operations", "Scouting"):
+                RefreshSelectableTab("Scouting", BuildScoutingRows());
+                break;
+            case ("Hockey Operations", "Scouting Operations"):
+                RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
+                break;
+            case ("Hockey Operations", "Trades"):
+                RefreshSelectableTab("Trades", BuildTradeRows());
+                break;
+            case ("Hockey Operations", "Draft War Room"):
+                SetTextTab("Draft War Room", BuildDraftWarRoom());
+                break;
+            case ("Hockey Operations", "Draft Board"):
+                RefreshSelectableTab("Draft Board", BuildDraftBoardRows());
+                break;
+            case ("Hockey Operations", "Training Camp"):
+                RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
+                break;
+            case ("Season", "Schedule"):
+                SetTextTab("Schedule", BuildSchedule());
+                break;
+            case ("Season", "Standings"):
+                SetTextTab("Standings", BuildStandings());
+                break;
+            case ("Season", "Playoffs"):
+                SetTextTab("Playoffs", BuildPlayoffs());
+                break;
+            case ("Season", "Stats"):
+                SetTextTab("Stats", BuildStats());
+                break;
+            case ("Season", "Monthly Summary"):
+                SetTextTab("Monthly Summary", BuildMonthlySummary());
+                break;
+            case ("Season", "Season Archive"):
+                SetTextTab("Season Archive", BuildSeasonArchive());
+                break;
+            case ("Season", "Season Readiness"):
+                SetTextTab("Season Readiness", BuildSeasonReadiness());
+                break;
+            case ("Settings placeholder", "Settings"):
+                SetTextTab("Settings", BuildSettings());
+                break;
+            default:
+                RefreshReportsScreen(screen);
+                break;
+        }
+    }
+
+    private void RefreshReportsScreen(string screen)
+    {
+        switch (screen)
+        {
+            case "Executive Reports": SetTextTab("Executive Reports", BuildExecutiveReports()); break;
+            case "Archived Seasons": SetTextTab("Archived Seasons", BuildSeasonArchive()); break;
+            case "GM Career": SetTextTab("GM Career", BuildGmCareerHistory()); break;
+            case "Organization History": SetTextTab("Organization History", BuildOrganizationHistoryReport()); break;
+            case "Draft History": SetTextTab("Draft History", BuildDraftHistoryReport()); break;
+            case "Drafted Players": SetTextTab("Drafted Players", BuildDraftedPlayersReport()); break;
+            case "Where Are They Now": SetTextTab("Where Are They Now", BuildWhereAreTheyNowReport()); break;
+            case "Player Career Timelines": SetTextTab("Player Career Timelines", BuildPlayerCareerTimelinesReport()); break;
+            case "Career Milestones": SetTextTab("Career Milestones", BuildCareerMilestonesReport()); break;
+            case "Player Stories": SetTextTab("Player Stories", BuildPlayerStoriesReport()); break;
+            case "Media / News": SetTextTab("Media / News", BuildMediaNews()); break;
+            case "Awards": SetTextTab("Awards", BuildAwardsReport()); break;
+            case "Record Book": SetTextTab("Record Book", BuildRecordBookReport()); break;
+            case "Team Records": SetTextTab("Team Records", BuildTeamRecordsReport()); break;
+            case "League Records": SetTextTab("League Records", BuildLeagueRecordsReport()); break;
+            case "Staff History": SetTextTab("Staff History", BuildStaffHistoryReport()); break;
+            case "Staff Careers": SetTextTab("Staff Careers", BuildStaffCareersReport()); break;
+            case "Coaching Trees": SetTextTab("Coaching Trees", BuildCoachingTreesReport()); break;
+            case "Scout History": SetTextTab("Scout History", BuildScoutHistoryReport()); break;
+            case "Development Staff History": SetTextTab("Development Staff History", BuildDevelopmentStaffHistoryReport()); break;
+            case "Owner History": SetTextTab("Owner History", BuildOwnerHistoryReport()); break;
+            case "Owner Letters": SetTextTab("Owner Letters", BuildOwnerLettersReport()); break;
+            case "Job Security History": SetTextTab("Job Security History", BuildJobSecurityHistoryReport()); break;
+            case "Expectation Results": SetTextTab("Expectation Results", BuildExpectationResultsReport()); break;
+            case "Transaction History": SetTextTab("Transaction History", BuildTransactionHistoryReport()); break;
+            case "Playoff Archive": SetTextTab("Playoff Archive", BuildPlayoffArchive()); break;
+            case "Champions": SetTextTab("Champions", BuildChampionsReport()); break;
+            case "Draft Recaps": SetTextTab("Draft Recaps", BuildDraftRecaps()); break;
+            case "Monthly Summaries": SetTextTab("Monthly Summaries", BuildMonthlySummaries()); break;
+            case "Career History": SetTextTab("Career History", BuildCareerHistory()); break;
+            case "Journal": SetTextTab("Journal", BuildJournal()); break;
+            case "Global Search": SetTextTab("Global Search", BuildGlobalSearch()); break;
+            case "Playtest Checklist": SetTextTab("Playtest Checklist", BuildPlaytestChecklist()); break;
+        }
+    }
+
+    private void SetTextTab(string title, string text)
+    {
+        if (_tabs.TryGetValue(title, out var tab))
+        {
+            tab.Text = text;
+        }
+    }
+
+    private void RefreshAll()
+    {
+        _isRefreshing = true;
+        try
+        {
+            RefreshHeaderChrome();
+
+            RefreshDashboard();
+            RefreshInboxPanels();
+            RefreshActionCenter();
+            RefreshHockeyOperationsCommandCenter();
+            RefreshOrganizationCommandCenter();
+            _tabs["Owner"].Text = BuildOwner();
+            _tabs["League Overview"].Text = BuildLeagueOverview();
+            _tabs["League Rules"].Text = BuildLeagueRules();
+            RefreshSelectableTab("Teams", BuildTeamRows());
+            _tabs["Transactions"].Text = BuildLeagueNews();
+            _tabs["Waiver Wire"].Text = BuildWaiverWire();
+            _tabs["Hockey Waivers"].Text = BuildWaiverWire();
+            RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
+            _tabs["League Draft"].Text = BuildDraftHistoryReport();
+            _tabs["Position Market"].Text = BuildPositionMarket();
+            RefreshSelectableTab("League Trade Block", BuildTradeRows());
+            _tabs["League Standings"].Text = BuildStandings();
+            RefreshSelectableTab("Staff", BuildStaffRows());
+            RefreshSelectableTab("Staff Hiring", BuildStaffCandidateRows());
+            RefreshSelectableTab("Vacancies", BuildStaffVacancyRows());
+            RefreshSelectableTab("Roster", BuildRosterRows());
+            RefreshSelectableTab("Lineup", BuildLineupRows());
+            RefreshSelectableTab("Tactics", BuildTacticsRows());
+            RefreshSelectableTab("Recruits", BuildRecruitRows());
+            RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
+            _tabs["Contracts"].Text = BuildContractsWorkspace();
+            _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
+            _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
+            _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
+            _tabs["Offer Sheets"].Text = BuildOfferSheetWorkspace();
+            RefreshSelectableTab("Scouting", BuildScoutingRows());
+            RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
+            RefreshSelectableTab("Trades", BuildTradeRows());
+            if (_tabs.ContainsKey("Pending Actions"))
+            {
+                _tabs["Pending Actions"].Text = BuildPendingActions();
+            }
+            _tabs["League News"].Text = BuildLeagueNews();
+            _tabs["Budget"].Text = BuildBudgetWorkspace();
+            _tabs["Organization Health"].Text = BuildOrganizationHealth();
+            RefreshSelectableTab("Player Dossier", BuildDossierRows());
+            if (_selectableLists.ContainsKey("Draft Board"))
+            {
+                RefreshSelectableTab("Draft Board", BuildDraftBoardRows());
+            }
+            if (_tabs.ContainsKey("Draft War Room"))
+            {
+                _tabs["Draft War Room"].Text = BuildDraftWarRoom();
+            }
+            RefreshSelectableTab("Prospect List", BuildProspectRows());
+            RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
+            _tabs["Season Readiness"].Text = BuildSeasonReadiness();
+            _tabs["Schedule"].Text = BuildSchedule();
+            _tabs["Standings"].Text = BuildStandings();
+            _tabs["Playoffs"].Text = BuildPlayoffs();
+            _tabs["Stats"].Text = BuildStats();
+            _tabs["Monthly Summary"].Text = BuildMonthlySummary();
+            _tabs["Season Archive"].Text = BuildSeasonArchive();
+            _tabs["Executive Reports"].Text = BuildExecutiveReports();
+            _tabs["Archived Seasons"].Text = BuildSeasonArchive();
+            _tabs["GM Career"].Text = BuildGmCareerHistory();
+            _tabs["Organization History"].Text = BuildOrganizationHistoryReport();
+            _tabs["Draft History"].Text = BuildDraftHistoryReport();
+            _tabs["Drafted Players"].Text = BuildDraftedPlayersReport();
+            _tabs["Where Are They Now"].Text = BuildWhereAreTheyNowReport();
+            _tabs["Player Career Timelines"].Text = BuildPlayerCareerTimelinesReport();
+            _tabs["Career Milestones"].Text = BuildCareerMilestonesReport();
+            _tabs["Player Stories"].Text = BuildPlayerStoriesReport();
+            _tabs["Media / News"].Text = BuildMediaNews();
+            _tabs["Awards"].Text = BuildAwardsReport();
+            _tabs["Record Book"].Text = BuildRecordBookReport();
+            _tabs["Team Records"].Text = BuildTeamRecordsReport();
+            _tabs["League Records"].Text = BuildLeagueRecordsReport();
+            _tabs["Staff History"].Text = BuildStaffHistoryReport();
+            _tabs["Staff Careers"].Text = BuildStaffCareersReport();
+            _tabs["Coaching Trees"].Text = BuildCoachingTreesReport();
+            _tabs["Scout History"].Text = BuildScoutHistoryReport();
+            _tabs["Development Staff History"].Text = BuildDevelopmentStaffHistoryReport();
+            _tabs["Owner History"].Text = BuildOwnerHistoryReport();
+            _tabs["Owner Letters"].Text = BuildOwnerLettersReport();
+            _tabs["Job Security History"].Text = BuildJobSecurityHistoryReport();
+            _tabs["Expectation Results"].Text = BuildExpectationResultsReport();
+            _tabs["Transaction History"].Text = BuildTransactionHistoryReport();
+            _tabs["Playoff Archive"].Text = BuildPlayoffArchive();
+            _tabs["Champions"].Text = BuildChampionsReport();
+            _tabs["Draft Recaps"].Text = BuildDraftRecaps();
+            _tabs["Monthly Summaries"].Text = BuildMonthlySummaries();
+            _tabs["Career History"].Text = BuildCareerHistory();
+            _tabs["Journal"].Text = BuildJournal();
+            _tabs["Global Search"].Text = BuildGlobalSearch();
+            _tabs["Playtest Checklist"].Text = BuildPlaytestChecklist();
+            _tabs["Settings"].Text = BuildSettings();
+            _tabs["Relationships"].Text = BuildRelationships();
+            UpdateTabBadges();
+            RefreshDraftModal();
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
     }
 
     private void RefreshDashboard()
@@ -4535,7 +4807,7 @@ internal sealed class MainWindow : Window
 
         State.SelectTradeTarget(otherPlayerPersonId);
         ShowPopup($"Trade Builder - {entry.TeamName}", BuildTradeBuilderPopupContent(entry), 1100, 760);
-        RefreshAll();
+        RefreshAfterAction();
     }
 
     private UIElement BuildTradeBuilderPopupContent(TradeBlockEntry entry)
@@ -4709,13 +4981,13 @@ internal sealed class MainWindow : Window
         actions.Children.Add(CreateDetailButton("Propose Trade", () =>
         {
             State.ProposeCurrentTrade(entry.OrganizationId, entry.TeamName);
-            RefreshAll();
+            RefreshAfterAction();
             Window.GetWindow(root)?.Close();
         }, State.CanProposeCurrentTrade && State.TradeDeadlineWindow.TradesAllowed, State.TradeDeadlineWindow.TradesAllowed ? "Trade must include assets on both sides" : "Trade deadline has passed"));
         actions.Children.Add(CreateDetailButton("Withdraw", () =>
         {
             State.WithdrawLatestTradeOffer();
-            RefreshAll();
+            RefreshAfterAction();
             Window.GetWindow(root)?.Close();
         }, State.CanWithdrawLatestTradeOffer));
         actions.Children.Add(CreateDetailButton("Clear", () =>
@@ -5913,7 +6185,7 @@ internal sealed class MainWindow : Window
         button.Click += (_, _) =>
         {
             action();
-            RefreshAll();
+            RefreshAfterAction();
         };
         return button;
     }
