@@ -68,10 +68,17 @@ public sealed class DailySimulationCoordinator
         finalScenario = new HockeyIntelligenceRatingService().EnsureRatings(finalScenario);
         finalScenario = new DevelopmentCurveService().EnsureCurves(finalScenario);
         finalScenario = new PlayerRatingService().EnsureRatings(finalScenario);
+        var aiFrontOffice = new AiFrontOfficeDecisionService().RunCycle(finalScenario);
+        finalScenario = aiFrontOffice.ScenarioSnapshot;
+        leagueTransactions = leagueTransactions.Concat(aiFrontOffice.LeagueNews).ToArray();
         finalScenario = new MediaService().EnsureMediaFeed(finalScenario, leagueTransactions, registry);
         var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && deadline.InboxItems.Count == 0 && games.SimulatedGames.Count == 0 && playoffs.GameRecaps.Count == 0 && report?.Success != true
             ? simulation.Summary
             : $"{simulation.Summary} {camp.Summary} {scouting.Message} {deadline.Summary} {games.Summary} {playoffs.Message}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
+        if (aiFrontOffice.Cycle.Candidates.Count > 0)
+        {
+            summary = $"{summary} {aiFrontOffice.Message}";
+        }
 
         return new NewGmDailySimulationResult(finalScenario, simulation, inbox, leagueTransactions, summary);
     }

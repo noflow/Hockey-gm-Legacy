@@ -234,6 +234,16 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<OrganizationPlan> OrganizationPlans { get; init; } = Array.Empty<OrganizationPlan>();
 
+    public AiFrontOfficeDecisionCycle? LatestAiDecisionCycle { get; init; }
+
+    public IReadOnlyList<AiDecisionHistoryEntry> AiDecisionHistory { get; init; } = Array.Empty<AiDecisionHistoryEntry>();
+
+    public IReadOnlyList<AiTransactionPlan> AiTransactionPlans { get; init; } = Array.Empty<AiTransactionPlan>();
+
+    public IReadOnlyList<AiDecisionCooldown> AiDecisionCooldowns { get; init; } = Array.Empty<AiDecisionCooldown>();
+
+    public IReadOnlyList<AiEmergencyOverride> AiEmergencyOverrides { get; init; } = Array.Empty<AiEmergencyOverride>();
+
     public Lineup? CurrentLineup { get; init; }
 
     public LineChemistryReport? CurrentLineChemistry { get; init; }
@@ -676,6 +686,27 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var plan in OrganizationPlans)
         {
             plan.Validate();
+        }
+
+        LatestAiDecisionCycle?.Validate();
+        foreach (var decision in AiDecisionHistory)
+        {
+            decision.Validate();
+        }
+
+        foreach (var plan in AiTransactionPlans)
+        {
+            plan.Validate();
+        }
+
+        foreach (var cooldown in AiDecisionCooldowns)
+        {
+            cooldown.Validate();
+        }
+
+        foreach (var emergency in AiEmergencyOverrides)
+        {
+            emergency.Validate();
         }
 
         CurrentLineup?.Validate();

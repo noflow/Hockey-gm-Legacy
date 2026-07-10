@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.12 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.13 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -647,7 +647,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.12 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.13 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -3470,6 +3470,8 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Pipeline players", State.PipelineCountForOrganization(team.OrganizationId));
         AddSubHeader(panel, "AI Strategy");
         AddParagraph(panel, State.OrganizationAiTextForOrganization(team.OrganizationId, team.TeamName));
+        AddSubHeader(panel, "AI Front Office");
+        AddParagraph(panel, State.AiFrontOfficeTextForOrganization(team.OrganizationId, team.TeamName));
         AddSubHeader(panel, "Current Needs / Trade Direction");
         AddParagraph(panel, State.TeamNeedsTextForOrganization(team.OrganizationId, team.TeamName));
         AddSubHeader(panel, "Roster Browse");
@@ -9491,6 +9493,7 @@ internal sealed class AlphaDesktopState
     private readonly DraftIntelligenceService _draftIntelligence = new();
     private readonly AssetEvaluationService _assetEvaluation = new();
     private readonly OrganizationPlanningService _organizationPlanning = new();
+    private readonly AiFrontOfficeDecisionService _aiFrontOffice = new();
     private readonly EngineRegistry _registry;
     private readonly List<LeagueTransaction> _leagueTransactions = [];
     private readonly List<JournalEntry> _journalEntries = [];
@@ -12744,6 +12747,18 @@ internal sealed class AlphaDesktopState
         }
 
         return builder.ToString().Trim();
+    }
+
+    public string AiFrontOfficeTextForOrganization(string organizationId, string teamName)
+    {
+        if (ScenarioSnapshot.LatestAiDecisionCycle is null && ScenarioSnapshot.AiTransactionPlans.Count == 0)
+        {
+            var result = _aiFrontOffice.RunCycle(ScenarioSnapshot, force: true);
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = result.ScenarioSnapshot.AlphaSnapshot;
+        }
+
+        return _aiFrontOffice.BuildFrontOfficeText(ScenarioSnapshot, organizationId, teamName);
     }
 
     public string TeamNeedsTextForOrganization(string organizationId, string teamName)

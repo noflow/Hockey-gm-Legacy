@@ -201,7 +201,10 @@ internal sealed class AlphaIntegrationTests
         {
             var text = File.ReadAllText(file);
             Assert.False(text.Contains("Godot", StringComparison.OrdinalIgnoreCase), "Integration layer should not reference Godot.");
-            Assert.False(text.Contains("Control", StringComparison.Ordinal), "Integration layer should not define UI controls.");
+            Assert.False(text.Contains("System.Windows", StringComparison.Ordinal), "Integration layer should not reference desktop UI frameworks.");
+            Assert.False(text.Contains("System.Windows.Controls", StringComparison.Ordinal), "Integration layer should not define UI controls.");
+            Assert.False(text.Contains("Avalonia", StringComparison.OrdinalIgnoreCase), "Integration layer should not reference Avalonia UI.");
+            Assert.False(text.Contains("UIElement", StringComparison.Ordinal), "Integration layer should not define UI controls.");
         }
     }
 

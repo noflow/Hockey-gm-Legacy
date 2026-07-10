@@ -127,18 +127,19 @@ The five foundation pillars remain:
 - Alpha 7.10 - Player Value & Asset Evaluation Engine v1
 - Alpha 7.11 - Draft Board Realism & Position Value Engine
 - Alpha 7.12 - AI Roster Builder & Organizational Planning v1
+- Alpha 7.13 - AI Front Office Decision Cycle v1
 
 ## Current Milestone
 
-Alpha 7.12 - AI Roster Builder & Organizational Planning v1
+Alpha 7.13 - AI Front Office Decision Cycle v1
 
 ## Current Goal
 
-Give every organization a multi-year planning layer. AI and player organizations now track future depth, prospect paths, succession planning, contract outlook, roster needs, trade/free-agency targets, and competitive window context.
+Make AI-controlled organizations act on their multi-year plans through scheduled, explainable front-office decision cycles without auto-managing the player's team.
 
-## Why Organization Planning Was Next
+## Why AI Front Office Decisions Were Next
 
-Alpha 7.6 through Alpha 7.11 made ratings, development, scouting knowledge, draft boards, asset value, and position scarcity readable. Alpha 7.12 uses that information to help teams plan beyond the current lineup without auto-making GM decisions.
+Alpha 7.12 gave organizations a planning layer. Alpha 7.13 turns those plans into paced AI decision candidates, transaction plans, emergency overrides, cooldowns, and League News summaries so the league feels alive without flooding the player or taking GM-controlled actions.
 
 ## Next Build Target
 
