@@ -751,7 +751,6 @@ internal sealed class MainWindow : Window
         var button = new Button
         {
             Content = text,
-            ClickMode = ClickMode.Press,
             Focusable = false,
             MinWidth = 92,
             Padding = new Thickness(10, 7, 10, 7),
@@ -764,17 +763,9 @@ internal sealed class MainWindow : Window
         {
             action();
             RefreshAfterAction();
-            QueueRefreshAfterAction();
         };
 
         return button;
-    }
-
-    private void QueueRefreshAfterAction()
-    {
-        Dispatcher.BeginInvoke(
-            new Action(RefreshAfterAction),
-            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private static T? FindAncestor<T>(DependencyObject? source)
@@ -6229,7 +6220,6 @@ internal sealed class MainWindow : Window
         var button = new Button
         {
             Content = text,
-            ClickMode = ClickMode.Press,
             Focusable = false,
             Padding = new Thickness(7, 4, 7, 4),
             Margin = new Thickness(4, 0, 0, 0),
@@ -6240,7 +6230,6 @@ internal sealed class MainWindow : Window
         {
             action();
             RefreshAfterAction();
-            QueueRefreshAfterAction();
         };
         return button;
     }
