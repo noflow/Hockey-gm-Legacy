@@ -1110,6 +1110,7 @@ internal sealed class MainWindow : Window
         var tab = new TabItem
         {
             Header = title,
+            Tag = title,
             Content = root
         };
         _tabItems[title] = tab;
@@ -1833,7 +1834,9 @@ internal sealed class MainWindow : Window
             return;
         }
 
-        var workspace = tab.Header?.ToString() ?? string.Empty;
+        // Use the stable Tag, not Header: UpdateTabBadges() rewrites Header to include a
+        // live count (e.g. "Inbox (3)"), which would never match the workspace lookup key.
+        var workspace = tab.Tag as string ?? tab.Header?.ToString() ?? string.Empty;
         if (_workspaceNavigations.TryGetValue(workspace, out var navigation)
             && navigation.SelectedItem is ListBoxItem item
             && item.Content is string screen)
