@@ -179,13 +179,13 @@ public sealed class DraftClassGenerator
         {
             RosterPosition.Goalie => 72 + (Math.Abs(StableHash($"{profile.Year}:g:{index}")) % 8),
             RosterPosition.Defense => 70 + (Math.Abs(StableHash($"{profile.Year}:d:{index}")) % 9),
-            _ => 67 + (Math.Abs(StableHash($"{profile.Year}:f:{index}")) % 9)
+            _ => 68 + (Math.Abs(StableHash($"{profile.Year}:f:{index}")) % 10)
         };
         var weight = position switch
         {
             RosterPosition.Goalie => 176 + (index * 9 % 62),
-            RosterPosition.Defense => 174 + (index * 7 % 62),
-            _ => 158 + (index * 6 % 58)
+            RosterPosition.Defense => 175 + (index * 7 % 66),
+            _ => 160 + (index * 6 % 66)
         };
         var bio = new DraftProspectBio(
             position,

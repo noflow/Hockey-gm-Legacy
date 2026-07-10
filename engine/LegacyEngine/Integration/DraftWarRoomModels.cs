@@ -220,6 +220,16 @@ public sealed record DraftWarRoomState(
 
     public IReadOnlyList<DraftIntelligenceAlert> IntelligenceAlerts { get; init; } = Array.Empty<DraftIntelligenceAlert>();
 
+    public DraftBoardRealismProfile? RealismProfile { get; init; }
+
+    public DraftPositionValueProfile? PositionValueProfile { get; init; }
+
+    public DraftBoardValidationResult? RealismValidation { get; init; }
+
+    public DraftBoardRebalancingResult? RebalancingResult { get; init; }
+
+    public IReadOnlyList<DraftWarRoomBoardSnapshot> FinalBoardSnapshot { get; init; } = Array.Empty<DraftWarRoomBoardSnapshot>();
+
     public static DraftWarRoomState Empty { get; } = new(
         string.Empty,
         0,
@@ -275,6 +285,15 @@ public sealed record DraftWarRoomState(
         foreach (var alert in IntelligenceAlerts)
         {
             alert.Validate();
+        }
+
+        RealismProfile?.Validate();
+        PositionValueProfile?.Validate();
+        RealismValidation?.Validate();
+        RebalancingResult?.Validate();
+        foreach (var snapshot in FinalBoardSnapshot)
+        {
+            snapshot.Validate();
         }
 
         PostDraftReview?.Validate();

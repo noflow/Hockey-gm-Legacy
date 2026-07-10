@@ -243,7 +243,7 @@ public sealed class NewGmScenarioBootstrapper
         return new NewGmScenarioResult(
             Registry: registry,
             ScenarioSnapshot: scenarioSnapshot,
-            AlphaSnapshot: alphaSnapshot,
+            AlphaSnapshot: scenarioSnapshot.AlphaSnapshot,
             FirstDayInbox: firstDayInbox,
             Summary: scenarioSnapshot.ScenarioSummary);
     }

@@ -104,6 +104,7 @@ var alpha77AttributeDevelopmentTests = new Alpha77AttributeDevelopmentTests();
 var alpha78ScoutingIntelligenceTests = new Alpha78ScoutingIntelligenceTests();
 var alpha79DraftIntelligenceTests = new Alpha79DraftIntelligenceTests();
 var alpha710AssetEvaluationTests = new Alpha710AssetEvaluationTests();
+var alpha711DraftBoardRealismTests = new Alpha711DraftBoardRealismTests();
 var runner = new TestRunner();
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1393,6 +1394,22 @@ runner.Run("alpha 7.10 oversupplied winger market lowers winger demand", alpha71
 runner.Run("alpha 7.10 draft class depth affects scarcity", alpha710AssetEvaluationTests.DraftClassDepthAffectsScarcity);
 runner.Run("alpha 7.10 free-agent supply affects scarcity", alpha710AssetEvaluationTests.FreeAgentSupplyAffectsScarcity);
 runner.Run("alpha 7.10 UI exposes position market context", alpha710AssetEvaluationTests.UiExposesPositionMarketContext);
+runner.Run("alpha 7.11 NHL top six does not contain five goalies", alpha711DraftBoardRealismTests.NhlTopSixDoesNotContainFiveGoalies);
+runner.Run("alpha 7.11 top ten includes multiple skater groups", alpha711DraftBoardRealismTests.TopTenIncludesMultipleSkaterGroups);
+runner.Run("alpha 7.11 first round has believable forward defense mix", alpha711DraftBoardRealismTests.FirstRoundHasBelievableForwardDefenseMix);
+runner.Run("alpha 7.11 low goalie count normal for NHL boards", alpha711DraftBoardRealismTests.LowGoalieCountIsNormalForNhlBoards);
+runner.Run("alpha 7.11 strong goalie class rejects extreme clustering", alpha711DraftBoardRealismTests.StrongGoalieClassMayPlaceGoalieHigherButRejectsExtremeClustering);
+runner.Run("alpha 7.11 deep defense increases defense without all top board", alpha711DraftBoardRealismTests.DeepDefenseClassIncreasesDefenseWithoutTakingWholeTopBoard);
+runner.Run("alpha 7.11 junior board allows broader mix", alpha711DraftBoardRealismTests.JuniorBoardAllowsBroaderMix);
+runner.Run("alpha 7.11 WHL OHL QMJHL profiles differ", alpha711DraftBoardRealismTests.WhlOhlQmjhlProfilesDiffer);
+runner.Run("alpha 7.11 long position run flagged", alpha711DraftBoardRealismTests.LongPositionRunIsFlagged);
+runner.Run("alpha 7.11 missing groups flagged", alpha711DraftBoardRealismTests.MissingGroupsAreFlagged);
+runner.Run("alpha 7.11 rebalance comparable prospects terminates", alpha711DraftBoardRealismTests.RebalanceMovesComparableProspectsAndTerminates);
+runner.Run("alpha 7.11 elite exception preserved", alpha711DraftBoardRealismTests.EliteExceptionIsPreserved);
+runner.Run("alpha 7.11 deterministic hundred class variation exists", alpha711DraftBoardRealismTests.DeterministicHundredClassProfileVariationExists);
+runner.Run("alpha 7.11 AI draft reach bounded by draft value", alpha711DraftBoardRealismTests.AiDraftReachIsBoundedByDraftValue);
+runner.Run("alpha 7.11 hidden true ratings not exposed", alpha711DraftBoardRealismTests.HiddenTrueRatingsAreNotExposed);
+runner.Run("alpha 7.11 AlphaDesktop exposes draft realism context", alpha711DraftBoardRealismTests.AlphaDesktopExposesDraftRealismContext);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

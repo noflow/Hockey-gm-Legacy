@@ -10,26 +10,48 @@ public sealed class DraftWarRoomService
     {
         ArgumentNullException.ThrowIfNull(scenario);
         var existing = scenario.DraftWarRoom;
+        var originalSnapshot = existing.OriginalBoardSnapshot.Count > 0 ? existing.OriginalBoardSnapshot : BuildOriginalBoardSnapshot(scenario);
+        var realismService = new DraftPositionValueService();
+        var validator = new DraftBoardRealismValidator();
+        var preparedForRealism = scenario.PlayerRatings.Count == 0 ? new PlayerRatingService().EnsureRatings(scenario) : scenario;
+        var positionScarcity = preparedForRealism.PositionScarcity ?? new PositionScarcityService().BuildProfile(preparedForRealism);
+        preparedForRealism = preparedForRealism with { PositionScarcity = positionScarcity };
+        var positionValueProfile = realismService.BuildPositionValueProfile(preparedForRealism);
+        var realismProfile = realismService.BuildRealismProfile(preparedForRealism);
+        var rebalancing = validator.RebalanceBoard(preparedForRealism, realismProfile, positionValueProfile);
+        var calibratedBoard = validator.ApplyRebalancedBoard(preparedForRealism.AlphaSnapshot.DraftBoard, rebalancing, preparedForRealism);
+        var calibratedScenario = preparedForRealism with
+        {
+            AlphaSnapshot = preparedForRealism.AlphaSnapshot with { DraftBoard = calibratedBoard },
+            PositionScarcity = positionScarcity
+        };
         var existingById = existing.BoardEntries.ToDictionary(entry => entry.ProspectPersonId, StringComparer.Ordinal);
-        var entries = scenario.AlphaSnapshot.DraftBoard.Entries
+        var entries = calibratedScenario.AlphaSnapshot.DraftBoard.Entries
             .OrderBy(entry => entry.Rank)
-            .Select(entry => BuildEntry(scenario, entry, existingById.TryGetValue(entry.ProspectPersonId, out var current) ? current : null))
+            .Select(entry => BuildEntry(calibratedScenario, entry, existingById.TryGetValue(entry.ProspectPersonId, out var current) ? current : null))
             .OrderBy(entry => entry.IsRemoved)
             .ThenBy(entry => entry.PersonalRank)
             .Select((entry, index) => entry with { PersonalRank = index + 1 })
             .ToArray();
 
         var state = new DraftWarRoomState(
-            scenario.Organization.OrganizationId,
-            scenario.Season.Year,
+            calibratedScenario.Organization.OrganizationId,
+            calibratedScenario.Season.Year,
             entries,
-            BuildNeeds(scenario),
-            BuildStorylines(scenario),
-            BuildBestPlayerAvailableOpinions(scenario),
-            existing.OriginalBoardSnapshot.Count > 0 ? existing.OriginalBoardSnapshot : BuildOriginalBoardSnapshot(scenario),
-            existing.PostDraftReview);
+            BuildNeeds(calibratedScenario),
+            BuildStorylines(calibratedScenario),
+            BuildBestPlayerAvailableOpinions(calibratedScenario),
+            originalSnapshot,
+            existing.PostDraftReview)
+        {
+            RealismProfile = realismProfile,
+            PositionValueProfile = positionValueProfile,
+            RealismValidation = rebalancing.After,
+            RebalancingResult = rebalancing,
+            FinalBoardSnapshot = BuildOriginalBoardSnapshot(calibratedScenario)
+        };
         state.Validate();
-        var withState = scenario with { DraftWarRoom = state };
+        var withState = calibratedScenario with { DraftWarRoom = state };
         return ShouldEnrichDraftIntelligence(withState)
             ? new DraftIntelligenceService().EnsureDraftIntelligence(withState)
             : withState;
@@ -204,6 +226,8 @@ public sealed class DraftWarRoomService
     {
         var ai = scenario.OrganizationAiProfiles.FirstOrDefault(profile => profile.OrganizationId == organizationId);
         var score = 1000 - (entry.Rank * 10) - fallbackRank;
+        var positionValue = new DraftPositionValueService().EvaluateEntry(scenario, entry, scenario.DraftWarRoom.PositionValueProfile);
+        score += positionValue.DraftValue / 8;
         var position = entry.Bio?.Position ?? RosterPosition.Unknown;
         var market = (scenario.PositionScarcity ?? new PositionScarcityService().BuildProfile(scenario))
             .For(PositionScarcityService.MarketPositionFor(entry));

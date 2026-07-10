@@ -25,7 +25,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.10 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.11 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -634,7 +634,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.10 - GM Office",
+            Text = "Hockey GM Legacy - Alpha 7.11 - GM Office",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -5402,6 +5402,7 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"Scout consensus: {consensus.Level} ({consensus.AgreementScore}/100) | scout board #{intelligence.ScoutBoardRank} | consensus board #{intelligence.ConsensusBoardRank}");
         builder.AppendLine($"Visible ratings: {intelligence.RatingDisplay}");
         builder.AppendLine($"Team fit: {intelligence.TeamFitScore}/100");
+        builder.AppendLine($"Draft value context: {State.DraftValueContext(entry)}");
         builder.AppendLine($"Development curve: {intelligence.DevelopmentCurve}; pace {intelligence.DevelopmentPace}; ETA {intelligence.Eta}");
         builder.AppendLine($"Current picture: {State.DraftCurrentPicture(entry)}");
         builder.AppendLine($"Future picture: {State.DraftFuturePicture(entry)}");
@@ -7991,6 +7992,8 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"  Position depth: {State.DraftClassPositionDepthText}");
         builder.AppendLine($"  Regional mix: {State.DraftClassRegionalText}");
         builder.AppendLine($"  Scout quote: {State.DraftClassScoutQuoteText}");
+        builder.AppendLine($"  Board realism: {State.DraftBoardRealismText}");
+        builder.AppendLine($"  Position value: {State.DraftPositionValueText}");
         builder.AppendLine();
 
         builder.AppendLine("War Room Views");
@@ -8017,6 +8020,7 @@ internal sealed class MainWindow : Window
             var card = State.DraftIntelligenceCard(entry.ProspectPersonId);
             var tags = entry.Tags.Count == 0 ? "watching" : string.Join(", ", entry.Tags);
             builder.AppendLine($"  #{entry.PersonalRank} {entry.ProspectName} | {quick} | {card.RatingDisplay} | Consensus #{card.ConsensusBoardRank} | Fit {card.TeamFitScore}/100 | tags: {tags}");
+            builder.AppendLine($"     Draft value context: {State.DraftValueContext(boardEntry)}");
             builder.AppendLine($"     Group: {entry.GroupName} | Notes: {(string.IsNullOrWhiteSpace(entry.GmNotes) ? "none" : entry.GmNotes)}");
         }
         builder.AppendLine();
@@ -8151,6 +8155,8 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"  Regional mix: {State.DraftClassRegionalText}");
         builder.AppendLine($"  Scout quote: {State.DraftClassScoutQuoteText}");
         builder.AppendLine($"  Players to watch: {State.DraftClassPlayersToWatchText}");
+        builder.AppendLine($"  Board realism: {State.DraftBoardRealismText}");
+        builder.AppendLine($"  Position value: {State.DraftPositionValueText}");
         builder.AppendLine("  Filters placeholder: position, region, current league, handedness, projection, confidence, risk, class fit.");
         builder.AppendLine();
         if (State.ScenarioSnapshot.DraftExperience is { } draftState)
@@ -8210,6 +8216,7 @@ internal sealed class MainWindow : Window
 
             builder.AppendLine($"  Projection: {entry.ProjectionText}");
             builder.AppendLine($"  War Room: my #{card.MyBoardRank}, scout #{card.ScoutBoardRank}, consensus #{card.ConsensusBoardRank}; team fit {card.TeamFitScore}/100");
+            builder.AppendLine($"  Draft value context: {State.DraftValueContext(entry)}");
             builder.AppendLine($"  Attributes: {string.Join("; ", card.Attributes.OrderBy(attribute => attribute.Estimate.IsUnknown).ThenByDescending(attribute => attribute.Estimate.Midpoint).Take(5).Select(attribute => attribute.DisplayText))}");
             builder.AppendLine($"  Class context: {State.DraftClassContext(entry)}");
             builder.AppendLine($"  Risk: {State.DraftRiskText(entry)}");
@@ -9763,6 +9770,50 @@ internal sealed class AlphaDesktopState
     }
 
     public string DraftWarRoomSummaryText => _warRoom.BuildWarRoomSummary(ScenarioSnapshot);
+
+    public string DraftBoardRealismText
+    {
+        get
+        {
+            var state = DraftWarRoom;
+            var validation = state.RealismValidation;
+            var rebalancing = state.RebalancingResult;
+            var status = validation is null
+                ? "not evaluated"
+                : validation.IsValid ? "playable" : "needs review";
+            var moves = rebalancing is null || rebalancing.Moves.Count == 0
+                ? "no comparable rebalancing moves"
+                : $"{rebalancing.Moves.Count} comparable move(s)";
+            return $"{status}: {validation?.Summary ?? "No realism report yet."} {moves}.";
+        }
+    }
+
+    public string DraftPositionValueText
+    {
+        get
+        {
+            var profile = DraftWarRoom.PositionValueProfile;
+            if (profile is null)
+            {
+                return "Position value profile not available.";
+            }
+
+            return $"{profile.Summary} {string.Join(" | ", profile.Adjustments.Select(adjustment => $"{DraftPositionValueService.PositionLabel(adjustment.Position)} {Signed(adjustment.TotalAdjustment)}"))}";
+        }
+    }
+
+    public string DraftValueContext(DraftBoardEntry? entry)
+    {
+        if (entry is null)
+        {
+            return "Draft value context unavailable.";
+        }
+
+        var evaluation = new DraftPositionValueService().EvaluateEntry(ScenarioSnapshot, entry, DraftWarRoom.PositionValueProfile);
+        var validation = DraftWarRoom.RealismValidation;
+        var status = validation?.IsValid == true ? "board profile valid" : "board profile under review";
+        return $"{DraftPositionValueService.PositionLabel(evaluation.Position)} market and class context considered; {status}. {evaluation.Explanation}";
+    }
 
     public DraftScoutConsensus DraftConsensus(string prospectPersonId) =>
         _warRoom.BuildConsensus(ScenarioSnapshot, prospectPersonId);
@@ -11741,6 +11792,8 @@ internal sealed class AlphaDesktopState
     }
 
     public string PositionShortText(RosterPosition position) => PositionShort(position);
+
+    private static string Signed(int value) => value >= 0 ? $"+{value}" : value.ToString();
 
     private static string PositionShort(RosterPosition position) =>
         position switch

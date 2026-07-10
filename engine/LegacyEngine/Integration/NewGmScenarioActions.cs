@@ -23,7 +23,20 @@ public sealed class NewGmScenarioActions
 
         var entry = scenario.AlphaSnapshot.DraftBoard.Entries.SingleOrDefault(item => item.ProspectPersonId == prospectPersonId)
             ?? throw new ArgumentException("Prospect is not on the draft board.", nameof(prospectPersonId));
-        var draftBoard = scenario.AlphaSnapshot.DraftBoard.MoveProspect(prospectPersonId, direction);
+        var ordered = scenario.AlphaSnapshot.DraftBoard.Entries
+            .OrderBy(item => item.Rank)
+            .ToArray();
+        var currentIndex = Array.FindIndex(ordered, item => item.ProspectPersonId == entry.ProspectPersonId);
+        var targetIndex = Math.Clamp(currentIndex + (direction < 0 ? -1 : 1), 0, ordered.Length - 1);
+        if (targetIndex != currentIndex)
+        {
+            (ordered[currentIndex], ordered[targetIndex]) = (ordered[targetIndex], ordered[currentIndex]);
+        }
+
+        var draftBoard = scenario.AlphaSnapshot.DraftBoard with
+        {
+            Entries = ordered.Select((item, index) => item with { Rank = index + 1 }).ToArray()
+        };
         var newRank = draftBoard.Entries.Single(item => item.ProspectPersonId == prospectPersonId).Rank;
         var name = FindPersonName(scenario, prospectPersonId);
         QueueActionEvent(
