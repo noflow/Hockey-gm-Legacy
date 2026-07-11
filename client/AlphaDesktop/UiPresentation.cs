@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using LegacyEngine.Integration;
 
 namespace AlphaDesktop;
 
@@ -52,6 +53,245 @@ internal sealed record UiNavigationContext(string Workspace, string Screen, stri
 
 internal static class UiPresentation
 {
+    public static Border UiTeamCrest(TeamBrandingProfile profile, double size = 46)
+    {
+        var border = new Border
+        {
+            Width = size,
+            Height = size,
+            CornerRadius = profile.LogoPlaceholder == TeamLogoPlaceholder.Shield ? new CornerRadius(8, 8, 14, 14) : new CornerRadius(size / 2),
+            Background = BrushFromHex(profile.Palette.Primary),
+            BorderBrush = BrushFromHex(profile.Palette.Accent),
+            BorderThickness = new Thickness(Math.Max(2, size / 16)),
+            ToolTip = $"{profile.OrganizationDisplayName} placeholder crest: {profile.LogoPlaceholder}, {profile.VisualStyleDescriptor}",
+            Child = new Grid()
+        };
+
+        if (border.Child is Grid grid)
+        {
+            grid.Children.Add(new TextBlock
+            {
+                Text = profile.Monogram.Letters,
+                Foreground = BrushFromHex(profile.Palette.ReadableForeground),
+                FontSize = Math.Max(13, size / 3.2),
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            if (profile.LogoPlaceholder is TeamLogoPlaceholder.DiagonalStripeBadge or TeamLogoPlaceholder.WaveBadge)
+            {
+                grid.Children.Add(new Border
+                {
+                    Height = Math.Max(4, size / 10),
+                    Background = BrushFromHex(profile.Palette.Accent),
+                    Opacity = 0.75,
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    Margin = new Thickness(6, 0, 6, size / 5)
+                });
+            }
+        }
+
+        return border;
+    }
+
+    public static Border UiTeamHeader(
+        TeamBrandingProfile team,
+        LeagueBrandingProfile league,
+        string record,
+        string strategy,
+        string ownerMood,
+        string budgetStatus)
+    {
+        var root = new Border
+        {
+            Background = BrushFromHex(team.Palette.LightBackgroundTint),
+            BorderBrush = BrushFromHex(team.Palette.Primary),
+            BorderThickness = new Thickness(4, 0, 0, 0),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14),
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+
+        var dock = new DockPanel { LastChildFill = true };
+        var crest = UiTeamCrest(team, 52);
+        crest.Margin = new Thickness(0, 0, 12, 0);
+        DockPanel.SetDock(crest, Dock.Left);
+        dock.Children.Add(crest);
+
+        var content = new StackPanel();
+        content.Children.Add(new TextBlock
+        {
+            Text = $"{team.OrganizationDisplayName} ({team.TeamAbbreviation})",
+            FontSize = 20,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = $"{league.ShortName} | {team.ConferenceDivision} | {team.ArenaName}",
+            Foreground = UiTheme.MutedText,
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(BadgeRow(
+            ($"Record {record}", "neutral"),
+            (strategy, "info"),
+            (ownerMood, ownerMood.Contains("warning", StringComparison.OrdinalIgnoreCase) ? "caution" : "neutral"),
+            (budgetStatus, budgetStatus.Contains("over", StringComparison.OrdinalIgnoreCase) || budgetStatus.Contains("violation", StringComparison.OrdinalIgnoreCase) ? "critical" : "positive")));
+        dock.Children.Add(content);
+        root.Child = dock;
+        return root;
+    }
+
+    public static Border UiTeamCard(TeamBrandingProfile profile, string title, string subtitle, IReadOnlyList<string> facts, bool selected = false)
+    {
+        var root = new Border
+        {
+            Background = UiTheme.Surface,
+            BorderBrush = selected ? BrushFromHex(profile.Palette.Accent) : UiTheme.Border,
+            BorderThickness = selected ? new Thickness(2) : new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12),
+            Margin = new Thickness(0, 0, 0, 10)
+        };
+
+        var panel = new StackPanel();
+        var header = new DockPanel { LastChildFill = true };
+        var crest = UiTeamCrest(profile, 42);
+        crest.Margin = new Thickness(0, 0, 10, 0);
+        DockPanel.SetDock(crest, Dock.Left);
+        header.Children.Add(crest);
+        var titlePanel = new StackPanel();
+        titlePanel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, FontSize = 15, Foreground = UiTheme.Text, TextWrapping = TextWrapping.Wrap });
+        titlePanel.Children.Add(new TextBlock { Text = subtitle, FontSize = UiTypography.Small, Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        header.Children.Add(titlePanel);
+        panel.Children.Add(header);
+
+        foreach (var fact in facts.Where(fact => !string.IsNullOrWhiteSpace(fact)).Take(6))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = fact,
+                Foreground = UiTheme.MutedText,
+                FontSize = UiTypography.Small,
+                Margin = new Thickness(0, 5, 0, 0),
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+
+        root.Child = panel;
+        return root;
+    }
+
+    public static Border UiPersonAvatar(string displayName, string role, TeamBrandingProfile? profile, string position = "")
+    {
+        var initials = InitialsFor(displayName);
+        var teamProfile = profile ?? FallbackTeamBranding();
+        var roleText = role.ToLowerInvariant() switch
+        {
+            var value when value.Contains("goalie", StringComparison.Ordinal) => "G",
+            var value when value.Contains("coach", StringComparison.Ordinal) => "CO",
+            var value when value.Contains("scout", StringComparison.Ordinal) => "SC",
+            var value when value.Contains("medical", StringComparison.Ordinal) || value.Contains("trainer", StringComparison.Ordinal) => "MED",
+            var value when value.Contains("owner", StringComparison.Ordinal) => "OWN",
+            var value when value.Contains("agent", StringComparison.Ordinal) => "AG",
+            var value when value.Contains("gm", StringComparison.Ordinal) || value.Contains("general manager", StringComparison.Ordinal) => "GM",
+            _ => string.IsNullOrWhiteSpace(position) ? "PL" : position
+        };
+
+        var grid = new Grid();
+        grid.Children.Add(new TextBlock
+        {
+            Text = initials,
+            Foreground = BrushFromHex(teamProfile.Palette.ReadableForeground),
+            FontWeight = FontWeights.Bold,
+            FontSize = 13,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        grid.Children.Add(new Border
+        {
+            Background = BrushFromHex(teamProfile.Palette.Accent),
+            CornerRadius = new CornerRadius(7),
+            Padding = new Thickness(4, 1, 4, 1),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Child = new TextBlock
+            {
+                Text = roleText,
+                FontSize = 9,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White
+            }
+        });
+
+        return new Border
+        {
+            Width = 42,
+            Height = 42,
+            CornerRadius = new CornerRadius(21),
+            Background = BrushFromHex(teamProfile.Palette.Primary),
+            BorderBrush = BrushFromHex(teamProfile.Palette.Secondary),
+            BorderThickness = new Thickness(2),
+            ToolTip = $"{displayName} placeholder avatar: {roleText}. No real portrait is used.",
+            Child = grid
+        };
+    }
+
+    public static Border UiIconLabel(UiVisualIdentity identity)
+    {
+        var row = new DockPanel { LastChildFill = true };
+        var icon = new Border
+        {
+            Background = BadgeBackground(identity.Semantic),
+            BorderBrush = BadgeForeground(identity.Semantic),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(5, 2, 5, 2),
+            Margin = new Thickness(0, 0, 7, 0),
+            Child = new TextBlock
+            {
+                Text = IconToken(identity.Icon),
+                Foreground = BadgeForeground(identity.Semantic),
+                FontWeight = FontWeights.Bold,
+                FontSize = 10
+            }
+        };
+        DockPanel.SetDock(icon, Dock.Left);
+        row.Children.Add(icon);
+        row.Children.Add(new TextBlock { Text = identity.Label, Foreground = UiTheme.Text, VerticalAlignment = VerticalAlignment.Center });
+        return new Border { Child = row, ToolTip = identity.Tooltip };
+    }
+
+    public static Border UiFinanceBar(string title, decimal used, decimal total, string status)
+    {
+        var percent = total <= 0 ? 0 : Math.Clamp((double)(used / total), 0, 1);
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        panel.Children.Add(new TextBlock { Text = $"{used:C0} / {total:C0} | {Math.Max(0, total - used):C0} remaining | {status}", Foreground = UiTheme.MutedText, FontSize = UiTypography.Small });
+        panel.Children.Add(new Border
+        {
+            Height = 10,
+            Background = new SolidColorBrush(Color.FromRgb(230, 235, 241)),
+            CornerRadius = new CornerRadius(5),
+            Margin = new Thickness(0, 7, 0, 0),
+            Child = new Grid
+            {
+                Children =
+                {
+                    new Border
+                    {
+                        Width = 220 * percent,
+                        HorizontalAlignment = HorizontalAlignment.Left,
+                        Background = BadgeForeground(status.Contains("over", StringComparison.OrdinalIgnoreCase) ? "critical" : percent > 0.9 ? "caution" : "positive"),
+                        CornerRadius = new CornerRadius(5)
+                    }
+                }
+            }
+        });
+        return Card(panel);
+    }
+
     public static DataTemplate PersonRowTemplate()
     {
         var root = new FrameworkElementFactory(typeof(Border));
@@ -231,6 +471,75 @@ internal static class UiPresentation
             Margin = new Thickness(0, 0, 0, 12),
             Child = child
         };
+
+    public static Brush BrushFromHex(string hex)
+    {
+        try
+        {
+            return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        }
+        catch (FormatException)
+        {
+            return UiTheme.Neutral;
+        }
+    }
+
+    private static string IconToken(UiIcon icon) =>
+        icon switch
+        {
+            UiIcon.Dashboard => "HOME",
+            UiIcon.Inbox => "MAIL",
+            UiIcon.HockeyOperations => "HO",
+            UiIcon.Organization => "ORG",
+            UiIcon.League => "LG",
+            UiIcon.Season => "SEAS",
+            UiIcon.Reports => "REP",
+            UiIcon.Settings => "SET",
+            UiIcon.Roster => "ROS",
+            UiIcon.Scouting => "SCT",
+            UiIcon.Trade => "TRD",
+            UiIcon.Sign => "SIGN",
+            UiIcon.Injured => "MED",
+            UiIcon.Warning => "WARN",
+            UiIcon.Critical => "CRIT",
+            UiIcon.Goalie => "G",
+            UiIcon.Coach => "CO",
+            UiIcon.Scout => "SC",
+            UiIcon.Owner => "OWN",
+            UiIcon.Agent => "AG",
+            _ => icon.ToString().ToUpperInvariant()[..Math.Min(4, icon.ToString().Length)]
+        };
+
+    private static string InitialsFor(string displayName)
+    {
+        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(part => part.Any(char.IsLetter))
+            .ToArray();
+        if (parts.Length >= 2)
+        {
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+        }
+
+        return parts.Length == 1 ? parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant() : "HG";
+    }
+
+    private static TeamBrandingProfile FallbackTeamBranding() =>
+        new(
+            "ui-fallback",
+            "Hockey Club",
+            "Hockey",
+            "fallback",
+            "League",
+            "Division TBD",
+            "Placeholder Arena",
+            "HGM",
+            new TeamMonogram("HG"),
+            TeamLogoPlaceholder.RingMonogram,
+            new BrandColorPalette("#2A4558", "#F2F4F6", "#A85F2E", "#EEF4F7", "#1A2E3B", "#FFFFFF"),
+            "Clean",
+            "compact color edge",
+            "two-stripe placeholder",
+            "Fallback hockey identity");
 
     private static Brush BadgeBackground(string semantic) =>
         semantic.ToLowerInvariant() switch

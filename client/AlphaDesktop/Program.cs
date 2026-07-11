@@ -26,7 +26,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 7.13 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -291,9 +291,10 @@ internal sealed class MainWindow : Window
     {
         var profile = _careerSetup.GetProfile(SelectedLeagueExperience());
         var team = SelectedTeamOption();
+        var branding = team is null ? null : new UiBrandingService().BuildRegistry(profile).TeamProfiles[team.OrganizationId];
         _leagueSummaryText.Text = team is null
             ? $"{profile.Identity.Name}: {profile.Identity.Description}"
-            : $"{profile.Identity.Name} | {profile.Identity.Difficulty} | {profile.Teams.Count} teams\nFocus: {string.Join(", ", profile.Identity.PrimaryGameplayFocus)}\n{team.TeamName}: {team.DisplayLeagueName}, {team.DisplayDivisionConference}, {team.PreviousRecord}, budget {team.Budget:C0}, roster {team.RosterQuality}, prospects {team.ProspectStrength}, staff {team.DisplayStaffQuality}, difficulty {team.Difficulty}.";
+            : $"{profile.Identity.Name} | {profile.Identity.Difficulty} | {profile.Teams.Count} teams\nFocus: {string.Join(", ", profile.Identity.PrimaryGameplayFocus)}\n{branding!.TeamAbbreviation} {team.TeamName}: monogram {branding.Monogram.Letters}, {branding.VisualStyleDescriptor}, {team.DisplayLeagueName}, {team.DisplayDivisionConference}, {team.PreviousRecord}, budget {team.Budget:C0}, roster {team.RosterQuality}, prospects {team.ProspectStrength}, staff {team.DisplayStaffQuality}, difficulty {team.Difficulty}.";
     }
 
     private static int DifficultyRank(string difficulty) =>
@@ -644,20 +645,36 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildHeader()
     {
+        var teamBrand = CurrentTeamBranding();
+        var leagueBrand = CurrentLeagueBranding();
         var header = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            Background = UiPresentation.BrushFromHex(teamBrand.Palette.DarkBackgroundTint),
             Padding = new Thickness(16, 12, 16, 12)
         };
 
         var panel = new StackPanel();
-        var textPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        var brandHeader = new DockPanel { Margin = new Thickness(0, 0, 0, 10), LastChildFill = true };
+        var crest = UiPresentation.UiTeamCrest(teamBrand, 56);
+        crest.Margin = new Thickness(0, 0, 14, 0);
+        DockPanel.SetDock(crest, Dock.Left);
+        brandHeader.Children.Add(crest);
+
+        var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = "Hockey GM Legacy - Alpha 7.13 - GM Office",
+            Text = $"Hockey GM Legacy - Alpha 8.3 - GM Office | {teamBrand.OrganizationDisplayName}",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
+        });
+        textPanel.Children.Add(new TextBlock
+        {
+            Text = $"{teamBrand.TeamAbbreviation} | {leagueBrand.ShortName} | {teamBrand.ConferenceDivision} | {teamBrand.VisualStyleDescriptor} identity | {teamBrand.ArenaName}",
+            Foreground = new SolidColorBrush(Color.FromRgb(210, 225, 240)),
+            FontSize = 12,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 3, 0, 0)
         });
 
         _dateText.Foreground = Brushes.White;
@@ -674,7 +691,8 @@ internal sealed class MainWindow : Window
         _processedText.Margin = new Thickness(0, 4, 0, 0);
         textPanel.Children.Add(_processedText);
 
-        panel.Children.Add(textPanel);
+        brandHeader.Children.Add(textPanel);
+        panel.Children.Add(brandHeader);
 
         var searchPanel = new StackPanel
         {
@@ -1286,6 +1304,17 @@ internal sealed class MainWindow : Window
         else
         {
             var sample = State.TradeBlockEntries.FirstOrDefault(entry => entry.OrganizationId == selectedTeam.OrganizationId);
+            var brand = BrandingFor(selectedTeam.OrganizationId);
+            context.Children.Add(UiPresentation.UiTeamCard(
+                brand,
+                $"{brand.TeamAbbreviation} {selectedTeam.TeamName}",
+                $"{brand.LeagueName} | {brand.ConferenceDivision}",
+                new[]
+                {
+                    $"Monogram {brand.Monogram.Letters} | Crest {brand.LogoPlaceholder}",
+                    $"Trade context: {brand.IdentityPhrase}",
+                    $"Arena: {brand.ArenaName}"
+                }));
             context.Children.Add(new TextBlock { Text = sample is null ? "Team context pending." : State.TradeTeamNeedsShortText(sample), Foreground = UiTheme.Text, TextWrapping = TextWrapping.Wrap });
             context.Children.Add(new TextBlock { Text = $"Assets shopped: {State.OtherTradeAssetRows(selectedTeam.OrganizationId, selectedTeam.TeamName).Count} | Organization relationship and cooldowns remain tracked by existing trade logic.", Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
         }
@@ -1846,7 +1875,7 @@ internal sealed class MainWindow : Window
 
         var tab = new TabItem
         {
-            Header = title,
+            Header = NavigationHeaderText(title, title),
             Tag = title,
             Content = root
         };
@@ -2191,6 +2220,42 @@ internal sealed class MainWindow : Window
     }
 
     private AlphaDesktopState State => _state ?? throw new InvalidOperationException("Career has not started.");
+
+    private TeamBrandingProfile CurrentTeamBranding() =>
+        BrandingFor(State.ScenarioSnapshot.Organization.OrganizationId);
+
+    private LeagueBrandingProfile CurrentLeagueBranding() =>
+        State.ScenarioSnapshot.BrandingRegistry.LeagueProfiles.TryGetValue(State.ScenarioSnapshot.LeagueProfile.Identity.LeagueId, out var profile)
+            ? profile
+            : new UiBrandingService().LeagueFor(State.ScenarioSnapshot.LeagueProfile);
+
+    private TeamBrandingProfile BrandingFor(string organizationId) =>
+        State.ScenarioSnapshot.BrandingRegistry.TeamProfiles.TryGetValue(organizationId, out var profile)
+            ? profile
+            : new UiBrandingService().TeamFor(State.ScenarioSnapshot, organizationId);
+
+    private string BrandedTeamLabel(string organizationId, string fallbackName)
+    {
+        var brand = BrandingFor(organizationId);
+        return $"{brand.TeamAbbreviation} {brand.OrganizationDisplayName}";
+    }
+
+    private static string MainNavigationIcon(string title) =>
+        title switch
+        {
+            "Dashboard" => "[HOME]",
+            "Inbox" => "[MAIL]",
+            "Hockey Operations" => "[HO]",
+            "Organization" => "[ORG]",
+            "League" => "[LG]",
+            "Season" => "[SEAS]",
+            "Reports / History" => "[REP]",
+            "Settings placeholder" => "[SET]",
+            _ => "[APP]"
+        };
+
+    private static string NavigationHeaderText(string title, string header) =>
+        $"{MainNavigationIcon(title)} {header}";
 
     private void Advance(int days) => State.Advance(days);
 
@@ -3008,6 +3073,13 @@ internal sealed class MainWindow : Window
         var budget = State.BudgetOverview;
         var cap = State.SalaryCap;
         _dashboardPanel.Children.Clear();
+        _dashboardPanel.Children.Add(UiPresentation.UiTeamHeader(
+            CurrentTeamBranding(),
+            CurrentLeagueBranding(),
+            State.TeamRecordText,
+            State.PlayerOrganizationLeagueProfile.CurrentStrategy.ToString(),
+            OwnerMoodText(),
+            cap.IsEnabled ? cap.Status.ToString() : budget.Status.ToString()));
 
         _dashboardPanel.Children.Add(new TextBlock
         {
@@ -3264,7 +3336,7 @@ internal sealed class MainWindow : Window
     {
         if (_tabItems.TryGetValue(title, out var item))
         {
-            item.Header = header;
+            item.Header = NavigationHeaderText(title, header);
         }
     }
 
@@ -4705,13 +4777,17 @@ internal sealed class MainWindow : Window
     private IReadOnlyList<SelectablePersonRow> BuildTeamRows() =>
         State.ScenarioSnapshot.LeagueProfile.Teams
             .OrderBy(team => team.TeamName, StringComparer.Ordinal)
-            .Select(team => new SelectablePersonRow(
-                team.OrganizationId,
-                team.TeamName,
-                "Team",
-                $"{team.DisplayLeagueName} | {team.DisplayDivisionConference} | {team.City}, {team.Region}",
-                $"Record {team.PreviousRecord} | budget {team.Budget:C0} | roster {team.RosterQuality} | prospects {team.ProspectStrength}",
-                $"{team.DisplayCurrentStrategy} | staff {team.DisplayStaffQuality} | difficulty {team.Difficulty}"))
+            .Select(team =>
+            {
+                var brand = BrandingFor(team.OrganizationId);
+                return new SelectablePersonRow(
+                    team.OrganizationId,
+                    $"{brand.TeamAbbreviation} {team.TeamName}",
+                    "Team",
+                    $"{brand.Monogram.Letters} crest | {team.DisplayLeagueName} | {team.DisplayDivisionConference} | {team.City}, {team.Region}",
+                    $"Record {team.PreviousRecord} | budget {team.Budget:C0} | roster {team.RosterQuality} | prospects {team.ProspectStrength}",
+                    $"{brand.VisualStyleDescriptor} | {team.DisplayCurrentStrategy} | staff {team.DisplayStaffQuality} | difficulty {team.Difficulty}");
+            })
             .ToArray();
 
     private UIElement BuildTeamDetail(SelectablePersonRow? row)
@@ -4728,7 +4804,20 @@ internal sealed class MainWindow : Window
         }
 
         var roster = State.OtherTeamTradeRoster(team.OrganizationId);
+        var brand = BrandingFor(team.OrganizationId);
         var panel = CreateDetailPanel(team.TeamName, $"{team.City}, {team.Region}, {team.Country}");
+        panel.Children.Insert(0, UiPresentation.UiTeamCard(
+            brand,
+            $"{brand.TeamAbbreviation} {brand.OrganizationDisplayName}",
+            $"{brand.LeagueName} | {brand.ConferenceDivision}",
+            new[]
+            {
+                $"Monogram: {brand.Monogram.Letters} | Crest: {brand.LogoPlaceholder}",
+                $"Style: {brand.VisualStyleDescriptor} | Banner: {brand.BannerStyle}",
+                $"Arena: {brand.ArenaName}",
+                $"Record: {team.PreviousRecord} | Strategy: {team.DisplayCurrentStrategy}"
+            },
+            selected: team.OrganizationId == State.ScenarioSnapshot.Organization.OrganizationId));
         AddSubHeader(panel, "Team Overview");
         AddLine(panel, "League / division", $"{team.DisplayLeagueName} | {team.DisplayDivisionConference}");
         AddLine(panel, "Arena", team.DisplayArena);
@@ -9526,7 +9615,11 @@ internal sealed class MainWindow : Window
         builder.AppendLine($"History: {profile.Identity.HistorySummary}");
         builder.AppendLine();
         builder.AppendLine("Your Team");
-        builder.AppendLine($"{team.LogoPlaceholder}: {team.TeamName}");
+        var brand = CurrentTeamBranding();
+        var leagueBrand = CurrentLeagueBranding();
+        builder.AppendLine($"{brand.TeamAbbreviation} {team.TeamName} | Monogram {brand.Monogram.Letters} | Crest {brand.LogoPlaceholder}");
+        builder.AppendLine($"League identity: {leagueBrand.VisualStyleDescriptor} | Header: {leagueBrand.HeaderTreatment}");
+        builder.AppendLine($"Team visual identity: {brand.VisualStyleDescriptor} | {brand.BannerStyle} | {brand.JerseyStripePattern}");
         builder.AppendLine($"Previous record: {team.PreviousRecord}");
         builder.AppendLine($"Owner expectations: {team.OwnerExpectations}");
         builder.AppendLine($"Budget: {team.Budget:C0}");
@@ -10261,7 +10354,7 @@ internal sealed class MainWindow : Window
         {
             var marker = team.OrganizationId == State.ScenarioSnapshot.Organization.OrganizationId ? "*" : " ";
             var diff = team.GoalsFor - team.GoalsAgainst;
-            builder.AppendLine($"{rank,2}{marker} {team.TeamName,-28} {team.GamesPlayed,2} {team.Wins,3} {team.Losses,3} {team.OvertimeLosses,3} {team.Points,4} {team.GoalsFor,4} {team.GoalsAgainst,4} {diff,4}");
+            builder.AppendLine($"{rank,2}{marker} {TeamName(team.OrganizationId),-28} {team.GamesPlayed,2} {team.Wins,3} {team.Losses,3} {team.OvertimeLosses,3} {team.Points,4} {team.GoalsFor,4} {team.GoalsAgainst,4} {diff,4}");
             rank++;
         }
         builder.AppendLine();
@@ -10606,22 +10699,17 @@ internal sealed class MainWindow : Window
 
     private string TeamName(string organizationId)
     {
-        if (organizationId == State.ScenarioSnapshot.Organization.OrganizationId)
-        {
-            return State.ScenarioSnapshot.Organization.Name;
-        }
-
         var standingsName = State.ScenarioSnapshot.Standings?.Teams
             .FirstOrDefault(team => string.Equals(team.OrganizationId, organizationId, StringComparison.Ordinal))
             ?.TeamName;
         if (!string.IsNullOrWhiteSpace(standingsName))
         {
-            return standingsName;
+            return BrandedTeamLabel(organizationId, standingsName);
         }
 
         var leagueTeam = SeasonFrameworkService.LeagueTeams(State.ScenarioSnapshot)
             .FirstOrDefault(team => string.Equals(team.OrganizationId, organizationId, StringComparison.Ordinal));
-        return string.IsNullOrWhiteSpace(leagueTeam.TeamName) ? organizationId : leagueTeam.TeamName;
+        return BrandedTeamLabel(organizationId, string.IsNullOrWhiteSpace(leagueTeam.TeamName) ? organizationId : leagueTeam.TeamName);
     }
 
     private string BuildSeasonReadiness()
@@ -10896,6 +10984,7 @@ internal sealed class AlphaDesktopState
         prepared = _tactics.EnsureTactics(prepared);
         prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         prepared = _arbitration.EnsureArbitration(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
+        prepared = new UiBrandingService().EnsureBranding(prepared);
         ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();

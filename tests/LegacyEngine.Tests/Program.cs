@@ -110,6 +110,7 @@ var alpha713AiFrontOfficeDecisionTests = new Alpha713AiFrontOfficeDecisionTests(
 var alpha80PresentationLayerTests = new Alpha80PresentationLayerTests();
 var alpha81HockeyOperationsVisualTests = new Alpha81HockeyOperationsVisualTests();
 var alpha82DraftTradeVisualTests = new Alpha82DraftTradeVisualTests();
+var alpha83TeamBrandingTests = new Alpha83TeamBrandingTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1478,6 +1479,14 @@ runner.Run("alpha 8.2 draft supports tags compare and live actions", alpha82Draf
 runner.Run("alpha 8.2 trade center uses separated proposal buckets and team context", alpha82DraftTradeVisualTests.TradeCenterUsesSeparatedProposalBucketsAndTeamContext);
 runner.Run("alpha 8.2 trade center shows evaluation counter and impact cards", alpha82DraftTradeVisualTests.TradeCenterShowsEvaluationCounterAndImpactCards);
 runner.Run("alpha 8.2 clickable assets and hidden ratings remain safe", alpha82DraftTradeVisualTests.ClickableAssetsAndHiddenRatingsRemainSafe);
+runner.Run("alpha 8.3 every organization receives branding", alpha83TeamBrandingTests.EveryOrganizationReceivesBrandingProfile);
+runner.Run("alpha 8.3 branding fallback deterministic", alpha83TeamBrandingTests.BrandingFallbackIsDeterministic);
+runner.Run("alpha 8.3 abbreviation and monogram generated", alpha83TeamBrandingTests.TeamAbbreviationAndMonogramAreGeneratedWithoutNumbers);
+runner.Run("alpha 8.3 readable foreground and league identity selected", alpha83TeamBrandingTests.ReadableForegroundAndLeagueIdentityAreSelected);
+runner.Run("alpha 8.3 team colors persist through save load", alpha83TeamBrandingTests.TeamColorsPersistThroughSaveLoad);
+runner.Run("alpha 8.3 AlphaDesktop uses branding hooks", alpha83TeamBrandingTests.AlphaDesktopUsesBrandingPresentationHooks);
+runner.Run("alpha 8.3 semantic status colors remain separate", alpha83TeamBrandingTests.PresentationKeepsSemanticStatusColorsSeparate);
+runner.Run("alpha 8.3 no copyrighted logo assets or hidden truth", alpha83TeamBrandingTests.NoCopyrightedLogoAssetsOrHiddenTruthExposed);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

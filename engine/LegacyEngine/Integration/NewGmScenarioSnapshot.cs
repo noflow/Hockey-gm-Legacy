@@ -252,6 +252,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public TeamTactics? CurrentTactics { get; init; }
 
+    public UiBrandingRegistry BrandingRegistry { get; init; } = UiBrandingRegistry.Empty;
+
     public void Validate()
     {
         AlphaSnapshot.Validate();
@@ -260,6 +262,7 @@ public sealed record NewGmScenarioSnapshot(
         GeneralManagerProfile.Validate();
         LeagueProfile.Validate();
         TeamSelection.Validate();
+        BrandingRegistry.Validate();
 
         if (FirstDayInbox.Count == 0)
         {
