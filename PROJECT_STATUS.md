@@ -133,26 +133,27 @@ The five foundation pillars remain:
 - Alpha 8.2 - Draft War Room & Trade Center Visual Redesign
 - Alpha 8.3 - Team Branding, Icons & Visual Identity
 - Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass
+- Alpha 8.5 - Immersive GM Office Experience
 
 ## Current Milestone
 
-Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass
+Alpha 8.5 - Immersive GM Office Experience
 
 ## Current Goal
 
-Make the current AlphaDesktop interface easier to understand, faster to navigate, less crowded, and more comfortable during real alpha playtests.
+Transform the AlphaDesktop home experience into a believable GM office morning briefing that connects agenda, staff reports, medical updates, owner context, league news, organization status, and player-of-interest workflows without adding gameplay systems.
 
-## Why UX Playtest Was Next
+## Why Immersive GM Office Was Next
 
-Alpha 8.0 through Alpha 8.3 added the shared presentation layer, redesigned major workspaces, and introduced visual identity. Alpha 8.4 now reduces friction in real playtest workflows through clearer navigation, breadcrumbs, keyboard support, reset filters, feedback states, confirmation rules, and documented usability findings.
+Alpha 8.0 through Alpha 8.4 added the presentation layer, major workspace redesigns, branding, and playtest usability improvements. Alpha 8.5 now makes the first screen feel like a connected hockey front office instead of a database dashboard by surfacing the morning briefing, assistant GM, coach, scout, medical, owner, league, and player-of-interest cards.
 
 ## Next Build Target
 
-Alpha 8.5 - TBD
+Alpha 8.6 - TBD
 
 ## Next Milestones
 
-1. Alpha 8.5 - TBD
+1. Alpha 8.6 - TBD
 
 ## Build Rule
 

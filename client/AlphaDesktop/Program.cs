@@ -26,7 +26,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -709,7 +709,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = $"Hockey GM Legacy - Alpha 8.4 - GM Office | {teamBrand.OrganizationDisplayName}",
+            Text = $"Hockey GM Legacy - Alpha 8.5 - GM Office | {teamBrand.OrganizationDisplayName}",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -3280,10 +3280,6 @@ internal sealed class MainWindow : Window
             return;
         }
 
-        var snapshot = State.Snapshot;
-        var readiness = State.SeasonReadinessReport;
-        var roster = readiness.RosterReport;
-        var budget = State.BudgetOverview;
         var cap = State.SalaryCap;
         _dashboardPanel.Children.Clear();
         _dashboardPanel.Children.Add(UiPresentation.UiTeamHeader(
@@ -3292,170 +3288,313 @@ internal sealed class MainWindow : Window
             State.TeamRecordText,
             State.PlayerOrganizationLeagueProfile.CurrentStrategy.ToString(),
             OwnerMoodText(),
-            cap.IsEnabled ? cap.Status.ToString() : budget.Status.ToString()));
+            cap.IsEnabled ? cap.Status.ToString() : State.BudgetOverview.Status.ToString()));
+        _dashboardPanel.Children.Add(BuildGmOfficeHome());
+    }
 
-        _dashboardPanel.Children.Add(new TextBlock
+    private UIElement BuildGmOfficeHome()
+    {
+        var snapshot = State.Snapshot;
+        var office = new Grid { Margin = new Thickness(0, 2, 0, 0) };
+        office.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2.1, GridUnitType.Star) });
+        office.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var main = new StackPanel { Margin = new Thickness(0, 0, 14, 0) };
+        main.Children.Add(BuildMorningBriefingCard());
+        main.Children.Add(BuildTodayAgendaCard());
+        main.Children.Add(BuildFrontOfficeReportGrid());
+
+        var sidebar = new StackPanel();
+        sidebar.Children.Add(BuildOrganizationSnapshotCard());
+        sidebar.Children.Add(BuildLeagueSnapshotCard());
+        sidebar.Children.Add(BuildPlayerOfInterestCard());
+
+        Grid.SetColumn(main, 0);
+        Grid.SetColumn(sidebar, 1);
+        office.Children.Add(main);
+        office.Children.Add(sidebar);
+
+        var wrapper = new StackPanel();
+        wrapper.Children.Add(new TextBlock
         {
-            Text = "Dashboard",
+            Text = "GM Office",
             FontSize = 26,
             FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            Foreground = UiTheme.Text,
             Margin = new Thickness(0, 0, 0, 4)
         });
-        _dashboardPanel.Children.Add(new TextBlock
+        wrapper.Children.Add(new TextBlock
         {
-            Text = $"{snapshot.Organization?.Name ?? snapshot.OrganizationId} | {snapshot.WorldState.WorldName}",
-            FontSize = 14,
-            Foreground = new SolidColorBrush(Color.FromRgb(74, 88, 105)),
-            Margin = new Thickness(0, 0, 0, 16)
+            Text = $"{snapshot.GeneralManager.Identity.FirstName} starts the day at {snapshot.Organization?.Name ?? snapshot.OrganizationId}. Everything below is connected to a live workspace.",
+            FontSize = UiTypography.Body,
+            Foreground = UiTheme.MutedText,
+            Margin = new Thickness(0, 0, 0, 14),
+            TextWrapping = TextWrapping.Wrap
         });
-
-        var metrics = new WrapPanel { Orientation = Orientation.Horizontal };
-        metrics.Children.Add(CreateDashboardMetric("Current Date", snapshot.CurrentDate.ToString("yyyy-MM-dd"), snapshot.Season?.CurrentPhase.ToString() ?? snapshot.WorldState.CurrentPhase.ToString(), false));
-        metrics.Children.Add(CreateDashboardMetric("Draft Countdown", State.DraftCountdownText, State.ScenarioSnapshot.DraftExperience?.Status.ToString() ?? "PreDraft", false));
-        metrics.Children.Add(CreateDashboardMetric("Training Camp", State.TrainingCampCountdownText, State.TrainingCampStatusText, State.RosterWarningCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Inbox Unread", State.UnreadInboxCount.ToString(), "messages needing review", State.UnreadInboxCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Open Actions", State.OpenActionCount.ToString(), "Action Center items", State.OpenActionCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Urgent Actions", State.UrgentActionCount.ToString(), "need attention before advancing", State.UrgentActionCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Pending Decisions", State.PendingDecisionCount.ToString(), "GM approval required", State.PendingDecisionCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Urgent Decisions", State.UrgentPendingDecisionCount.ToString(), State.NextDecisionDeadlineText, State.UrgentPendingDecisionCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Roster Issues", State.RosterWarningCount.ToString(), roster.ValidationResult.Message, State.RosterWarningCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Game Usage", State.GameUsageWarningCount.ToString(), State.GameUsageDashboardSummary, State.GameUsageWarningCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Tactical Fit", State.CurrentTactics.FitReport.Grade.ToString(), State.TacticsDashboardSummary, State.TacticsWarningCount > 0));
-        metrics.Children.Add(CreateDashboardMetric("Staff Vacancies", State.StaffVacancies.Count.ToString(), State.StaffVacancySummary, State.StaffVacancies.Count > 0));
-        metrics.Children.Add(CreateDashboardMetric("Scouting Reports", State.ScoutingReportCount.ToString(), $"{State.ScenarioSnapshot.ScoutingOperations.Count(item => item.IsOpen)} active assignment(s)", false));
-        metrics.Children.Add(CreateDashboardMetric("League News", State.LeagueNewsCount.ToString(), "notable league items", false));
-        metrics.Children.Add(CreateDashboardMetric(
-            "Top Headline",
-            State.TopMediaHeadline?.Source.Name ?? "None",
-            State.TopMediaHeadline?.Headline ?? "No major media headline yet",
-            State.TopMediaHeadline?.Importance >= MediaImportance.Breaking));
-        metrics.Children.Add(CreateDashboardMetric("Journal", State.JournalEntries.Count.ToString(), "routine updates archived", false));
-        if (State.TradeDeadlineWindow.Status != TradeDeadlineStatus.NotStarted)
-        {
-            metrics.Children.Add(CreateDashboardMetric("Trade Deadline", State.TradeDeadlineCardTitle, State.TradeDeadlineWindow.Summary, State.TradeDeadlineWindow.Status is TradeDeadlineStatus.DeadlineWeek or TradeDeadlineStatus.DeadlineDay or TradeDeadlineStatus.Closed));
-        }
-
-        metrics.Children.Add(CreateDashboardMetric("Budget", budget.Status.ToString(), $"{budget.RemainingBudget:C0} remaining", budget.Status == BudgetStatus.OverBudget));
-        metrics.Children.Add(CreateDashboardMetric(
-            "Salary Cap",
-            cap.Status.ToString(),
-            cap.IsEnabled ? $"{cap.AvailableCapSpace:C0} remaining | {cap.CapPercentage:0.##}% used" : "Disabled by rulebook",
-            cap.Status is SalaryCapStatus.OverCap or SalaryCapStatus.Violation));
-        metrics.Children.Add(CreateDashboardMetric("Owner Mood", OwnerMoodText(), $"Job security {State.OwnerOffice.JobSecurity.Level} | Support {State.OwnerOffice.Confidence.Support}", State.OwnerOffice.JobSecurity.Level is JobSecurityLevel.HotSeat or JobSecurityLevel.Critical));
-        var nextGame = State.NextGame;
-        var lastGame = State.LastGameRecap;
-        var record = State.TeamRecordText;
-        metrics.Children.Add(CreateDashboardMetric(
-            "Next Game",
-            nextGame is null ? "None" : nextGame.Date.ToString("yyyy-MM-dd"),
-            nextGame is null ? "Season schedule pending" : DescribeGame(nextGame),
-            false));
-        metrics.Children.Add(CreateDashboardMetric(
-            "Last Game",
-            lastGame is null ? "None" : lastGame.BoxScore.FinalScore,
-            lastGame is null ? "No completed game yet" : lastGame.NarrativeSummary,
-            lastGame is not null && lastGame.WinnerOrganizationId != State.ScenarioSnapshot.Organization.OrganizationId));
-        metrics.Children.Add(CreateDashboardMetric("Team Record", record, "regular season", false));
-        metrics.Children.Add(CreateDashboardMetric("Standings Rank", State.StandingsRankText, "league table", false));
-        metrics.Children.Add(CreateDashboardMetric("Playoffs", State.PlayoffStatusText, State.PlayoffDashboardSummary, State.ScenarioSnapshot.Playoffs.Bracket?.Status == PlayoffStatus.InProgress));
-        _dashboardPanel.Children.Add(metrics);
-
-        var lower = new Grid { Margin = new Thickness(0, 14, 0, 0) };
-        lower.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.25, GridUnitType.Star) });
-        lower.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var actionsCard = CreateDashboardCard("Quick Advance Controls", out var actions);
-        AddActions(actions,
-            CreateDetailButton("Advance Day", () => Advance(1)),
-            CreateDetailButton("Advance Week", () => Advance(7)),
-            CreateDetailButton("Advance to Next Game", AdvanceToNextGame),
-            CreateDetailButton("Advance to Month End", AdvanceToMonthEnd),
-            CreateDetailButton("Review Inbox", () => SelectTab("Inbox")),
-            CreateDetailButton("Review Draft Board", () => SelectTab("Hockey Operations")),
-            CreateDetailButton("Review Pending Actions", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")));
-        Grid.SetColumn(actionsCard, 0);
-        lower.Children.Add(actionsCard);
-
-        var summaryCard = CreateDashboardCard("Action Center / Pending Decisions", out var summary);
-        AddLine(summary, "Owner", snapshot.Owner.Name);
-        AddLine(summary, "Job security", State.OwnerOffice.JobSecurity.Level.ToString());
-        AddLine(summary, "Owner expectation", State.OwnerOffice.Expectations.FirstOrDefault()?.Description ?? "No active owner expectation.");
-        AddLine(summary, "GM", snapshot.GeneralManager.Identity.DisplayName);
-        AddLine(summary, "Head scout", snapshot.Scout.Name);
-        AddLine(summary, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
-        AddLine(summary, "Staff vacancies", State.StaffVacancySummary);
-        AddLine(summary, "Season readiness", readiness.RosterStatus);
-        AddLine(summary, "Last game", lastGame is null ? "No completed game" : lastGame.BoxScore.FinalScore);
-        AddLine(summary, "Last top performer", lastGame?.TopLineSummary ?? "No game report yet");
-        AddLine(summary, "Last game concern", lastGame?.KeyConcern ?? "No game concern yet");
-        AddLine(summary, "Next game", nextGame is null ? "No scheduled game" : $"{nextGame.Date:yyyy-MM-dd}: {DescribeGame(nextGame)}");
-        AddLine(summary, "Team record", record);
-        AddLine(summary, "Standings rank", State.StandingsRankText);
-        AddLine(summary, "Playoffs", State.PlayoffDashboardSummary);
-        AddLine(summary, "Top Headline", State.TopMediaHeadline?.Headline ?? "No major headline yet.");
-        AddLine(summary, "Urgent decisions", $"{State.UrgentPendingDecisionCount} urgent of {State.PendingDecisionCount} open");
-        AddLine(summary, "Open actions", $"{State.OpenActionCount} open / {State.UrgentActionCount} urgent");
-        AddLine(summary, "Inbox focus", State.InboxFocusSummary);
-        AddLine(summary, "League news", $"{State.LeagueNewsCount} notable item(s)");
-        AddLine(summary, "Journal", $"{State.JournalEntries.Count} routine update(s) archived");
-        AddLine(summary, "Trade deadline", State.TradeDeadlineWindow.Summary);
-        AddLine(summary, "Last advance result", State.LastStopReason);
-        AddLine(summary, "Next stop reason", State.LastStopReason);
-        var nextAction = State.ActionCenterItems.FirstOrDefault(item => item.Status == ActionCenterStatus.Open);
-        AddLine(summary, "Next recommended action", nextAction?.RecommendedAction ?? "No urgent work queued.");
-        if (State.LatestMonthlySummary is not null)
-        {
-            AddLine(summary, "Monthly summary", $"{State.LatestMonthlySummary.MonthName}: {State.LatestMonthlySummary.TeamRecordForMonth}");
-            AddParagraph(summary, State.LatestMonthlySummary.ExecutiveNarrative);
-        }
-        AddLine(summary, "Budget", $"{budget.UsedBudget:C0} used of {budget.TotalBudget:C0}");
-        AddParagraph(summary, State.LatestSummary);
-        Grid.SetColumn(summaryCard, 1);
-        lower.Children.Add(summaryCard);
-        _dashboardPanel.Children.Add(lower);
-
-        var workflow = new Grid { Margin = new Thickness(0, 14, 0, 0) };
-        workflow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        workflow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        workflow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-        var agendaCard = CreateDashboardCard("Daily Agenda", out var agenda);
-        foreach (var line in State.DailyAgenda)
-        {
-            AddParagraph(agenda, line);
-        }
-        Grid.SetColumn(agendaCard, 0);
-        workflow.Children.Add(agendaCard);
-
-        var urgentCard = CreateDashboardCard("Top Urgent Actions", out var urgent);
-        var topActions = State.ActionCenterItems.Where(item => item.Status == ActionCenterStatus.Open).Take(4).ToArray();
-        if (topActions.Length == 0)
-        {
-            AddParagraph(urgent, "No open Action Center items.");
-        }
-        foreach (var item in topActions)
-        {
-            AddLine(urgent, item.Category.ToString(), $"{item.Title} - {item.RecommendedAction}");
-        }
-        AddActions(urgent, CreateDetailButton("View All Actions", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")));
-        Grid.SetColumn(urgentCard, 1);
-        workflow.Children.Add(urgentCard);
-
-        var assistantCard = CreateDashboardCard("Assistant GM Recommendations", out var assistant);
-        foreach (var recommendation in State.AssistantGmRecommendations)
-        {
-            AddParagraph(assistant, recommendation);
-        }
-        AddSubHeader(assistant, "Upcoming Events");
-        foreach (var item in State.UpcomingActionEvents)
-        {
-            AddParagraph(assistant, item);
-        }
-        Grid.SetColumn(assistantCard, 2);
-        workflow.Children.Add(assistantCard);
-        _dashboardPanel.Children.Add(workflow);
+        wrapper.Children.Add(office);
+        return wrapper;
     }
+
+    private UIElement BuildMorningBriefingCard()
+    {
+        var snapshot = State.Snapshot;
+        var currentDate = snapshot.CurrentDate;
+        var panel = CreateDetailPanel($"Good Morning {snapshot.GeneralManager.Identity.FirstName}", $"{currentDate:dddd} | {currentDate:MMMM d, yyyy}");
+        panel.Children.Insert(1, UiPresentation.BadgeRow(
+            ($"Owner {OwnerMoodText()}", OwnerMoodSemantic()),
+            ($"Confidence {State.OwnerOffice.Confidence.Confidence}%", "info"),
+            ($"Urgent {State.UrgentActionCount}", State.UrgentActionCount > 0 ? "critical" : "positive"),
+            ($"Important {State.OpenActionCount}", State.OpenActionCount > 0 ? "caution" : "positive"),
+            ($"Routine {State.JournalEntries.Count}", "neutral")));
+
+        var nextGame = State.NextGame;
+        AddLine(panel, "Tonight", nextGame is null ? "No game scheduled." : $"{DescribeGame(nextGame)} | {nextGame.Date:MMM d}");
+        AddLine(panel, "Last game", State.LastGameRecap is null ? "No completed game yet." : $"{State.LastGameRecap.BoxScore.FinalScore} | {State.LastGameRecap.TopLineSummary}");
+        AddLine(panel, "Assistant GM", MorningAssistantQuote());
+        AddLine(panel, "Top headline", State.TopMediaHeadline?.Headline ?? "No major league headline yet.");
+        AddActions(panel,
+            CreateDetailButton("Advance Day", () => Advance(1)),
+            CreateDetailButton("Review Action Center", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")),
+            CreateDetailButton("Open Inbox", () => SelectTab("Inbox")),
+            CreateDetailButton("Save Career", SaveCareer));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildTodayAgendaCard()
+    {
+        var panel = CreateDetailPanel("Today's Agenda", "Chronological front-office priorities");
+        var agenda = State.DailyAgenda
+            .Concat(State.UpcomingActionEvents)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.Ordinal)
+            .Take(8)
+            .ToArray();
+        if (agenda.Length == 0)
+        {
+            AddParagraph(panel, "No urgent meetings, deadlines, or game-day items are scheduled. Review scouting, roster, or development work when ready.");
+        }
+
+        foreach (var line in agenda)
+        {
+            AddParagraph(panel, $"• {line}");
+        }
+
+        AddActions(panel,
+            CreateDetailButton("Go To Action Center", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")),
+            CreateDetailButton("Review Season", () => SelectTab("Season")));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildFrontOfficeReportGrid()
+    {
+        var grid = new Grid { Margin = new Thickness(0, 2, 0, 0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var assistant = BuildOfficeReportCard("Assistant GM", "Current concerns", State.AssistantGmRecommendations.Take(3), "Open Action Center", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions"));
+        var coach = BuildOfficeReportCard("Coach Morning Report", "One short hockey-ops note", BuildCoachMorningReportLines(), "Review Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup"));
+        var scout = BuildOfficeReportCard("Head Scout Report", "Latest discoveries", BuildHeadScoutReportLines(), "Open Scouting", () => SelectWorkspaceScreen("Hockey Operations", "Scouting"));
+        Grid.SetColumn(assistant, 0);
+        Grid.SetColumn(coach, 1);
+        Grid.SetColumn(scout, 2);
+        grid.Children.Add(assistant);
+        grid.Children.Add(coach);
+        grid.Children.Add(scout);
+
+        var second = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+        second.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        second.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        second.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var medical = BuildOfficeReportCard("Medical Report", "Availability", BuildMedicalReportLines(), "Review Medical", () => SelectWorkspaceScreen("Hockey Operations", "Roster"));
+        var owner = BuildOfficeReportCard("Owner Report", "Only when it matters", BuildOwnerReportLines(), "Open Owner", () => SelectWorkspaceScreen("Organization", "Owner"));
+        var transactions = BuildOfficeReportCard("Recent Transactions", "League wire", BuildRecentTransactionLines(), "Open League News", () => SelectWorkspaceScreen("Inbox", "League News / Transaction Wire"));
+        Grid.SetColumn(medical, 0);
+        Grid.SetColumn(owner, 1);
+        Grid.SetColumn(transactions, 2);
+        second.Children.Add(medical);
+        second.Children.Add(owner);
+        second.Children.Add(transactions);
+
+        var stack = new StackPanel();
+        stack.Children.Add(grid);
+        stack.Children.Add(second);
+        return stack;
+    }
+
+    private UIElement BuildOfficeReportCard(string title, string subtitle, IEnumerable<string> lines, string actionLabel, Action action)
+    {
+        var panel = CreateDetailPanel(title, subtitle);
+        var any = false;
+        foreach (var line in lines.Where(line => !string.IsNullOrWhiteSpace(line)).Take(4))
+        {
+            AddParagraph(panel, line);
+            any = true;
+        }
+
+        if (!any)
+        {
+            AddParagraph(panel, "No new item this morning.");
+        }
+
+        AddActions(panel, CreateDetailButton(actionLabel, action));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildOrganizationSnapshotCard()
+    {
+        var readiness = State.SeasonReadinessReport;
+        var roster = readiness.RosterReport;
+        var budget = State.BudgetOverview;
+        var cap = State.SalaryCap;
+        var panel = CreateDetailPanel("Organization Snapshot", State.ScenarioSnapshot.Organization.Name);
+        AddLine(panel, "Record", State.TeamRecordText);
+        AddLine(panel, "Cap", cap.IsEnabled ? $"{cap.Status} | {cap.AvailableCapSpace:C0} available" : "Disabled by rulebook");
+        AddLine(panel, "Budget", $"{budget.Status} | {budget.RemainingBudget:C0} remaining");
+        AddLine(panel, "Roster", $"{roster.CurrentRosterSize}/{roster.RequiredRosterSize} opening target");
+        AddLine(panel, "Chemistry", State.LineChemistryReport.Overall.Score.Grade);
+        AddLine(panel, "Development", State.GameUsageDashboardSummary);
+        AddLine(panel, "Competitive window", State.PlayerOrganizationLeagueProfile.CurrentStrategy);
+        AddLine(panel, "Organization grade", readiness.OrganizationHealth);
+        AddActions(panel,
+            CreateDetailButton("Open Organization", () => SelectTab("Organization")),
+            CreateDetailButton("Open Hockey Ops", () => SelectTab("Hockey Operations")));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildLeagueSnapshotCard()
+    {
+        var panel = CreateDetailPanel("League Snapshot", State.ScenarioSnapshot.LeagueProfile.Identity.ShortName);
+        AddLine(panel, "Leader", State.StandingsRankText);
+        AddLine(panel, "Top scorer", BuildLeagueLeaderLine("Points"));
+        AddLine(panel, "Best goalie", BuildLeagueLeaderLine("Goalie"));
+        AddLine(panel, "Biggest story", State.TopMediaHeadline?.Headline ?? "No major story yet.");
+        AddLine(panel, "Next draft", State.DraftCountdownText);
+        AddActions(panel,
+            CreateDetailButton("Standings", () => SelectWorkspaceScreen("Season", "Standings")),
+            CreateDetailButton("League News", () => SelectWorkspaceScreen("Inbox", "League News / Transaction Wire")));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildPlayerOfInterestCard()
+    {
+        var row = BuildPlayerOfInterestRow();
+        var panel = CreateDetailPanel("Player of Interest", row?.Name ?? "No player selected");
+        if (row is null)
+        {
+            AddParagraph(panel, "No roster, prospect, draft, or scouting target is available yet.");
+            return UiPresentation.Card(panel);
+        }
+
+        panel.Children.Insert(1, UiPresentation.BadgeRow(
+            (row.Kind, "info"),
+            (State.InjuryStatus(row.PersonId), StatusSemantic(State.InjuryStatus(row.PersonId))),
+            (State.ScoutingConfidenceText(row.PersonId), ConfidenceSemantic(State.ScoutingConfidenceText(row.PersonId)))));
+        AddLine(panel, "Role / status", row.Primary);
+        AddLine(panel, "Context", row.Secondary);
+        AddParagraph(panel, row.Summary);
+        AddActions(panel,
+            CreateDetailButton("Open Player Card", () => OpenUniversalPersonCard(row.PersonId)),
+            CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Go To Hockey Ops", () => SelectTab("Hockey Operations")));
+        return UiPresentation.Card(panel);
+    }
+
+    private IEnumerable<string> BuildCoachMorningReportLines()
+    {
+        yield return State.CurrentGameUsage.CoachRecommendations.FirstOrDefault(recommendation => recommendation.IsImportant)?.SuggestedAction
+            ?? State.CurrentTactics.Recommendations.FirstOrDefault(recommendation => recommendation.IsImportant)?.SuggestedAction
+            ?? State.LineChemistryReport.Overall.Recommendation;
+    }
+
+    private IEnumerable<string> BuildHeadScoutReportLines()
+    {
+        var reports = BuildScoutingRows().Take(3).ToArray();
+        if (reports.Length == 0)
+        {
+            yield return "No new scouting report has been completed. Assign a scout from Hockey Operations.";
+            yield break;
+        }
+
+        foreach (var report in reports)
+        {
+            yield return $"{report.Name}: {report.Secondary}";
+        }
+    }
+
+    private IEnumerable<string> BuildMedicalReportLines()
+    {
+        var rows = BuildRosterRows()
+            .Where(row => IsLikelyPersonRow(row) && !State.InjuryStatus(row.PersonId).Equals("Available", StringComparison.OrdinalIgnoreCase))
+            .Take(3)
+            .ToArray();
+        if (rows.Length == 0)
+        {
+            yield return "Roster is healthy enough for today's review.";
+            yield break;
+        }
+
+        foreach (var row in rows)
+        {
+            yield return $"{row.Name} ({State.PersonPosition(row.PersonId)}): {State.InjuryStatus(row.PersonId)}";
+        }
+    }
+
+    private IEnumerable<string> BuildOwnerReportLines()
+    {
+        var office = State.OwnerOffice;
+        if (office.JobSecurity.Level is JobSecurityLevel.HotSeat or JobSecurityLevel.Critical)
+        {
+            yield return $"Job security is {office.JobSecurity.Level}. {office.JobSecurity.Explanation}";
+        }
+        else if (State.BudgetOverview.Status == BudgetStatus.OverBudget)
+        {
+            yield return "Owner warning: hockey operations spending needs attention.";
+        }
+        else if (office.Confidence.Confidence >= 70)
+        {
+            yield return "Owner confidence is stable. Keep executing the current plan.";
+        }
+    }
+
+    private IEnumerable<string> BuildRecentTransactionLines()
+    {
+        foreach (var transaction in State.LeagueTransactions.Take(4))
+        {
+            yield return $"{transaction.Date:MMM d}: {transaction.TeamName} - {transaction.Description}";
+        }
+    }
+
+    private SelectablePersonRow? BuildPlayerOfInterestRow() =>
+        BuildRosterRows().FirstOrDefault(row => IsLikelyPersonRow(row) && !State.InjuryStatus(row.PersonId).Equals("Available", StringComparison.OrdinalIgnoreCase))
+        ?? BuildProspectRows().FirstOrDefault(row => IsLikelyPersonRow(row))
+        ?? BuildScoutingRows().FirstOrDefault(row => IsLikelyPersonRow(row))
+        ?? BuildRosterRows().FirstOrDefault(IsLikelyPersonRow);
+
+    private string MorningAssistantQuote() =>
+        State.AssistantGmRecommendations.FirstOrDefault()
+        ?? State.ActionCenterItems.FirstOrDefault(item => item.Status == ActionCenterStatus.Open)?.RecommendedAction
+        ?? "No urgent move this morning. Review the roster and scouting board when ready.";
+
+    private string BuildLeagueLeaderLine(string label)
+    {
+        var stats = State.ScenarioSnapshot.PlayerStats;
+        if (stats is null || stats.Count == 0)
+        {
+            return $"{label} leader pending season stats.";
+        }
+
+        var leader = stats
+            .OrderByDescending(stat => stat.Points)
+            .ThenByDescending(stat => stat.Goals)
+            .FirstOrDefault();
+        return leader is null ? $"{label} leader pending season stats." : $"{FindPersonName(leader.PersonId)} - {leader.Points} pts";
+    }
+
+    private string OwnerMoodSemantic() =>
+        State.OwnerOffice.JobSecurity.Level is JobSecurityLevel.HotSeat or JobSecurityLevel.Critical
+            ? "critical"
+            : State.OwnerOffice.Confidence.Support >= 60 ? "positive" : "caution";
 
     private Border CreateDashboardMetric(string label, string value, string note, bool warning)
     {

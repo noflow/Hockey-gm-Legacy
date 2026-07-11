@@ -112,6 +112,7 @@ var alpha81HockeyOperationsVisualTests = new Alpha81HockeyOperationsVisualTests(
 var alpha82DraftTradeVisualTests = new Alpha82DraftTradeVisualTests();
 var alpha83TeamBrandingTests = new Alpha83TeamBrandingTests();
 var alpha84UxNavigationTests = new Alpha84UxNavigationTests();
+var alpha85GmOfficeExperienceTests = new Alpha85GmOfficeExperienceTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1496,6 +1497,11 @@ runner.Run("alpha 8.4 save load and density UX visible", alpha84UxNavigationTest
 runner.Run("alpha 8.4 Action Center Go To opens specific context", alpha84UxNavigationTests.ActionCenterGoToOpensSpecificContext);
 runner.Run("alpha 8.4 playtest findings documented", alpha84UxNavigationTests.PlaytestFindingsAreDocumented);
 runner.Run("alpha 8.4 no hidden ratings or remote telemetry", alpha84UxNavigationTests.NoHiddenRatingsOrRemoteTelemetryAdded);
+runner.Run("alpha 8.5 GM Office home replaces metric dashboard", alpha85GmOfficeExperienceTests.GmOfficeHomeReplacesMetricDashboard);
+runner.Run("alpha 8.5 morning briefing panels exist", alpha85GmOfficeExperienceTests.MorningBriefingPanelsExist);
+runner.Run("alpha 8.5 office sidebar snapshots exist", alpha85GmOfficeExperienceTests.OfficeSidebarSnapshotsExist);
+runner.Run("alpha 8.5 office cards navigate to workspaces", alpha85GmOfficeExperienceTests.OfficeCardsNavigateToWorkspaces);
+runner.Run("alpha 8.5 card consistency and no gameplay change documented", alpha85GmOfficeExperienceTests.CardConsistencyAndNoGameplayChangeDocumented);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
