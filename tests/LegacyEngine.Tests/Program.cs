@@ -109,6 +109,7 @@ var alpha712OrganizationPlanningTests = new Alpha712OrganizationPlanningTests();
 var alpha713AiFrontOfficeDecisionTests = new Alpha713AiFrontOfficeDecisionTests();
 var alpha80PresentationLayerTests = new Alpha80PresentationLayerTests();
 var alpha81HockeyOperationsVisualTests = new Alpha81HockeyOperationsVisualTests();
+var alpha82DraftTradeVisualTests = new Alpha82DraftTradeVisualTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1471,6 +1472,12 @@ runner.Run("alpha 8.1 lineup board shows forward defense and goalie slots", alph
 runner.Run("alpha 8.1 grouped operations views exist", alpha81HockeyOperationsVisualTests.GroupedOperationsViewsExist);
 runner.Run("alpha 8.1 scouting transactions special teams and tactics are visual", alpha81HockeyOperationsVisualTests.ScoutingTransactionsSpecialTeamsAndTacticsAreVisual);
 runner.Run("alpha 8.1 selected player card uses compact sections and no hidden truth", alpha81HockeyOperationsVisualTests.SelectedPlayerCardUsesCompactSectionsAndNoHiddenTruth);
+runner.Run("alpha 8.2 draft war room uses integrated four part layout", alpha82DraftTradeVisualTests.DraftWarRoomUsesIntegratedFourPartLayout);
+runner.Run("alpha 8.2 draft rows and prospect card expose readable intelligence", alpha82DraftTradeVisualTests.DraftBoardRowsAndProspectCardExposeReadableIntelligence);
+runner.Run("alpha 8.2 draft supports tags compare and live actions", alpha82DraftTradeVisualTests.DraftWarRoomSupportsTagsCompareAndLiveDraftActions);
+runner.Run("alpha 8.2 trade center uses separated proposal buckets and team context", alpha82DraftTradeVisualTests.TradeCenterUsesSeparatedProposalBucketsAndTeamContext);
+runner.Run("alpha 8.2 trade center shows evaluation counter and impact cards", alpha82DraftTradeVisualTests.TradeCenterShowsEvaluationCounterAndImpactCards);
+runner.Run("alpha 8.2 clickable assets and hidden ratings remain safe", alpha82DraftTradeVisualTests.ClickableAssetsAndHiddenRatingsRemainSafe);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

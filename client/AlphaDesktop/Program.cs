@@ -112,6 +112,11 @@ internal sealed class MainWindow : Window
     private ListBox? _tradeOtherAssetsList;
     private ListBox? _tradeYouGiveList;
     private ListBox? _tradeYouReceiveList;
+    private Grid? _draftWarRoomPanel;
+    private Grid? _tradeCenterPanel;
+    private string _draftWarRoomBoard = "My Board";
+    private string? _selectedDraftWarRoomProspectId;
+    private string? _selectedTradeCenterOrganizationId;
     private bool _layoutReady;
     private bool _isRefreshing;
 
@@ -559,13 +564,13 @@ internal sealed class MainWindow : Window
             new("Waivers", CreateTextScreen("Hockey Waivers")),
             new("Scouting", CreateSelectablePeopleContent("Scouting")),
             new("Scouting Operations", CreateSelectablePeopleContent("Scouting Operations")),
-            new("Trades", CreateSelectablePeopleContent("Trades")),
+            new("Trades", CreateTradeCenterWorkspace()),
             new("Training Camp", CreateSelectablePeopleContent("Training Camp"))
         };
         if (State.IsDraftUiEnabled)
         {
             hockeyOperations.Insert(5, new WorkspaceScreen("Draft Board", CreateSelectablePeopleContent("Draft Board")));
-            hockeyOperations.Insert(5, new WorkspaceScreen("Draft War Room", CreateTextScreen("Draft War Room")));
+            hockeyOperations.Insert(5, new WorkspaceScreen("Draft War Room", CreateDraftWarRoomWorkspace()));
         }
         AddWorkspaceTab(tabs, "Hockey Operations", hockeyOperations);
 
@@ -836,6 +841,680 @@ internal sealed class MainWindow : Window
             Background = Brushes.White,
             Content = _dashboardPanel
         };
+    }
+
+    private UIElement CreateDraftWarRoomWorkspace()
+    {
+        _draftWarRoomPanel = new Grid { Background = Brushes.White, Margin = new Thickness(12) };
+        RefreshDraftWarRoomWorkspace();
+        return new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = Brushes.White,
+            Content = _draftWarRoomPanel
+        };
+    }
+
+    private UIElement CreateTradeCenterWorkspace()
+    {
+        _tradeCenterPanel = new Grid { Background = Brushes.White, Margin = new Thickness(12) };
+        RefreshTradeCenterWorkspace();
+        return new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = Brushes.White,
+            Content = _tradeCenterPanel
+        };
+    }
+
+    private void RefreshDraftWarRoomWorkspace()
+    {
+        if (_draftWarRoomPanel is null || _state is null)
+        {
+            return;
+        }
+
+        _draftWarRoomPanel.Children.Clear();
+        _draftWarRoomPanel.RowDefinitions.Clear();
+        _draftWarRoomPanel.ColumnDefinitions.Clear();
+        _draftWarRoomPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        _draftWarRoomPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        _draftWarRoomPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
+        _draftWarRoomPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _draftWarRoomPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(430) });
+
+        var rows = BuildDraftWarRoomVisualRows();
+        var selected = rows.FirstOrDefault(row => row.PersonId == _selectedDraftWarRoomProspectId) ?? rows.FirstOrDefault();
+        _selectedDraftWarRoomProspectId = selected?.PersonId;
+
+        var left = BuildDraftWarRoomLeftPanel();
+        var center = BuildDraftWarRoomCenterPanel(rows, selected);
+        var right = BuildDraftWarRoomProspectPanel(selected?.PersonId);
+        var bottom = BuildDraftWarRoomBottomStrip();
+
+        Grid.SetColumn(left, 0);
+        Grid.SetColumn(center, 1);
+        Grid.SetColumn(right, 2);
+        Grid.SetRow(bottom, 1);
+        Grid.SetColumnSpan(bottom, 3);
+        _draftWarRoomPanel.Children.Add(left);
+        _draftWarRoomPanel.Children.Add(center);
+        _draftWarRoomPanel.Children.Add(right);
+        _draftWarRoomPanel.Children.Add(bottom);
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildDraftWarRoomVisualRows()
+    {
+        var board = State.DraftWarRoom;
+        IEnumerable<DraftWarRoomEntry> entries = board.BoardEntries.Where(entry => !entry.IsRemoved);
+        entries = _draftWarRoomBoard switch
+        {
+            "Watch List" => entries.Where(entry => entry.Tags.Count > 0 || entry.IsFavorite || entry.IsPinned),
+            "Sleepers" => entries.Where(entry => entry.Tags.Contains(DraftWatchTag.Sleeper)),
+            "Avoid List" => entries.Where(entry => entry.Tags.Contains(DraftWatchTag.Avoid)),
+            "Medical Concerns" => entries.Where(entry => entry.Tags.Contains(DraftWatchTag.MedicalConcern)),
+            "Character Concerns" => entries.Where(entry => entry.Tags.Contains(DraftWatchTag.CharacterConcern)),
+            "Late-Round Targets" => entries.Where(entry => entry.Tags.Contains(DraftWatchTag.LateRoundTarget)),
+            _ => entries
+        };
+
+        return entries
+            .OrderBy(entry => BoardRankFor(entry))
+            .Take(80)
+            .Select(entry =>
+            {
+                var draftEntry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(item => item.ProspectPersonId == entry.ProspectPersonId);
+                var card = State.DraftIntelligenceCard(entry.ProspectPersonId);
+                var consensus = State.DraftConsensus(entry.ProspectPersonId);
+                var tags = entry.Tags.Count == 0 ? "Watching" : string.Join(", ", entry.Tags);
+                var quick = draftEntry is null ? card.CurrentTeamLeague : State.DraftQuickScan(draftEntry);
+                var fit = card.TeamFitScore >= 78 ? "Excellent Team Fit" : card.TeamFitScore >= 62 ? "Good Team Fit" : card.TeamFitScore >= 45 ? "Neutral Fit" : "Poor Fit";
+                return new SelectablePersonRow(
+                    entry.ProspectPersonId,
+                    $"{BoardRankFor(entry)}. {entry.ProspectName}",
+                    "DraftProspect",
+                    $"{State.PositionShortText(card.Position)} | age {card.Age?.ToString() ?? "unknown"} | {quick}",
+                    $"{card.RatingDisplay} | {card.Projection} | {consensus.Level}",
+                    $"{fit} | Risk: {card.RiskSummary} | Tags: {tags}");
+            })
+            .ToArray();
+    }
+
+    private int BoardRankFor(DraftWarRoomEntry entry)
+    {
+        var card = State.DraftIntelligenceCard(entry.ProspectPersonId);
+        return _draftWarRoomBoard switch
+        {
+            "Scout Board" => card.ScoutBoardRank,
+            "Consensus Board" => card.ConsensusBoardRank,
+            "Public Board" => entry.OriginalRank,
+            _ => entry.PersonalRank
+        };
+    }
+
+    private UIElement BuildDraftWarRoomLeftPanel()
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+        panel.Children.Add(UiPresentation.UiSectionHeader("Draft War Room"));
+        var boards = new[] { "My Board", "Scout Board", "Consensus Board", "Public Board", "Watch List", "Sleepers", "Avoid List", "Medical Concerns", "Character Concerns", "Late-Round Targets" };
+        var boardButtons = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+        foreach (var board in boards)
+        {
+            boardButtons.Children.Add(CreateDetailButton(board, () =>
+            {
+                _draftWarRoomBoard = board;
+                RefreshDraftWarRoomWorkspace();
+            }, true));
+        }
+
+        panel.Children.Add(UiPresentation.Card(boardButtons));
+        panel.Children.Add(UiPresentation.UiMetricCard("Class Theme", State.DraftClassThemeText, State.DraftClassSummaryText));
+        panel.Children.Add(UiPresentation.UiMetricCard("Position Value", State.DraftPositionValueText, State.DraftClassPositionDepthText));
+        panel.Children.Add(BuildTextCard("Team Needs", string.Join(" | ", State.DraftWarRoom.Needs.Take(3).Select(need => need.Label)), string.Join(Environment.NewLine, State.DraftWarRoom.Needs.Take(4).Select(need => $"{need.Priority}: {need.Reason}"))));
+        panel.Children.Add(BuildTextCard("Pick Inventory", "Upcoming picks and rights", BuildDraftPickInventoryText()));
+        return panel;
+    }
+
+    private UIElement BuildDraftWarRoomCenterPanel(IReadOnlyList<SelectablePersonRow> rows, SelectablePersonRow? selected)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+        panel.Children.Add(UiPresentation.UiSectionHeader($"{_draftWarRoomBoard} Board"));
+        if (State.ScenarioSnapshot.DraftExperience is not null)
+        {
+            panel.Children.Add(UiPresentation.UiAlertBanner(BuildLiveDraftStatusLine(), State.ScenarioSnapshot.DraftExperience.IsPlayerTurn ? "attention" : "info"));
+        }
+
+        var list = new ListBox
+        {
+            ItemsSource = rows,
+            SelectedItem = selected,
+            MinHeight = 500,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = UiPresentation.PersonRowTemplate()
+        };
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is SelectablePersonRow row)
+            {
+                _selectedDraftWarRoomProspectId = row.PersonId;
+                RefreshDraftWarRoomWorkspace();
+            }
+        };
+        list.MouseDoubleClick += (_, _) =>
+        {
+            if (list.SelectedItem is SelectablePersonRow row)
+            {
+                OpenUniversalPersonCard(row.PersonId);
+            }
+        };
+        panel.Children.Add(rows.Count == 0
+            ? UiPresentation.UiEmptyState("No prospects match", "No prospects match this board or watch tag. Try My Board or Consensus Board.")
+            : list);
+        panel.Children.Add(BuildDraftCompareStrip(rows));
+        return panel;
+    }
+
+    private UIElement BuildDraftCompareStrip(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(UiPresentation.UiSectionHeader("Compare Prospects"));
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Compare 2-4 prospects from the current board without exposing hidden true ratings.",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = UiTheme.MutedText
+        });
+        AddActions(panel,
+            CreateDetailButton("Compare Top 4", () => ShowDraftComparePopup(rows.Take(4).Select(row => row.PersonId).ToArray()), rows.Count >= 2),
+            CreateDetailButton("View Full Profile", () =>
+            {
+                if (_selectedDraftWarRoomProspectId is not null)
+                {
+                    OpenUniversalPersonCard(_selectedDraftWarRoomProspectId);
+                }
+            }, _selectedDraftWarRoomProspectId is not null),
+            CreateDetailButton("Add GM Note", () =>
+            {
+                if (_selectedDraftWarRoomProspectId is not null)
+                {
+                    State.AddDraftNoteFor(_selectedDraftWarRoomProspectId);
+                    RefreshAfterAction();
+                }
+            }, _selectedDraftWarRoomProspectId is not null));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildDraftWarRoomProspectPanel(string? prospectId)
+    {
+        if (string.IsNullOrWhiteSpace(prospectId))
+        {
+            return UiPresentation.UiEmptyState("Selected Prospect", "Select a prospect to see ratings, scouting, fit, story, and actions.");
+        }
+
+        var entry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(item => item.ProspectPersonId == prospectId);
+        var card = State.DraftIntelligenceCard(prospectId);
+        var consensus = State.DraftConsensus(prospectId);
+        var war = State.DraftWarRoom.BoardEntries.FirstOrDefault(item => item.ProspectPersonId == prospectId);
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 0, 0) };
+        panel.Children.Add(new TextBlock { Text = card.ProspectName, FontSize = UiTypography.CardTitle, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = $"{State.PositionShortText(card.Position)} | Age {card.Age?.ToString() ?? "unknown"} | {card.ShootsCatches} | {card.Height}, {card.Weight} | {card.CurrentTeamLeague}", Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(UiPresentation.BadgeRow(
+            ($"My #{card.MyBoardRank}", "info"),
+            ($"Scout #{card.ScoutBoardRank}", "neutral"),
+            ($"Consensus #{card.ConsensusBoardRank}", "neutral"),
+            ($"Fit {card.TeamFitScore}/100", card.TeamFitScore >= 70 ? "positive" : card.TeamFitScore < 45 ? "critical" : "neutral"),
+            ($"{card.RatingConfidenceColor}", ConfidenceSemantic(card.RatingConfidenceColor.ToString()))));
+        panel.Children.Add(UiPresentation.UiInfoRow("OVR / POT", card.RatingDisplay));
+        panel.Children.Add(UiPresentation.UiInfoRow("Projection", card.Projection));
+        panel.Children.Add(UiPresentation.UiInfoRow("Risk", card.RiskSummary));
+        panel.Children.Add(UiPresentation.UiInfoRow("Tags", war is null || war.Tags.Count == 0 ? "Watching" : string.Join(", ", war.Tags)));
+        panel.Children.Add(BuildCommandCenterSection("Overview", entry is null ? card.CurrentTeamLeague : State.DraftCurrentPicture(entry), expanded: true));
+        panel.Children.Add(BuildCommandCenterSection("Ratings", string.Join(Environment.NewLine, card.Attributes.Take(8).Select(attribute => attribute.DisplayText)), expanded: true));
+        panel.Children.Add(BuildCommandCenterSection("Scouting", $"{card.ScoutRecommendation}\nConsensus: {consensus.Level} ({consensus.AgreementScore}/100)\n{consensus.Summary}"));
+        panel.Children.Add(BuildScoutOpinionCards(consensus));
+        panel.Children.Add(BuildCommandCenterSection("Development", $"Curve: {card.DevelopmentCurve}\nPace: {card.DevelopmentPace}\nETA: {card.Eta}"));
+        panel.Children.Add(BuildCommandCenterSection("Medical", card.Alerts.Any(alert => alert.AlertType == DraftIntelligenceAlertType.MedicalRisk) ? string.Join(Environment.NewLine, card.Alerts.Where(alert => alert.AlertType == DraftIntelligenceAlertType.MedicalRisk).Select(alert => alert.Summary)) : "No major medical alert."));
+        panel.Children.Add(BuildCommandCenterSection("Character", entry?.Bio?.CharacterSummary ?? "Character report is limited by scouting confidence."));
+        panel.Children.Add(BuildCommandCenterSection("Team Fit", BuildDraftTeamFitText(card)));
+        panel.Children.Add(BuildCommandCenterSection("Draft Story", entry is null ? card.RiskSummary : $"{State.DraftClassContext(entry)}\n{State.DraftValueContext(entry)}"));
+        panel.Children.Add(BuildCommandCenterSection("GM Notes", war is null || string.IsNullOrWhiteSpace(war.GmNotes) ? "No GM note yet." : war.GmNotes));
+        AddActions(panel,
+            CreateDetailButton("Favorite", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Favorite)),
+            CreateDetailButton("Priority", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Priority)),
+            CreateDetailButton("Sleeper", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Sleeper)),
+            CreateDetailButton("Avoid", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Avoid)),
+            CreateDetailButton("Needs More Scouting", () => State.ScoutAgainFor(prospectId), State.AvailableScoutProfiles.Count > 0),
+            CreateDetailButton("Draft Player", () => ConfirmDraftProspect(prospectId), State.ScenarioSnapshot.DraftExperience?.IsPlayerTurn == true, "Your team is not on the clock"));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildScoutOpinionCards(DraftScoutConsensus consensus)
+    {
+        var grid = new UniformGrid { Columns = 1 };
+        foreach (var opinion in consensus.Opinions.Take(4))
+        {
+            grid.Children.Add(BuildTextCard(opinion.Department, $"{opinion.Confidence} confidence", opinion.Opinion));
+        }
+
+        if (consensus.Opinions.Count == 0)
+        {
+            grid.Children.Add(UiPresentation.UiEmptyState("Scout Opinions", "This prospect has no completed scout disagreement report yet."));
+        }
+
+        return UiPresentation.UiExpandableSection("Scout Opinions", grid);
+    }
+
+    private string BuildDraftTeamFitText(DraftProspectIntelligenceCard card)
+    {
+        var label = card.TeamFitScore >= 78 ? "Excellent Fit" : card.TeamFitScore >= 62 ? "Good Fit" : card.TeamFitScore >= 45 ? "Neutral Fit" : "Poor Fit";
+        var needs = State.DraftWarRoom.Needs.Take(2).Select(need => $"- {need.Label}: {need.Reason}");
+        return $"{label}\n- {card.Projection}\n- {card.PlayerType}\n{string.Join(Environment.NewLine, needs)}";
+    }
+
+    private string BuildDraftPickInventoryText()
+    {
+        if (State.ScenarioSnapshot.DraftExperience?.Draft?.Picks is { } picks)
+        {
+            return string.Join(Environment.NewLine, picks
+                .Where(pick => pick.Selection is null)
+                .OrderBy(pick => pick.PickNumber)
+                .Take(8)
+                .Select(pick => $"#{pick.PickNumber} Round {pick.RoundNumber} - {State.ScenarioSnapshot.DraftExperience.OrganizationNames.GetValueOrDefault(pick.OwningOrganizationId, pick.OwningOrganizationId)}"));
+        }
+
+        return State.ScenarioSnapshot.DraftRights.Count == 0
+            ? "Draft pick inventory appears when the live draft starts."
+            : string.Join(Environment.NewLine, State.ScenarioSnapshot.DraftRights.Take(8).Select(right => $"R{right.RoundNumber} #{right.PickNumber}: {right.ProspectName}"));
+    }
+
+    private string BuildLiveDraftStatusLine()
+    {
+        var draft = State.ScenarioSnapshot.DraftExperience;
+        if (draft is null)
+        {
+            return "Draft is not active. War Room stays available all season.";
+        }
+
+        return $"Live draft: pick {draft.OverallPick}, round {draft.CurrentRound}/{draft.TotalRounds}, on clock {draft.TeamSelecting}, your next pick {draft.PlayerNextPick?.PickNumber.ToString() ?? "none"}.";
+    }
+
+    private UIElement BuildDraftWarRoomBottomStrip()
+    {
+        var grid = new UniformGrid { Columns = 4, Margin = new Thickness(0, 12, 0, 0) };
+        var draft = State.ScenarioSnapshot.DraftExperience;
+        grid.Children.Add(UiPresentation.UiMetricCard("On Clock", draft?.TeamSelecting ?? "Not active", draft is null ? "War Room mode" : $"Overall pick {draft.OverallPick}"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Your Next Pick", draft?.PlayerNextPick?.PickNumber.ToString() ?? "none", draft?.CountdownPlaceholder ?? "No timer"));
+        grid.Children.Add(BuildTextCard("Recent Picks", "Latest selections", draft is null || draft.Selections.Count == 0 ? "No picks yet." : string.Join(Environment.NewLine, draft.Selections.OrderByDescending(item => item.PickNumber).Take(4).Select(item => $"#{item.PickNumber} {item.OrganizationName}: {item.ProspectName}"))));
+        grid.Children.Add(BuildTextCard("Upcoming Picks", "Next teams", draft?.Draft?.Picks is null ? "Draft order appears during live draft." : string.Join(Environment.NewLine, draft.Draft.Picks.Where(pick => pick.Selection is null).OrderBy(pick => pick.PickNumber).Take(4).Select(pick => $"#{pick.PickNumber} {draft.OrganizationNames.GetValueOrDefault(pick.OwningOrganizationId, pick.OwningOrganizationId)}"))));
+        return grid;
+    }
+
+    private void ToggleDraftTagAndRefresh(string prospectId, DraftWatchTag tag)
+    {
+        State.ToggleDraftWarRoomTag(prospectId, tag);
+        RefreshAfterAction();
+    }
+
+    private void ConfirmDraftProspect(string prospectId)
+    {
+        var name = FindPersonName(prospectId);
+        if (MessageBox.Show($"Draft {name} with your current pick?", "Draft Player", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        {
+            State.DraftSelectedProspect(prospectId);
+            RefreshAfterAction();
+        }
+    }
+
+    private void ShowDraftComparePopup(IReadOnlyList<string> prospectIds)
+    {
+        var ids = prospectIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).Take(4).ToArray();
+        if (ids.Length < 2)
+        {
+            ShowConfirmationPopup("Compare Prospects", "Select 2-4 prospects to compare.");
+            return;
+        }
+
+        var grid = new UniformGrid { Columns = ids.Length, Margin = new Thickness(14) };
+        foreach (var id in ids)
+        {
+            var card = State.DraftIntelligenceCard(id);
+            var panel = new StackPanel();
+            panel.Children.Add(UiPresentation.UiPersonLink(card.ProspectName, () => OpenUniversalPersonCard(id)));
+            panel.Children.Add(UiPresentation.UiInfoRow("OVR / POT", card.RatingDisplay));
+            panel.Children.Add(UiPresentation.UiInfoRow("Position", State.PositionShortText(card.Position)));
+            panel.Children.Add(UiPresentation.UiInfoRow("Size", $"{card.Height}, {card.Weight}"));
+            panel.Children.Add(UiPresentation.UiInfoRow("Projection", card.Projection));
+            panel.Children.Add(UiPresentation.UiInfoRow("Curve / ETA", $"{card.DevelopmentCurve}, {card.Eta}"));
+            panel.Children.Add(UiPresentation.UiInfoRow("Risk", card.RiskSummary));
+            panel.Children.Add(UiPresentation.UiInfoRow("Team Fit", $"{card.TeamFitScore}/100"));
+            panel.Children.Add(UiPresentation.UiInfoRow("Scout View", $"{card.ScoutConsensus} ({card.ScoutAgreementScore}/100)"));
+            grid.Children.Add(UiPresentation.Card(panel));
+        }
+
+        ShowPopup("Compare Prospects", grid, 980, 560);
+    }
+
+    private void RefreshTradeCenterWorkspace()
+    {
+        if (_tradeCenterPanel is null || _state is null)
+        {
+            return;
+        }
+
+        var teams = BuildTradeTeamChoices();
+        var selectedTeam = teams.FirstOrDefault(team => team.OrganizationId == _selectedTradeCenterOrganizationId)
+            ?? teams.FirstOrDefault();
+        _selectedTradeCenterOrganizationId = selectedTeam?.OrganizationId;
+
+        _tradeCenterPanel.Children.Clear();
+        _tradeCenterPanel.RowDefinitions.Clear();
+        _tradeCenterPanel.ColumnDefinitions.Clear();
+        _tradeCenterPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        _tradeCenterPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        _tradeCenterPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        _tradeCenterPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        _tradeCenterPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.88, GridUnitType.Star) });
+        _tradeCenterPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.88, GridUnitType.Star) });
+        _tradeCenterPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var top = BuildTradeCenterTeamContext(teams, selectedTeam);
+        Grid.SetColumnSpan(top, 4);
+        _tradeCenterPanel.Children.Add(top);
+
+        var yourAssets = BuildTradeAssetPanel("Your Assets", State.ScenarioSnapshot.Organization.Name, State.YourTradeAssetRows(), true);
+        var youGive = BuildTradeProposalBucket("You Give", "Assets leaving your organization", State.CurrentTradeYouGiveRows(), true);
+        var youReceive = BuildTradeProposalBucket("You Receive", selectedTeam is null ? "Select another team" : $"Assets from {selectedTeam.TeamName}", State.CurrentTradeYouReceiveRows(), false);
+        var theirAssets = BuildTradeAssetPanel("Their Assets", selectedTeam?.TeamName ?? "Select another team", selectedTeam is null ? Array.Empty<TradeAssetRow>() : State.OtherTradeAssetRows(selectedTeam.OrganizationId, selectedTeam.TeamName), false);
+
+        Grid.SetRow(yourAssets, 1);
+        Grid.SetColumn(yourAssets, 0);
+        Grid.SetRow(youGive, 1);
+        Grid.SetColumn(youGive, 1);
+        Grid.SetRow(youReceive, 1);
+        Grid.SetColumn(youReceive, 2);
+        Grid.SetRow(theirAssets, 1);
+        Grid.SetColumn(theirAssets, 3);
+        _tradeCenterPanel.Children.Add(yourAssets);
+        _tradeCenterPanel.Children.Add(youGive);
+        _tradeCenterPanel.Children.Add(youReceive);
+        _tradeCenterPanel.Children.Add(theirAssets);
+
+        var bottom = BuildTradeCenterEvaluation(selectedTeam);
+        Grid.SetRow(bottom, 2);
+        Grid.SetColumnSpan(bottom, 4);
+        _tradeCenterPanel.Children.Add(bottom);
+    }
+
+    private IReadOnlyList<TradeTeamChoice> BuildTradeTeamChoices() =>
+        State.TradeBlockEntries
+            .GroupBy(entry => entry.OrganizationId, StringComparer.Ordinal)
+            .Select(group => new TradeTeamChoice(group.Key, group.First().TeamName))
+            .OrderBy(team => team.TeamName, StringComparer.Ordinal)
+            .ToArray();
+
+    private UIElement BuildTradeCenterTeamContext(IReadOnlyList<TradeTeamChoice> teams, TradeTeamChoice? selectedTeam)
+    {
+        var panel = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
+        var combo = new ComboBox
+        {
+            ItemsSource = teams,
+            SelectedItem = selectedTeam,
+            DisplayMemberPath = nameof(TradeTeamChoice.TeamName),
+            MinWidth = 240,
+            Margin = new Thickness(0, 0, 12, 0)
+        };
+        combo.SelectionChanged += (_, _) =>
+        {
+            if (combo.SelectedItem is TradeTeamChoice team && team.OrganizationId != _selectedTradeCenterOrganizationId)
+            {
+                _selectedTradeCenterOrganizationId = team.OrganizationId;
+                State.ClearTradeBuilder();
+                RefreshTradeCenterWorkspace();
+            }
+        };
+        DockPanel.SetDock(combo, Dock.Left);
+        panel.Children.Add(combo);
+
+        var context = new StackPanel();
+        context.Children.Add(new TextBlock { Text = selectedTeam?.TeamName ?? "Select another team", FontSize = UiTypography.CardTitle, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        if (selectedTeam is null)
+        {
+            context.Children.Add(new TextBlock { Text = "Select another team to browse roster players, prospects, rights, draft picks, and trade block assets.", Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        }
+        else
+        {
+            var sample = State.TradeBlockEntries.FirstOrDefault(entry => entry.OrganizationId == selectedTeam.OrganizationId);
+            context.Children.Add(new TextBlock { Text = sample is null ? "Team context pending." : State.TradeTeamNeedsShortText(sample), Foreground = UiTheme.Text, TextWrapping = TextWrapping.Wrap });
+            context.Children.Add(new TextBlock { Text = $"Assets shopped: {State.OtherTradeAssetRows(selectedTeam.OrganizationId, selectedTeam.TeamName).Count} | Organization relationship and cooldowns remain tracked by existing trade logic.", Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        }
+
+        panel.Children.Add(UiPresentation.Card(context));
+        return panel;
+    }
+
+    private UIElement BuildTradeAssetPanel(string title, string subtitle, IReadOnlyList<TradeAssetRow> rows, bool isYourSide)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, FontSize = UiTypography.SectionTitle, Foreground = UiTheme.Text });
+        panel.Children.Add(new TextBlock { Text = subtitle, Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(BuildTradeSourceTabs());
+        var list = new ListBox
+        {
+            ItemsSource = rows,
+            MinHeight = 360,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = TradeAssetRowTemplate()
+        };
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is TradeAssetRow row)
+            {
+                if (isYourSide)
+                {
+                    State.SelectYourTradeAsset(row.Asset.AssetId);
+                }
+                else
+                {
+                    State.SelectOtherTradeAsset(row.Asset.AssetId);
+                }
+            }
+        };
+        list.MouseDoubleClick += (_, _) =>
+        {
+            if (list.SelectedItem is TradeAssetRow row)
+            {
+                if (isYourSide)
+                {
+                    State.AddYourAssetToTradeProposal(row.Asset);
+                }
+                else
+                {
+                    State.AddOtherAssetToTradeProposal(row.Asset);
+                }
+
+                RefreshAfterAction();
+            }
+        };
+        if (isYourSide)
+        {
+            _tradeYourAssetsList = list;
+        }
+        else
+        {
+            _tradeOtherAssetsList = list;
+        }
+
+        panel.Children.Add(rows.Count == 0 ? UiPresentation.UiEmptyState("No assets", "No assets are currently visible for this source.") : list);
+        AddActions(panel,
+            CreateDetailButton(isYourSide ? "Add Your Selected Asset" : "Add Their Selected Asset", () =>
+            {
+                if (list.SelectedItem is TradeAssetRow row)
+                {
+                    if (isYourSide)
+                    {
+                        State.AddYourAssetToTradeProposal(row.Asset);
+                    }
+                    else
+                    {
+                        State.AddOtherAssetToTradeProposal(row.Asset);
+                    }
+
+                    RefreshAfterAction();
+                }
+            }, rows.Count > 0, "Select an asset to add."),
+            CreateDetailButton("View Asset", () =>
+            {
+                if (list.SelectedItem is TradeAssetRow row)
+                {
+                    OpenTradeAssetProfile(row.Asset);
+                }
+            }, rows.Count > 0, "Select a player, prospect, or pick."));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildTradeSourceTabs()
+    {
+        var tabs = new WrapPanel { Margin = new Thickness(0, 8, 0, 8) };
+        foreach (var tab in new[] { "Roster", "Prospects", "Rights", "Draft Picks", "Contract Assets", "Trade Block", "Shortlist" })
+        {
+            tabs.Children.Add(UiPresentation.UiStatusBadge(tab, "neutral"));
+        }
+
+        return tabs;
+    }
+
+    private UIElement BuildTradeProposalBucket(string title, string subtitle, IReadOnlyList<TradeAssetRow> rows, bool isGiveSide)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, FontSize = UiTypography.SectionTitle, Foreground = UiTheme.Text });
+        panel.Children.Add(new TextBlock { Text = subtitle, Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(UiPresentation.BadgeRow(
+            ($"{rows.Sum(row => row.Asset.Value)} value", rows.Count == 0 ? "neutral" : "info"),
+            ($"{rows.Sum(row => row.Asset.SalaryImpact):C0} salary", "neutral"),
+            ($"{rows.Count} asset(s)", rows.Count == 0 ? "caution" : "positive")));
+        var list = new ListBox
+        {
+            ItemsSource = rows,
+            MinHeight = 300,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = TradeAssetRowTemplate()
+        };
+        if (isGiveSide)
+        {
+            _tradeYouGiveList = list;
+        }
+        else
+        {
+            _tradeYouReceiveList = list;
+        }
+
+        panel.Children.Add(rows.Count == 0 ? UiPresentation.UiEmptyState(title, "Select an asset from an asset panel, then add it here.") : list);
+        AddActions(panel,
+            CreateDetailButton("Remove Selected", () =>
+            {
+                if (list.SelectedItem is TradeAssetRow row)
+                {
+                    if (isGiveSide)
+                    {
+                        State.RemoveYourAssetFromTradeProposal(row.Asset);
+                    }
+                    else
+                    {
+                        State.RemoveOtherAssetFromTradeProposal(row.Asset);
+                    }
+
+                    RefreshAfterAction();
+                }
+            }, rows.Count > 0),
+            CreateDetailButton("Clear Proposal", () =>
+            {
+                State.ClearTradeBuilder();
+                RefreshAfterAction();
+            }, State.HasTradeProposalAssets));
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildTradeCenterEvaluation(TradeTeamChoice? selectedTeam)
+    {
+        var grid = new UniformGrid { Columns = 4, Margin = new Thickness(0, 12, 0, 0) };
+        grid.Children.Add(BuildTextCard("Trade Evaluation", State.CanProposeCurrentTrade ? State.CurrentTradeEvaluationText : "Both sides need at least one asset.", string.Join(Environment.NewLine, State.CurrentTradeEvaluationReasons.Take(4).DefaultIfEmpty("Add assets from both sides to see why they respond this way."))));
+        grid.Children.Add(BuildTextCard("Roster Impact", "Before / after preview", State.CurrentTradeRosterImpact));
+        grid.Children.Add(BuildTextCard("Cap / Contract Impact", "Payroll and contract count", $"{State.CurrentTradeBudgetImpact}\n{State.CurrentTradeAssetValueComparison}"));
+        grid.Children.Add(BuildTextCard("Position Scarcity", "Market context", State.CurrentTradeScarcityText));
+
+        var counter = BuildTextCard("Counteroffer", State.HasCurrentTradeCounter ? "Countering" : "No active counter", State.CurrentTradeCounterText);
+        grid.Children.Add(counter);
+        grid.Children.Add(BuildTextCard("Recent Activity", selectedTeam?.TeamName ?? "No team selected", selectedTeam is null ? "Select a team." : BuildTradeRecentActivityText(selectedTeam.OrganizationId)));
+        var actions = new StackPanel();
+        actions.Children.Add(new TextBlock { Text = "Actions", FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        AddActions(actions,
+            CreateDetailButton("Apply Counter", () =>
+            {
+                State.AcceptCurrentTradeCounter();
+                RefreshAfterAction();
+            }, State.HasCurrentTradeCounter),
+            CreateDetailButton("Propose Trade", () =>
+            {
+                if (selectedTeam is not null)
+                {
+                    State.ProposeCurrentTrade(selectedTeam.OrganizationId, selectedTeam.TeamName);
+                    RefreshAfterAction();
+                }
+            }, selectedTeam is not null && State.CanProposeCurrentTrade && State.TradeDeadlineWindow.TradesAllowed, State.TradeDeadlineWindow.TradesAllowed ? "Both sides need at least one asset." : "Trade deadline has passed"),
+            CreateDetailButton("Withdraw", () =>
+            {
+                State.WithdrawLatestTradeOffer();
+                RefreshAfterAction();
+            }, State.CanWithdrawLatestTradeOffer),
+            CreateDetailButton("Clear Offer", () =>
+            {
+                State.ClearTradeBuilder();
+                RefreshAfterAction();
+            }, State.HasTradeProposalAssets));
+        grid.Children.Add(UiPresentation.Card(actions));
+        grid.Children.Add(BuildTextCard("Warnings", "Invalid / cooldown state", State.CanProposeCurrentTrade ? "Proposal validates through existing trade service before any pending GM action is created." : "Both sides need at least one asset. Trades never auto-complete."));
+        return grid;
+    }
+
+    private string BuildTradeRecentActivityText(string organizationId)
+    {
+        var transactions = State.LeagueRecentTransactions(organizationId).Take(4).ToArray();
+        if (transactions.Length == 0)
+        {
+            return "No recent tracked activity with this team.";
+        }
+
+        return string.Join(Environment.NewLine, transactions.Select(item => $"{item.Date:yyyy-MM-dd}: {item.Description}"));
+    }
+
+    private static DataTemplate TradeAssetRowTemplate()
+    {
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.SetValue(Border.PaddingProperty, UiSpacing.RowPadding);
+        border.SetValue(Border.MarginProperty, new Thickness(0, 0, 0, 5));
+        border.SetValue(Border.BorderBrushProperty, UiTheme.Border);
+        border.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(6));
+        border.SetValue(Border.BackgroundProperty, UiTheme.SurfaceAlt);
+        var text = new FrameworkElementFactory(typeof(TextBlock));
+        text.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Label"));
+        text.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
+        text.SetValue(TextBlock.ForegroundProperty, UiTheme.Text);
+        border.AppendChild(text);
+        return new DataTemplate { VisualTree = border };
+    }
+
+    private void OpenTradeAssetProfile(TradeAsset asset)
+    {
+        if (asset.AssetType is TradeAssetType.Player or TradeAssetType.ProspectRights)
+        {
+            OpenUniversalPersonCard(asset.AssetId);
+            return;
+        }
+
+        ShowConfirmationPopup(asset.DisplayName, $"{asset.DisplayName}\n{asset.Summary}\nValue: {asset.Value}\nDraft picks and future considerations are selectable trade assets, but do not have player dossiers.");
     }
 
     private void AddSelectablePeopleTab(TabControl tabs, string title)
@@ -2114,10 +2793,10 @@ internal sealed class MainWindow : Window
                 RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
                 break;
             case ("Hockey Operations", "Trades"):
-                RefreshSelectableTab("Trades", BuildTradeRows());
+                RefreshTradeCenterWorkspace();
                 break;
             case ("Hockey Operations", "Draft War Room"):
-                SetTextTab("Draft War Room", BuildDraftWarRoom());
+                RefreshDraftWarRoomWorkspace();
                 break;
             case ("Hockey Operations", "Draft Board"):
                 RefreshSelectableTab("Draft Board", BuildDraftBoardRows());
@@ -2243,7 +2922,7 @@ internal sealed class MainWindow : Window
             _tabs["Offer Sheets"].Text = BuildOfferSheetWorkspace();
             RefreshSelectableTab("Scouting", BuildScoutingRows());
             RefreshSelectableTab("Scouting Operations", BuildScoutingOperationRows());
-            RefreshSelectableTab("Trades", BuildTradeRows());
+            RefreshTradeCenterWorkspace();
             if (_tabs.ContainsKey("Pending Actions"))
             {
                 _tabs["Pending Actions"].Text = BuildPendingActions();
@@ -2262,6 +2941,7 @@ internal sealed class MainWindow : Window
             {
                 _tabs["Draft War Room"].Text = BuildDraftWarRoom();
             }
+            RefreshDraftWarRoomWorkspace();
             RefreshSelectableTab("Prospect List", BuildProspectRows());
             RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
             _tabs["Season Readiness"].Text = BuildSeasonReadiness();
@@ -10104,6 +10784,11 @@ internal sealed record SelectablePersonRow(
 internal sealed record TradeAssetRow(TradeAsset Asset, string Label)
 {
     public override string ToString() => Label;
+}
+
+internal sealed record TradeTeamChoice(string OrganizationId, string TeamName)
+{
+    public override string ToString() => TeamName;
 }
 
 internal sealed record LineupSlotChoice(LineupSlot Slot, string Display)
