@@ -1502,6 +1502,7 @@ runner.Run("alpha 8.5 morning briefing panels exist", alpha85GmOfficeExperienceT
 runner.Run("alpha 8.5 office sidebar snapshots exist", alpha85GmOfficeExperienceTests.OfficeSidebarSnapshotsExist);
 runner.Run("alpha 8.5 office cards navigate to workspaces", alpha85GmOfficeExperienceTests.OfficeCardsNavigateToWorkspaces);
 runner.Run("alpha 8.5 card consistency and no gameplay change documented", alpha85GmOfficeExperienceTests.CardConsistencyAndNoGameplayChangeDocumented);
+runner.Run("alpha 8.5 new career screen uses preset choices and responsive start", alpha85GmOfficeExperienceTests.NewCareerScreenUsesPresetChoicesAndResponsiveStart);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

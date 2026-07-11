@@ -40,6 +40,27 @@ internal sealed class MainWindow : Window
     private sealed record WorkspaceScreen(string Label, UIElement Content);
     private sealed record NavigationSnapshot(string Workspace, string Screen, string? SelectedPersonId);
 
+    private static readonly string[] NationalityOptions =
+    [
+        "Canada",
+        "United States",
+        "Finland",
+        "Sweden",
+        "Czechia",
+        "Slovakia",
+        "Russia",
+        "Germany",
+        "Switzerland",
+        "Latvia",
+        "Denmark",
+        "Norway",
+        "Austria",
+        "France",
+        "United Kingdom",
+        "Japan",
+        "Australia"
+    ];
+
     private AlphaDesktopState? _state;
     private readonly TextBlock _dateText = new();
     private readonly TextBlock _summaryText = new();
@@ -98,11 +119,8 @@ internal sealed class MainWindow : Window
     private readonly TextBox _firstNameInput = new() { Text = "Jordan" };
     private readonly TextBox _lastNameInput = new() { Text = "Hayes" };
     private readonly TextBox _preferredNameInput = new() { Text = "Jordan" };
-    private readonly TextBox _ageInput = new() { Text = "39" };
-    private readonly TextBox _nationalityInput = new() { Text = "Canada" };
-    private readonly TextBox _birthplaceInput = new() { Text = "Swift Current, SK" };
-    private readonly TextBox _strengthsInput = new() { Text = "development planning, communication" };
-    private readonly TextBox _weaknessesInput = new() { Text = "limited draft history" };
+    private readonly ComboBox _ageInput = new() { ItemsSource = Enumerable.Range(25, 51).ToArray(), SelectedItem = 39 };
+    private readonly ComboBox _nationalityInput = new() { ItemsSource = NationalityOptions, SelectedItem = "Canada" };
     private readonly MultiLeagueCareerService _careerSetup = new();
     private readonly ComboBox _leagueInput = new() { ItemsSource = Enum.GetValues<LeagueExperience>(), SelectedItem = LeagueExperience.Junior };
     private readonly ComboBox _teamInput = new() { DisplayMemberPath = nameof(TeamSelectionOption.TeamName) };
@@ -110,9 +128,12 @@ internal sealed class MainWindow : Window
     private readonly ComboBox _teamDivisionFilterInput = new() { MinWidth = 160 };
     private readonly ComboBox _teamSortInput = new() { ItemsSource = new[] { "Team name", "Difficulty", "Budget", "Roster quality", "Prospect strength" }, SelectedItem = "Team name", MinWidth = 160 };
     private readonly TextBlock _leagueSummaryText = new();
-    private readonly ComboBox _genderInput = new() { ItemsSource = Enum.GetValues<Gender>(), SelectedItem = Gender.NonBinary };
+    private readonly ComboBox _genderInput = new() { ItemsSource = new[] { Gender.Male, Gender.Female }, SelectedItem = Gender.Male };
     private readonly ComboBox _backgroundInput = new() { ItemsSource = Enum.GetValues<GmBackground>(), SelectedItem = GmBackground.Operations };
     private readonly ComboBox _styleInput = new() { ItemsSource = Enum.GetValues<GmStyle>(), SelectedItem = GmStyle.Balanced };
+    private readonly TextBlock _startupStatusText = new();
+    private Button? _startCareerButton;
+    private bool _careerStartInProgress;
     private Border? _draftModalOverlay;
     private ListBox? _tradeYourAssetsList;
     private ListBox? _tradeOtherAssetsList;
@@ -180,68 +201,120 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildCreationLayout()
     {
-        var root = new Grid { Margin = new Thickness(28) };
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var root = new Grid
+        {
+            Margin = new Thickness(0),
+            Background = new LinearGradientBrush(
+                Color.FromRgb(236, 242, 249),
+                Color.FromRgb(248, 250, 253),
+                90)
+        };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        var title = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
-        title.Children.Add(new TextBlock
+        var title = new Border
         {
-            Text = "Start New Career",
-            FontSize = 28,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64))
-        });
-        title.Children.Add(new TextBlock
+            Background = new SolidColorBrush(Color.FromRgb(15, 39, 66)),
+            Padding = new Thickness(28, 22, 28, 22),
+            Child = new StackPanel()
+        };
+        if (title.Child is StackPanel titlePanel)
         {
-            Text = "Choose a league, choose a team, create your GM, then enter the GM Office.",
-            FontSize = 14,
-            Foreground = new SolidColorBrush(Color.FromRgb(65, 78, 92)),
-            Margin = new Thickness(0, 6, 0, 0)
-        });
+            titlePanel.Children.Add(new TextBlock
+            {
+                Text = "Start New Career",
+                FontSize = 30,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White
+            });
+            titlePanel.Children.Add(new TextBlock
+            {
+                Text = "Choose your league, pick your organization, create your GM, then enter the morning briefing.",
+                FontSize = 14,
+                Foreground = new SolidColorBrush(Color.FromRgb(213, 225, 239)),
+                Margin = new Thickness(0, 6, 0, 0),
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+
         Grid.SetRow(title, 0);
         root.Children.Add(title);
 
+        var content = new Grid { Margin = new Thickness(28) };
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
+        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
         var selection = BuildLeagueSelectionPanel();
-        Grid.SetRow(selection, 1);
-        root.Children.Add(selection);
+        Grid.SetColumn(selection, 0);
+        content.Children.Add(selection);
+
+        var formCard = new Border
+        {
+            Background = Brushes.White,
+            BorderBrush = UiTheme.Border,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(18),
+            Margin = new Thickness(18, 0, 0, 0),
+            Child = new StackPanel()
+        };
+
+        var formStack = (StackPanel)formCard.Child;
+        formStack.Children.Add(new TextBlock
+        {
+            Text = "Create Your GM",
+            FontSize = 22,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text
+        });
+        formStack.Children.Add(new TextBlock
+        {
+            Text = "Keep it simple. You can start quickly, then make hockey decisions in the GM Office.",
+            FontSize = UiTypography.Body,
+            Foreground = UiTheme.MutedText,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 14)
+        });
 
         var form = new Grid();
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        for (var index = 0; index < 7; index++)
-        {
-            form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        }
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         AddField(form, "First name", _firstNameInput, 0, 0);
         AddField(form, "Last name", _lastNameInput, 0, 1);
-        AddField(form, "Preferred name", _preferredNameInput, 0, 2);
-        AddField(form, "Gender", _genderInput, 1, 0);
-        AddField(form, "Age", _ageInput, 1, 1);
-        AddField(form, "Nationality", _nationalityInput, 1, 2);
-        AddField(form, "Birthplace", _birthplaceInput, 2, 0);
-        AddField(form, "Background", _backgroundInput, 2, 1);
-        AddField(form, "GM style", _styleInput, 2, 2);
-        AddField(form, "Strengths", _strengthsInput, 3, 0, 2);
-        AddField(form, "Weaknesses", _weaknessesInput, 3, 2);
+        AddField(form, "Preferred name", _preferredNameInput, 1, 0);
+        AddField(form, "Gender", _genderInput, 1, 1);
+        AddField(form, "Age", _ageInput, 2, 0);
+        AddField(form, "Nationality", _nationalityInput, 2, 1);
+        AddField(form, "Background", _backgroundInput, 3, 0);
+        AddField(form, "GM style", _styleInput, 3, 1);
+        formStack.Children.Add(form);
 
         var buttons = new WrapPanel
         {
             Orientation = Orientation.Horizontal,
             Margin = new Thickness(0, 24, 0, 0)
         };
-        buttons.Children.Add(CreateButton("Start Career", StartCareer));
+        _startCareerButton = CreateButton("Start Career", StartCareer);
+        buttons.Children.Add(_startCareerButton);
         buttons.Children.Add(CreateButton("Load Career", LoadCareerFromStartup));
-        Grid.SetRow(buttons, 5);
-        Grid.SetColumn(buttons, 0);
-        Grid.SetColumnSpan(buttons, 3);
-        form.Children.Add(buttons);
+        formStack.Children.Add(buttons);
+        _startupStatusText.Text = "Ready to start.";
+        _startupStatusText.Foreground = UiTheme.MutedText;
+        _startupStatusText.Margin = new Thickness(0, 12, 0, 0);
+        _startupStatusText.TextWrapping = TextWrapping.Wrap;
+        formStack.Children.Add(_startupStatusText);
 
-        Grid.SetRow(form, 2);
-        root.Children.Add(form);
+        Grid.SetColumn(formCard, 1);
+        content.Children.Add(formCard);
+
+        Grid.SetRow(content, 1);
+        root.Children.Add(content);
         RefreshTeamChoices();
         return root;
     }
@@ -256,35 +329,56 @@ internal sealed class MainWindow : Window
         var panel = new Border
         {
             Background = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(210, 219, 229)),
+            BorderBrush = UiTheme.Border,
             BorderThickness = new Thickness(1),
-            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(18),
             Margin = new Thickness(0, 0, 0, 16)
         };
-        var content = new Grid();
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(210) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        content.Children.Add(LabeledControl("League", _leagueInput));
+        var content = new StackPanel();
+        content.Children.Add(new TextBlock
+        {
+            Text = "Choose Organization",
+            FontSize = 22,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text
+        });
+        content.Children.Add(new TextBlock
+        {
+            Text = "Start in junior, AHL, or NHL-style leagues with a prebuilt organization.",
+            FontSize = UiTypography.Body,
+            Foreground = UiTheme.MutedText,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 14)
+        });
+
+        var fields = new Grid();
+        fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var teamField = LabeledControl("Team", _teamInput);
         Grid.SetColumn(teamField, 1);
-        content.Children.Add(teamField);
+        fields.Children.Add(LabeledControl("League", _leagueInput));
+        fields.Children.Add(teamField);
         var searchField = LabeledControl("Search", _teamSearchInput);
-        Grid.SetColumn(searchField, 2);
-        content.Children.Add(searchField);
+        Grid.SetRow(searchField, 1);
+        fields.Children.Add(searchField);
         var divisionField = LabeledControl("League / Division", _teamDivisionFilterInput);
-        Grid.SetColumn(divisionField, 3);
-        content.Children.Add(divisionField);
+        Grid.SetRow(divisionField, 1);
+        Grid.SetColumn(divisionField, 1);
+        fields.Children.Add(divisionField);
         var sortField = LabeledControl("Sort", _teamSortInput);
-        Grid.SetColumn(sortField, 4);
-        content.Children.Add(sortField);
+        Grid.SetRow(sortField, 2);
+        Grid.SetColumnSpan(sortField, 2);
+        fields.Children.Add(sortField);
+        content.Children.Add(fields);
         _leagueSummaryText.TextWrapping = TextWrapping.Wrap;
         _leagueSummaryText.Foreground = new SolidColorBrush(Color.FromRgb(44, 58, 74));
-        _leagueSummaryText.Margin = new Thickness(16, 20, 0, 0);
-        Grid.SetColumn(_leagueSummaryText, 5);
+        _leagueSummaryText.Margin = new Thickness(0, 16, 0, 0);
+        _leagueSummaryText.Padding = new Thickness(12);
+        _leagueSummaryText.Background = new SolidColorBrush(Color.FromRgb(245, 248, 252));
         content.Children.Add(_leagueSummaryText);
         panel.Child = content;
         return panel;
@@ -390,27 +484,37 @@ internal sealed class MainWindow : Window
         grid.Children.Add(panel);
     }
 
-    private void StartCareer()
+    private async void StartCareer()
     {
-        if (!int.TryParse(_ageInput.Text.Trim(), out var age))
+        if (_careerStartInProgress)
+        {
+            return;
+        }
+
+        var age = _ageInput.SelectedItem is int selectedAge
+            ? selectedAge
+            : int.TryParse(_ageInput.Text.Trim(), out var typedAge) ? typedAge : 0;
+        if (age == 0)
         {
             MessageBox.Show("Please enter a valid age.", "GM Creation", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
+        var background = (GmBackground)(_backgroundInput.SelectedItem ?? GmBackground.Operations);
+        var style = (GmStyle)(_styleInput.SelectedItem ?? GmStyle.Balanced);
         var settings = new GmProfileCreationSettings(
             FirstName: _firstNameInput.Text.Trim(),
             LastName: _lastNameInput.Text.Trim(),
             PreferredName: _preferredNameInput.Text.Trim(),
-            Gender: (Gender)(_genderInput.SelectedItem ?? Gender.Unknown),
+            Gender: (Gender)(_genderInput.SelectedItem ?? Gender.Male),
             BirthDate: null,
             Age: age,
-            Nationality: _nationalityInput.Text.Trim(),
-            Birthplace: _birthplaceInput.Text.Trim(),
-            Background: (GmBackground)(_backgroundInput.SelectedItem ?? GmBackground.Operations),
-            Style: (GmStyle)(_styleInput.SelectedItem ?? GmStyle.Balanced),
-            Strengths: SplitList(_strengthsInput.Text),
-            Weaknesses: SplitList(_weaknessesInput.Text));
+            Nationality: _nationalityInput.SelectedItem?.ToString() ?? "Canada",
+            Birthplace: "Not specified",
+            Background: background,
+            Style: style,
+            Strengths: DefaultGmStrengths(background, style),
+            Weaknesses: DefaultGmWeaknesses(background, style));
 
         var team = SelectedTeamOption();
         if (team is null)
@@ -419,10 +523,78 @@ internal sealed class MainWindow : Window
             return;
         }
 
-        _state = AlphaDesktopState.Create(settings, SelectedLeagueExperience(), team.OrganizationId);
-        Content = BuildLayout();
-        RefreshAll();
+        _careerStartInProgress = true;
+        if (_startCareerButton is not null)
+        {
+            _startCareerButton.IsEnabled = false;
+            _startCareerButton.Content = "Creating...";
+        }
+
+        _startupStatusText.Text = "Creating your career. Building league, roster, prospects, scouting, and office reports...";
+        Mouse.OverrideCursor = Cursors.Wait;
+        try
+        {
+            var league = SelectedLeagueExperience();
+            var organizationId = team.OrganizationId;
+            var created = await Task.Run(() => AlphaDesktopState.Create(settings, league, organizationId));
+            _state = created;
+            Content = BuildLayout();
+            RefreshAll();
+        }
+        catch (Exception ex)
+        {
+            _startupStatusText.Text = "Career creation failed. Please try another team or league.";
+            MessageBox.Show($"Could not start career: {ex.Message}", "New Career", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            Mouse.OverrideCursor = null;
+            _careerStartInProgress = false;
+            if (_startCareerButton is not null)
+            {
+                _startCareerButton.IsEnabled = true;
+                _startCareerButton.Content = "Start Career";
+            }
+        }
     }
+
+    private static IReadOnlyList<string> DefaultGmStrengths(GmBackground background, GmStyle style) =>
+        new[]
+        {
+            background switch
+            {
+                GmBackground.FormerPlayer => "locker room credibility",
+                GmBackground.Scout => "talent evaluation",
+                GmBackground.Coach => "player usage",
+                GmBackground.Analyst => "data-driven planning",
+                GmBackground.Agent => "contract awareness",
+                _ => "front office operations"
+            },
+            style switch
+            {
+                GmStyle.DevelopmentFirst => "development planning",
+                GmStyle.ScoutDriven => "scouting process",
+                GmStyle.AggressiveBuilder => "decisive roster building",
+                GmStyle.RelationshipFirst => "communication",
+                GmStyle.Analytical => "structured decision-making",
+                _ => "balanced management"
+            }
+        };
+
+    private static IReadOnlyList<string> DefaultGmWeaknesses(GmBackground background, GmStyle style) =>
+        new[]
+        {
+            background switch
+            {
+                GmBackground.FormerPlayer => "limited front office history",
+                GmBackground.Scout => "limited contract negotiation history",
+                GmBackground.Coach => "limited market management history",
+                GmBackground.Analyst => "limited dressing room history",
+                GmBackground.Agent => "needs staff trust",
+                _ => "limited draft history"
+            },
+            style == GmStyle.AggressiveBuilder ? "can move too quickly" : "still building organizational trust"
+        };
 
     private void LoadCareerFromStartup()
     {

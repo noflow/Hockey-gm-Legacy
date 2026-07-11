@@ -58,6 +58,21 @@ internal sealed class Alpha85GmOfficeExperienceTests
         Assert.False(doc.Contains("remote telemetry", StringComparison.OrdinalIgnoreCase), "Alpha 8.5 should not add telemetry.");
     }
 
+    public void NewCareerScreenUsesPresetChoicesAndResponsiveStart()
+    {
+        var source = AlphaDesktopSource("Program.cs");
+
+        Assert.True(source.Contains("Choose Organization", StringComparison.Ordinal), "Start screen should have a clear organization card.");
+        Assert.True(source.Contains("Create Your GM", StringComparison.Ordinal), "Start screen should have a clear GM card.");
+        Assert.True(source.Contains("NationalityOptions", StringComparison.Ordinal), "Nationality should use a country list.");
+        Assert.True(source.Contains("new[] { Gender.Male, Gender.Female }", StringComparison.Ordinal), "Gender dropdown should only show male and female.");
+        Assert.False(source.Contains("AddField(form, \"Birthplace\"", StringComparison.Ordinal), "GM creation screen should not ask for birthplace.");
+        Assert.False(source.Contains("AddField(form, \"Strengths\"", StringComparison.Ordinal), "GM creation screen should not ask for strengths.");
+        Assert.False(source.Contains("AddField(form, \"Weaknesses\"", StringComparison.Ordinal), "GM creation screen should not ask for weaknesses.");
+        Assert.True(source.Contains("Creating your career.", StringComparison.Ordinal), "Start Career should show progress feedback.");
+        Assert.True(source.Contains("Task.Run(() => AlphaDesktopState.Create", StringComparison.Ordinal), "Career creation should run away from the UI thread.");
+    }
+
     private static string AlphaDesktopSource(string fileName) =>
         File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", fileName));
 
