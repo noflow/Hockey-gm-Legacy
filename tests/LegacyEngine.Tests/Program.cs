@@ -107,6 +107,7 @@ var alpha710AssetEvaluationTests = new Alpha710AssetEvaluationTests();
 var alpha711DraftBoardRealismTests = new Alpha711DraftBoardRealismTests();
 var alpha712OrganizationPlanningTests = new Alpha712OrganizationPlanningTests();
 var alpha713AiFrontOfficeDecisionTests = new Alpha713AiFrontOfficeDecisionTests();
+var alpha80PresentationLayerTests = new Alpha80PresentationLayerTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1456,6 +1457,13 @@ runner.Run("alpha 7.13 save load does not duplicate decisions", alpha713AiFrontO
 runner.Run("alpha 7.13 AlphaDesktop exposes AI explanations", alpha713AiFrontOfficeDecisionTests.AlphaDesktopExposesAiDecisionExplanations);
 runner.Run("alpha 7.13 hidden true ratings not exposed", alpha713AiFrontOfficeDecisionTests.HiddenTrueRatingsNotExposed);
 runner.Run("alpha 7.13 five season soak", alpha713AiFrontOfficeDecisionTests.FiveSeasonSoakTest);
+runner.Run("alpha 8.0 shared presentation components exist", alpha80PresentationLayerTests.SharedPresentationComponentsExist);
+runner.Run("alpha 8.0 people rows are clickable across core workspaces", alpha80PresentationLayerTests.PeopleRowsAreClickableAcrossCoreWorkspaces);
+runner.Run("alpha 8.0 universal person card uses shared shell", alpha80PresentationLayerTests.UniversalPersonCardUsesSharedShellAndPreservesContext);
+runner.Run("alpha 8.0 player card shows quick summary and collapsed details", alpha80PresentationLayerTests.PlayerCardShowsQuickSummaryAndCollapsedDetails);
+runner.Run("alpha 8.0 contextual actions and disabled reasons remain visible", alpha80PresentationLayerTests.ContextualActionsAndDisabledReasonsRemainVisible);
+runner.Run("alpha 8.0 hidden true ratings are not exposed by presentation layer", alpha80PresentationLayerTests.HiddenTrueRatingsAreNotExposedByPresentationLayer);
+runner.Run("alpha 8.0 roster rows use compact card preview text", alpha80PresentationLayerTests.RosterRowsUseCompactCardPreviewText);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

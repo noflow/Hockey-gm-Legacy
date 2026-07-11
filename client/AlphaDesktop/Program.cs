@@ -861,7 +861,8 @@ internal sealed class MainWindow : Window
             BorderBrush = new SolidColorBrush(Color.FromRgb(222, 229, 237)),
             Background = new SolidColorBrush(Color.FromRgb(248, 250, 253)),
             Padding = new Thickness(8),
-            HorizontalContentAlignment = HorizontalAlignment.Stretch
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = UiPresentation.PersonRowTemplate()
         };
         list.SelectionChanged += (_, _) =>
         {
@@ -869,6 +870,13 @@ internal sealed class MainWindow : Window
             {
                 _selectedPeopleByTab[title] = row.PersonId;
                 RenderSelectableDetail(title);
+            }
+        };
+        list.MouseDoubleClick += (_, _) =>
+        {
+            if (list.SelectedItem is SelectablePersonRow row && IsLikelyPersonRow(row))
+            {
+                OpenUniversalPersonCard(row.PersonId);
             }
         };
 
@@ -1688,6 +1696,93 @@ internal sealed class MainWindow : Window
         var panel = CreateDetailPanel(FindPersonName(personId), "Staff Profile");
         AddParagraph(panel, State.StaffProfileText(personId));
         ShowPopup($"Staff Profile - {FindPersonName(personId)}", panel, 640, 560);
+    }
+
+    private void OpenUniversalPersonCard(string personId)
+    {
+        ShowPopup($"Person Card - {FindPersonName(personId)}", BuildUniversalPersonCard(personId), 760, 680);
+    }
+
+    private UIElement BuildUniversalPersonCard(string personId)
+    {
+        var row = BuildUniversalPersonRow(personId);
+        var panel = CreateDetailPanel(row.Name, $"{row.Kind} | {row.Primary}");
+        panel.Children.Insert(1, UiPresentation.BadgeRow(
+            ("Universal Person Card", "info"),
+            (State.PersonPosition(personId).ToString(), "neutral"),
+            (State.InjuryStatus(personId), StatusSemantic(State.InjuryStatus(personId))),
+            (State.ScoutingConfidenceText(personId), ConfidenceSemantic(State.ScoutingConfidenceText(personId)))));
+
+        AddSubHeader(panel, "Overview");
+        AddLine(panel, "Age", State.PersonAge(personId)?.ToString() ?? "unknown");
+        AddLine(panel, "Organization / rights", State.RegionTeamText(personId));
+        AddLine(panel, "Role", State.CurrentLineupRole(personId));
+        AddLine(panel, "Rating", State.RatingText(personId));
+        AddLine(panel, "Contract", State.ContractRightsStatus(personId));
+        AddLine(panel, "Health", State.InjuryStatus(personId));
+
+        var ratings = new StackPanel();
+        AddLine(ratings, "OVR / POT", State.RatingContextText(personId));
+        AddLine(ratings, "Asset value", State.AssetValueShortText(personId));
+        AddLine(ratings, "Position market", State.PositionMarketNote(personId));
+        panel.Children.Add(UiPresentation.UiExpandableSection("Ratings", ratings, expanded: false));
+
+        var development = new StackPanel();
+        AddLine(development, "Stage", State.DevelopmentStageText(personId));
+        AddLine(development, "Trend", State.DevelopmentTrend(personId));
+        AddParagraph(development, State.DevelopmentPlanText(personId));
+        panel.Children.Add(UiPresentation.UiExpandableSection("Development", development));
+
+        var scouting = new StackPanel();
+        AddLine(scouting, "Confidence", State.ScoutingConfidenceText(personId));
+        AddParagraph(scouting, State.ScoutingKnowledgeText(personId));
+        AddParagraph(scouting, State.ScoutingReportHeadline(personId));
+        panel.Children.Add(UiPresentation.UiExpandableSection("Scouting Reports", scouting));
+
+        var medical = new StackPanel();
+        AddParagraph(medical, State.MedicalReportText(personId));
+        panel.Children.Add(UiPresentation.UiExpandableSection("Medical History", medical));
+
+        var career = new StackPanel();
+        AddLine(career, "Last season", State.LastSeasonStats(personId));
+        AddLine(career, "Career", State.CareerStatSummary(personId));
+        AddParagraph(career, BuildCommandCenterCareerText(personId));
+        panel.Children.Add(UiPresentation.UiExpandableSection("Career Timeline", career));
+
+        AddActions(panel,
+            CreateDetailButton("View Full Profile", () => OpenDossierFor(personId)),
+            CreateDetailButton("Add GM Note", () => State.AddDossierNoteFor(personId)),
+            CreateDetailButton("Return", () => Window.GetWindow(panel)?.Close()));
+        return panel;
+    }
+
+    private SelectablePersonRow BuildUniversalPersonRow(string personId)
+    {
+        var staff = State.StaffProfiles.FirstOrDefault(profile => profile.PersonId == personId);
+        if (staff is not null)
+        {
+            return new SelectablePersonRow(personId, staff.Name, "Staff", $"{StaffRoles.Title(staff.CurrentRole)} | {staff.Department}", $"{staff.ContractStatus} | relationship {staff.RelationshipWithGm}/100", staff.CurrentAssignment);
+        }
+
+        var candidate = State.StaffMarketCandidateFor(personId);
+        if (candidate is not null)
+        {
+            return new SelectablePersonRow(personId, candidate.Candidate.Person.Identity.DisplayName, "Staff Candidate", $"{candidate.Candidate.StaffMember.CurrentRole} | {candidate.Candidate.StaffMember.Department}", $"{candidate.Candidate.Reputation} reputation | ask {candidate.Candidate.ExpectedSalary.AnnualAmount:C0}", candidate.Candidate.HiringRecommendation);
+        }
+
+        var owner = State.Snapshot.Owner;
+        if (string.Equals(owner.OwnerId, personId, StringComparison.Ordinal) || string.Equals("owner", personId, StringComparison.Ordinal))
+        {
+            return new SelectablePersonRow(personId, owner.Name, "Owner", $"{owner.Archetype} | confidence {owner.Confidence}", State.OwnerOffice.JobSecurity.Level.ToString(), State.OwnerOffice.Personality.Vision);
+        }
+
+        return new SelectablePersonRow(
+            personId,
+            FindPersonName(personId),
+            "Player",
+            $"{State.PersonPosition(personId)} | age {State.PersonAge(personId)?.ToString() ?? "unknown"} | {State.RatingText(personId)}",
+            $"{State.CurrentLineupRole(personId)} | {State.ContractRightsStatus(personId)} | {State.InjuryStatus(personId)}",
+            State.PipelineText(personId));
     }
 
     private void SetStaffFocusFor(string personId)
@@ -2617,6 +2712,7 @@ internal sealed class MainWindow : Window
             SelectedItem = selected,
             MinHeight = 320,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = UiPresentation.PersonRowTemplate(),
             ContextMenu = BuildCommandCenterContextMenu()
         };
         _commandCenterPlayerList.SelectionChanged += (_, _) =>
@@ -2625,6 +2721,13 @@ internal sealed class MainWindow : Window
             {
                 _selectedCommandCenterPersonId = row.PersonId;
                 RenderCommandCenterPlayerCard(row);
+            }
+        };
+        _commandCenterPlayerList.MouseDoubleClick += (_, _) =>
+        {
+            if (_commandCenterPlayerList.SelectedItem is SelectablePersonRow row && IsLikelyPersonRow(row))
+            {
+                OpenUniversalPersonCard(row.PersonId);
             }
         };
         _commandCenterCenterPanel.Children.Add(_commandCenterPlayerList);
@@ -3005,7 +3108,8 @@ internal sealed class MainWindow : Window
             ItemsSource = rows,
             SelectedItem = selected,
             MinHeight = 250,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemTemplate = UiPresentation.PersonRowTemplate()
         };
         _organizationCommandStaffList.SelectionChanged += (_, _) =>
         {
@@ -3013,6 +3117,13 @@ internal sealed class MainWindow : Window
             {
                 _selectedOrganizationStaffPersonId = row.PersonId;
                 RenderOrganizationStaffCard(row);
+            }
+        };
+        _organizationCommandStaffList.MouseDoubleClick += (_, _) =>
+        {
+            if (_organizationCommandStaffList.SelectedItem is SelectablePersonRow row && IsLikelyPersonRow(row))
+            {
+                OpenUniversalPersonCard(row.PersonId);
             }
         };
         _organizationCommandCenterPanel.Children.Add(_organizationCommandStaffList);
@@ -3315,6 +3426,7 @@ internal sealed class MainWindow : Window
         AddParagraph(panel, StaffHistoryText(profile.PersonId));
         AddSubHeader(panel, "Actions");
         AddActions(panel,
+            CreateDetailButton("Person Card", () => OpenUniversalPersonCard(profile.PersonId)),
             CreateDetailButton("View Profile", () => ShowStaffProfile(profile.PersonId)),
             CreateDetailButton("Promote", () => State.ReassignStaffRoleFor(profile.PersonId)),
             CreateDetailButton("Demote", () => State.ReassignStaffRoleFor(profile.PersonId)),
@@ -3347,6 +3459,7 @@ internal sealed class MainWindow : Window
         }
 
         AddActions(panel,
+            CreateDetailButton("Person Card", () => OpenUniversalPersonCard("owner")),
             CreateDetailButton("Owner Workspace", () => SelectWorkspaceScreen("Organization", "Owner")),
             CreateDetailButton("Budget View", () => SelectWorkspaceScreen("Organization", "Budget")),
             CreateDetailButton("Owner History", () => SelectWorkspaceScreen("Reports / History", "Owner History")));
@@ -3674,9 +3787,9 @@ internal sealed class MainWindow : Window
                     player.PersonId,
                     FindPersonName(player.PersonId),
                     "RosterPlayer",
-                    $"{player.Position} - age {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} - {State.RatingText(player.PersonId)} - {player.Status}",
-                    $"{State.PlayerType(player.PersonId)} | role {State.CurrentLineupRole(player.PersonId)} | expected {State.ExpectedRoleText(player.PersonId)} | promised {State.PromisedRoleText(player.PersonId)} | {State.CurrentLinePair(player.PersonId)}",
-                    $"Satisfaction: {State.RoleSatisfactionText(player.PersonId)} | Stage: {State.DevelopmentStageText(player.PersonId)} | Development: {State.DevelopmentTrend(player.PersonId)} | Contract/rights: {State.ContractRightsStatus(player.PersonId)} | Waivers: {State.WaiverStatusText(player.PersonId)} | Last year: {State.LastSeasonStats(player.PersonId)} | Injury: {State.InjuryStatus(player.PersonId)}");
+                    $"{State.PositionShortText(player.Position)} | {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} | {State.RatingText(player.PersonId)}",
+                    $"{State.CurrentLineupRole(player.PersonId)} | {State.CurrentLinePair(player.PersonId)} | {State.ContractRightsStatus(player.PersonId)}",
+                    $"{State.PlayerType(player.PersonId)} | {State.DevelopmentTrend(player.PersonId)} | {State.InjuryStatus(player.PersonId)}");
             })
             .ToArray());
 
@@ -4455,6 +4568,7 @@ internal sealed class MainWindow : Window
             AddParagraph(panel, State.CandidateHiringFitText(row.PersonId));
             AddParagraph(panel, candidate.HiringRecommendation);
             AddActions(panel,
+                CreateDetailButton("Person Card", () => OpenUniversalPersonCard(row.PersonId)),
                 CreateDetailButton("Hire Candidate", () => State.HireCandidateFor(row.PersonId), market.CanBeHired, market.Status == StaffMarketStatus.Hired ? "Already hired" : "Candidate is employed elsewhere"),
                 CreateDetailButton("Approach Candidate", () => ShowConfirmationPopup("Approach Candidate", "Approach Candidate is a placeholder for employed staff interest."), !market.CanBeHired, "Available candidates can be hired directly"),
                 CreateDetailButton("Compare", () => MessageBox.Show(State.CompareCandidateText(row.PersonId), "Compare Candidate", MessageBoxButton.OK, MessageBoxImage.Information)),
@@ -4488,6 +4602,7 @@ internal sealed class MainWindow : Window
         AddSubHeader(detail, "Department Grades");
         AddParagraph(detail, State.DepartmentGradesText());
         AddActions(detail,
+            CreateDetailButton("Person Card", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)),
             CreateDetailButton("View Dossier/Profile", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Reassign Role", () => State.ReassignStaffRoleFor(row.PersonId)),
@@ -5101,6 +5216,7 @@ internal sealed class MainWindow : Window
 
     private IEnumerable<Button> BuildPlayerActionButtons(string tab, SelectablePersonRow row)
     {
+        yield return CreateDetailButton("Person Card", () => OpenUniversalPersonCard(row.PersonId));
         yield return CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId));
         yield return CreateDetailButton("Add GM Note", () => State.AddDossierNoteFor(row.PersonId));
 
@@ -5206,53 +5322,44 @@ internal sealed class MainWindow : Window
 
     private StackPanel EmptyDetail(string title, string message)
     {
-        var panel = CreateDetailPanel(title, "No selection");
-        AddParagraph(panel, message);
+        var panel = new StackPanel();
+        panel.Children.Add(UiPresentation.UiEmptyState(title, message));
         return panel;
     }
 
     private StackPanel CreateDetailPanel(string title, string subtitle)
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock
+        var header = new StackPanel();
+        header.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 22,
+            FontSize = UiTypography.CardTitle,
             FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
+            Foreground = UiTheme.Text,
             TextWrapping = TextWrapping.Wrap
         });
-        panel.Children.Add(new TextBlock
+        header.Children.Add(new TextBlock
         {
             Text = subtitle,
-            FontSize = 13,
-            Foreground = new SolidColorBrush(Color.FromRgb(92, 105, 120)),
-            Margin = new Thickness(0, 4, 0, 14),
+            FontSize = UiTypography.Body,
+            Foreground = UiTheme.MutedText,
+            Margin = new Thickness(0, 4, 0, 8),
             TextWrapping = TextWrapping.Wrap
         });
+        header.Children.Add(UiPresentation.BadgeRow(("Clickable Profile", "info"), ("Universal Person Card shell", "neutral")));
+        panel.Children.Add(UiPresentation.UiPersonCard(header));
         return panel;
     }
 
     private static void AddSubHeader(StackPanel panel, string text)
     {
-        panel.Children.Add(new TextBlock
-        {
-            Text = text,
-            FontSize = 15,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(38, 58, 82)),
-            Margin = new Thickness(0, 16, 0, 6)
-        });
+        panel.Children.Add(UiPresentation.UiSectionHeader(text));
     }
 
     private static void AddLine(StackPanel panel, string label, object? value)
     {
-        panel.Children.Add(new TextBlock
-        {
-            Text = $"{label}: {value ?? "unknown"}",
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 5)
-        });
+        panel.Children.Add(UiPresentation.UiInfoRow(label, value));
     }
 
     private static void AddParagraph(StackPanel panel, string text)
@@ -5261,7 +5368,7 @@ internal sealed class MainWindow : Window
         {
             Text = text,
             TextWrapping = TextWrapping.Wrap,
-            Foreground = new SolidColorBrush(Color.FromRgb(52, 65, 82)),
+            Foreground = UiTheme.MutedText,
             Margin = new Thickness(0, 0, 0, 8)
         });
     }
@@ -5297,6 +5404,56 @@ internal sealed class MainWindow : Window
         }
 
         return button;
+    }
+
+    private static bool IsLikelyPersonRow(SelectablePersonRow row) =>
+        !row.PersonId.Contains(':', StringComparison.Ordinal)
+        && !row.PersonId.EndsWith("-summary", StringComparison.OrdinalIgnoreCase)
+        && row.Kind is not ("RosterSummary" or "LineupSummary" or "GameUsage" or "LineChemistry" or "LineupSlot" or "TacticsSummary" or "StaffSection");
+
+    private static string StatusSemantic(string text)
+    {
+        if (text.Contains("injured", StringComparison.OrdinalIgnoreCase))
+        {
+            return "injured";
+        }
+
+        if (text.Contains("recover", StringComparison.OrdinalIgnoreCase) || text.Contains("risk", StringComparison.OrdinalIgnoreCase))
+        {
+            return "attention";
+        }
+
+        if (text.Contains("healthy", StringComparison.OrdinalIgnoreCase))
+        {
+            return "healthy";
+        }
+
+        return "neutral";
+    }
+
+    private static string ConfidenceSemantic(string text)
+    {
+        if (text.Contains("Black", StringComparison.OrdinalIgnoreCase) || text.Contains("VeryHigh", StringComparison.OrdinalIgnoreCase))
+        {
+            return "black";
+        }
+
+        if (text.Contains("Blue", StringComparison.OrdinalIgnoreCase) || text.Contains("High", StringComparison.OrdinalIgnoreCase))
+        {
+            return "info";
+        }
+
+        if (text.Contains("Green", StringComparison.OrdinalIgnoreCase) || text.Contains("Medium", StringComparison.OrdinalIgnoreCase))
+        {
+            return "positive";
+        }
+
+        if (text.Contains("Red", StringComparison.OrdinalIgnoreCase) || text.Contains("Low", StringComparison.OrdinalIgnoreCase))
+        {
+            return "critical";
+        }
+
+        return "neutral";
     }
 
     private void RefreshDraftModal()
@@ -5446,6 +5603,14 @@ internal sealed class MainWindow : Window
         {
             prospectCard.Text = BuildLiveDraftProspectCard((prospectList.SelectedItem as ListBoxItem)?.Tag as string);
         };
+        prospectList.MouseDoubleClick += (_, _) =>
+        {
+            var prospectId = (prospectList.SelectedItem as ListBoxItem)?.Tag as string;
+            if (!string.IsNullOrWhiteSpace(prospectId))
+            {
+                OpenUniversalPersonCard(prospectId);
+            }
+        };
 
         var left = new Grid { Margin = new Thickness(0, 0, 16, 0) };
         left.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -5510,6 +5675,14 @@ internal sealed class MainWindow : Window
             if (!string.IsNullOrWhiteSpace(prospectId))
             {
                 OpenDossierFor(prospectId);
+            }
+        }));
+        actionBar.Children.Add(CreateButton("Person Card", () =>
+        {
+            var prospectId = (prospectList.SelectedItem as ListBoxItem)?.Tag as string;
+            if (!string.IsNullOrWhiteSpace(prospectId))
+            {
+                OpenUniversalPersonCard(prospectId);
             }
         }));
         actionBar.Children.Add(CreateButton("Compare", () =>
