@@ -135,6 +135,32 @@ internal sealed class Alpha24StaffBudgetTests
         Assert.True(source.Contains("Staff release obligations", StringComparison.Ordinal), "Budget screen should show release obligations.");
     }
 
+    public void NhlStaffBudgetIsLeagueAppropriate()
+    {
+        var league = new MultiLeagueCareerService();
+        var selected = league.SelectLeagueAndTeam(LeagueExperience.Nhl, league.TeamsFor(LeagueExperience.Nhl).First().OrganizationId);
+        var scenario = league.CreateScenario(selected);
+        var budget = new StaffBudgetService().Build(scenario.ScenarioSnapshot, scenario.Registry.Rulebook!);
+
+        Assert.True(budget.TotalBudget >= 15_000_000m, "NHL-style hockey operations budget should support professional staff salaries.");
+        Assert.True(budget.Status != BudgetStatus.OverBudget, "A new NHL-style career should not start with staff already over budget.");
+        Assert.True(scenario.ScenarioSnapshot.AlphaSnapshot.Owner.Budget.PlayerPayroll >= scenario.Registry.Rulebook!.SalaryCapRules!.CapAmount, "Player payroll side should be represented by the salary cap.");
+    }
+
+    public void StaffCandidatesIncludeBudgetAndPremiumSalaryOptions()
+    {
+        var league = new MultiLeagueCareerService();
+        var selected = league.SelectLeagueAndTeam(LeagueExperience.Nhl, league.TeamsFor(LeagueExperience.Nhl).First().OrganizationId);
+        var scenario = league.CreateScenario(selected);
+        var generated = new StaffOfficeService().GenerateCandidatePool(scenario.Registry, scenario.ScenarioSnapshot);
+        var salaries = generated.ScenarioSnapshot.StaffCandidates.Select(candidate => candidate.ExpectedSalary.AnnualAmount).OrderBy(amount => amount).ToArray();
+
+        Assert.True(generated.ScenarioSnapshot.StaffCandidates.Count >= 3, "Staff market should include multiple tiers of candidates.");
+        Assert.True(salaries.First() < salaries.Last(), "Staff candidates should include cheaper and more expensive options.");
+        Assert.True(generated.ScenarioSnapshot.StaffCandidates.Any(candidate => candidate.PersonalityFitSummary.Contains("Budget-tier", StringComparison.Ordinal)), "Staff market should label budget-tier options.");
+        Assert.True(generated.ScenarioSnapshot.StaffCandidates.Any(candidate => candidate.PersonalityFitSummary.Contains("Premium", StringComparison.Ordinal)), "Staff market should label premium options.");
+    }
+
     public void NoGodotSaveOrGameSimulationAdded()
     {
         var source = string.Join('\n',

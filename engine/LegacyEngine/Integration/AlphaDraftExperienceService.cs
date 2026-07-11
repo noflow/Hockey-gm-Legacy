@@ -73,31 +73,38 @@ public sealed class AlphaDraftExperienceService
         var board = scenario.AlphaSnapshot.DraftBoard;
         var selections = state.Selections.ToList();
         var inboxItems = new List<AlphaInboxItem>();
+        var picks = draft.Picks.ToArray();
+        var selectedProspects = picks
+            .Where(item => item.Selection is not null)
+            .Select(item => item.Selection!.ProspectPersonId)
+            .ToHashSet(StringComparer.Ordinal);
         var picked = 0;
+        var pickIndex = Array.FindIndex(picks, item => !item.IsSelected);
 
-        while (state.CurrentPick is { } pick && pick.OwningOrganizationId != state.PlayerOrganizationId)
+        while (pickIndex >= 0 && pickIndex < picks.Length && picks[pickIndex].OwningOrganizationId != state.PlayerOrganizationId)
         {
-            var prospectId = SelectAiProspect(scenario, board, draft, pick.OwningOrganizationId, pick.PickNumber);
-            var selection = registry.DraftEngine.SelectProspect(
-                draft,
-                pick.RoundNumber,
-                pick.PickNumber,
+            var pick = picks[pickIndex];
+            var prospectId = SelectAiProspect(scenario, board, selectedProspects, pick.OwningOrganizationId, pick.PickNumber);
+            var selectedPick = pick.Select(new DraftSelection(
                 prospectId,
-                AtCurrentDate(scenario, 10, pick.PickNumber),
-                ruleValidator: new DraftRuleValidator(ResolveRulebook(registry)));
+                AtCurrentDate(scenario, 10, pick.PickNumber)));
 
-            draft = selection.Draft;
-            selections.Add(SummaryFor(scenario, state, selection.Pick, prospectId, isPlayerSelection: false));
+            picks[pickIndex] = selectedPick;
+            selectedProspects.Add(prospectId);
+            selections.Add(SummaryFor(scenario, state, selectedPick, prospectId, isPlayerSelection: false));
             if (board.Entries.Any(entry => entry.ProspectPersonId == prospectId))
             {
                 board = board.RemoveProspect(prospectId);
             }
 
             picked++;
-            state = state with { Draft = draft, Selections = selections };
+            pickIndex++;
         }
 
-        if (state.CurrentPick is null)
+        draft = draft with { Picks = picks };
+        state = state with { Draft = draft, Selections = selections };
+
+        if (pickIndex < 0 || pickIndex >= picks.Length)
         {
             return CompleteDraft(registry, scenario, state, board, selections);
         }
@@ -441,25 +448,30 @@ public sealed class AlphaDraftExperienceService
 
     private static IReadOnlyList<(string OrganizationId, string TeamName)> DraftTeams(NewGmScenarioSnapshot scenario)
     {
-        var opponents = SeasonFrameworkService.LeagueTeams(scenario)
+        var opponents = scenario.LeagueProfile.Teams
             .Where(team => team.OrganizationId != scenario.AlphaSnapshot.OrganizationId)
-            .Take(3);
+            .Select(team => (team.OrganizationId, team.TeamName))
+            .ToArray();
 
         return new[] { (scenario.AlphaSnapshot.OrganizationId, scenario.Organization.Name) }
             .Concat(opponents)
+            .GroupBy(team => team.OrganizationId, StringComparer.Ordinal)
+            .Select(group => group.First())
             .ToArray();
     }
 
-    private static string SelectAiProspect(NewGmScenarioSnapshot scenario, DraftBoard board, LegacyEngine.Draft.Draft draft, string organizationId, int pickNumber)
+    private static string SelectAiProspect(
+        NewGmScenarioSnapshot scenario,
+        DraftBoard board,
+        ISet<string> selected,
+        string organizationId,
+        int pickNumber)
     {
-        var selected = draft.Picks
-            .Where(item => item.Selection is not null)
-            .Select(item => item.Selection!.ProspectPersonId)
-            .ToHashSet(StringComparer.Ordinal);
-
         var warRoom = new DraftWarRoomService();
         return board.Entries
             .Where(item => !selected.Contains(item.ProspectPersonId))
+            .OrderBy(item => item.Rank)
+            .Take(40)
             .Select((item, index) => new
             {
                 Entry = item,

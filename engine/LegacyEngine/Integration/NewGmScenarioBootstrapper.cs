@@ -74,12 +74,23 @@ public sealed class NewGmScenarioBootstrapper
         var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
         var existingProspectPeople = CreateExistingProspectPeople(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
         var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, activeRulebook);
+        var draftProspectCount = RequiredDraftProspectCount(scenarioSettings, activeRulebook, leagueProfile);
+        var draftOnlyProspects = CreateDraftOnlyProspectPeople(
+            startDate,
+            nameGenerator,
+            nameRegistry,
+            scenarioSettings.SeasonYear,
+            activeRulebook,
+            recruits.Count,
+            Math.Max(0, draftProspectCount - recruits.Count));
+        var draftPeople = recruits.Concat(draftOnlyProspects).ToArray();
         var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
         var tradeBlockPeople = TradeService.CreateTradeBlockPeople(startDate, scenarioSettings.SeasonYear, nameGenerator, nameRegistry);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
             .Concat(rosterPlayers)
             .Concat(existingProspectPeople)
             .Concat(recruits)
+            .Concat(draftOnlyProspects)
             .Concat(freeAgentPeople)
             .Concat(tradeBlockPeople)
             .ToArray();
@@ -89,7 +100,7 @@ public sealed class NewGmScenarioBootstrapper
             Name: ownerPerson.Identity.DisplayName,
             OrganizationId: scenarioSettings.OrganizationId,
             Archetype: OwnerArchetype.Builder,
-            Budget: new OwnerBudget(1_150_000, 410_000, 180_000, 245_000, 210_000),
+            Budget: OwnerBudgetFor(scenarioSettings, activeRulebook, leagueProfile.Experience),
             Goals: new[]
             {
                 new OwnerGoal(OwnerGoalType.DevelopProspects, 5, "Become a club known for graduating dependable players."),
@@ -109,8 +120,9 @@ public sealed class NewGmScenarioBootstrapper
         var staffMembers = CreateStaff(registry, scenarioSettings.OrganizationId, startDate, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, staffContracts);
         var roster = CreateRoster(registry, scenarioSettings, rosterPlayers, startDate);
         var recruitProfiles = CreateRecruitProfiles(scenarioSettings.OrganizationId, recruits, startDate);
-        var draftClassProfile = new DraftClassGenerator().GenerateProfile(activeRulebook, scenarioSettings.SeasonYear, scenarioSettings.LeagueId, recruitProfiles.Count);
-        var draftBoard = CreateDraftBoard(scenarioSettings, recruitProfiles, recruits, activeRulebook, draftClassProfile);
+        var draftProfiles = CreateRecruitProfiles(scenarioSettings.OrganizationId, draftPeople, startDate);
+        var draftClassProfile = new DraftClassGenerator().GenerateProfile(activeRulebook, scenarioSettings.SeasonYear, scenarioSettings.LeagueId, draftProfiles.Count);
+        var draftBoard = CreateDraftBoard(scenarioSettings, draftProfiles, draftPeople, activeRulebook, draftClassProfile);
         var scout = new Scout(
             ScoutId: "scout-head-prairie-falcons",
             Name: headScoutPerson.Identity.DisplayName,
@@ -119,7 +131,7 @@ public sealed class NewGmScenarioBootstrapper
             Diligence: 78,
             ReportBias: -2);
         scout.Validate();
-        var inheritedScoutingReports = CreateInheritedScoutingReports(draftBoard, recruits, scout, startDate);
+        var inheritedScoutingReports = CreateInheritedScoutingReports(draftBoard, draftPeople, scout, startDate);
 
         var relationships = CreateRelationships(owner, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, rosterPlayers, startDate);
         var developmentProfiles = CreateDevelopmentProfiles(registry, rosterPlayers, startDate);
@@ -337,6 +349,32 @@ public sealed class NewGmScenarioBootstrapper
             },
             parentOrganizationId: settings.ParentOrganizationId,
             affiliateOrganizationId: settings.AffiliateOrganizationId);
+
+    private static OwnerBudget OwnerBudgetFor(NewGmScenarioSettings settings, Rulebook rulebook, LeagueExperience experience)
+    {
+        var playerPayroll = rulebook.SalaryCapRules?.CapAmount ?? settings.TeamSelection?.Budget ?? 1_150_000m;
+        return experience switch
+        {
+            LeagueExperience.Nhl => new OwnerBudget(
+                playerPayroll,
+                Staff: 10_500_000m,
+                Scouting: 2_250_000m,
+                Facilities: 4_500_000m,
+                Operations: 3_000_000m),
+            LeagueExperience.Ahl => new OwnerBudget(
+                playerPayroll > 0 ? playerPayroll : 4_900_000m,
+                Staff: 1_450_000m,
+                Scouting: 550_000m,
+                Facilities: 900_000m,
+                Operations: 650_000m),
+            _ => new OwnerBudget(
+                playerPayroll,
+                Staff: 410_000m,
+                Scouting: 180_000m,
+                Facilities: 245_000m,
+                Operations: 210_000m)
+        };
+    }
 
     private static IReadOnlyList<Contract> CreateContracts(
         EngineRegistry registry,
@@ -925,6 +963,49 @@ public sealed class NewGmScenarioBootstrapper
                 var birthDate = DraftBirthDateFor(startDate, rulebook, index);
                 return CreatePlayer(
                     $"person-recruit-{index + 1:000}",
+                    name.FirstName,
+                    name.LastName,
+                    birthDate,
+                    name.Nationality,
+                    name.Birthplace,
+                    "unassigned",
+                    startDate);
+            })
+            .ToArray();
+    }
+
+    private static int RequiredDraftProspectCount(
+        NewGmScenarioSettings settings,
+        Rulebook rulebook,
+        LeagueProfile leagueProfile)
+    {
+        if (rulebook.DraftRules?.DraftEnabled != true)
+        {
+            return 60;
+        }
+
+        var teamCount = Math.Max(1, leagueProfile.Teams.Count);
+        var rounds = Math.Max(1, rulebook.DraftRules.Rounds);
+        return Math.Max(60, (teamCount * rounds) + 5);
+    }
+
+    private static IReadOnlyList<Person> CreateDraftOnlyProspectPeople(
+        DateOnly startDate,
+        NameGenerator nameGenerator,
+        NameUniquenessRegistry nameRegistry,
+        int seasonYear,
+        Rulebook rulebook,
+        int startIndex,
+        int count)
+    {
+        return Enumerable.Range(0, count)
+            .Select(offset =>
+            {
+                var index = startIndex + offset;
+                var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "draft-class"), PlayerOrigins());
+                var birthDate = DraftBirthDateFor(startDate, rulebook, index);
+                return CreatePlayer(
+                    $"person-draft-prospect-{index + 1:000}",
                     name.FirstName,
                     name.LastName,
                     birthDate,

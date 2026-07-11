@@ -107,7 +107,7 @@ var alpha710AssetEvaluationTests = new Alpha710AssetEvaluationTests();
 var alpha711DraftBoardRealismTests = new Alpha711DraftBoardRealismTests();
 var alpha712OrganizationPlanningTests = new Alpha712OrganizationPlanningTests();
 var alpha713AiFrontOfficeDecisionTests = new Alpha713AiFrontOfficeDecisionTests();
-var runner = new TestRunner();
+var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
 runner.Run("invalid rulebook is rejected", tests.InvalidRulebookIsRejected);
@@ -381,6 +381,8 @@ runner.Run("alpha draft board reordering works", alphaDraftExperienceTests.Draft
 runner.Run("alpha draft notes and stars work", alphaDraftExperienceTests.DraftNotesAndStarsWork);
 runner.Run("alpha draft AI drafting runs until player pick", alphaDraftExperienceTests.AiDraftingRunsUntilPlayerPick);
 runner.Run("alpha live draft starts active draft", alphaDraftExperienceTests.StartDraftBeginsDraft);
+runner.Run("alpha draft includes every league team", alphaDraftExperienceTests.DraftIncludesEveryLeagueTeam);
+runner.Run("alpha draft board has enough prospects for full league draft", alphaDraftExperienceTests.DraftBoardHasEnoughProspectsForFullLeagueDraft);
 runner.Run("alpha live draft automatically advances AI picks", alphaDraftExperienceTests.LiveDraftStartAdvancesAiPicksAutomatically);
 runner.Run("alpha draft player drafting records selection", alphaDraftExperienceTests.PlayerDraftingRecordsSelection);
 runner.Run("alpha live draft player selection continues to next pick", alphaDraftExperienceTests.LiveDraftPlayerSelectionContinuesToNextPlayerPick);
@@ -559,6 +561,8 @@ runner.Run("alpha 2.4 over-budget warning generated", alpha24StaffBudgetTests.Ov
 runner.Run("alpha 2.4 league salary ranges differ", alpha24StaffBudgetTests.LeagueSalaryRangesDifferForJuniorAhlAndNhl);
 runner.Run("alpha 2.4 relationship chemistry warning can appear", alpha24StaffBudgetTests.RelationshipChemistryWarningCanAppear);
 runner.Run("alpha 2.4 AlphaDesktop exposes hockey operations budget", alpha24StaffBudgetTests.AlphaDesktopExposesHockeyOperationsBudget);
+runner.Run("alpha 2.4 NHL staff budget is league appropriate", alpha24StaffBudgetTests.NhlStaffBudgetIsLeagueAppropriate);
+runner.Run("alpha 2.4 staff candidates include budget and premium options", alpha24StaffBudgetTests.StaffCandidatesIncludeBudgetAndPremiumSalaryOptions);
 runner.Run("alpha 2.4 no Godot save or game simulation added", alpha24StaffBudgetTests.NoGodotSaveOrGameSimulationAdded);
 runner.Run("alpha 2.5 schedule generated", alpha25SeasonFrameworkTests.ScheduleGenerated);
 runner.Run("alpha 2.5 games have dates home and away", alpha25SeasonFrameworkTests.GamesHaveDatesHomeAndAway);
@@ -1634,11 +1638,24 @@ internal sealed class RuleEngineTests
 internal sealed class TestRunner
 {
     private readonly List<string> _failures = [];
+    private readonly IReadOnlyList<string> _filters;
 
     public int FailedCount => _failures.Count;
 
+    public TestRunner(IReadOnlyList<string>? filters = null)
+    {
+        _filters = filters is null || filters.Count == 0
+            ? Array.Empty<string>()
+            : filters;
+    }
+
     public void Run(string name, Action test)
     {
+        if (_filters.Count > 0 && !_filters.Any(filter => name.Contains(filter, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
         try
         {
             test();

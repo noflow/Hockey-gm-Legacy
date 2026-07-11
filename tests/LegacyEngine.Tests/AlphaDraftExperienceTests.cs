@@ -67,7 +67,7 @@ internal sealed class AlphaDraftExperienceTests
 
         Assert.Equal(DraftExperienceStatus.AwaitingPlayerPick, result.DraftState.Status);
         Assert.True(result.DraftState.IsPlayerTurn, "AI drafting should stop on the player's pick.");
-        Assert.Equal(3, result.DraftState.Selections.Count);
+        Assert.Equal(scenario.ScenarioSnapshot.LeagueProfile.Teams.Count - 1, result.DraftState.Selections.Count);
     }
 
     public void StartDraftBeginsDraft()
@@ -77,6 +77,26 @@ internal sealed class AlphaDraftExperienceTests
 
         Assert.Equal(DraftExperienceStatus.InProgress, result.DraftState.Status);
         Assert.True(result.DraftState.Draft is not null, "Starting draft day should create the active draft.");
+    }
+
+    public void DraftIncludesEveryLeagueTeam()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        var result = new AlphaDraftExperienceService().StartDraftDay(scenario.Registry, scenario.ScenarioSnapshot);
+        var teamCount = scenario.ScenarioSnapshot.LeagueProfile.Teams.Count;
+
+        Assert.Equal(teamCount, result.DraftState.OrganizationNames.Count);
+        Assert.Equal(teamCount * result.DraftState.TotalRounds, result.DraftState.Draft!.Picks.Count);
+    }
+
+    public void DraftBoardHasEnoughProspectsForFullLeagueDraft()
+    {
+        var scenario = AdvanceToDraftDay(NewGmScenarioBootstrapper.CreateScenario());
+        var result = new AlphaDraftExperienceService().StartDraftDay(scenario.Registry, scenario.ScenarioSnapshot);
+
+        Assert.True(
+            scenario.AlphaSnapshot.DraftBoard.Entries.Count >= result.DraftState.Draft!.Picks.Count,
+            "Draft board should have enough prospects for every team and every round.");
     }
 
     public void LiveDraftStartAdvancesAiPicksAutomatically()

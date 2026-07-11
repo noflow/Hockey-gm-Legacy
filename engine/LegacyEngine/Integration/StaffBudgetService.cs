@@ -87,8 +87,9 @@ public sealed class StaffBudgetService
             .Sum(contract => contract.Money.SalaryOrStipend + contract.Money.SigningBonus);
         var staffTotal = gmSalary + executive + coaching + scouting + medical + operations;
         var used = staffTotal + obligations;
-        var remaining = scenario.AlphaSnapshot.Owner.Budget.Total - used;
-        var ratio = scenario.AlphaSnapshot.Owner.Budget.Total == 0 ? 1 : used / scenario.AlphaSnapshot.Owner.Budget.Total;
+        var totalBudget = HockeyOperationsBudgetTotal(scenario.AlphaSnapshot.Owner.Budget);
+        var remaining = totalBudget - used;
+        var ratio = totalBudget == 0 ? 1 : used / totalBudget;
         var status = remaining < 0
             ? BudgetStatus.OverBudget
             : ratio >= 0.9m
@@ -110,7 +111,7 @@ public sealed class StaffBudgetService
         }
 
         var budget = new HockeyOperationsBudget(
-            scenario.AlphaSnapshot.Owner.Budget.Total,
+            totalBudget,
             gmSalary,
             coaching,
             scouting,
@@ -155,6 +156,9 @@ public sealed class StaffBudgetService
             _ => new StaffSalaryRange(null, StaffBudgetCategory.GeneralManager, 60_000m, 140_000m)
         };
 
+    public static decimal HockeyOperationsBudgetTotal(LegacyEngine.Owners.OwnerBudget budget) =>
+        budget.Staff + budget.Scouting + budget.Facilities + budget.Operations;
+
     private static Contract? SignedContractFor(string personId, NewGmScenarioSnapshot scenario) =>
         SignedContracts(scenario).FirstOrDefault(contract => contract.PersonId == personId);
 
@@ -169,8 +173,9 @@ public sealed class StaffBudgetService
     private decimal EstimateSalary(StaffRole role, int reputation, Rulebook rulebook)
     {
         var range = RangeFor(role, rulebook);
-        var reputationRatio = Math.Clamp(reputation, 0, 100) / 100m;
-        return Math.Round(range.Minimum + ((range.Maximum - range.Minimum) * reputationRatio), 0);
+        var reputationRatio = Math.Clamp(reputation - 25, 0, 75) / 75m;
+        var curvedRatio = reputationRatio * reputationRatio;
+        return Math.Round(range.Minimum + ((range.Maximum - range.Minimum) * curvedRatio), 0);
     }
 
     private static StaffBudgetCategory CategoryFor(StaffRole role) =>

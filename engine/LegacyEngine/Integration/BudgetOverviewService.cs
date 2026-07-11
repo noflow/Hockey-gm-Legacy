@@ -32,9 +32,10 @@ public sealed class BudgetOverviewService
             .Where(penalty => penalty.SeasonYear == scenario.Season.Year)
             .Sum(penalty => penalty.Amount);
         var ownerBudget = scenario.AlphaSnapshot.Owner.Budget;
+        var totalBudget = hockeyOps.TotalBudget;
         var used = hockeyOps.UsedBudget;
-        var remaining = ownerBudget.Total - used;
-        var ratio = ownerBudget.Total == 0 ? 1 : used / ownerBudget.Total;
+        var remaining = totalBudget - used;
+        var ratio = totalBudget == 0 ? 1 : used / totalBudget;
         var status = remaining < 0
             ? BudgetStatus.OverBudget
             : ratio >= 0.9m
@@ -49,7 +50,7 @@ public sealed class BudgetOverviewService
         };
 
         var snapshot = new BudgetSnapshot(
-            TotalBudget: ownerBudget.Total,
+            TotalBudget: totalBudget,
             UsedBudget: used,
             RemainingBudget: remaining,
             PlayerContractsTotal: playerContracts + buyoutPenalty,

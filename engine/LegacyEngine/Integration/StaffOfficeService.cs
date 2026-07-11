@@ -81,20 +81,21 @@ public sealed class StaffOfficeService
             .Take(8)
             .ToArray();
         var candidates = openRoles
-            .Select((role, index) => BuildCandidate(
-                registry,
-                scenario,
-                rulebook,
-                $"candidate-staff-{index + 1:000}",
-                GenerateCandidateName(nameGenerator, nameRegistry, scenario),
-                role,
-                68 + ((index * 7) % 16),
-                65 + ((index * 5) % 18),
-                52 + ((index * 6) % 20),
-                StrengthsFor(role),
-                WeaknessesFor(role),
-                PersonalityFor(role),
-                ChemistryRiskFor(role, index)))
+            .SelectMany((role, roleIndex) => CandidateTiers(role, roleIndex)
+                .Select((tier, tierIndex) => BuildCandidate(
+                    registry,
+                    scenario,
+                    rulebook,
+                    $"candidate-staff-{roleIndex + 1:000}-{tierIndex + 1}",
+                    GenerateCandidateName(nameGenerator, nameRegistry, scenario),
+                    role,
+                    tier.RoleFit,
+                    tier.DepartmentFit,
+                    tier.Reputation,
+                    StrengthsFor(role),
+                    WeaknessesFor(role).Concat(tier.Weaknesses).Distinct(StringComparer.Ordinal).ToArray(),
+                    $"{PersonalityFor(role)} {tier.Description}",
+                    ChemistryRiskFor(role, roleIndex + tierIndex))))
             .ToArray();
 
         var updatedPeople = scenario.AlphaSnapshot.People
@@ -494,6 +495,29 @@ public sealed class StaffOfficeService
         candidate.Validate();
         return candidate;
     }
+
+    private static IReadOnlyList<(int RoleFit, int DepartmentFit, int Reputation, string Description, IReadOnlyList<string> Weaknesses)> CandidateTiers(StaffRole role, int roleIndex) =>
+        new[]
+        {
+            (
+                RoleFit: 46 + roleIndex % 8,
+                DepartmentFit: 44 + roleIndex % 10,
+                Reputation: 34 + roleIndex % 9,
+                Description: "Budget-tier candidate; affordable, but needs support and patience.",
+                Weaknesses: (IReadOnlyList<string>)new[] { "limited top-level track record" }),
+            (
+                RoleFit: 63 + (roleIndex * 3 % 12),
+                DepartmentFit: 60 + (roleIndex * 5 % 12),
+                Reputation: 53 + (roleIndex * 4 % 14),
+                Description: "Solid mid-market candidate with credible fit and manageable cost.",
+                Weaknesses: (IReadOnlyList<string>)new[] { "still proving ceiling" }),
+            (
+                RoleFit: 78 + (roleIndex * 2 % 12),
+                DepartmentFit: 76 + (roleIndex * 4 % 12),
+                Reputation: 72 + (roleIndex * 5 % 16),
+                Description: "Premium candidate; stronger resume with a higher salary ask.",
+                Weaknesses: (IReadOnlyList<string>)new[] { "expensive for the role" })
+        };
 
     private static GeneratedName GenerateCandidateName(NameGenerator generator, NameUniquenessRegistry registry, NewGmScenarioSnapshot scenario) =>
         generator.Generate(
