@@ -26,7 +26,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.3 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.4 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -38,17 +38,23 @@ public static class Program
 internal sealed class MainWindow : Window
 {
     private sealed record WorkspaceScreen(string Label, UIElement Content);
+    private sealed record NavigationSnapshot(string Workspace, string Screen, string? SelectedPersonId);
 
     private AlphaDesktopState? _state;
     private readonly TextBlock _dateText = new();
     private readonly TextBlock _summaryText = new();
     private readonly TextBlock _processedText = new();
+    private readonly TextBlock _feedbackText = new();
     private readonly Dictionary<string, TextBox> _tabs = [];
     private readonly Dictionary<string, TabItem> _tabItems = [];
     private readonly Dictionary<string, ListBox> _workspaceNavigations = [];
+    private readonly Dictionary<string, TextBlock> _workspaceBreadcrumbs = [];
     private readonly Dictionary<string, ListBox> _selectableLists = [];
     private readonly Dictionary<string, StackPanel> _selectableDetails = [];
     private readonly Dictionary<string, string> _selectedPeopleByTab = [];
+    private readonly Stack<NavigationSnapshot> _backStack = new();
+    private readonly Stack<NavigationSnapshot> _forwardStack = new();
+    private readonly Dictionary<string, int> _localUxCounters = [];
     private ListBox? _commandCenterSourceList;
     private ListBox? _commandCenterViewList;
     private ListBox? _commandCenterPlayerList;
@@ -119,6 +125,9 @@ internal sealed class MainWindow : Window
     private string? _selectedTradeCenterOrganizationId;
     private bool _layoutReady;
     private bool _isRefreshing;
+    private bool _isRestoringNavigation;
+    private string _displayDensity = "Comfortable";
+    private IInputElement? _lastPopupFocus;
 
     public MainWindow()
     {
@@ -128,8 +137,45 @@ internal sealed class MainWindow : Window
         MinWidth = 920;
         MinHeight = 620;
         Background = new SolidColorBrush(Color.FromRgb(245, 247, 250));
+        KeyDown += HandleGlobalKeyDown;
 
         Content = BuildCreationLayout();
+    }
+
+    private void HandleGlobalKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
+        {
+            e.Handled = true;
+            if (_state is not null)
+            {
+                SaveCareer();
+                SetFeedback("Career saved with Ctrl+S.");
+            }
+
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.F)
+        {
+            e.Handled = true;
+            _globalSearchInput?.Focus();
+            SetFeedback("Search focused. Type a player, team, role, status, or message.");
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey == Key.Left)
+        {
+            e.Handled = true;
+            NavigateBack();
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Alt && e.SystemKey == Key.Right)
+        {
+            e.Handled = true;
+            NavigateForward();
+        }
     }
 
     private UIElement BuildCreationLayout()
@@ -663,7 +709,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = $"Hockey GM Legacy - Alpha 8.3 - GM Office | {teamBrand.OrganizationDisplayName}",
+            Text = $"Hockey GM Legacy - Alpha 8.4 - GM Office | {teamBrand.OrganizationDisplayName}",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -690,6 +736,13 @@ internal sealed class MainWindow : Window
         _processedText.Foreground = new SolidColorBrush(Color.FromRgb(210, 225, 240));
         _processedText.Margin = new Thickness(0, 4, 0, 0);
         textPanel.Children.Add(_processedText);
+
+        _feedbackText.Foreground = new SolidColorBrush(Color.FromRgb(236, 245, 255));
+        _feedbackText.FontWeight = FontWeights.SemiBold;
+        _feedbackText.TextWrapping = TextWrapping.Wrap;
+        _feedbackText.Margin = new Thickness(0, 4, 0, 0);
+        _feedbackText.ToolTip = "Last action feedback. Use Ctrl+S to save, Ctrl+F to search, Alt+Left/Alt+Right for navigation history.";
+        textPanel.Children.Add(_feedbackText);
 
         brandHeader.Children.Add(textPanel);
         panel.Children.Add(brandHeader);
@@ -721,8 +774,47 @@ internal sealed class MainWindow : Window
                 _tabs["Global Search"].Text = BuildGlobalSearch();
             }
         };
-        searchPanel.Children.Add(_globalSearchInput);
+        var globalSearchRow = new DockPanel { LastChildFill = true };
+        var clearSearch = CreateButton("Clear Search", () =>
+        {
+            _globalSearchInput.Text = string.Empty;
+            SetFeedback("Search cleared.");
+        });
+        clearSearch.MinWidth = 100;
+        DockPanel.SetDock(clearSearch, Dock.Right);
+        globalSearchRow.Children.Add(clearSearch);
+        globalSearchRow.Children.Add(_globalSearchInput);
+        searchPanel.Children.Add(globalSearchRow);
         panel.Children.Add(searchPanel);
+
+        var densityPanel = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        densityPanel.Children.Add(new TextBlock
+        {
+            Text = "Display density",
+            Foreground = new SolidColorBrush(Color.FromRgb(210, 225, 240)),
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 5, 8, 0)
+        });
+        var densityInput = new ComboBox
+        {
+            ItemsSource = new[] { "Comfortable", "Compact" },
+            SelectedItem = _displayDensity,
+            MinWidth = 130,
+            MinHeight = 28,
+            ToolTip = "Comfortable uses larger rows. Compact reduces padding so more rows are visible."
+        };
+        densityInput.SelectionChanged += (_, _) =>
+        {
+            _displayDensity = densityInput.SelectedItem?.ToString() ?? "Comfortable";
+            SetFeedback($"Display density changed to {_displayDensity}.");
+            RefreshAfterAction();
+        };
+        densityPanel.Children.Add(densityInput);
+        panel.Children.Add(densityPanel);
 
         panel.Children.Add(new TextBlock
         {
@@ -776,17 +868,20 @@ internal sealed class MainWindow : Window
         var button = new Button
         {
             Content = text,
-            Focusable = false,
+            Focusable = true,
             MinWidth = 92,
             Padding = new Thickness(10, 7, 10, 7),
             Margin = new Thickness(0, 0, 8, 8),
             FontWeight = FontWeights.SemiBold,
-            HorizontalAlignment = HorizontalAlignment.Left
+            HorizontalAlignment = HorizontalAlignment.Left,
+            ToolTip = text
         };
 
         button.Click += (_, _) =>
         {
+            IncrementUxCounter($"button:{text}");
             action();
+            SetFeedback($"{text} complete.");
             RefreshAfterAction();
         };
 
@@ -1823,6 +1918,8 @@ internal sealed class MainWindow : Window
     private void AddWorkspaceTab(TabControl tabs, string title, IReadOnlyList<WorkspaceScreen> screens)
     {
         var root = new Grid { Background = Brushes.White };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
@@ -1837,6 +1934,14 @@ internal sealed class MainWindow : Window
         var contentHost = new ContentControl
         {
             Content = screens.FirstOrDefault()?.Content
+        };
+        var breadcrumb = new TextBlock
+        {
+            Text = BuildBreadcrumb(title, screens.FirstOrDefault()?.Label ?? string.Empty),
+            Foreground = UiTheme.MutedText,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(14, 10, 14, 8),
+            ToolTip = "Current location. Use Alt+Left and Alt+Right to move through recent context."
         };
 
         foreach (var screen in screens)
@@ -1855,7 +1960,14 @@ internal sealed class MainWindow : Window
         {
             if (navigation.SelectedItem is ListBoxItem item && item.Tag is UIElement content)
             {
+                if (_layoutReady && !_isRestoringNavigation)
+                {
+                    PushNavigationSnapshot();
+                }
+
                 contentHost.Content = content;
+                breadcrumb.Text = BuildBreadcrumb(title, item.Content?.ToString() ?? string.Empty);
+                Keyboard.Focus(navigation);
                 if (_layoutReady && item.Content is string screen)
                 {
                     RefreshWorkspaceScreen(title, screen);
@@ -1869,8 +1981,13 @@ internal sealed class MainWindow : Window
         }
 
         Grid.SetColumn(navigation, 0);
+        Grid.SetRowSpan(navigation, 2);
+        Grid.SetColumn(breadcrumb, 1);
+        Grid.SetRow(breadcrumb, 0);
         Grid.SetColumn(contentHost, 1);
+        Grid.SetRow(contentHost, 1);
         root.Children.Add(navigation);
+        root.Children.Add(breadcrumb);
         root.Children.Add(contentHost);
 
         var tab = new TabItem
@@ -1881,6 +1998,7 @@ internal sealed class MainWindow : Window
         };
         _tabItems[title] = tab;
         _workspaceNavigations[title] = navigation;
+        _workspaceBreadcrumbs[title] = breadcrumb;
         tabs.Items.Add(tab);
     }
 
@@ -1910,8 +2028,21 @@ internal sealed class MainWindow : Window
 
         _rosterAgeFilter = CreateRosterFilter(new[] { "All", "Under 18", "18-19", "20+", "Unknown" });
         panel.Children.Add(LabeledControl("Age", _rosterAgeFilter));
+        panel.Children.Add(CreateDetailButton("Reset Filters", ResetRosterFilters));
 
         return panel;
+    }
+
+    private void ResetRosterFilters()
+    {
+        _rosterSearchInput!.Text = string.Empty;
+        _rosterPositionFilter!.SelectedIndex = 0;
+        _rosterStatusFilter!.SelectedIndex = 0;
+        _rosterPlayerTypeFilter!.SelectedIndex = 0;
+        _rosterRoleFilter!.SelectedIndex = 0;
+        _rosterAgeFilter!.SelectedIndex = 0;
+        SetFeedback("Roster filters reset.");
+        RefreshVisibleWorkspace();
     }
 
     private ComboBox CreateRosterFilter(string[] items)
@@ -1931,13 +2062,16 @@ internal sealed class MainWindow : Window
     private static UIElement LabeledControl(string label, Control control)
     {
         var panel = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
-        panel.Children.Add(new TextBlock
+        control.ToolTip ??= label;
+        panel.Children.Add(new Label
         {
-            Text = label,
+            Content = label,
+            Target = control,
             FontWeight = FontWeights.SemiBold,
             FontSize = 12,
             Foreground = new SolidColorBrush(Color.FromRgb(70, 84, 102)),
-            Margin = new Thickness(0, 0, 0, 3)
+            Margin = new Thickness(0, 0, 0, 3),
+            Padding = new Thickness(0)
         });
         panel.Children.Add(control);
         return panel;
@@ -2065,6 +2199,7 @@ internal sealed class MainWindow : Window
         filters.Children.Add(LabeledControl("Category", _actionCategoryFilter));
         filters.Children.Add(LabeledControl("Priority", _actionPriorityFilter));
         filters.Children.Add(LabeledControl("Status", _actionStatusFilter));
+        filters.Children.Add(CreateDetailButton("Reset Filters", ResetActionCenterFilters));
         Grid.SetRow(filters, 0);
         Grid.SetColumnSpan(filters, 2);
         root.Children.Add(filters);
@@ -2114,6 +2249,27 @@ internal sealed class MainWindow : Window
         };
         combo.SelectionChanged += (_, _) => RefreshActionCenter();
         return combo;
+    }
+
+    private void ResetActionCenterFilters()
+    {
+        if (_actionCategoryFilter is not null)
+        {
+            _actionCategoryFilter.SelectedItem = "All";
+        }
+
+        if (_actionPriorityFilter is not null)
+        {
+            _actionPriorityFilter.SelectedItem = "All";
+        }
+
+        if (_actionStatusFilter is not null)
+        {
+            _actionStatusFilter.SelectedItem = "Open";
+        }
+
+        SetFeedback("Action Center filters reset.");
+        RefreshActionCenter();
     }
 
     private void RefreshActionCenter()
@@ -2169,11 +2325,9 @@ internal sealed class MainWindow : Window
         _actionCenterDetail.Children.Clear();
         if (item is null)
         {
-            _actionCenterDetail.Children.Add(new TextBlock
-            {
-                Text = "No action selected.",
-                Foreground = new SolidColorBrush(Color.FromRgb(92, 106, 122))
-            });
+            _actionCenterDetail.Children.Add(UiPresentation.UiEmptyState(
+                "No urgent decisions today.",
+                "No Action Center item matches the current filters. Reset filters or advance time when you are ready."));
             return;
         }
 
@@ -2197,13 +2351,27 @@ internal sealed class MainWindow : Window
 
     private void GoToActionRelatedScreen(ActionCenterItem item)
     {
-        SelectTab(item.Category switch
+        var target = item.Category switch
         {
-            ActionCenterCategory.Contracts or ActionCenterCategory.Roster or ActionCenterCategory.Recruiting or ActionCenterCategory.Scouting or ActionCenterCategory.Medical or ActionCenterCategory.GameDay => "Hockey Operations",
-            ActionCenterCategory.Staff or ActionCenterCategory.Owner or ActionCenterCategory.Budget => "Organization",
-            ActionCenterCategory.League => "Season",
-            _ => "Dashboard"
-        });
+            ActionCenterCategory.Contracts => ("Hockey Operations", "Contracts"),
+            ActionCenterCategory.Roster => ("Hockey Operations", "Roster"),
+            ActionCenterCategory.Recruiting => ("Hockey Operations", "Recruits"),
+            ActionCenterCategory.Scouting => ("Hockey Operations", "Scouting Operations"),
+            ActionCenterCategory.Medical => ("Hockey Operations", "Roster"),
+            ActionCenterCategory.GameDay => ("Season", "Schedule"),
+            ActionCenterCategory.Staff => ("Organization", "Command Center"),
+            ActionCenterCategory.Owner => ("Organization", "Owner"),
+            ActionCenterCategory.Budget => ("Organization", "Budget"),
+            ActionCenterCategory.League => ("League", "League Overview"),
+            _ => ("Dashboard", "Dashboard")
+        };
+        if (!string.IsNullOrWhiteSpace(item.RelatedPersonId))
+        {
+            _selectedPeopleByTab[target.Item2] = item.RelatedPersonId;
+        }
+
+        SelectWorkspaceScreen(target.Item1, target.Item2);
+        SetFeedback($"Opened related context for {item.Title}.");
     }
 
     private CheckBox CreateFilterBox(string text)
@@ -2220,6 +2388,8 @@ internal sealed class MainWindow : Window
     }
 
     private AlphaDesktopState State => _state ?? throw new InvalidOperationException("Career has not started.");
+
+    private bool IsCompactDensity => string.Equals(_displayDensity, "Compact", StringComparison.Ordinal);
 
     private TeamBrandingProfile CurrentTeamBranding() =>
         BrandingFor(State.ScenarioSnapshot.Organization.OrganizationId);
@@ -2421,7 +2591,13 @@ internal sealed class MainWindow : Window
 
     private void ShowPopup(string title, UIElement content, double width = 720, double height = 620, bool includeCloseButton = true)
     {
-        var root = new Grid { Margin = new Thickness(18) };
+        _lastPopupFocus = Keyboard.FocusedElement;
+        IncrementUxCounter($"modal:{title}");
+        var root = new Grid
+        {
+            Margin = new Thickness(18),
+            Focusable = true
+        };
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         if (includeCloseButton)
         {
@@ -2458,6 +2634,20 @@ internal sealed class MainWindow : Window
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Content = root
         };
+        window.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Escape)
+            {
+                args.Handled = true;
+                window.Close();
+            }
+        };
+        window.Loaded += (_, _) => root.Focus();
+        window.Closed += (_, _) =>
+        {
+            _lastPopupFocus?.Focus();
+            SetFeedback($"Closed {title}.");
+        };
         window.ShowDialog();
     }
 
@@ -2475,6 +2665,15 @@ internal sealed class MainWindow : Window
         }
 
         ShowPopup(title, panel, 520, 360);
+    }
+
+    private void ConfirmDestructiveAction(string title, string consequence, Action confirmAction)
+    {
+        ShowConfirmationPopup(title, consequence, () =>
+        {
+            confirmAction();
+            SetFeedback($"{title} confirmed.");
+        });
     }
 
     private void ShowContractOfferPlaceholder(string personId)
@@ -2657,6 +2856,16 @@ internal sealed class MainWindow : Window
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             Content = panel
         };
+        window.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Escape)
+            {
+                args.Handled = true;
+                window.Close();
+            }
+        };
+        window.Loaded += (_, _) => scoutBox.Focus();
+        window.Closed += (_, _) => SetFeedback("Closed scouting assignment.");
         var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 14, 0, 0) };
         actions.Children.Add(CreateButton("Assign", () =>
         {
@@ -2714,6 +2923,10 @@ internal sealed class MainWindow : Window
         _dateText.Text = $"Current date: {snapshot.CurrentDate:yyyy-MM-dd}";
         _summaryText.Text = State.LatestSummary;
         _processedText.Text = $"Last processed events: {State.LastProcessedEventCount} | Inbox items: {State.Inbox.Count}";
+        if (string.IsNullOrWhiteSpace(_feedbackText.Text))
+        {
+            _feedbackText.Text = $"Status: {State.LatestSummary}";
+        }
     }
 
     private void RefreshVisibleWorkspace()
@@ -3274,9 +3487,9 @@ internal sealed class MainWindow : Window
         {
             Child = panel,
             Width = 190,
-            MinHeight = 116,
+            MinHeight = IsCompactDensity ? 96 : 116,
             Margin = new Thickness(0, 0, 12, 12),
-            Padding = new Thickness(14),
+            Padding = IsCompactDensity ? new Thickness(10) : new Thickness(14),
             BorderThickness = new Thickness(1),
             BorderBrush = new SolidColorBrush(warning ? Color.FromRgb(224, 174, 160) : Color.FromRgb(221, 229, 238)),
             Background = new SolidColorBrush(warning ? Color.FromRgb(255, 247, 244) : Color.FromRgb(248, 250, 253)),
@@ -3344,7 +3557,13 @@ internal sealed class MainWindow : Window
     {
         if (_mainTabs is not null && _tabItems.TryGetValue(title, out var item))
         {
+            if (!ReferenceEquals(_mainTabs.SelectedItem, item) && !_isRestoringNavigation)
+            {
+                PushNavigationSnapshot();
+            }
+
             _mainTabs.SelectedItem = item;
+            SetFeedback($"Opened {title}.");
         }
     }
 
@@ -3361,9 +3580,140 @@ internal sealed class MainWindow : Window
             if (string.Equals(item.Content?.ToString(), screenLabel, StringComparison.Ordinal))
             {
                 navigation.SelectedItem = item;
+                SetFeedback($"Opened {BuildBreadcrumb(title, screenLabel)}.");
                 break;
             }
         }
+    }
+
+    private string BuildBreadcrumb(string workspace, string screen)
+    {
+        var selected = _selectedPeopleByTab.GetValueOrDefault(screen);
+        var person = !string.IsNullOrWhiteSpace(selected) ? $" > {FindPersonName(selected)}" : string.Empty;
+        return string.IsNullOrWhiteSpace(screen)
+            ? workspace
+            : $"{workspace} > {screen}{person}";
+    }
+
+    private void PushNavigationSnapshot()
+    {
+        var snapshot = CurrentNavigationSnapshot();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        if (_backStack.Count > 0 && _backStack.Peek().Equals(snapshot))
+        {
+            return;
+        }
+
+        _backStack.Push(snapshot);
+        TrimStack(_backStack, 25);
+        _forwardStack.Clear();
+    }
+
+    private NavigationSnapshot? CurrentNavigationSnapshot()
+    {
+        if (_mainTabs?.SelectedItem is not TabItem tab)
+        {
+            return null;
+        }
+
+        var workspace = tab.Tag as string ?? tab.Header?.ToString() ?? string.Empty;
+        var screen = _workspaceNavigations.TryGetValue(workspace, out var navigation)
+            && navigation.SelectedItem is ListBoxItem item
+            ? item.Content?.ToString() ?? string.Empty
+            : string.Empty;
+        var selectedPerson = !string.IsNullOrWhiteSpace(screen)
+            ? _selectedPeopleByTab.GetValueOrDefault(screen)
+            : null;
+        return string.IsNullOrWhiteSpace(workspace) ? null : new NavigationSnapshot(workspace, screen, selectedPerson);
+    }
+
+    private void NavigateBack()
+    {
+        var current = CurrentNavigationSnapshot();
+        if (_backStack.Count == 0)
+        {
+            SetFeedback("No previous GM Office screen to return to.");
+            return;
+        }
+
+        if (current is not null)
+        {
+            _forwardStack.Push(current);
+            TrimStack(_forwardStack, 25);
+        }
+
+        RestoreNavigationSnapshot(_backStack.Pop(), "Back");
+    }
+
+    private void NavigateForward()
+    {
+        var current = CurrentNavigationSnapshot();
+        if (_forwardStack.Count == 0)
+        {
+            SetFeedback("No forward GM Office screen is available.");
+            return;
+        }
+
+        if (current is not null)
+        {
+            _backStack.Push(current);
+            TrimStack(_backStack, 25);
+        }
+
+        RestoreNavigationSnapshot(_forwardStack.Pop(), "Forward");
+    }
+
+    private void RestoreNavigationSnapshot(NavigationSnapshot snapshot, string direction)
+    {
+        _isRestoringNavigation = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(snapshot.Screen) && !string.IsNullOrWhiteSpace(snapshot.SelectedPersonId))
+            {
+                _selectedPeopleByTab[snapshot.Screen] = snapshot.SelectedPersonId;
+            }
+
+            SelectWorkspaceScreen(snapshot.Workspace, snapshot.Screen);
+            SetFeedback($"{direction}: {BuildBreadcrumb(snapshot.Workspace, snapshot.Screen)}.");
+        }
+        finally
+        {
+            _isRestoringNavigation = false;
+        }
+    }
+
+    private static void TrimStack(Stack<NavigationSnapshot> stack, int maxCount)
+    {
+        if (stack.Count <= maxCount)
+        {
+            return;
+        }
+
+        var retained = stack.Take(maxCount).Reverse().ToArray();
+        stack.Clear();
+        foreach (var snapshot in retained)
+        {
+            stack.Push(snapshot);
+        }
+    }
+
+    private void SetFeedback(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        _feedbackText.Text = $"Status: {message}";
+    }
+
+    private void IncrementUxCounter(string key)
+    {
+        _localUxCounters[key] = _localUxCounters.GetValueOrDefault(key) + 1;
     }
 
     private void RefreshSelectableTab(string title, IReadOnlyList<SelectablePersonRow> rows)
@@ -4647,7 +4997,10 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Move Department", () => State.SetStaffFocusFor(profile.PersonId)),
             CreateDetailButton("Set Focus", () => SetStaffFocusFor(profile.PersonId)),
             CreateDetailButton("Performance Review", () => MessageBox.Show(State.StaffPerformanceReviewText(profile.PersonId), "Staff Performance Review", MessageBoxButton.OK, MessageBoxImage.Information)),
-            CreateDetailButton("Release", () => State.ReleaseStaffFor(profile.PersonId)));
+            CreateDetailButton("Release", () => ConfirmDestructiveAction(
+                "Release Staff Member",
+                $"{profile.Name} will be released from the staff if permitted by role rules. Continue?",
+                () => State.ReleaseStaffFor(profile.PersonId))));
         _organizationCommandStaffCard.Children.Add(panel);
     }
 
@@ -5837,7 +6190,10 @@ internal sealed class MainWindow : Window
             CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)),
             CreateDetailButton("View Dossier/Profile", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Reassign Role", () => State.ReassignStaffRoleFor(row.PersonId)),
-            CreateDetailButton("Release Staff", () => State.ReleaseStaffFor(row.PersonId)),
+            CreateDetailButton("Release Staff", () => ConfirmDestructiveAction(
+                "Release Staff Member",
+                $"{row.Name} will be released from the staff if permitted by role rules. Continue?",
+                () => State.ReleaseStaffFor(row.PersonId))),
             CreateDetailButton("Set Focus", () => SetStaffFocusFor(row.PersonId)),
             CreateDetailButton("Generate Evaluation", () => State.GenerateStaffEvaluationFor(row.PersonId)),
             CreateDetailButton("Performance Review", () => MessageBox.Show(State.StaffPerformanceReviewText(row.PersonId), "Staff Performance Review", MessageBoxButton.OK, MessageBoxImage.Information)),
@@ -6514,7 +6870,10 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Conditioning", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.ConditioningAssignment), State.HasActiveInjury(row.PersonId));
             yield return CreateDetailButton("Medical Clearance", () => State.ApplyMedicalDecisionFor(row.PersonId, ReturnToPlayOption.MedicalClearance), State.HasActiveInjury(row.PersonId));
             yield return CreateDetailButton("Assign Affiliate", () => State.AssignPlayerToAffiliateFor(row.PersonId), State.CanAssignPlayerToAffiliate(row.PersonId));
-            yield return CreateDetailButton("Place On Waivers", () => State.PlacePlayerOnWaiversFor(row.PersonId), State.CanPlacePlayerOnWaivers(row.PersonId));
+            yield return CreateDetailButton("Place On Waivers", () => ConfirmDestructiveAction(
+                "Place Player On Waivers",
+                $"{row.Name} will be exposed to waiver claims before assignment. Continue?",
+                () => State.PlacePlayerOnWaiversFor(row.PersonId)), State.CanPlacePlayerOnWaivers(row.PersonId));
             yield return CreateDetailButton("Recall", () => State.RecallPlayerFromAffiliateFor(row.PersonId), State.CanRecallPlayerFromAffiliate(row.PersonId));
         }
 
@@ -6524,9 +6883,15 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("File Arbitration", () => State.FileArbitrationFor(row.PersonId), State.CanFileArbitration(row.PersonId));
         yield return CreateDetailButton("Settle Arbitration", () => State.SettleArbitrationFor(row.PersonId), State.CanSettleArbitration(row.PersonId));
         yield return CreateDetailButton("Accept Award", () => State.AcceptArbitrationAwardFor(row.PersonId), State.CanAcceptArbitrationAward(row.PersonId));
-        yield return CreateDetailButton("Walk Away", () => State.WalkAwayArbitrationFor(row.PersonId), State.CanWalkAwayArbitration(row.PersonId));
+        yield return CreateDetailButton("Walk Away", () => ConfirmDestructiveAction(
+            "Walk Away From Arbitration",
+            $"{row.Name} may become available to other teams if you walk away. Continue?",
+            () => State.WalkAwayArbitrationFor(row.PersonId)), State.CanWalkAwayArbitration(row.PersonId));
         yield return CreateDetailButton("Calculate Buyout", () => State.CalculateBuyoutFor(row.PersonId), State.CanCalculateBuyout(row.PersonId));
-        yield return CreateDetailButton("Confirm Buyout", () => State.ConfirmBuyoutFor(row.PersonId), State.CanConfirmBuyout(row.PersonId));
+        yield return CreateDetailButton("Confirm Buyout", () => ConfirmDestructiveAction(
+            "Confirm Contract Buyout",
+            $"{row.Name}'s contract will be bought out and future cap/budget penalties may remain. Continue?",
+            () => State.ConfirmBuyoutFor(row.PersonId)), State.CanConfirmBuyout(row.PersonId));
         yield return CreateDetailButton("Cancel Buyout", () => State.CancelBuyoutFor(row.PersonId), State.CanCancelBuyout(row.PersonId));
         yield return CreateDetailButton("Submit Offer Sheet", () => State.SubmitOfferSheetFor(row.PersonId), State.CanSubmitOfferSheet(row.PersonId));
         yield return CreateDetailButton("Match Offer", () => State.MatchOfferSheetFor(row.PersonId), State.CanMatchOfferSheet(row.PersonId));
@@ -6537,16 +6902,25 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Invite Prospect", () => State.InviteProspectToCampFor(row.PersonId), available.Contains(ProspectDecisionType.InviteToCamp));
         yield return CreateDetailButton("Return Prospect", () => State.ReturnProspectToJuniorOrYouthFor(row.PersonId), available.Contains(ProspectDecisionType.ReturnToJunior) || available.Contains(ProspectDecisionType.ReturnToYouthTeam));
         yield return CreateDetailButton("Assign Prospect", () => State.AssignProspectToAffiliateFor(row.PersonId), available.Contains(ProspectDecisionType.AssignToAffiliate));
-        yield return CreateDetailButton("Release Rights", () => State.ReleaseProspectRightsFor(row.PersonId), available.Contains(ProspectDecisionType.ReleaseRights));
+        yield return CreateDetailButton("Release Rights", () => ConfirmDestructiveAction(
+            "Release Prospect Rights",
+            $"{row.Name}'s rights will be released if the league rules allow it. Continue?",
+            () => State.ReleaseProspectRightsFor(row.PersonId)), available.Contains(ProspectDecisionType.ReleaseRights));
 
         if (tab == "Training Camp")
         {
             yield return CreateDetailButton("Keep", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Keep), State.CanApplyCampDecision(row.PersonId));
             yield return CreateDetailButton("Cut", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Cut), State.CanApplyCampDecision(row.PersonId));
-            yield return CreateDetailButton("Release", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Release), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Release", () => ConfirmDestructiveAction(
+                "Release Camp Player",
+                $"{row.Name} will be released from camp. Continue?",
+                () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.Release)), State.CanApplyCampDecision(row.PersonId));
             yield return CreateDetailButton("Return Junior", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.ReturnToJuniorTeam), State.CanApplyCampDecision(row.PersonId));
             yield return CreateDetailButton("Assign/Return", () => State.AssignOrReturnTrainingCampPlayerFor(row.PersonId), State.CanApplyCampDecision(row.PersonId));
-            yield return CreateDetailButton("Waivers", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.PlaceOnWaivers), State.CanApplyCampDecision(row.PersonId));
+            yield return CreateDetailButton("Waivers", () => ConfirmDestructiveAction(
+                "Place Camp Player On Waivers",
+                $"{row.Name} will be placed on waivers before assignment. Continue?",
+                () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.PlaceOnWaivers)), State.CanApplyCampDecision(row.PersonId));
             yield return CreateDetailButton("Mark Injured", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.MarkInjured), State.CanApplyCampDecision(row.PersonId));
         }
     }
@@ -9011,6 +9385,16 @@ internal sealed class MainWindow : Window
         builder.AppendLine("Settings");
         builder.AppendLine("========");
         builder.AppendLine("Save / Load");
+        var gmName = State.ScenarioSnapshot.GeneralManagerProfile.Person.Identity.DisplayName;
+        builder.AppendLine($"Save name: {gmName} - {State.ScenarioSnapshot.Organization.Name}");
+        builder.AppendLine($"GM: {gmName}");
+        builder.AppendLine($"Team: {State.ScenarioSnapshot.Organization.Name}");
+        builder.AppendLine($"League: {State.ScenarioSnapshot.LeagueProfile.Identity.Name}");
+        builder.AppendLine($"Current date: {State.Snapshot.CurrentDate:yyyy-MM-dd}");
+        builder.AppendLine($"Season: {State.ScenarioSnapshot.Season.Year}");
+        builder.AppendLine($"Record: {State.TeamRecordText}");
+        builder.AppendLine($"Save version: {SaveGameVersion.Current.SaveFormatVersion} ({SaveGameVersion.Current.GameVersionLabel})");
+        builder.AppendLine($"Compatibility: Current save format supported");
         builder.AppendLine($"Save folder: {State.SaveFolder}");
         builder.AppendLine($"Current save file: {State.CurrentSavePath ?? "not saved yet"}");
         builder.AppendLine($"Last saved: {State.LastSavedText}");
@@ -9779,6 +10163,31 @@ internal sealed class MainWindow : Window
         builder.AppendLine("==================");
         builder.AppendLine("Quick regression pass for first-month GM flow. This is a checklist, not a new gameplay system.");
         builder.AppendLine();
+        builder.AppendLine("Alpha 8.4 UX Pass");
+        builder.AppendLine("-----------------");
+        foreach (var line in Alpha84PlaytestChecklistLines())
+        {
+            builder.AppendLine(line);
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Local UX counters");
+        builder.AppendLine("-----------------");
+        if (_localUxCounters.Count == 0)
+        {
+            builder.AppendLine("No local developer-only UX counters recorded this session.");
+        }
+        else
+        {
+            foreach (var counter in _localUxCounters.OrderBy(item => item.Key, StringComparer.Ordinal).Take(30))
+            {
+                builder.AppendLine($"{counter.Key}: {counter.Value}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Existing checklist");
+        builder.AppendLine("------------------");
         foreach (var item in State.PlaytestChecklist)
         {
             builder.AppendLine($"{(item.IsPassing ? "PASS" : "CHECK")} | {item.Area}");
@@ -9790,6 +10199,28 @@ internal sealed class MainWindow : Window
 
         return builder.ToString();
     }
+
+    private static IReadOnlyList<string> Alpha84PlaytestChecklistLines() =>
+        new[]
+        {
+            "Not Tested | New Career | Choose league/team, create GM, and verify the selected team preview is readable.",
+            "Not Tested | Dashboard | Confirm Action Center, inbox, save, advance, next game, and roster warnings are understandable.",
+            "Not Tested | Action Center | Use Go To, Resolve, Defer, Dismiss, Reset Filters, and back navigation.",
+            "Not Tested | Roster | Select player, open person card, view contract/health, reset filters, and verify no blank panel.",
+            "Not Tested | Lineup | Select slot/player, change usage, and confirm routine choices do not ask for destructive confirmation.",
+            "Not Tested | Development | Set a focus and confirm success feedback appears.",
+            "Not Tested | Contracts | Review rights/arbitration/buyout actions and confirm destructive actions explain consequences.",
+            "Not Tested | Scouting | Assign scout, close with Escape, verify focus returns and report workflow remains clear.",
+            "Not Tested | Free Agency | Offer/sign workflow shows why action is blocked or completed.",
+            "Not Tested | Trades | Build offer, remove asset, clear proposal, apply counter, and preserve proposal after profile view.",
+            "Not Tested | Draft | Switch boards, compare prospects, draft player, and verify selected prospect context remains.",
+            "Not Tested | Season | Review schedule, standings, result recap, and branded team names.",
+            "Not Tested | Save / Load | Ctrl+S save, Load Career, and Settings save metadata card.",
+            "Fixed | Navigation | Breadcrumbs, bounded Back/Forward history, and current-section selection preservation added.",
+            "Fixed | Accessibility | Buttons are focusable, labels target controls, Escape closes safe popups, Ctrl+F/Ctrl+S supported.",
+            "Fixed | Feedback | Action status banner added; reset filters and empty states give player-facing text.",
+            "Retest Needed | Resolution | Minimum supported desktop remains 920x620; manually review 1366x768 and 1920x1080."
+        };
 
     private static string PendingActionConsequence(PendingGmAction action) =>
         action.ActionType switch

@@ -113,6 +113,11 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 7.11 Draft Board Realism & Position Value Engine
 - Alpha 7.12 AI Roster Builder & Organizational Planning v1
 - Alpha 7.13 AI Front Office Decision Cycle v1
+- Alpha 8.0 Presentation Layer & Universal Clickable Profiles
+- Alpha 8.1 Hockey Operations Visual Redesign
+- Alpha 8.2 Draft War Room & Trade Center Visual Redesign
+- Alpha 8.3 Team Branding, Icons & Visual Identity
+- Alpha 8.4 Alpha UX Playtest, Accessibility & Navigation Pass
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -147,6 +152,8 @@ Alpha 7.11 - Draft Board Realism & Position Value Engine improves board shape an
 Alpha 7.12 - AI Roster Builder & Organizational Planning v1 gives organizations a multi-year planning layer. The engine now creates organization plans with current and future depth charts, prospect development paths, succession planning, contract outlook, roster needs, trade/free-agency targets, and competitive-window reports. AlphaDesktop exposes Organization Planning in the Organization and Reports / History workspaces while keeping the planning layer advisory only.
 
 Alpha 7.13 - AI Front Office Decision Cycle v1 lets AI-controlled organizations act on those plans through scheduled decision windows, explainable decision candidates, transaction plans, cooldowns, emergency overrides, and capped League News summaries. The player organization remains advisory-only, so the sim can create league movement without auto-managing the GM's roster, contracts, prospects, or staff.
+
+Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass improves real playtest comfort in AlphaDesktop. The GM Office now has compact breadcrumbs, bounded Back/Forward context history, focusable buttons, Ctrl+S save, Ctrl+F search, Escape-to-close safe popups, reset filters, clearer empty states, persistent success/status feedback, destructive-action confirmations, display density options, save/load metadata, and a documented UX findings checklist without adding gameplay systems.
 
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
 

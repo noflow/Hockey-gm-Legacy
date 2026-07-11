@@ -128,26 +128,31 @@ The five foundation pillars remain:
 - Alpha 7.11 - Draft Board Realism & Position Value Engine
 - Alpha 7.12 - AI Roster Builder & Organizational Planning v1
 - Alpha 7.13 - AI Front Office Decision Cycle v1
+- Alpha 8.0 - Presentation Layer & Universal Clickable Profiles
+- Alpha 8.1 - Hockey Operations Visual Redesign
+- Alpha 8.2 - Draft War Room & Trade Center Visual Redesign
+- Alpha 8.3 - Team Branding, Icons & Visual Identity
+- Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass
 
 ## Current Milestone
 
-Alpha 7.13 - AI Front Office Decision Cycle v1
+Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass
 
 ## Current Goal
 
-Make AI-controlled organizations act on their multi-year plans through scheduled, explainable front-office decision cycles without auto-managing the player's team.
+Make the current AlphaDesktop interface easier to understand, faster to navigate, less crowded, and more comfortable during real alpha playtests.
 
-## Why AI Front Office Decisions Were Next
+## Why UX Playtest Was Next
 
-Alpha 7.12 gave organizations a planning layer. Alpha 7.13 turns those plans into paced AI decision candidates, transaction plans, emergency overrides, cooldowns, and League News summaries so the league feels alive without flooding the player or taking GM-controlled actions.
+Alpha 8.0 through Alpha 8.3 added the shared presentation layer, redesigned major workspaces, and introduced visual identity. Alpha 8.4 now reduces friction in real playtest workflows through clearer navigation, breadcrumbs, keyboard support, reset filters, feedback states, confirmation rules, and documented usability findings.
 
 ## Next Build Target
 
-Alpha 8.0 - TBD
+Alpha 8.5 - TBD
 
 ## Next Milestones
 
-1. Alpha 8.0 - TBD
+1. Alpha 8.5 - TBD
 
 ## Build Rule
 

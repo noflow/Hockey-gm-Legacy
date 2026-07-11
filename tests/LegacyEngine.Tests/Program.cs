@@ -111,6 +111,7 @@ var alpha80PresentationLayerTests = new Alpha80PresentationLayerTests();
 var alpha81HockeyOperationsVisualTests = new Alpha81HockeyOperationsVisualTests();
 var alpha82DraftTradeVisualTests = new Alpha82DraftTradeVisualTests();
 var alpha83TeamBrandingTests = new Alpha83TeamBrandingTests();
+var alpha84UxNavigationTests = new Alpha84UxNavigationTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1487,6 +1488,14 @@ runner.Run("alpha 8.3 team colors persist through save load", alpha83TeamBrandin
 runner.Run("alpha 8.3 AlphaDesktop uses branding hooks", alpha83TeamBrandingTests.AlphaDesktopUsesBrandingPresentationHooks);
 runner.Run("alpha 8.3 semantic status colors remain separate", alpha83TeamBrandingTests.PresentationKeepsSemanticStatusColorsSeparate);
 runner.Run("alpha 8.3 no copyrighted logo assets or hidden truth", alpha83TeamBrandingTests.NoCopyrightedLogoAssetsOrHiddenTruthExposed);
+runner.Run("alpha 8.4 primary navigation has breadcrumbs and history", alpha84UxNavigationTests.PrimaryNavigationHasBreadcrumbsAndHistory);
+runner.Run("alpha 8.4 keyboard and focus support wired", alpha84UxNavigationTests.KeyboardAndFocusSupportAreWired);
+runner.Run("alpha 8.4 empty feedback and filter states exist", alpha84UxNavigationTests.EmptyFeedbackAndFilterStatesExist);
+runner.Run("alpha 8.4 destructive actions require confirmation", alpha84UxNavigationTests.DestructiveActionsRequireConfirmation);
+runner.Run("alpha 8.4 save load and density UX visible", alpha84UxNavigationTests.SaveLoadAndDensityUxAreVisible);
+runner.Run("alpha 8.4 Action Center Go To opens specific context", alpha84UxNavigationTests.ActionCenterGoToOpensSpecificContext);
+runner.Run("alpha 8.4 playtest findings documented", alpha84UxNavigationTests.PlaytestFindingsAreDocumented);
+runner.Run("alpha 8.4 no hidden ratings or remote telemetry", alpha84UxNavigationTests.NoHiddenRatingsOrRemoteTelemetryAdded);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
