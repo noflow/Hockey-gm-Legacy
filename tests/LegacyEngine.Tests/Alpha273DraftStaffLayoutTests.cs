@@ -30,6 +30,17 @@ internal sealed class Alpha273DraftStaffLayoutTests
         Assert.True(source.Contains("public IReadOnlyList<DraftBoardEntry> DraftBoardEntriesByCurrentWarRoom", StringComparison.Ordinal), "AlphaDesktop state should expose current War Room ordered draft entries.");
     }
 
+    public void DraftWarRoomUsesCachedPresentationData()
+    {
+        var source = AlphaDesktopSource();
+
+        Assert.True(source.Contains("_cachedDraftWarRoom", StringComparison.Ordinal), "Draft War Room state should be cached for desktop presentation.");
+        Assert.True(source.Contains("_draftCardCache", StringComparison.Ordinal), "Draft prospect intelligence cards should be cached after first build.");
+        Assert.True(source.Contains("_draftConsensusCache", StringComparison.Ordinal), "Draft scout consensus should be cached after first build.");
+        Assert.True(source.Contains("ClearDraftPresentationCache", StringComparison.Ordinal), "Draft presentation cache should be cleared when scenario state changes.");
+        Assert.False(source.Contains(".OrderBy(entry => BoardRankFor(entry))", StringComparison.Ordinal), "War Room row sorting should not call expensive card-backed rank logic per row.");
+    }
+
     public void SelectingDraftProspectPopulatesLeftProspectCard()
     {
         var source = AlphaDesktopSource();

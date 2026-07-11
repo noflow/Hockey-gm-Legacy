@@ -631,6 +631,7 @@ runner.Run("alpha 2.7.2 AlphaDesktop exposes League News tab", alpha272InboxClea
 runner.Run("alpha 2.7.3 live draft middle rows include name position team and confidence", alpha273DraftStaffLayoutTests.LiveDraftMiddleRowsIncludeNamePositionTeamAndConfidence);
 runner.Run("alpha 2.7.3 live draft rows use current available rank", alpha273DraftStaffLayoutTests.LiveDraftRowsUseCurrentAvailableRank);
 runner.Run("alpha 2.7.3 draft and scouting rows use War Room order", alpha273DraftStaffLayoutTests.DraftAndScoutingRowsUseCurrentWarRoomOrder);
+runner.Run("alpha 2.7.3 Draft War Room uses cached presentation data", alpha273DraftStaffLayoutTests.DraftWarRoomUsesCachedPresentationData);
 runner.Run("alpha 2.7.3 selecting draft prospect populates left prospect card", alpha273DraftStaffLayoutTests.SelectingDraftProspectPopulatesLeftProspectCard);
 runner.Run("alpha 2.7.3 prospect card includes bio and scouting info", alpha273DraftStaffLayoutTests.ProspectCardIncludesBioAndScoutingInfo);
 runner.Run("alpha 2.7.3 draft status appears on right", alpha273DraftStaffLayoutTests.DraftStatusAppearsOnRight);

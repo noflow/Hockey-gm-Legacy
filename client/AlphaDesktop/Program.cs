@@ -1205,39 +1205,47 @@ internal sealed class MainWindow : Window
             _ => entries
         };
 
+        var draftEntriesByPerson = State.Snapshot.DraftBoard.Entries
+            .GroupBy(item => item.ProspectPersonId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.OrderBy(item => item.Rank).First(), StringComparer.Ordinal);
+
         return entries
-            .OrderBy(entry => BoardRankFor(entry))
-            .Take(80)
             .Select(entry =>
             {
-                var draftEntry = State.Snapshot.DraftBoard.Entries.FirstOrDefault(item => item.ProspectPersonId == entry.ProspectPersonId);
-                var card = State.DraftIntelligenceCard(entry.ProspectPersonId);
-                var consensus = State.DraftConsensus(entry.ProspectPersonId);
+                draftEntriesByPerson.TryGetValue(entry.ProspectPersonId, out var draftEntry);
+                return new { Entry = entry, DraftEntry = draftEntry, Rank = BoardRankFor(entry) };
+            })
+            .OrderBy(item => item.Rank)
+            .Take(80)
+            .Select(item =>
+            {
+                var entry = item.Entry;
+                var draftEntry = item.DraftEntry;
                 var tags = entry.Tags.Count == 0 ? "Watching" : string.Join(", ", entry.Tags);
-                var quick = draftEntry is null ? card.CurrentTeamLeague : State.DraftQuickScan(draftEntry);
-                var fit = card.TeamFitScore >= 78 ? "Excellent Team Fit" : card.TeamFitScore >= 62 ? "Good Team Fit" : card.TeamFitScore >= 45 ? "Neutral Fit" : "Poor Fit";
+                var quick = draftEntry is null ? State.RegionTeamText(entry.ProspectPersonId) : State.DraftQuickScan(draftEntry);
+                var position = draftEntry is null ? State.PositionShortText(State.PersonPosition(entry.ProspectPersonId)) : State.DraftPositionText(draftEntry);
+                var age = State.PersonAge(entry.ProspectPersonId)?.ToString() ?? "unknown";
+                var confidence = draftEntry?.ScoutingConfidence?.ToString() ?? "Unknown";
+                var projection = draftEntry?.ProjectionText ?? "Projection pending";
+                var risk = string.IsNullOrWhiteSpace(draftEntry?.RiskSummary) ? "standard scouting uncertainty" : draftEntry!.RiskSummary;
+                var rating = State.RatingText(entry.ProspectPersonId);
                 return new SelectablePersonRow(
                     entry.ProspectPersonId,
-                    $"{BoardRankFor(entry)}. {entry.ProspectName}",
+                    $"{item.Rank}. {entry.ProspectName}",
                     "DraftProspect",
-                    $"{State.PositionShortText(card.Position)} | age {card.Age?.ToString() ?? "unknown"} | {quick}",
-                    $"{card.RatingDisplay} | {card.Projection} | {consensus.Level}",
-                    $"{fit} | Risk: {card.RiskSummary} | Tags: {tags}");
+                    $"{position} | age {age} | {quick}",
+                    $"{rating} | Confidence {confidence} | {projection}",
+                    $"Risk: {risk} | Tags: {tags}");
             })
             .ToArray();
     }
 
     private int BoardRankFor(DraftWarRoomEntry entry)
-    {
-        var card = State.DraftIntelligenceCard(entry.ProspectPersonId);
-        return _draftWarRoomBoard switch
+        => _draftWarRoomBoard switch
         {
-            "Scout Board" => card.ScoutBoardRank,
-            "Consensus Board" => card.ConsensusBoardRank,
             "Public Board" => entry.OriginalRank,
             _ => entry.PersonalRank
         };
-    }
 
     private UIElement BuildDraftWarRoomLeftPanel()
     {
@@ -11694,6 +11702,10 @@ internal sealed class AlphaDesktopState
     private string? _selectedOtherTradeAssetId;
     private readonly List<TradeAsset> _tradePlayerGives = [];
     private readonly List<TradeAsset> _tradePlayerReceives = [];
+    private NewGmScenarioSnapshot? _cachedDraftWarRoomScenario;
+    private DraftWarRoomState? _cachedDraftWarRoom;
+    private readonly Dictionary<string, DraftProspectIntelligenceCard> _draftCardCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DraftScoutConsensus> _draftConsensusCache = new(StringComparer.Ordinal);
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
     private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
@@ -12361,10 +12373,19 @@ internal sealed class AlphaDesktopState
     {
         get
         {
+            if (ReferenceEquals(_cachedDraftWarRoomScenario, ScenarioSnapshot) && _cachedDraftWarRoom is not null)
+            {
+                return _cachedDraftWarRoom;
+            }
+
             var updated = _warRoom.EnsureWarRoom(ScenarioSnapshot);
             ScenarioSnapshot = updated;
             Snapshot = updated.AlphaSnapshot;
-            return updated.DraftWarRoom;
+            _cachedDraftWarRoomScenario = ScenarioSnapshot;
+            _cachedDraftWarRoom = updated.DraftWarRoom;
+            _draftCardCache.Clear();
+            _draftConsensusCache.Clear();
+            return _cachedDraftWarRoom;
         }
     }
 
@@ -12429,8 +12450,17 @@ internal sealed class AlphaDesktopState
         return $"{DraftPositionValueService.PositionLabel(evaluation.Position)} market and class context considered; {status}. {evaluation.Explanation}";
     }
 
-    public DraftScoutConsensus DraftConsensus(string prospectPersonId) =>
-        _warRoom.BuildConsensus(ScenarioSnapshot, prospectPersonId);
+    public DraftScoutConsensus DraftConsensus(string prospectPersonId)
+    {
+        _ = DraftWarRoom;
+        if (!_draftConsensusCache.TryGetValue(prospectPersonId, out var consensus))
+        {
+            consensus = _warRoom.BuildConsensus(ScenarioSnapshot, prospectPersonId);
+            _draftConsensusCache[prospectPersonId] = consensus;
+        }
+
+        return consensus;
+    }
 
     public string DraftConsensusText(string prospectPersonId)
     {
@@ -14367,8 +14397,17 @@ internal sealed class AlphaDesktopState
         return $"{position} | {entry.Bio.ShootsCatches} | {entry.Bio.HeightDisplay} | {entry.Bio.WeightDisplay} | Age {age} | {entry.Bio.CurrentTeam} / {entry.Bio.League}";
     }
 
-    public DraftProspectIntelligenceCard DraftIntelligenceCard(string prospectPersonId) =>
-        _draftIntelligence.BuildProspectCard(ScenarioSnapshot, prospectPersonId);
+    public DraftProspectIntelligenceCard DraftIntelligenceCard(string prospectPersonId)
+    {
+        _ = DraftWarRoom;
+        if (!_draftCardCache.TryGetValue(prospectPersonId, out var card))
+        {
+            card = _draftIntelligence.BuildProspectCard(ScenarioSnapshot, prospectPersonId);
+            _draftCardCache[prospectPersonId] = card;
+        }
+
+        return card;
+    }
 
     public string DraftIntelligenceRowText(DraftBoardEntry entry) =>
         _draftIntelligence.BuildRowText(ScenarioSnapshot, entry);
@@ -16160,6 +16199,15 @@ internal sealed class AlphaDesktopState
     {
         ScenarioSnapshot = _assetEvaluation.EnsureEvaluations(scenario);
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        ClearDraftPresentationCache();
+    }
+
+    private void ClearDraftPresentationCache()
+    {
+        _cachedDraftWarRoomScenario = null;
+        _cachedDraftWarRoom = null;
+        _draftCardCache.Clear();
+        _draftConsensusCache.Clear();
     }
 
     private void ApplyAdvanceResult(FirstMonthAdvanceResult result)
