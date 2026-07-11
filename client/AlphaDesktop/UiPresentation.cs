@@ -220,7 +220,7 @@ internal static class UiPresentation
         return row;
     }
 
-    private static Border Card(UIElement child) =>
+    public static Border Card(UIElement child) =>
         new()
         {
             Background = UiTheme.Surface,

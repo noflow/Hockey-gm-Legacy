@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using LegacyEngine.Contracts;
@@ -54,8 +55,9 @@ internal sealed class MainWindow : Window
     private StackPanel? _commandCenterCenterPanel;
     private StackPanel? _commandCenterPlayerCard;
     private TextBox? _commandCenterSearchInput;
-    private string _commandCenterSource = "Roster";
-    private string _commandCenterView = "Roster";
+    private ComboBox? _commandCenterPositionFilter;
+    private string _commandCenterSource = "NHL Roster";
+    private string _commandCenterView = "Roster Overview";
     private string? _selectedCommandCenterPersonId;
     private ListBox? _organizationCommandDepartmentList;
     private ListBox? _organizationCommandStaffList;
@@ -910,9 +912,9 @@ internal sealed class MainWindow : Window
     private UIElement CreateHockeyOperationsCommandCenter()
     {
         var root = new Grid { Background = Brushes.White };
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(240) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(270) });
         root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(430) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(455) });
 
         var left = new StackPanel
         {
@@ -921,26 +923,54 @@ internal sealed class MainWindow : Window
         };
         left.Children.Add(new TextBlock
         {
-            Text = "Hockey Operations Command Center",
+            Text = "Hockey Operations",
             FontSize = 17,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(Color.FromRgb(20, 40, 64)),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(12, 12, 12, 10)
         });
+        left.Children.Add(new TextBlock
+        {
+            Text = "Player sources",
+            Foreground = UiTheme.MutedText,
+            FontSize = UiTypography.Small,
+            Margin = new Thickness(12, 0, 12, 4)
+        });
         _commandCenterSearchInput = new TextBox
         {
             MinHeight = 30,
             Margin = new Thickness(12, 0, 12, 10),
-            ToolTip = "Search Command Center players, prospects, free agents, and trade targets."
+            ToolTip = "Search players, prospects, free agents, trade targets, rights, and reports."
         };
         _commandCenterSearchInput.TextChanged += (_, _) => RefreshHockeyOperationsCommandCenter();
         left.Children.Add(_commandCenterSearchInput);
+        _commandCenterPositionFilter = new ComboBox
+        {
+            ItemsSource = new[] { "All Positions", "C", "LW", "RW", "D", "G" },
+            SelectedIndex = 0,
+            Margin = new Thickness(12, 0, 12, 10),
+            MinHeight = 28,
+            ToolTip = "Position filter"
+        };
+        _commandCenterPositionFilter.SelectionChanged += (_, _) => RefreshHockeyOperationsCommandCenter();
+        left.Children.Add(_commandCenterPositionFilter);
         _commandCenterSourceList = new ListBox
         {
-            ItemsSource = new[] { "Roster", "Prospects", "AHL", "Junior Rights", "Free Agents", "Trade Targets" },
+            ItemsSource = new[]
+            {
+                "NHL Roster",
+                "AHL Roster",
+                "Junior / Returned Prospects",
+                "Unsigned Rights",
+                "Injured Players",
+                "Waiver Wire",
+                "Free Agents",
+                "Trade Targets",
+                "Drafted Prospects"
+            },
             SelectedItem = _commandCenterSource,
-            MinHeight = 210,
+            MinHeight = 270,
             Margin = new Thickness(12, 0, 12, 12)
         };
         _commandCenterSourceList.SelectionChanged += (_, _) =>
@@ -960,10 +990,23 @@ internal sealed class MainWindow : Window
         center.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         _commandCenterViewList = new ListBox
         {
-            ItemsSource = new[] { "Lines", "Roster", "Development", "Contracts", "Scouting", "Trade", "Free Agency" },
+            ItemsSource = new[]
+            {
+                "Roster Overview",
+                "Lineup",
+                "Depth Chart",
+                "Prospects",
+                "Development",
+                "Contracts",
+                "Scouting",
+                "Roster Transactions",
+                "Tactics",
+                "Special Teams"
+            },
             SelectedItem = _commandCenterView,
             MinHeight = 44,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            ItemsPanel = HorizontalWrapItemsPanel()
         };
         _commandCenterViewList.SelectionChanged += (_, _) =>
         {
@@ -998,6 +1041,13 @@ internal sealed class MainWindow : Window
         Grid.SetColumn(right, 2);
         root.Children.Add(right);
         return root;
+    }
+
+    private static ItemsPanelTemplate HorizontalWrapItemsPanel()
+    {
+        var panel = new FrameworkElementFactory(typeof(WrapPanel));
+        panel.SetValue(WrapPanel.OrientationProperty, Orientation.Horizontal);
+        return new ItemsPanelTemplate(panel);
     }
 
     private UIElement CreateOrganizationCommandCenter()
@@ -2646,12 +2696,22 @@ internal sealed class MainWindow : Window
     {
         IReadOnlyList<SelectablePersonRow> sourceRows = _commandCenterSource switch
         {
+            "Drafted Prospects" => BuildProspectRows(),
             "Prospects" => BuildProspectRows(),
-            "AHL" => BuildProspectRows()
+            "AHL Roster" => BuildProspectRows()
                 .Where(row => CommandCenterMatches(row, "AHL", "affiliate", "assigned"))
                 .ToArray(),
-            "Junior Rights" => BuildProspectRows()
-                .Where(row => CommandCenterMatches(row, "junior", "youth", "rights"))
+            "Junior / Returned Prospects" => BuildProspectRows()
+                .Where(row => CommandCenterMatches(row, "junior", "youth", "returned"))
+                .ToArray(),
+            "Unsigned Rights" => BuildProspectRows()
+                .Where(row => CommandCenterMatches(row, "rights", "unsigned", "DraftRightsHeld"))
+                .ToArray(),
+            "Injured Players" => BuildRosterRows()
+                .Where(row => row.Kind != "RosterSummary" && !State.InjuryStatus(row.PersonId).Equals("Available", StringComparison.OrdinalIgnoreCase))
+                .ToArray(),
+            "Waiver Wire" => BuildRosterRows()
+                .Where(row => row.Kind != "RosterSummary" && CommandCenterMatches(row, "waiver", "AHL Eligible", "exempt"))
                 .ToArray(),
             "Free Agents" => BuildFreeAgentRows(),
             "Trade Targets" => BuildTradeRows(),
@@ -2665,6 +2725,15 @@ internal sealed class MainWindow : Window
         {
             sourceRows = sourceRows
                 .Where(row => CommandCenterMatches(row, query))
+                .ToArray();
+        }
+
+        var position = _commandCenterPositionFilter?.SelectedItem?.ToString();
+        if (!string.IsNullOrWhiteSpace(position) && position != "All Positions")
+        {
+            sourceRows = sourceRows
+                .Where(row => RowPositionText(row.PersonId).Equals(position, StringComparison.OrdinalIgnoreCase)
+                    || row.Primary.Contains(position, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
         }
 
@@ -2682,6 +2751,400 @@ internal sealed class MainWindow : Window
                 || row.Secondary.Contains(term, StringComparison.OrdinalIgnoreCase)
                 || row.Summary.Contains(term, StringComparison.OrdinalIgnoreCase)));
 
+    private UIElement BuildHockeyOperationsTeamSummaryStrip()
+    {
+        var grid = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
+        var active = State.Snapshot.Roster.ActivePlayers;
+        var averageAge = active.Count == 0
+            ? "n/a"
+            : active.Average(player => State.PersonAge(player.PersonId) ?? player.Age ?? 0).ToString("0.0");
+        var injured = active.Count(player => !State.InjuryStatus(player.PersonId).Equals("Available", StringComparison.OrdinalIgnoreCase));
+        var cap = State.SalaryCap;
+
+        grid.Children.Add(UiPresentation.UiMetricCard("Roster", State.RosterBreakdownTitle, State.RosterBreakdownSecondary));
+        grid.Children.Add(UiPresentation.UiMetricCard("Average Age", averageAge, State.RosterAgeBreakdown));
+        grid.Children.Add(UiPresentation.UiMetricCard("Player Payroll", cap.IsEnabled ? $"{cap.CapUsed:C0}" : "Budget league", cap.IsEnabled ? $"{cap.CapRemaining:C0} remaining" : "Salary cap disabled"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Health", $"{injured} injured", $"{State.ContractDecisionCount} contract decisions"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Prospect Pool", $"{BuildProspectRows().Count} tracked", $"{State.ScoutingReportCount} scouting reports"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Chemistry", State.LineChemistryReport.Overall.Score.Grade.ToString(), State.LineChemistryReport.Overall.Recommendation));
+        grid.Children.Add(UiPresentation.UiMetricCard("Record", State.TeamRecordText, State.NextGame is null ? "No next game scheduled" : $"Next game: {State.NextGame.AwayOrganizationId} at {State.NextGame.HomeOrganizationId}"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Top Need", BuildHockeyOperationsTopNeed(), $"{State.PendingDecisionCount} pending decisions"));
+        return grid;
+    }
+
+    private string BuildHockeyOperationsTopNeed()
+    {
+        var active = State.Snapshot.Roster.ActivePlayers;
+        if (active.Count(player => player.Position == RosterPosition.Goalie) < 2)
+        {
+            return "Goalie depth";
+        }
+
+        if (active.Count(player => player.Position == RosterPosition.Defense) < 6)
+        {
+            return "Defense depth";
+        }
+
+        if (State.ContractDecisionCount > 0)
+        {
+            return "Contract decisions";
+        }
+
+        return State.RosterWarningCount > 0 ? "Roster compliance" : "Depth balance";
+    }
+
+    private UIElement BuildHockeyOperationsActiveView(IReadOnlyList<SelectablePersonRow> rows, SelectablePersonRow? selected)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(UiPresentation.UiSectionHeader($"{_commandCenterView} - {_commandCenterSource}"));
+        panel.Children.Add(_commandCenterView switch
+        {
+            "Lineup" => BuildHockeyOperationsLineupBoard(),
+            "Depth Chart" => BuildHockeyOperationsDepthChartBoard(),
+            "Prospects" => BuildHockeyOperationsProspectPipeline(rows),
+            "Development" => BuildHockeyOperationsDevelopmentBoard(rows),
+            "Contracts" => BuildHockeyOperationsContractBoard(rows),
+            "Scouting" => BuildHockeyOperationsScoutingBoard(rows),
+            "Roster Transactions" => BuildHockeyOperationsTransactionBoard(rows, selected),
+            "Tactics" => BuildHockeyOperationsTacticsBoard(),
+            "Special Teams" => BuildHockeyOperationsSpecialTeamsBoard(),
+            _ => BuildHockeyOperationsRosterOverview(rows)
+        });
+        return panel;
+    }
+
+    private UIElement BuildHockeyOperationsRosterOverview(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return UiPresentation.UiEmptyState("No roster cards", "No players match the current source and filters.");
+        }
+
+        var grid = new UniformGrid { Columns = 2 };
+        foreach (var row in rows.Take(10))
+        {
+            grid.Children.Add(BuildHockeyOperationsPlayerCard(row));
+        }
+
+        return grid;
+    }
+
+    private UIElement BuildHockeyOperationsPlayerCard(SelectablePersonRow row)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(UiPresentation.UiPersonLink(row.Name, () => OpenUniversalPersonCard(row.PersonId)));
+        panel.Children.Add(UiPresentation.BadgeRow(
+            (RowPositionText(row.PersonId), "info"),
+            ($"Age {State.PersonAge(row.PersonId)?.ToString() ?? "unknown"}", "neutral"),
+            (State.InjuryStatus(row.PersonId), StatusSemantic(State.InjuryStatus(row.PersonId))),
+            (State.DevelopmentTrend(row.PersonId), StatusSemantic(State.DevelopmentTrend(row.PersonId)))));
+        panel.Children.Add(new TextBlock { Text = State.RatingText(row.PersonId), FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        panel.Children.Add(new TextBlock { Text = $"{State.CurrentLineupRole(row.PersonId)} | {State.CurrentLinePair(row.PersonId)}", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+        panel.Children.Add(new TextBlock { Text = State.ContractRightsStatus(row.PersonId), TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+        panel.Children.Add(new TextBlock { Text = State.WaiverStatusText(row.PersonId), TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+        return UiPresentation.UiPersonCard(panel);
+    }
+
+    private UIElement BuildHockeyOperationsLineupBoard()
+    {
+        var root = new Grid();
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+        root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var forwards = new StackPanel { Margin = new Thickness(0, 0, 10, 0) };
+        forwards.Children.Add(UiPresentation.UiSectionHeader("Forwards"));
+        for (var line = 1; line <= 4; line++)
+        {
+            forwards.Children.Add(BuildLineUnitCard($"Line {line}", ForwardLineSlots(line), $"forward-line:{line}"));
+        }
+
+        var right = new StackPanel();
+        right.Children.Add(UiPresentation.UiSectionHeader("Defense"));
+        for (var pair = 1; pair <= 3; pair++)
+        {
+            right.Children.Add(BuildLineUnitCard($"Pair {pair}", DefensePairSlots(pair), $"defense-pair:{pair}"));
+        }
+
+        right.Children.Add(UiPresentation.UiSectionHeader("Goalies"));
+        right.Children.Add(BuildLineUnitCard("Goalies", new[] { LineupSlot.Starter, LineupSlot.Backup }, "goalie-depth"));
+        Grid.SetColumn(forwards, 0);
+        Grid.SetColumn(right, 1);
+        root.Children.Add(forwards);
+        root.Children.Add(right);
+        return root;
+    }
+
+    private UIElement BuildLineUnitCard(string title, IReadOnlyList<LineupSlot> slots, string unitId)
+    {
+        var panel = new StackPanel();
+        var chemistry = State.LineChemistryUnit(unitId);
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        panel.Children.Add(UiPresentation.BadgeRow(
+            (chemistry is null ? "Chemistry: n/a" : $"Chemistry {chemistry.Score.Grade}", chemistry is null ? "neutral" : ChemistrySemantic(chemistry.Score.Grade.ToString())),
+            (chemistry?.Recommendation ?? "Coach has no line note yet.", "info")));
+        var slotGrid = new UniformGrid { Columns = slots.Count, Margin = new Thickness(0, 4, 0, 0) };
+        foreach (var slot in slots)
+        {
+            slotGrid.Children.Add(BuildLineSlotCard(slot));
+        }
+
+        panel.Children.Add(slotGrid);
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildLineSlotCard(LineupSlot slot)
+    {
+        var playerName = State.LineupSlotPlayerText(slot);
+        var assignment = State.CurrentLineup.Assignments.FirstOrDefault(item => item.Slot == slot);
+        var personId = assignment?.PersonId;
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = LineupDisplay.SlotLabel(slot), FontSize = UiTypography.Small, Foreground = UiTheme.MutedText });
+        if (personId is null)
+        {
+            panel.Children.Add(new TextBlock { Text = "Open", FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Attention });
+            panel.Children.Add(new TextBlock { Text = $"{State.EligibleLineupReplacements(slot).Count} eligible replacements", Foreground = UiTheme.MutedText, TextWrapping = TextWrapping.Wrap });
+        }
+        else
+        {
+            panel.Children.Add(UiPresentation.UiPersonLink(playerName, () => OpenUniversalPersonCard(personId)));
+            panel.Children.Add(new TextBlock { Text = $"{State.RatingText(personId)} | {State.CurrentLineupRole(personId)}", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.Text });
+            panel.Children.Add(new TextBlock { Text = $"{State.InjuryStatus(personId)} | {State.PromiseStatusText(personId)}", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+        }
+
+        return new Border
+        {
+            Background = UiTheme.SurfaceAlt,
+            BorderBrush = UiTheme.Border,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 0, 8, 0),
+            Child = panel
+        };
+    }
+
+    private static IReadOnlyList<LineupSlot> ForwardLineSlots(int line) =>
+        line switch
+        {
+            1 => new[] { LineupSlot.Line1LW, LineupSlot.Line1C, LineupSlot.Line1RW },
+            2 => new[] { LineupSlot.Line2LW, LineupSlot.Line2C, LineupSlot.Line2RW },
+            3 => new[] { LineupSlot.Line3LW, LineupSlot.Line3C, LineupSlot.Line3RW },
+            _ => new[] { LineupSlot.Line4LW, LineupSlot.Line4C, LineupSlot.Line4RW }
+        };
+
+    private static IReadOnlyList<LineupSlot> DefensePairSlots(int pair) =>
+        pair switch
+        {
+            1 => new[] { LineupSlot.Pair1LD, LineupSlot.Pair1RD },
+            2 => new[] { LineupSlot.Pair2LD, LineupSlot.Pair2RD },
+            _ => new[] { LineupSlot.Pair3LD, LineupSlot.Pair3RD }
+        };
+
+    private UIElement BuildHockeyOperationsDepthChartBoard()
+    {
+        var grid = new UniformGrid { Columns = 3 };
+        foreach (var position in new[] { "C", "LW", "RW", "D", "G", "Future" })
+        {
+            var rows = BuildCommandCenterRows()
+                .Where(row => position == "Future" ? row.Kind.Contains("Prospect", StringComparison.OrdinalIgnoreCase) : RowPositionText(row.PersonId) == position)
+                .Take(6)
+                .ToArray();
+            grid.Children.Add(BuildHockeyOperationsGroupCard(position == "D" ? "Defense" : position, rows, row => $"{State.RatingText(row.PersonId)} | {State.CurrentLinePair(row.PersonId)}"));
+        }
+
+        return grid;
+    }
+
+    private UIElement BuildHockeyOperationsProspectPipeline(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        var grid = new UniformGrid { Columns = 2 };
+        foreach (var group in new[] { "NHL Ready", "AHL", "Junior", "Unsigned Rights", "Long-Term Project", "At Risk", "Blocked" })
+        {
+            var groupRows = rows
+                .Where(row => ProspectPipelineGroup(row.PersonId).Equals(group, StringComparison.Ordinal))
+                .Take(5)
+                .ToArray();
+            grid.Children.Add(BuildHockeyOperationsGroupCard(group, groupRows, row => $"{State.RatingText(row.PersonId)} | {State.ScoutingConfidenceText(row.PersonId)} | {State.DevelopmentStageText(row.PersonId)}"));
+        }
+
+        return grid;
+    }
+
+    private string ProspectPipelineGroup(string personId)
+    {
+        var contract = State.ContractRightsStatus(personId);
+        var role = State.CurrentLineupRole(personId);
+        var trend = State.DevelopmentTrend(personId);
+        if (role.Contains("Top", StringComparison.OrdinalIgnoreCase) || role.Contains("Line", StringComparison.OrdinalIgnoreCase))
+        {
+            return "NHL Ready";
+        }
+
+        if (contract.Contains("rights", StringComparison.OrdinalIgnoreCase) || contract.Contains("unsigned", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Unsigned Rights";
+        }
+
+        if (State.RegionTeamText(personId).Contains("junior", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Junior";
+        }
+
+        if (trend.Contains("risk", StringComparison.OrdinalIgnoreCase) || State.InjuryStatus(personId) != "Available")
+        {
+            return "At Risk";
+        }
+
+        return "Long-Term Project";
+    }
+
+    private UIElement BuildHockeyOperationsDevelopmentBoard(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        var grid = new UniformGrid { Columns = 2 };
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Biggest Risers", rows.Where(row => State.DevelopmentTrend(row.PersonId).Contains("improv", StringComparison.OrdinalIgnoreCase)).Take(6).ToArray(), row => $"{State.RatingText(row.PersonId)} | {State.LineupDevelopmentImpactText(row.PersonId)}"));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Plateau / Risk Watch", rows.Where(row => State.DevelopmentTrend(row.PersonId).Contains("plateau", StringComparison.OrdinalIgnoreCase) || State.InjuryStatus(row.PersonId) != "Available").Take(6).ToArray(), row => $"{State.DevelopmentTrend(row.PersonId)} | {State.MedicalReportText(row.PersonId)}"));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Training Focus", rows.Take(6).ToArray(), row => $"{State.DevelopmentStageText(row.PersonId)} | {State.DevelopmentPlanText(row.PersonId)}"));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Coach Recommendations", rows.Take(6).ToArray(), row => State.PlayerCoachFitText(row.PersonId)));
+        return grid;
+    }
+
+    private UIElement BuildHockeyOperationsContractBoard(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        var grid = new UniformGrid { Columns = 2 };
+        foreach (var group in new[] { "Expiring This Year", "RFA", "UFA", "Long-Term Commitments", "Entry-Level Contracts", "Arbitration", "Offer Sheets", "Buyout Candidates" })
+        {
+            var groupRows = rows.Where(row => ContractGroup(row.PersonId) == group).Take(5).ToArray();
+            grid.Children.Add(BuildHockeyOperationsGroupCard(group, groupRows, row => State.ContractRightsStatus(row.PersonId)));
+        }
+
+        return grid;
+    }
+
+    private string ContractGroup(string personId)
+    {
+        var text = State.ContractRightsStatus(personId);
+        if (text.Contains("arbitration", StringComparison.OrdinalIgnoreCase)) return "Arbitration";
+        if (text.Contains("offer", StringComparison.OrdinalIgnoreCase)) return "Offer Sheets";
+        if (State.CanCalculateBuyout(personId) || State.CanConfirmBuyout(personId)) return "Buyout Candidates";
+        if (text.Contains("RFA", StringComparison.OrdinalIgnoreCase) || text.Contains("Restricted", StringComparison.OrdinalIgnoreCase)) return "RFA";
+        if (text.Contains("UFA", StringComparison.OrdinalIgnoreCase) || text.Contains("Unrestricted", StringComparison.OrdinalIgnoreCase)) return "UFA";
+        if (text.Contains("expires", StringComparison.OrdinalIgnoreCase) || text.Contains("expired", StringComparison.OrdinalIgnoreCase)) return "Expiring This Year";
+        if (text.Contains("JuniorPlayerAgreement", StringComparison.OrdinalIgnoreCase) || text.Contains("Entry", StringComparison.OrdinalIgnoreCase)) return "Entry-Level Contracts";
+        return "Long-Term Commitments";
+    }
+
+    private UIElement BuildHockeyOperationsScoutingBoard(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        var grid = new UniformGrid { Columns = 2 };
+        grid.Children.Add(BuildHockeyOperationsGroupCard("High Confidence", rows.Where(row => State.ScoutingConfidenceText(row.PersonId).Contains("High", StringComparison.OrdinalIgnoreCase)).Take(6).ToArray(), row => $"{State.RatingText(row.PersonId)} | {State.ScoutingReportHeadline(row.PersonId)}"));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Needs Another Look", rows.Where(row => !State.ScoutingConfidenceText(row.PersonId).Contains("High", StringComparison.OrdinalIgnoreCase)).Take(6).ToArray(), row => $"{State.ScoutingConfidenceText(row.PersonId)} | {State.ScoutingKnowledgeText(row.PersonId)}"));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Disagreement / Watch", rows.Take(6).ToArray(), row => State.ScoutingComparisonText(row.PersonId)));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("Recommended Assignments", rows.Take(6).ToArray(), row => $"Next: assign scout | {State.AssignedScoutText(row.PersonId)}"));
+        return grid;
+    }
+
+    private UIElement BuildHockeyOperationsTransactionBoard(IReadOnlyList<SelectablePersonRow> rows, SelectablePersonRow? selected)
+    {
+        var panel = new StackPanel();
+        if (selected is not null)
+        {
+            panel.Children.Add(UiPresentation.UiAlertBanner($"{selected.Name}: {State.WaiverStatusText(selected.PersonId)} | {State.ContractRightsStatus(selected.PersonId)}", "info"));
+        }
+
+        panel.Children.Add(BuildHockeyOperationsGroupCard("Immediate Decisions", rows.Where(row => State.ContractRightsStatus(row.PersonId).Contains("decision", StringComparison.OrdinalIgnoreCase) || State.PendingDecisionCount > 0).Take(6).ToArray(), row => $"{State.ContractRightsStatus(row.PersonId)} | {State.WaiverStatusText(row.PersonId)}"));
+        panel.Children.Add(BuildHockeyOperationsGroupCard("Waiver / Assignment Check", rows.Take(8).ToArray(), row => $"{State.WaiverStatusText(row.PersonId)} | roster impact: manual GM approval required"));
+        return panel;
+    }
+
+    private UIElement BuildHockeyOperationsSpecialTeamsBoard()
+    {
+        var grid = new UniformGrid { Columns = 2 };
+        foreach (var unit in State.CurrentGameUsage.SpecialTeams.PowerPlayUnits)
+        {
+            grid.Children.Add(BuildSpecialTeamUnitCard($"PP{unit.UnitNumber}", new[] { unit.LeftWing?.PlayerName, unit.Center?.PlayerName, unit.RightWing?.PlayerName, unit.QuarterbackDefense?.PlayerName, unit.NetFrontOrSecondDefense?.PlayerName }, "Power play personnel group. Use offensive skill, puck movement, and net-front balance."));
+        }
+
+        foreach (var unit in State.CurrentGameUsage.SpecialTeams.PenaltyKillUnits)
+        {
+            grid.Children.Add(BuildSpecialTeamUnitCard($"PK{unit.UnitNumber}", new[] { unit.LeftWing?.PlayerName, unit.RightWing?.PlayerName, unit.LeftDefense?.PlayerName, unit.RightDefense?.PlayerName }, "Penalty kill personnel group. Use defensive awareness, trust, and veteran support."));
+        }
+
+        grid.Children.Add(BuildSpecialTeamUnitCard("Extra Attacker", State.CurrentGameUsage.SpecialTeams.ExtraAttacker.Players.Select(player => player.PlayerName).ToArray(), State.CurrentGameUsage.SpecialTeams.ExtraAttacker.Summary));
+        grid.Children.Add(BuildSpecialTeamUnitCard("Shootout", State.CurrentGameUsage.SpecialTeams.ShootoutOrder.Shooters.Select(player => player.PlayerName).ToArray(), State.CurrentGameUsage.SpecialTeams.ShootoutOrder.Summary));
+        return grid;
+    }
+
+    private UIElement BuildSpecialTeamUnitCard(string title, IEnumerable<string?> names, string summary)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        panel.Children.Add(new TextBlock { Text = string.Join(" | ", names.Where(name => !string.IsNullOrWhiteSpace(name)).DefaultIfEmpty("Open")), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = summary, TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildHockeyOperationsTacticsBoard()
+    {
+        var tactics = State.CurrentTactics;
+        var grid = new UniformGrid { Columns = 2 };
+        grid.Children.Add(BuildTextCard("Attack", $"Style {TacticsService.Display(tactics.Style)} | Shots {TacticsService.Display(tactics.Settings.ShotPreference)}", tactics.FitReport.Summary));
+        grid.Children.Add(BuildTextCard("Transition", $"Forecheck {TacticsService.Display(tactics.Settings.Forecheck)} | Breakout {TacticsService.Display(tactics.Settings.Breakout)}", tactics.FitReport.CoachRecommendation));
+        grid.Children.Add(BuildTextCard("Defense", $"NZ {TacticsService.Display(tactics.Settings.NeutralZone)} | DZ {TacticsService.Display(tactics.Settings.DefensiveZone)}", $"Risk {tactics.Settings.RiskLevel} | Physicality {tactics.Settings.Physicality}"));
+        grid.Children.Add(BuildTextCard("Special Teams", $"PP {TacticsService.Display(tactics.Settings.PowerPlayStyle)} | PK {TacticsService.Display(tactics.Settings.PenaltyKillStyle)}", tactics.Summary));
+        return grid;
+    }
+
+    private UIElement BuildTextCard(string title, string headline, string detail)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        panel.Children.Add(new TextBlock { Text = headline, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = detail, TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+        return UiPresentation.Card(panel);
+    }
+
+    private UIElement BuildHockeyOperationsGroupCard(string title, IReadOnlyList<SelectablePersonRow> rows, Func<SelectablePersonRow, string> detail)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Foreground = UiTheme.Text });
+        if (rows.Count == 0)
+        {
+            panel.Children.Add(new TextBlock { Text = "No players in this group.", Foreground = UiTheme.MutedText, Margin = new Thickness(0, 6, 0, 0) });
+        }
+        else
+        {
+            foreach (var row in rows)
+            {
+                var item = new StackPanel { Margin = new Thickness(0, 8, 0, 0) };
+                item.Children.Add(UiPresentation.UiPersonLink(row.Name, () => OpenUniversalPersonCard(row.PersonId)));
+                item.Children.Add(new TextBlock { Text = $"{RowPositionText(row.PersonId)} | {detail(row)}", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
+                panel.Children.Add(item);
+            }
+        }
+
+        return UiPresentation.Card(panel);
+    }
+
+    private string RowPositionText(string personId)
+    {
+        var position = State.PersonPosition(personId);
+        return position switch
+        {
+            RosterPosition.Center => "C",
+            RosterPosition.LeftWing => "LW",
+            RosterPosition.RightWing => "RW",
+            RosterPosition.Defense => "D",
+            RosterPosition.Goalie => "G",
+            _ => "Unknown"
+        };
+    }
+
+    private static string ChemistrySemantic(string grade) =>
+        grade.Contains("Excellent", StringComparison.OrdinalIgnoreCase) || grade.Contains("Good", StringComparison.OrdinalIgnoreCase)
+            ? "positive"
+            : grade.Contains("Poor", StringComparison.OrdinalIgnoreCase) || grade.Contains("Problem", StringComparison.OrdinalIgnoreCase)
+                ? "critical"
+                : "neutral";
+
     private void RenderCommandCenterCenter(IReadOnlyList<SelectablePersonRow> rows, SelectablePersonRow? selected)
     {
         if (_commandCenterCenterPanel is null)
@@ -2690,27 +3153,15 @@ internal sealed class MainWindow : Window
         }
 
         _commandCenterCenterPanel.Children.Clear();
-        var header = CreateDetailPanel($"{_commandCenterSource} - {_commandCenterView}", "Integrated hockey operations workspace");
-        AddLine(header, "Roster", State.RosterBreakdownSummary);
-        AddLine(header, "Lineup", $"{State.LineupValidationText} | chemistry {State.LineChemistryReport.Overall.Score.Grade}");
-        AddLine(header, "Game usage", State.CurrentGameUsage.Summary);
-        AddLine(header, "Scouting", $"{State.ScoutingReportCount} reports | {State.ScoutingBudgetText}");
-        AddLine(header, "Contracts", $"{State.ContractDecisionCount} contract decision(s)");
-        AddLine(header, "Pending decisions", State.PendingDecisionCount);
-        _commandCenterCenterPanel.Children.Add(header);
+        _commandCenterCenterPanel.Children.Add(BuildHockeyOperationsTeamSummaryStrip());
+        _commandCenterCenterPanel.Children.Add(BuildHockeyOperationsActiveView(rows, selected));
 
-        AddSubHeader(_commandCenterCenterPanel, "Current View");
-        foreach (var line in BuildCommandCenterViewLines().Take(18))
-        {
-            AddParagraph(_commandCenterCenterPanel, line);
-        }
-
-        AddSubHeader(_commandCenterCenterPanel, $"{_commandCenterSource} List");
+        AddSubHeader(_commandCenterCenterPanel, $"{_commandCenterSource} Players");
         _commandCenterPlayerList = new ListBox
         {
             ItemsSource = rows,
             SelectedItem = selected,
-            MinHeight = 320,
+            MinHeight = 300,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             ItemTemplate = UiPresentation.PersonRowTemplate(),
             ContextMenu = BuildCommandCenterContextMenu()
@@ -2734,7 +3185,7 @@ internal sealed class MainWindow : Window
 
         if (rows.Count == 0)
         {
-            AddParagraph(_commandCenterCenterPanel, "No players match this source and search filter.");
+            _commandCenterCenterPanel.Children.Add(UiPresentation.UiEmptyState("No players match", "No players match this source, search term, and position filter."));
         }
     }
 
@@ -2803,42 +3254,53 @@ internal sealed class MainWindow : Window
         }
 
         var tab = CommandCenterTabForRow(row);
-        var panel = CreateDetailPanel(row.Name, $"{row.Kind} | {row.Primary}");
-        AddLine(panel, "Photo", "Photo Placeholder");
-        AddLine(panel, "Position", State.PersonPosition(row.PersonId));
-        AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
-        AddLine(panel, "Team / rights", State.RegionTeamText(row.PersonId));
-        AddLine(panel, "Current role", State.CurrentLineupRole(row.PersonId));
-        AddLine(panel, "Potential role", State.PotentialLineupRole(row.PersonId));
-        AddLine(panel, "Current line", State.CurrentLinePair(row.PersonId));
-        AddLine(panel, "Contract / rights", State.ContractRightsStatus(row.PersonId));
-        AddLine(panel, "Waiver status", State.WaiverStatusText(row.PersonId));
-        AddLine(panel, "Development", $"{State.DevelopmentStageText(row.PersonId)} | {State.DevelopmentTrend(row.PersonId)}");
-        AddLine(panel, "Health", State.InjuryStatus(row.PersonId));
-        AddLine(panel, "Scouting confidence", State.ScoutingConfidenceText(row.PersonId));
-        AddLine(panel, "Last season", State.LastSeasonStats(row.PersonId));
-        AddLine(panel, "Career", State.CareerStatSummary(row.PersonId));
-        AddSubHeader(panel, "Basic Bio");
-        AddParagraph(panel, BuildCommandCenterBioText(row.PersonId));
-        AddSubHeader(panel, "Coach Comments");
-        AddParagraph(panel, State.PlayerCoachFitText(row.PersonId));
-        AddParagraph(panel, State.RoleSatisfactionText(row.PersonId));
-        AddSubHeader(panel, "Scout Reports");
-        AddParagraph(panel, State.ScoutingKnowledgeText(row.PersonId));
-        AddParagraph(panel, State.ScoutingReportHeadline(row.PersonId));
-        AddParagraph(panel, State.ScoutingComparisonText(row.PersonId));
-        AddSubHeader(panel, "Development");
-        AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
-        AddParagraph(panel, State.LineupDevelopmentImpactText(row.PersonId));
-        AddSubHeader(panel, "Medical");
-        AddParagraph(panel, State.MedicalReportText(row.PersonId));
-        AddSubHeader(panel, "Relationships");
-        AddParagraph(panel, BuildCommandCenterRelationshipText(row.PersonId));
-        AddSubHeader(panel, "History");
-        AddParagraph(panel, BuildCommandCenterCareerText(row.PersonId));
-        AddSubHeader(panel, "Quick Actions");
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock
+        {
+            Text = row.Name,
+            FontSize = UiTypography.CardTitle,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text,
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"{RowPositionText(row.PersonId)} | Age {State.PersonAge(row.PersonId)?.ToString() ?? "unknown"} | {State.RegionTeamText(row.PersonId)}",
+            Foreground = UiTheme.MutedText,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 2, 0, 8)
+        });
+        panel.Children.Add(UiPresentation.BadgeRow(
+            (State.RatingText(row.PersonId), "info"),
+            (State.CurrentLineupRole(row.PersonId), "neutral"),
+            (State.InjuryStatus(row.PersonId), StatusSemantic(State.InjuryStatus(row.PersonId))),
+            (State.ScoutingConfidenceText(row.PersonId), ConfidenceSemantic(State.ScoutingConfidenceText(row.PersonId)))));
+
+        panel.Children.Add(UiPresentation.UiInfoRow("Line / Pair", State.CurrentLinePair(row.PersonId)));
+        panel.Children.Add(UiPresentation.UiInfoRow("Contract", State.ContractRightsStatus(row.PersonId)));
+        panel.Children.Add(UiPresentation.UiInfoRow("Development", $"{State.DevelopmentStageText(row.PersonId)} | {State.DevelopmentTrend(row.PersonId)}"));
+        panel.Children.Add(UiPresentation.UiInfoRow("Waiver / Rights", State.WaiverStatusText(row.PersonId)));
+        panel.Children.Add(BuildCommandCenterSection("Ratings", State.RatingContextText(row.PersonId), expanded: true));
+        panel.Children.Add(BuildCommandCenterSection("Development", $"{State.DevelopmentPlanText(row.PersonId)}\n{State.LineupDevelopmentImpactText(row.PersonId)}"));
+        panel.Children.Add(BuildCommandCenterSection("Contract", State.PlayerContractDetailsText(row.PersonId)));
+        panel.Children.Add(BuildCommandCenterSection("Usage", $"{State.CurrentLinePair(row.PersonId)}\n{State.PlayerCoachFitText(row.PersonId)}\n{State.RoleSatisfactionText(row.PersonId)}"));
+        panel.Children.Add(BuildCommandCenterSection("Scouting", $"{State.ScoutingKnowledgeText(row.PersonId)}\n{State.ScoutingReportHeadline(row.PersonId)}\n{State.ScoutingComparisonText(row.PersonId)}"));
+        panel.Children.Add(BuildCommandCenterSection("Medical", State.MedicalReportText(row.PersonId)));
+        panel.Children.Add(BuildCommandCenterSection("Relationships", BuildCommandCenterRelationshipText(row.PersonId)));
+        panel.Children.Add(BuildCommandCenterSection("Career", BuildCommandCenterCareerText(row.PersonId)));
+        AddSubHeader(panel, "Context Actions");
         AddActions(panel, BuildCommandCenterActionButtons(row, tab).ToArray());
         _commandCenterPlayerCard.Children.Add(panel);
+    }
+
+    private static Expander BuildCommandCenterSection(string title, string text, bool expanded = false)
+    {
+        return UiPresentation.UiExpandableSection(title, new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(text) ? "No information available yet." : text,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = UiTheme.Text
+        }, expanded);
     }
 
     private string BuildCommandCenterBioText(string personId)

@@ -108,6 +108,7 @@ var alpha711DraftBoardRealismTests = new Alpha711DraftBoardRealismTests();
 var alpha712OrganizationPlanningTests = new Alpha712OrganizationPlanningTests();
 var alpha713AiFrontOfficeDecisionTests = new Alpha713AiFrontOfficeDecisionTests();
 var alpha80PresentationLayerTests = new Alpha80PresentationLayerTests();
+var alpha81HockeyOperationsVisualTests = new Alpha81HockeyOperationsVisualTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1464,6 +1465,12 @@ runner.Run("alpha 8.0 player card shows quick summary and collapsed details", al
 runner.Run("alpha 8.0 contextual actions and disabled reasons remain visible", alpha80PresentationLayerTests.ContextualActionsAndDisabledReasonsRemainVisible);
 runner.Run("alpha 8.0 hidden true ratings are not exposed by presentation layer", alpha80PresentationLayerTests.HiddenTrueRatingsAreNotExposedByPresentationLayer);
 runner.Run("alpha 8.0 roster rows use compact card preview text", alpha80PresentationLayerTests.RosterRowsUseCompactCardPreviewText);
+runner.Run("alpha 8.1 hockey operations uses integrated three panel layout", alpha81HockeyOperationsVisualTests.HockeyOperationsUsesIntegratedThreePanelLayout);
+runner.Run("alpha 8.1 roster rows show readable hockey context", alpha81HockeyOperationsVisualTests.RosterRowsShowReadableHockeyContext);
+runner.Run("alpha 8.1 lineup board shows forward defense and goalie slots", alpha81HockeyOperationsVisualTests.LineupBoardShowsForwardDefenseAndGoalieSlots);
+runner.Run("alpha 8.1 grouped operations views exist", alpha81HockeyOperationsVisualTests.GroupedOperationsViewsExist);
+runner.Run("alpha 8.1 scouting transactions special teams and tactics are visual", alpha81HockeyOperationsVisualTests.ScoutingTransactionsSpecialTeamsAndTacticsAreVisual);
+runner.Run("alpha 8.1 selected player card uses compact sections and no hidden truth", alpha81HockeyOperationsVisualTests.SelectedPlayerCardUsesCompactSectionsAndNoHiddenTruth);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
