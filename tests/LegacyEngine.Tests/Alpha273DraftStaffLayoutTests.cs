@@ -13,6 +13,23 @@ internal sealed class Alpha273DraftStaffLayoutTests
         Assert.True(source.Contains("Confidence:", StringComparison.Ordinal), "Middle rows should include confidence.");
     }
 
+    public void LiveDraftRowsUseCurrentAvailableRank()
+    {
+        var source = AlphaDesktopSource();
+
+        Assert.True(source.Contains("State.LiveDraftAvailableEntries", StringComparison.Ordinal), "Live draft should use the current available board order.");
+        Assert.True(source.Contains("AvailableRank = index + 1", StringComparison.Ordinal), "Live draft should compute a fresh available rank after drafted players are removed.");
+        Assert.True(source.Contains("BuildLiveDraftMiddleRow(item.Entry, item.AvailableRank)", StringComparison.Ordinal), "Live draft rows should display the fresh available rank.");
+    }
+
+    public void DraftAndScoutingRowsUseCurrentWarRoomOrder()
+    {
+        var source = AlphaDesktopSource();
+
+        Assert.True(source.Contains("DraftBoardEntriesByCurrentWarRoom", StringComparison.Ordinal), "Draft and scouting rows should use the scouting-adjusted War Room order.");
+        Assert.True(source.Contains("public IReadOnlyList<DraftBoardEntry> DraftBoardEntriesByCurrentWarRoom", StringComparison.Ordinal), "AlphaDesktop state should expose current War Room ordered draft entries.");
+    }
+
     public void SelectingDraftProspectPopulatesLeftProspectCard()
     {
         var source = AlphaDesktopSource();

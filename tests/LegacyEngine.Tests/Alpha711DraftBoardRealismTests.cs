@@ -38,6 +38,19 @@ internal sealed class Alpha711DraftBoardRealismTests
         Assert.True(defense is >= 6 and <= 18, "NHL-style first round should include defensemen without becoming all defense.");
     }
 
+    public void GeneratedNhlTopTwentyIncludesForwardsAndLimitsGoalieRun()
+    {
+        var scenario = NhlScenario();
+        var topTwenty = scenario.AlphaSnapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).Take(20).ToArray();
+        var forwards = topTwenty.Count(entry => entry.Bio?.Position is RosterPosition.Center or RosterPosition.LeftWing or RosterPosition.RightWing);
+        var defense = topTwenty.Count(entry => entry.Bio?.Position == RosterPosition.Defense);
+        var goalies = topTwenty.Count(entry => entry.Bio?.Position == RosterPosition.Goalie);
+
+        Assert.True(forwards >= 10, $"Fresh NHL draft boards should show forwards early; found {forwards} forward(s) in the top 20.");
+        Assert.True(defense <= 9, $"Fresh NHL draft boards should not be all defense after goalies; found {defense} defensemen in the top 20.");
+        Assert.True(goalies <= 3, $"Fresh NHL draft boards should not front-load goalies; found {goalies} goalie(s) in the top 20.");
+    }
+
     public void LowGoalieCountIsNormalForNhlBoards()
     {
         var scenario = WarRoom(WithTheme(NhlScenario(), DraftClassTheme.BalancedClass), BalancedNhlPositions());

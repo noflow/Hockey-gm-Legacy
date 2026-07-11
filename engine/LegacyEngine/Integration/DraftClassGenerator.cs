@@ -61,20 +61,9 @@ public sealed class DraftClassGenerator
 
     public RosterPosition PositionFor(DraftClassProfile profile, int index)
     {
-        var goalieSlots = profile.PositionalDepth.GetValueOrDefault(RosterPosition.Goalie);
-        var defenseSlots = profile.PositionalDepth.GetValueOrDefault(RosterPosition.Defense);
-        if (index < goalieSlots)
-        {
-            return RosterPosition.Goalie;
-        }
-
-        if (index < goalieSlots + defenseSlots)
-        {
-            return RosterPosition.Defense;
-        }
-
-        var forwardIndex = index - goalieSlots - defenseSlots;
-        return forwardIndex % 3 == 0 ? RosterPosition.Center : forwardIndex % 3 == 1 ? RosterPosition.LeftWing : RosterPosition.RightWing;
+        ArgumentNullException.ThrowIfNull(profile);
+        var sequence = BuildPositionSequence(profile);
+        return sequence.Count == 0 ? RosterPosition.Unknown : sequence[Math.Clamp(index, 0, sequence.Count - 1)];
     }
 
     public ScoutingConfidenceLevel StartingConfidence(DraftClassProfile profile, int rank, bool inheritedScouting)
@@ -304,6 +293,108 @@ public sealed class DraftClassGenerator
             [RosterPosition.RightWing] = forwards - forwards / 3 - forwards / 3
         };
     }
+
+    private static IReadOnlyList<RosterPosition> BuildPositionSequence(DraftClassProfile profile)
+    {
+        var remaining = new Dictionary<RosterPosition, int>
+        {
+            [RosterPosition.Center] = profile.PositionalDepth.GetValueOrDefault(RosterPosition.Center),
+            [RosterPosition.LeftWing] = profile.PositionalDepth.GetValueOrDefault(RosterPosition.LeftWing),
+            [RosterPosition.RightWing] = profile.PositionalDepth.GetValueOrDefault(RosterPosition.RightWing),
+            [RosterPosition.Defense] = profile.PositionalDepth.GetValueOrDefault(RosterPosition.Defense),
+            [RosterPosition.Goalie] = profile.PositionalDepth.GetValueOrDefault(RosterPosition.Goalie)
+        };
+        var sequence = new List<RosterPosition>(profile.TotalProspects);
+        var pattern = PositionPattern(profile.Theme);
+        while (sequence.Count < profile.TotalProspects && remaining.Values.Any(value => value > 0))
+        {
+            var added = false;
+            foreach (var position in pattern)
+            {
+                if (sequence.Count >= profile.TotalProspects)
+                {
+                    break;
+                }
+
+                if (remaining.GetValueOrDefault(position) <= 0)
+                {
+                    continue;
+                }
+
+                sequence.Add(position);
+                remaining[position]--;
+                added = true;
+            }
+
+            if (!added)
+            {
+                var next = remaining.Where(item => item.Value > 0).OrderByDescending(item => item.Value).First().Key;
+                sequence.Add(next);
+                remaining[next]--;
+            }
+        }
+
+        return sequence;
+    }
+
+    private static IReadOnlyList<RosterPosition> PositionPattern(DraftClassTheme theme) =>
+        theme switch
+        {
+            DraftClassTheme.DeepDefenseClass =>
+            [
+                RosterPosition.Center,
+                RosterPosition.Defense,
+                RosterPosition.LeftWing,
+                RosterPosition.Defense,
+                RosterPosition.RightWing,
+                RosterPosition.Defense,
+                RosterPosition.Center,
+                RosterPosition.LeftWing,
+                RosterPosition.Defense,
+                RosterPosition.RightWing,
+                RosterPosition.Goalie
+            ],
+            DraftClassTheme.StrongGoalieClass =>
+            [
+                RosterPosition.Center,
+                RosterPosition.Defense,
+                RosterPosition.LeftWing,
+                RosterPosition.RightWing,
+                RosterPosition.Goalie,
+                RosterPosition.Center,
+                RosterPosition.Defense,
+                RosterPosition.LeftWing,
+                RosterPosition.RightWing,
+                RosterPosition.Defense,
+                RosterPosition.Center,
+                RosterPosition.Goalie
+            ],
+            DraftClassTheme.DeepForwardClass =>
+            [
+                RosterPosition.Center,
+                RosterPosition.LeftWing,
+                RosterPosition.Defense,
+                RosterPosition.RightWing,
+                RosterPosition.Center,
+                RosterPosition.LeftWing,
+                RosterPosition.RightWing,
+                RosterPosition.Defense,
+                RosterPosition.Center,
+                RosterPosition.Goalie
+            ],
+            _ =>
+            [
+                RosterPosition.Center,
+                RosterPosition.Defense,
+                RosterPosition.LeftWing,
+                RosterPosition.RightWing,
+                RosterPosition.Center,
+                RosterPosition.Defense,
+                RosterPosition.LeftWing,
+                RosterPosition.RightWing,
+                RosterPosition.Goalie
+            ]
+        };
 
     private static IReadOnlyDictionary<string, int> RegionalDistribution(Rulebook rulebook, DraftClassTheme theme, int total)
     {

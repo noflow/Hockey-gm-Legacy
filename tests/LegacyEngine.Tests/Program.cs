@@ -629,6 +629,8 @@ runner.Run("alpha 2.7.2 League News feed displays transactions", alpha272InboxCl
 runner.Run("alpha 2.7.2 inbox remains team decision focused", alpha272InboxCleanupTransactionWireTests.InboxRemainsTeamDecisionFocused);
 runner.Run("alpha 2.7.2 AlphaDesktop exposes League News tab", alpha272InboxCleanupTransactionWireTests.AlphaDesktopExposesLeagueNewsTab);
 runner.Run("alpha 2.7.3 live draft middle rows include name position team and confidence", alpha273DraftStaffLayoutTests.LiveDraftMiddleRowsIncludeNamePositionTeamAndConfidence);
+runner.Run("alpha 2.7.3 live draft rows use current available rank", alpha273DraftStaffLayoutTests.LiveDraftRowsUseCurrentAvailableRank);
+runner.Run("alpha 2.7.3 draft and scouting rows use War Room order", alpha273DraftStaffLayoutTests.DraftAndScoutingRowsUseCurrentWarRoomOrder);
 runner.Run("alpha 2.7.3 selecting draft prospect populates left prospect card", alpha273DraftStaffLayoutTests.SelectingDraftProspectPopulatesLeftProspectCard);
 runner.Run("alpha 2.7.3 prospect card includes bio and scouting info", alpha273DraftStaffLayoutTests.ProspectCardIncludesBioAndScoutingInfo);
 runner.Run("alpha 2.7.3 draft status appears on right", alpha273DraftStaffLayoutTests.DraftStatusAppearsOnRight);
@@ -1411,6 +1413,7 @@ runner.Run("alpha 7.10 UI exposes position market context", alpha710AssetEvaluat
 runner.Run("alpha 7.11 NHL top six does not contain five goalies", alpha711DraftBoardRealismTests.NhlTopSixDoesNotContainFiveGoalies);
 runner.Run("alpha 7.11 top ten includes multiple skater groups", alpha711DraftBoardRealismTests.TopTenIncludesMultipleSkaterGroups);
 runner.Run("alpha 7.11 first round has believable forward defense mix", alpha711DraftBoardRealismTests.FirstRoundHasBelievableForwardDefenseMix);
+runner.Run("alpha 7.11 generated NHL top twenty includes forwards", alpha711DraftBoardRealismTests.GeneratedNhlTopTwentyIncludesForwardsAndLimitsGoalieRun);
 runner.Run("alpha 7.11 low goalie count normal for NHL boards", alpha711DraftBoardRealismTests.LowGoalieCountIsNormalForNhlBoards);
 runner.Run("alpha 7.11 strong goalie class rejects extreme clustering", alpha711DraftBoardRealismTests.StrongGoalieClassMayPlaceGoalieHigherButRejectsExtremeClustering);
 runner.Run("alpha 7.11 deep defense increases defense without all top board", alpha711DraftBoardRealismTests.DeepDefenseClassIncreasesDefenseWithoutTakingWholeTopBoard);

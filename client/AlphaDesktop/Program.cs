@@ -6291,10 +6291,7 @@ internal sealed class MainWindow : Window
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildScoutingRows() =>
-        State.Snapshot.DraftBoard.Entries
-            .GroupBy(entry => entry.ProspectPersonId, StringComparer.Ordinal)
-            .Select(group => group.OrderBy(entry => entry.Rank).First())
-            .OrderBy(entry => entry.Rank)
+        State.DraftBoardEntriesByCurrentWarRoom
             .Select(entry => new SelectablePersonRow(
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
@@ -6318,10 +6315,7 @@ internal sealed class MainWindow : Window
             .ToArray();
 
     private IReadOnlyList<SelectablePersonRow> BuildDraftBoardRows() =>
-        State.Snapshot.DraftBoard.Entries
-            .GroupBy(entry => entry.ProspectPersonId, StringComparer.Ordinal)
-            .Select(group => group.OrderBy(entry => entry.Rank).First())
-            .OrderBy(entry => entry.Rank)
+        State.DraftBoardEntriesByCurrentWarRoom
             .Select(entry => new SelectablePersonRow(
                 entry.ProspectPersonId,
                 ScoutingDisplayName(entry.ProspectPersonId),
@@ -7488,12 +7482,13 @@ internal sealed class MainWindow : Window
             BorderThickness = new Thickness(1)
         };
 
-        foreach (var entry in State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank))
+        var availableEntries = State.LiveDraftAvailableEntries;
+        foreach (var item in availableEntries.Select((entry, index) => new { Entry = entry, AvailableRank = index + 1 }))
         {
             prospectList.Items.Add(new ListBoxItem
             {
-                Tag = entry.ProspectPersonId,
-                Content = BuildLiveDraftMiddleRow(entry)
+                Tag = item.Entry.ProspectPersonId,
+                Content = BuildLiveDraftMiddleRow(item.Entry, item.AvailableRank)
             });
         }
 
@@ -7550,7 +7545,7 @@ internal sealed class MainWindow : Window
         {
             var selected = prospectList.SelectedItem as ListBoxItem;
             var prospectId = selected?.Tag as string
-                ?? State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault()?.ProspectPersonId;
+                ?? State.LiveDraftAvailableEntries.FirstOrDefault()?.ProspectPersonId;
             if (!string.IsNullOrWhiteSpace(prospectId))
             {
                 State.DraftSelectedProspect(prospectId);
@@ -7741,18 +7736,19 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
-    private string BuildLiveDraftMiddleRow(DraftBoardEntry entry)
+    private string BuildLiveDraftMiddleRow(DraftBoardEntry entry, int availableRank)
     {
         var quickBio = State.DraftQuickScan(entry);
         var position = entry.Bio?.Position;
         var currentTeam = entry.Bio is null ? State.RegionTeamText(entry.ProspectPersonId) : entry.Bio.CurrentTeam;
-        return $"{State.DraftIntelligenceRowText(entry)} | Bio: {quickBio} | Public position: {position?.ToString() ?? "Unknown"} | Team: {currentTeam} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"}";
+        var card = State.DraftIntelligenceCard(entry.ProspectPersonId);
+        return $"{availableRank}. {FindPersonName(entry.ProspectPersonId)} | {quickBio} | Projection: {card.Projection} | OVR/POT {card.RatingDisplay} | Confidence: {entry.ScoutingConfidence?.ToString() ?? "Unknown"} | Board #{entry.Rank} | Scout #{card.ScoutBoardRank} | Consensus #{card.ConsensusBoardRank} | Team: {currentTeam} | Public position: {position?.ToString() ?? "Unknown"}";
     }
 
     private string BuildLiveDraftProspectCard(string? prospectId)
     {
         var entry = string.IsNullOrWhiteSpace(prospectId)
-            ? State.Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault()
+            ? State.LiveDraftAvailableEntries.FirstOrDefault()
             : State.Snapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == prospectId);
         if (entry is null)
         {
@@ -12372,6 +12368,21 @@ internal sealed class AlphaDesktopState
         }
     }
 
+    public IReadOnlyList<DraftBoardEntry> DraftBoardEntriesByCurrentWarRoom
+    {
+        get
+        {
+            _ = DraftWarRoom;
+            return Snapshot.DraftBoard.Entries
+                .GroupBy(entry => entry.ProspectPersonId, StringComparer.Ordinal)
+                .Select(group => group.OrderBy(entry => entry.Rank).First())
+                .OrderBy(entry => entry.Rank)
+                .ToArray();
+        }
+    }
+
+    public IReadOnlyList<DraftBoardEntry> LiveDraftAvailableEntries => DraftBoardEntriesByCurrentWarRoom;
+
     public string DraftWarRoomSummaryText => _warRoom.BuildWarRoomSummary(ScenarioSnapshot);
 
     public string DraftBoardRealismText
@@ -15618,7 +15629,7 @@ internal sealed class AlphaDesktopState
 
     public void StarTopProspect()
     {
-        var prospect = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        var prospect = LiveDraftAvailableEntries.FirstOrDefault();
         if (prospect is null)
         {
             LatestSummary = "No draft board prospect is available to star.";
@@ -15630,7 +15641,7 @@ internal sealed class AlphaDesktopState
 
     public void AddDraftNote()
     {
-        var prospect = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        var prospect = LiveDraftAvailableEntries.FirstOrDefault();
         if (prospect is null)
         {
             LatestSummary = "No draft board prospect is available for notes.";
@@ -15858,7 +15869,7 @@ internal sealed class AlphaDesktopState
             return;
         }
 
-        var prospect = Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+        var prospect = LiveDraftAvailableEntries.FirstOrDefault();
         if (prospect is null)
         {
             LatestSummary = "No available prospect remains on the draft board.";
@@ -15892,7 +15903,7 @@ internal sealed class AlphaDesktopState
             .OrderBy(entry => entry.PersonalRank)
             .Select(entry => Snapshot.DraftBoard.Entries.FirstOrDefault(board => board.ProspectPersonId == entry.ProspectPersonId))
             .FirstOrDefault(entry => entry is not null)
-            ?? Snapshot.DraftBoard.Entries.OrderBy(entry => entry.Rank).FirstOrDefault();
+            ?? LiveDraftAvailableEntries.FirstOrDefault();
         if (prospect is null)
         {
             LatestSummary = "No available prospect remains on the draft board.";
