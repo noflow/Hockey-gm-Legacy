@@ -82,6 +82,9 @@ internal sealed class Alpha86DailyHockeyWorldTests
         Assert.True(source.Contains("Tag = screen.Label", StringComparison.Ordinal), "Workspace sidebar metadata should store a screen key, not a live visual element.");
         Assert.True(source.Contains("var screensByLabel", StringComparison.Ordinal), "Workspace screen controls should resolve from a local label lookup.");
         Assert.True(source.Contains("PrepareOfficeVisuals();", StringComparison.Ordinal), "A retry after a partial office build should detach persistent header visuals before rebuilding.");
+        Assert.True(source.Contains("Dictionary<string, ComboBox> _freeAgentMarketFilters", StringComparison.Ordinal), "Each Free Agent workspace needs its own filter control.");
+        Assert.True(source.Contains("BuildFreeAgentRows(\"League Free Agents\")", StringComparison.Ordinal), "League Free Agents should use its own filter state.");
+        Assert.True(source.Contains("BuildFreeAgentRows(\"Free Agents\")", StringComparison.Ordinal), "Hockey Operations Free Agents should use its own filter state.");
     }
 
     public void MultiDayBriefingIsStoredWithoutDuplicatesAndPreservesUrgency()

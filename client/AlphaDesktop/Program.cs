@@ -104,7 +104,7 @@ internal sealed class MainWindow : Window
     private ComboBox? _rosterPlayerTypeFilter;
     private ComboBox? _rosterRoleFilter;
     private ComboBox? _rosterAgeFilter;
-    private ComboBox? _freeAgentMarketFilter;
+    private readonly Dictionary<string, ComboBox> _freeAgentMarketFilters = [];
     private TextBox? _globalSearchInput;
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
@@ -3373,7 +3373,7 @@ internal sealed class MainWindow : Window
                 SetTextTab("Waiver Wire", BuildWaiverWire());
                 break;
             case ("League", "League Free Agents"):
-                RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
+                RefreshSelectableTab("League Free Agents", BuildFreeAgentRows("League Free Agents"));
                 break;
             case ("League", "League Draft"):
                 SetTextTab("League Draft", BuildDraftHistoryReport());
@@ -3433,7 +3433,7 @@ internal sealed class MainWindow : Window
                 RefreshSelectableTab("Recruits", BuildRecruitRows());
                 break;
             case ("Hockey Operations", "Free Agents"):
-                RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
+                RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
                 break;
             case ("Hockey Operations", "Contracts"):
                 SetTextTab("Contracts", BuildContractsWorkspace());
@@ -3570,7 +3570,7 @@ internal sealed class MainWindow : Window
             _tabs["Transactions"].Text = BuildLeagueNews();
             _tabs["Waiver Wire"].Text = BuildWaiverWire();
             _tabs["Hockey Waivers"].Text = BuildWaiverWire();
-            RefreshSelectableTab("League Free Agents", BuildFreeAgentRows());
+            RefreshSelectableTab("League Free Agents", BuildFreeAgentRows("League Free Agents"));
             _tabs["League Draft"].Text = BuildDraftHistoryReport();
             _tabs["Position Market"].Text = BuildPositionMarket();
             RefreshSelectableTab("League Trade Block", BuildTradeRows());
@@ -3582,7 +3582,7 @@ internal sealed class MainWindow : Window
             RefreshSelectableTab("Lineup", BuildLineupRows());
             RefreshSelectableTab("Tactics", BuildTacticsRows());
             RefreshSelectableTab("Recruits", BuildRecruitRows());
-            RefreshSelectableTab("Free Agents", BuildFreeAgentRows());
+            RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
             _tabs["Contracts"].Text = BuildContractsWorkspace();
             _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
             _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
@@ -6741,9 +6741,9 @@ internal sealed class MainWindow : Window
             })
             .ToArray();
 
-    private IReadOnlyList<SelectablePersonRow> BuildFreeAgentRows() =>
+    private IReadOnlyList<SelectablePersonRow> BuildFreeAgentRows(string filterOwner = "Free Agents") =>
         State.FreeAgents
-            .Where(MatchesFreeAgentFilter)
+            .Where(agent => MatchesFreeAgentFilter(agent, filterOwner))
             .OrderByDescending(agent => agent.IsShortlisted)
             .ThenByDescending(agent => agent.FitSummary.FitScore)
             .ThenBy(agent => agent.Name, StringComparer.Ordinal)
@@ -6758,17 +6758,23 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildFreeAgentMarketFilters(string title)
     {
-        _freeAgentMarketFilter ??= new ComboBox
+        if (!_freeAgentMarketFilters.TryGetValue(title, out var filter))
         {
-            ItemsSource = new[] { "All", "Impact Players", "NHL Regulars", "Veterans", "Young Players", "Goalies", "Camp Invites", "Near Retirement", "Short-Term Deals", "Interested", "Shortlisted" },
-            SelectedItem = "All",
-            MinWidth = 180
-        };
-        _freeAgentMarketFilter.SelectionChanged += (_, _) => RefreshVisibleWorkspace();
-        return LabeledControl("Free-agent filter", _freeAgentMarketFilter);
+            filter = new ComboBox
+            {
+                ItemsSource = new[] { "All", "Impact Players", "NHL Regulars", "Veterans", "Young Players", "Goalies", "Camp Invites", "Near Retirement", "Short-Term Deals", "Interested", "Shortlisted" },
+                SelectedItem = "All",
+                MinWidth = 180
+            };
+            filter.SelectionChanged += (_, _) => RefreshVisibleWorkspace();
+            _freeAgentMarketFilters[title] = filter;
+        }
+
+        return LabeledControl("Free-agent filter", filter);
     }
 
-    private bool MatchesFreeAgentFilter(FreeAgent agent) => (_freeAgentMarketFilter?.SelectedItem?.ToString() ?? "All") switch
+    private bool MatchesFreeAgentFilter(FreeAgent agent, string filterOwner) =>
+        (_freeAgentMarketFilters.TryGetValue(filterOwner, out var filter) ? filter.SelectedItem?.ToString() : "All") switch
     {
         "Impact Players" => agent.MarketTier == FreeAgentMarketTier.ImpactFreeAgent,
         "NHL Regulars" => agent.MarketTier == FreeAgentMarketTier.NhlRegular,

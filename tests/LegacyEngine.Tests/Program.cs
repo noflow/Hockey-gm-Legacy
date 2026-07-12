@@ -514,6 +514,7 @@ runner.Run("generated display names have no numeric suffixes", playerDossierInte
 runner.Run("dossier can be created for roster player", playerDossierIntegrationTests.DossierCanBeCreatedForRosterPlayer);
 runner.Run("dossier can be created for recruit", playerDossierIntegrationTests.DossierCanBeCreatedForRecruit);
 runner.Run("dossier can be created for draft prospect", playerDossierIntegrationTests.DossierCanBeCreatedForDraftProspect);
+runner.Run("dossier can be created for staff profile", playerDossierIntegrationTests.DossierCanBeCreatedForStaffProfile);
 runner.Run("dossier hides true ratings", playerDossierIntegrationTests.DossierHidesTrueRatings);
 runner.Run("GM note can be added to dossier", playerDossierIntegrationTests.GmNoteCanBeAdded);
 runner.Run("dossier sections populate when data exists", playerDossierIntegrationTests.ScoutingDevelopmentInjuryAndContractSectionsPopulateWhenDataExists);

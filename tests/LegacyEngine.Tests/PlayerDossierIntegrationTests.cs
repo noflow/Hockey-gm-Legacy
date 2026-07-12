@@ -48,6 +48,17 @@ internal sealed class PlayerDossierIntegrationTests
         Assert.Contains("Scouting Reports", dossier.Sections.Select(section => section.Title));
     }
 
+    public void DossierCanBeCreatedForStaffProfile()
+    {
+        var scenario = NewGmScenarioBootstrapper.CreateScenario();
+        var staffId = scenario.ScenarioSnapshot.StaffMembers.First().PersonId;
+
+        var dossier = new PlayerDossierService().CreateDossier(scenario.ScenarioSnapshot, staffId);
+
+        Assert.Contains("Professional Profile", dossier.Sections.Select(section => section.Title));
+        Assert.False(dossier.Sections.Any(section => section.Title == "Career Rating Curve"), "Staff dossiers must not attempt to create player career curves.");
+    }
+
     public void DossierHidesTrueRatings()
     {
         var scenario = NewGmScenarioBootstrapper.CreateScenario();

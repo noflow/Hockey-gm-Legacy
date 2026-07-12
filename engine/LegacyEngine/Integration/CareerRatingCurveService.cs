@@ -23,7 +23,12 @@ public sealed class CareerRatingCurveService
     public IReadOnlyList<string> BuildDossierLines(NewGmScenarioSnapshot scenario, string personId)
     {
         var curve = scenario.CareerRatingCurves.FirstOrDefault(item => item.PersonId == personId)
-            ?? EnsureCurves(scenario).CareerRatingCurves.First(item => item.PersonId == personId);
+            ?? EnsureCurves(scenario).CareerRatingCurves.FirstOrDefault(item => item.PersonId == personId);
+        if (curve is null)
+        {
+            return new[] { "Career rating curve: not tracked for this non-player profile." };
+        }
+
         return new[]
         {
             $"Career stage: {Display(curve.GrowthStage)}",

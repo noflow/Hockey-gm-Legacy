@@ -31,34 +31,45 @@ public sealed class PlayerDossierService
         var status = ResolveStatus(scenario, personId);
         var teamOrRights = ResolveTeamOrRights(scenario, personId);
         var notes = ResolveGmNotes(scenario, personId);
-
-        var sections = new[]
+        var sections = new List<PlayerDossierSection>
         {
             BuildOverview(scenario, person, position, status, teamOrRights, resolvedSource),
-            BuildFacts(scenario, person, resolvedSource),
-            BuildRatings(scenario, personId),
-            BuildHockeyIntelligenceRatings(scenario, personId),
-            BuildScoutingReports(scenario, personId),
-            BuildDevelopment(scenario, personId),
-            BuildDevelopmentCurve(scenario, personId),
-            BuildCareerRatingCurve(scenario, personId),
-            BuildAttributeDevelopment(scenario, personId),
-            BuildRoleUsage(scenario, personId),
-            BuildGameUsage(scenario, personId),
-            BuildTactics(scenario, personId),
-            BuildMedical(scenario, personId),
-            BuildContractRights(scenario, personId),
-            BuildWaivers(scenario, personId),
-            BuildAgentRepresentation(scenario, personId),
-            BuildOrganizationFit(scenario, personId),
-            BuildStories(scenario, personId),
-            BuildMediaCoverage(scenario, personId),
-            BuildAwardsAndRecords(scenario, personId),
-            BuildStaffOpinions(scenario, personId),
-            BuildRelationships(scenario, personId),
-            BuildCareerHistory(scenario, personId),
-            new PlayerDossierSection("GM Notes", string.IsNullOrWhiteSpace(notes) ? new[] { "No GM notes yet." } : new[] { notes })
+            BuildFacts(scenario, person, resolvedSource)
         };
+
+        if (IsHockeyPlayer(scenario, personId))
+        {
+            sections.AddRange(
+            [
+                BuildRatings(scenario, personId),
+                BuildHockeyIntelligenceRatings(scenario, personId),
+                BuildScoutingReports(scenario, personId),
+                BuildDevelopment(scenario, personId),
+                BuildDevelopmentCurve(scenario, personId),
+                BuildCareerRatingCurve(scenario, personId),
+                BuildAttributeDevelopment(scenario, personId),
+                BuildRoleUsage(scenario, personId),
+                BuildGameUsage(scenario, personId),
+                BuildTactics(scenario, personId),
+                BuildMedical(scenario, personId),
+                BuildContractRights(scenario, personId),
+                BuildWaivers(scenario, personId),
+                BuildAgentRepresentation(scenario, personId),
+                BuildOrganizationFit(scenario, personId),
+                BuildStories(scenario, personId),
+                BuildMediaCoverage(scenario, personId),
+                BuildAwardsAndRecords(scenario, personId),
+                BuildStaffOpinions(scenario, personId)
+            ]);
+        }
+        else
+        {
+            sections.Add(BuildProfessionalProfile(scenario, personId));
+        }
+
+        sections.Add(BuildRelationships(scenario, personId));
+        sections.Add(BuildCareerHistory(scenario, personId));
+        sections.Add(new PlayerDossierSection("GM Notes", string.IsNullOrWhiteSpace(notes) ? new[] { "No GM notes yet." } : new[] { notes }));
 
         var dossier = new PlayerDossierView(
             PersonId: personId,
@@ -73,6 +84,44 @@ public sealed class PlayerDossierService
 
         dossier.Validate();
         return dossier;
+    }
+
+    private static bool IsHockeyPlayer(NewGmScenarioSnapshot scenario, string personId) =>
+        scenario.TrueRatings.Any(rating => rating.PersonId == personId)
+        || scenario.PlayerRatings.Any(rating => rating.PersonId == personId)
+        || scenario.InternalPlayerKnowledge.Any(knowledge => knowledge.PersonId == personId)
+        || scenario.AlphaSnapshot.Roster.FindPlayer(personId) is not null
+        || scenario.AlphaSnapshot.DevelopmentProfiles.Any(profile => profile.PersonId == personId)
+        || scenario.AlphaSnapshot.DraftBoard.Entries.Any(entry => entry.ProspectPersonId == personId)
+        || scenario.AlphaSnapshot.Recruits.Any(recruit => recruit.RecruitPersonId == personId)
+        || scenario.ProspectRights.Any(rights => rights.ProspectPersonId == personId)
+        || scenario.FreeAgentMarket?.FreeAgents.Any(agent => agent.PersonId == personId) == true
+        || scenario.PlayerPipeline.Any(record => record.PersonId == personId);
+
+    private static PlayerDossierSection BuildProfessionalProfile(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var staff = scenario.StaffMembers.FirstOrDefault(member => member.PersonId == personId);
+        if (staff is null)
+        {
+            return new PlayerDossierSection(
+                "Professional Profile",
+                new[] { "This person does not have a player rating or development profile." });
+        }
+
+        var assignment = staff.CurrentAssignment;
+        return new PlayerDossierSection(
+            "Professional Profile",
+            new[]
+            {
+                $"Role: {staff.CurrentRole}",
+                $"Department: {staff.Department}",
+                $"Employment status: {staff.EmploymentStatus}",
+                $"Experience: {staff.Profile.YearsExperience} years",
+                $"Reputation: {staff.Profile.Reputation}/100",
+                $"Current assignment: {(assignment is null ? "None" : $"{assignment.Role} since {assignment.StartDate:yyyy-MM-dd}")}",
+                $"Performance reviews: {staff.PerformanceHistory.Count}",
+                $"Contract reference: {staff.ContractId ?? "Not recorded"}"
+            });
     }
 
     public PlayerDossierResult AddOrUpdateGmNote(NewGmScenarioSnapshot scenario, string personId, string note)
