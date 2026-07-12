@@ -24,6 +24,7 @@ var staffTests = new StaffEngineTests();
 var organizationTests = new OrganizationEngineTests();
 var seasonTests = new SeasonEngineTests();
 var alphaDraftExperienceTests = new AlphaDraftExperienceTests();
+var alphaDesktopResponsivenessTests = new AlphaDesktopResponsivenessTests();
 var developmentInboxPolicyTests = new DevelopmentInboxPolicyTests();
 var ahlAffiliateRulebookTests = new AhlAffiliateRulebookTests();
 var trainingCampTests = new TrainingCampTests();
@@ -406,6 +407,9 @@ runner.Run("alpha draft events are generated", alphaDraftExperienceTests.DraftEv
 runner.Run("alpha draft completion creates recap event", alphaDraftExperienceTests.DraftCompletionCreatesRecapEvent);
 runner.Run("alpha desktop exposes draft actions", alphaDraftExperienceTests.DesktopIntegrationExposesDraftActions);
 runner.Run("alpha desktop exposes live draft modal", alphaDraftExperienceTests.DesktopIntegrationExposesLiveDraftModal);
+runner.Run("alpha desktop starts with a visible workspace refresh", alphaDesktopResponsivenessTests.StartupUsesVisibleWorkspaceRefresh);
+runner.Run("alpha desktop scouting skips unrelated asset recalculation", alphaDesktopResponsivenessTests.ScoutingAssignmentsSkipUnrelatedAssetRecalculation);
+runner.Run("alpha desktop contracts and rights use selectable player rows", alphaDesktopResponsivenessTests.ContractsAndRightsUseSelectablePlayerRows);
 runner.Run("development inbox no offseason spam", developmentInboxPolicyTests.NoOffseasonDevelopmentInboxSpam);
 runner.Run("development inbox messages are capped", developmentInboxPolicyTests.DevelopmentInboxMessagesAreCapped);
 runner.Run("development inbox names player", developmentInboxPolicyTests.PlayerNameAppearsInDevelopmentMessage);

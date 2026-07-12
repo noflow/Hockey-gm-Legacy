@@ -692,7 +692,25 @@ internal sealed class MainWindow : Window
         // remain as fields on MainWindow, and WPF allows each visual only one logical parent.
         Content = null;
         Content = BuildLayout();
-        RefreshAll();
+        RefreshInitialOfficeView();
+    }
+
+    private void RefreshInitialOfficeView()
+    {
+        _isRefreshing = true;
+        try
+        {
+            // Populate the visible dashboard now. The remaining workspaces refresh on first visit,
+            // so entering a new career does not build every report, market, and history screen at once.
+            RefreshHeaderChrome();
+            RefreshDashboard();
+            UpdateTabBadges();
+            RefreshDraftModal();
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
     }
 
     private static string? PromptForLoadPath()
@@ -788,8 +806,8 @@ internal sealed class MainWindow : Window
             new("Prospects", CreateSelectablePeopleContent("Prospect List")),
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
-            new("Contracts", CreateTextScreen("Contracts")),
-            new("Contract Rights", CreateTextScreen("Contract Rights")),
+            new("Contracts", CreateSelectablePeopleContent("Contracts")),
+            new("Contract Rights", CreateSelectablePeopleContent("Contract Rights")),
             new("Arbitration", CreateTextScreen("Arbitration")),
             new("Buyouts", CreateTextScreen("Buyouts")),
             new("Offer Sheets", CreateTextScreen("Offer Sheets")),
@@ -1049,7 +1067,7 @@ internal sealed class MainWindow : Window
         return _draftModalOverlay;
     }
 
-    private Button CreateButton(string text, Action action)
+    private Button CreateButton(string text, Action action, bool refreshBadges = true)
     {
         var button = new Button
         {
@@ -1068,7 +1086,7 @@ internal sealed class MainWindow : Window
             IncrementUxCounter($"button:{text}");
             action();
             SetFeedback($"{text} complete.");
-            RefreshAfterAction();
+            RefreshAfterAction(refreshBadges);
         };
 
         return button;
@@ -1258,7 +1276,6 @@ internal sealed class MainWindow : Window
     private UIElement CreateDraftWarRoomWorkspace()
     {
         _draftWarRoomPanel = new Grid { Background = Brushes.White, Margin = new Thickness(12) };
-        RefreshDraftWarRoomWorkspace();
         return new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -1271,7 +1288,6 @@ internal sealed class MainWindow : Window
     private UIElement CreateTradeCenterWorkspace()
     {
         _tradeCenterPanel = new Grid { Background = Brushes.White, Margin = new Thickness(12) };
-        RefreshTradeCenterWorkspace();
         return new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -1505,7 +1521,7 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Priority", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Priority)),
             CreateDetailButton("Sleeper", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Sleeper)),
             CreateDetailButton("Avoid", () => ToggleDraftTagAndRefresh(prospectId, DraftWatchTag.Avoid)),
-            CreateDetailButton("Needs More Scouting", () => State.ScoutAgainFor(prospectId), State.AvailableScoutProfiles.Count > 0),
+            CreateDetailButton("Needs More Scouting", () => State.ScoutAgainFor(prospectId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false),
             CreateDetailButton("Draft Player", () => ConfirmDraftProspect(prospectId), State.ScenarioSnapshot.DraftExperience?.IsPlayerTurn == true, "Your team is not on the clock"));
         return UiPresentation.Card(panel);
     }
@@ -3278,14 +3294,13 @@ internal sealed class MainWindow : Window
             }
 
             window.Close();
-        }));
-        actions.Children.Add(CreateButton("Cancel", window.Close));
+        }, refreshBadges: false));
+        actions.Children.Add(CreateButton("Cancel", window.Close, refreshBadges: false));
         panel.Children.Add(actions);
         window.ShowDialog();
-        RefreshAfterAction();
     }
 
-    private void RefreshAfterAction()
+    private void RefreshAfterAction(bool refreshBadges = true)
     {
         if (!_layoutReady || _state is null || _isRefreshing)
         {
@@ -3294,7 +3309,10 @@ internal sealed class MainWindow : Window
 
         RefreshHeaderChrome();
         RefreshVisibleWorkspace();
-        UpdateTabBadges();
+        if (refreshBadges)
+        {
+            UpdateTabBadges();
+        }
         RefreshDraftModal();
     }
 
@@ -3436,10 +3454,10 @@ internal sealed class MainWindow : Window
                 RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
                 break;
             case ("Hockey Operations", "Contracts"):
-                SetTextTab("Contracts", BuildContractsWorkspace());
+                RefreshSelectableTab("Contracts", BuildContractRows());
                 break;
             case ("Hockey Operations", "Contract Rights"):
-                SetTextTab("Contract Rights", BuildContractRightsWorkspace());
+                RefreshSelectableTab("Contract Rights", BuildContractRightsRows());
                 break;
             case ("Hockey Operations", "Arbitration"):
                 SetTextTab("Arbitration", BuildArbitrationWorkspace());
@@ -3583,8 +3601,8 @@ internal sealed class MainWindow : Window
             RefreshSelectableTab("Tactics", BuildTacticsRows());
             RefreshSelectableTab("Recruits", BuildRecruitRows());
             RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
-            _tabs["Contracts"].Text = BuildContractsWorkspace();
-            _tabs["Contract Rights"].Text = BuildContractRightsWorkspace();
+            RefreshSelectableTab("Contracts", BuildContractRows());
+            RefreshSelectableTab("Contract Rights", BuildContractRightsRows());
             _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
             _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
             _tabs["Offer Sheets"].Text = BuildOfferSheetWorkspace();
@@ -4528,6 +4546,8 @@ internal sealed class MainWindow : Window
             "Recruits" => BuildPlayerDetail(title, row),
             "Free Agents" => BuildPlayerDetail(title, row),
             "League Free Agents" => BuildPlayerDetail("Free Agents", row),
+            "Contracts" => BuildContractDetail(row),
+            "Contract Rights" => BuildContractRightsDetail(row),
             "Teams" => BuildTeamDetail(row),
             "Scouting" => BuildPlayerDetail(title, row),
             "Scouting Operations" => BuildScoutingOperationDetail(row),
@@ -5220,7 +5240,7 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Assign Line", () => SelectWorkspaceScreen("Hockey Operations", "Lineup"));
         yield return CreateDetailButton("Development", () => MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information), CommandCenterHasDevelopmentProfile(row.PersonId), "No development profile is tracked for this person");
         yield return CreateDetailButton("Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contracts"));
-        yield return CreateDetailButton("Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0);
+        yield return CreateDetailButton("Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false);
         yield return CreateDetailButton("Trade", () => SelectWorkspaceScreen("Hockey Operations", "Trades"));
         yield return CreateDetailButton("History", () => MessageBox.Show(BuildCommandCenterCareerText(row.PersonId), "Player History", MessageBoxButton.OK, MessageBoxImage.Information));
         foreach (var button in BuildPlayerActionButtons(tab, row))
@@ -6072,7 +6092,7 @@ internal sealed class MainWindow : Window
             panel,
             CreateDetailButton("View Dossier", () => OpenDossierFor(entry.PersonId)),
             CreateDetailButton("Add to Trade Proposal", () => ShowTradeBuilderPopup(entry.PersonId)),
-            CreateDetailButton("Scout Player", () => ShowScoutAssignmentDialog(entry.PersonId), State.AvailableScoutProfiles.Count > 0),
+            CreateDetailButton("Scout Player", () => ShowScoutAssignmentDialog(entry.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false),
             CreateDetailButton("Add to Watchlist", () => ShowConfirmationPopup("Watchlist", "Watchlist placeholder: this player would be flagged for future review.")));
         return panel;
     }
@@ -7046,8 +7066,8 @@ internal sealed class MainWindow : Window
         AddParagraph(panel, State.ScoutIntelligenceProfileText(row.PersonId));
         AddParagraph(panel, State.ScoutCareerText(row.PersonId));
         AddActions(panel,
-            CreateDetailButton("Assign Region", () => ShowScoutAssignmentDialog(null, row.PersonId, ScoutingRegionFocus.WesternCanada), State.IsScoutAvailable(row.PersonId)),
-            CreateDetailButton("Assign Player", () => ShowScoutAssignmentDialog(State.NextUnassignedScoutingTargetId(), row.PersonId), State.IsScoutAvailable(row.PersonId) && State.NextUnassignedScoutingTargetId() is not null),
+            CreateDetailButton("Assign Region", () => ShowScoutAssignmentDialog(null, row.PersonId, ScoutingRegionFocus.WesternCanada), State.IsScoutAvailable(row.PersonId), refreshBadges: false),
+            CreateDetailButton("Assign Player", () => ShowScoutAssignmentDialog(State.NextUnassignedScoutingTargetId(), row.PersonId), State.IsScoutAvailable(row.PersonId) && State.NextUnassignedScoutingTargetId() is not null, refreshBadges: false),
             CreateDetailButton("Set Scouting Focus", () => SetStaffFocusFor(row.PersonId)),
             CreateDetailButton("View Profile", () => ShowStaffProfile(row.PersonId)));
 
@@ -7681,9 +7701,9 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Remove Board", () => State.RemoveFromDraftWarRoom(row.PersonId), State.IsDraftUiEnabled);
             yield return CreateDetailButton("Consensus", () => MessageBox.Show(State.DraftConsensusText(row.PersonId), "Scout Consensus", MessageBoxButton.OK, MessageBoxImage.Information), State.IsDraftUiEnabled);
             yield return CreateDetailButton("Compare", () => MessageBox.Show(State.CompareWithNearbyProspectsText(row.PersonId), "Prospect Compare", MessageBoxButton.OK, MessageBoxImage.Information), State.IsDraftUiEnabled);
-            yield return CreateDetailButton("Assign Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0);
-            yield return CreateDetailButton("Scout Again", () => State.ScoutAgainFor(row.PersonId), State.AvailableScoutProfiles.Count > 0);
-            yield return CreateDetailButton("Tournament", () => State.TournamentScoutFor(row.PersonId), State.AvailableScoutProfiles.Count > 0);
+            yield return CreateDetailButton("Assign Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false);
+            yield return CreateDetailButton("Scout Again", () => State.ScoutAgainFor(row.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false);
+            yield return CreateDetailButton("Tournament", () => State.TournamentScoutFor(row.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false);
             yield return CreateDetailButton("Compare Reports", () => MessageBox.Show(State.ScoutingComparisonText(row.PersonId), "Compare Reports", MessageBoxButton.OK, MessageBoxImage.Information));
         }
 
@@ -7832,9 +7852,9 @@ internal sealed class MainWindow : Window
         panel.Children.Add(actions);
     }
 
-    private Button CreateDetailButton(string text, Action action, bool enabled = true, string? disabledTooltip = null)
+    private Button CreateDetailButton(string text, Action action, bool enabled = true, string? disabledTooltip = null, bool refreshBadges = true)
     {
-        var button = CreateButton(text, action);
+        var button = CreateButton(text, action, refreshBadges);
         button.MinWidth = 118;
         button.IsEnabled = enabled;
         if (!enabled)
@@ -9164,6 +9184,158 @@ internal sealed class MainWindow : Window
         builder.AppendLine("Evaluation output includes total cost, annual cost, common expiry date, budget before/after, likelihood, risk warning, and plain-language reasons.");
         builder.AppendLine("Use Free Agents, Prospects, Recruits, Staff, or Pending Decisions to pick the person, then approve only the deals you actually want signed.");
         return builder.ToString();
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildContractRows()
+    {
+        var summary = State.ContractManagement;
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "contract-summary",
+                "Contract Overview",
+                "ContractSummary",
+                $"{State.ScenarioSnapshot.Contracts.Count} contract record(s) | {summary.ExpiringPlayers.Count} player contract(s) expiring",
+                $"Budget: {summary.Budget.PlayerContractsTotal:C0} player payroll | {summary.Budget.StaffContractsTotal:C0} staff payroll",
+                "Select a contract to inspect its term, salary, clauses, status, and related player profile.")
+        };
+
+        var contracts = State.ScenarioSnapshot.Contracts
+            .Concat(State.Snapshot.Contracts)
+            .DistinctBy(contract => contract.ContractId)
+            .OrderBy(contract => contract.Term.EndDate)
+            .ThenBy(contract => FindPersonName(contract.PersonId), StringComparer.Ordinal)
+            .ToArray();
+        rows.AddRange(contracts.Select(contract => new SelectablePersonRow(
+            contract.PersonId,
+            FindPersonName(contract.PersonId),
+            "Contract",
+            $"{contract.ContractType} | {contract.Status} | expires {contract.Term.EndDate:yyyy-MM-dd}",
+            $"{contract.Money.Currency} {contract.Money.SalaryOrStipend:C0} annually | {contract.Term.StartDate:yyyy-MM-dd} to {contract.Term.EndDate:yyyy-MM-dd}",
+            $"Contract {contract.ContractId} | signing bonus {contract.Money.SigningBonus:C0} | clauses: {(contract.Clauses.Count == 0 ? "none" : string.Join(", ", contract.Clauses.Select(clause => clause.ClauseType)))}")));
+
+        return rows;
+    }
+
+    private IReadOnlyList<SelectablePersonRow> BuildContractRightsRows()
+    {
+        var decisions = State.ContractRightsDecisions;
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "contract-rights-summary",
+                "RFA / UFA Contract Rights",
+                "ContractRightsSummary",
+                $"{decisions.Count} rights record(s) | {decisions.Count(decision => decision.IsOpenDecision)} decision(s) open",
+                State.ContractRightsRuleSummary,
+                "Select a player to review expiry, qualifying-offer requirements, agent context, and available rights actions.")
+        };
+
+        rows.AddRange(decisions
+            .OrderBy(decision => decision.ExpiryRule?.Deadline ?? DateOnly.MaxValue)
+            .ThenBy(decision => decision.PlayerName, StringComparer.Ordinal)
+            .Select(decision => new SelectablePersonRow(
+                decision.PersonId,
+                decision.PlayerName,
+                "ContractRights",
+                $"{State.DisplayRightsStatus(decision.RightsStatus)} | {State.PositionShortText(decision.Position)} | age {decision.Age?.ToString() ?? "unknown"}",
+                $"Expires {decision.ContractExpiryDate?.ToString("yyyy-MM-dd") ?? "unknown"} | deadline {decision.ExpiryRule?.Deadline.ToString("yyyy-MM-dd") ?? "n/a"}",
+                $"{decision.Recommendation} Agent: {decision.AgentNote}")));
+
+        return rows;
+    }
+
+    private UIElement BuildContractDetail(SelectablePersonRow? row)
+    {
+        if (row is null || row.Kind == "ContractSummary")
+        {
+            return EmptyDetail("Contracts", "Select a player contract to inspect its terms and open the related profile.");
+        }
+
+        var panel = CreateDetailPanel(row.Name, row.Primary);
+        var contracts = State.ScenarioSnapshot.Contracts
+            .Concat(State.Snapshot.Contracts)
+            .DistinctBy(contract => contract.ContractId)
+            .Where(contract => contract.PersonId == row.PersonId)
+            .OrderByDescending(contract => contract.Term.EndDate)
+            .ToArray();
+
+        if (contracts.Length == 0)
+        {
+            AddParagraph(panel, row.Summary);
+            AddParagraph(panel, "No signed contract is currently on file. This is an unsigned or pending contract decision.");
+        }
+        else
+        {
+            foreach (var contract in contracts)
+            {
+                AddSubHeader(panel, contract.ContractType.ToString());
+                AddLine(panel, "Status", contract.Status);
+                AddLine(panel, "Term", $"{contract.Term.StartDate:yyyy-MM-dd} to {contract.Term.EndDate:yyyy-MM-dd}");
+                AddLine(panel, "Annual salary / stipend", $"{contract.Money.Currency} {contract.Money.SalaryOrStipend:C0}");
+                AddLine(panel, "Signing bonus", $"{contract.Money.Currency} {contract.Money.SigningBonus:C0}");
+                AddLine(panel, "Clauses", contract.Clauses.Count == 0 ? "None" : string.Join(", ", contract.Clauses.Select(clause => clause.ClauseType)));
+                AddLine(panel, "Contract ID", contract.ContractId);
+            }
+        }
+
+        AddActions(panel,
+            CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
+            CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Open Contract Rights", () => OpenContractRightsFor(row.PersonId), State.HasContractRightsDecision(row.PersonId)));
+        return panel;
+    }
+
+    private UIElement BuildContractRightsDetail(SelectablePersonRow? row)
+    {
+        if (row is null || row.Kind == "ContractRightsSummary")
+        {
+            return EmptyDetail("Contract Rights", "Select a player to review RFA/UFA status, qualifying offers, and contract deadlines.");
+        }
+
+        var decision = State.ContractRightsDecisions.FirstOrDefault(item => item.PersonId == row.PersonId);
+        if (decision is null)
+        {
+            return EmptyDetail("Contract Rights", "This rights record is no longer active. Refresh the list to see current decisions.");
+        }
+
+        var panel = CreateDetailPanel(decision.PlayerName, State.DisplayRightsStatus(decision.RightsStatus));
+        AddLine(panel, "Position / age", $"{State.PositionShortText(decision.Position)} | {decision.Age?.ToString() ?? "unknown"}");
+        AddLine(panel, "Accrued seasons", decision.AccruedSeasons);
+        AddLine(panel, "Contract expiry", decision.ContractExpiryDate?.ToString("yyyy-MM-dd") ?? "unknown");
+        AddLine(panel, "Decision deadline", decision.ExpiryRule?.Deadline.ToString("yyyy-MM-dd") ?? "n/a");
+        AddLine(panel, "Qualifying offer", decision.QualifyingOffer is null
+            ? (decision.QualifyingOfferRequired ? "Required; amount pending" : "Not required")
+            : $"{decision.QualifyingOffer.RequiredSalary:C0} {decision.QualifyingOffer.Currency} | {(decision.QualifyingOffer.IsIssued ? "issued" : "not issued")}");
+        AddLine(panel, "Recommendation", decision.Recommendation);
+        AddLine(panel, "Agent note", decision.AgentNote);
+        AddActions(panel,
+            CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
+            CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Qualify", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId)),
+            CreateDetailButton("Do Not Qualify", () => State.DeclineRightsFor(row.PersonId), State.CanDeclineRights(row.PersonId)),
+            CreateDetailButton("Open Contracts", () => OpenContractFor(row.PersonId)));
+        return panel;
+    }
+
+    private void OpenContractFor(string personId)
+    {
+        SelectWorkspaceScreen("Hockey Operations", "Contracts");
+        SelectPersonInList("Contracts", personId);
+    }
+
+    private void OpenContractRightsFor(string personId)
+    {
+        SelectWorkspaceScreen("Hockey Operations", "Contract Rights");
+        SelectPersonInList("Contract Rights", personId);
+    }
+
+    private void SelectPersonInList(string title, string personId)
+    {
+        if (_selectableLists.TryGetValue(title, out var list))
+        {
+            list.SelectedItem = list.Items.OfType<SelectablePersonRow>().FirstOrDefault(row => row.PersonId == personId);
+        }
     }
 
     private string BuildOfferSheetWorkspace()
@@ -12246,32 +12418,45 @@ internal sealed class AlphaDesktopState
     private DraftWarRoomState? _cachedDraftWarRoom;
     private readonly Dictionary<string, DraftProspectIntelligenceCard> _draftCardCache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DraftScoutConsensus> _draftConsensusCache = new(StringComparer.Ordinal);
+    private NewGmScenarioSnapshot? _cachedScoutProfilesScenario;
+    private IReadOnlyList<ScoutingOperationScoutProfile>? _cachedScoutProfiles;
     public NewGmScenarioSnapshot ScenarioSnapshot { get; private set; }
 
-    private AlphaDesktopState(EngineRegistry registry, NewGmScenarioSnapshot scenarioSnapshot, bool addFirstDayInbox = true)
+    private AlphaDesktopState(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenarioSnapshot,
+        bool addFirstDayInbox = true,
+        bool scenarioAlreadyPrepared = false)
     {
         _registry = registry;
-        var prepared = _developmentPlanning.EnsureScenarioPlans(scenarioSnapshot);
-        prepared = _agents.EnsureAgents(prepared);
-        prepared = _organizationAi.EnsureProfiles(prepared);
-        prepared = _franchiseIdentity.EnsureIdentities(prepared);
-        prepared = _lifeCycle.EnsureLifeCycle(prepared, registry);
-        prepared = _staffLifeCycle.EnsureLifeCycle(prepared, registry);
-        prepared = _ownerLifeCycle.EnsureLifeCycle(prepared, registry);
-        prepared = _relationships.EnsureExpansion(prepared, registry);
-        prepared = _stories.EnsureStories(prepared, registry);
-        prepared = _media.EnsureMediaFeed(prepared, Array.Empty<LeagueTransaction>(), registry);
-        prepared = _lineups.EnsureLineup(prepared);
-        prepared = _lineChemistry.EnsureChemistry(prepared);
-        prepared = _gameUsage.EnsureGameUsage(prepared);
-        prepared = new HockeyIntelligenceRatingService().EnsureRatings(prepared);
-        prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
-        prepared = new DevelopmentCurveService().EnsureCurves(prepared);
-        prepared = _ratings.EnsureRatings(prepared);
-        prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
-        prepared = _warRoom.EnsureWarRoom(prepared);
-        prepared = _assetEvaluation.EnsureEvaluations(prepared);
-        prepared = _organizationPlanning.EnsurePlans(prepared);
+        var prepared = scenarioSnapshot;
+        if (!scenarioAlreadyPrepared)
+        {
+            prepared = _developmentPlanning.EnsureScenarioPlans(prepared);
+            prepared = _agents.EnsureAgents(prepared);
+            prepared = _organizationAi.EnsureProfiles(prepared);
+            prepared = _franchiseIdentity.EnsureIdentities(prepared);
+            prepared = _lifeCycle.EnsureLifeCycle(prepared, registry);
+            prepared = _staffLifeCycle.EnsureLifeCycle(prepared, registry);
+            prepared = _ownerLifeCycle.EnsureLifeCycle(prepared, registry);
+            prepared = _relationships.EnsureExpansion(prepared, registry);
+            prepared = _stories.EnsureStories(prepared, registry);
+            prepared = _media.EnsureMediaFeed(prepared, Array.Empty<LeagueTransaction>(), registry);
+            prepared = _lineups.EnsureLineup(prepared);
+            prepared = _lineChemistry.EnsureChemistry(prepared);
+            prepared = _gameUsage.EnsureGameUsage(prepared);
+            prepared = new HockeyIntelligenceRatingService().EnsureRatings(prepared);
+            prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
+            prepared = new DevelopmentCurveService().EnsureCurves(prepared);
+            prepared = _ratings.EnsureRatings(prepared);
+            prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
+            prepared = _warRoom.EnsureWarRoom(prepared);
+            prepared = _assetEvaluation.EnsureEvaluations(prepared);
+            prepared = _organizationPlanning.EnsurePlans(prepared);
+        }
+
+        // These are lightweight compatibility passes for older saves and fields the
+        // bootstrapper intentionally leaves to the desktop integration layer.
         prepared = _tactics.EnsureTactics(prepared);
         prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         prepared = _arbitration.EnsureArbitration(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
@@ -13152,7 +13337,19 @@ internal sealed class AlphaDesktopState
         }
     }
 
-    public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles => _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
+    public IReadOnlyList<ScoutingOperationScoutProfile> ScoutProfiles
+    {
+        get
+        {
+            if (!ReferenceEquals(_cachedScoutProfilesScenario, ScenarioSnapshot))
+            {
+                _cachedScoutProfiles = _scoutingOperations.BuildScoutProfiles(ScenarioSnapshot);
+                _cachedScoutProfilesScenario = ScenarioSnapshot;
+            }
+
+            return _cachedScoutProfiles ?? Array.Empty<ScoutingOperationScoutProfile>();
+        }
+    }
 
     public IReadOnlyList<ScoutIntelligenceProfile> ScoutIntelligenceProfiles => _scoutingIntelligence.BuildScoutProfiles(ScenarioSnapshot, _registry.Rulebook);
 
@@ -13377,7 +13574,7 @@ internal sealed class AlphaDesktopState
     {
         var selection = new MultiLeagueCareerService().SelectLeagueAndTeam(LeagueExperience.Junior, "org-prairie-falcons");
         var scenario = new MultiLeagueCareerService().CreateScenario(selection);
-        return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
+        return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot, scenarioAlreadyPrepared: true);
     }
 
     public static AlphaDesktopState Create(GmProfileCreationSettings gmSettings)
@@ -13390,7 +13587,7 @@ internal sealed class AlphaDesktopState
         var service = new MultiLeagueCareerService();
         var selection = service.SelectLeagueAndTeam(leagueExperience, organizationId, gmSettings);
         var scenario = service.CreateScenario(selection);
-        return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot);
+        return new AlphaDesktopState(scenario.Registry, scenario.ScenarioSnapshot, scenarioAlreadyPrepared: true);
     }
 
     public static SaveLoadResult LoadCareer(string filePath, out AlphaDesktopState? state)
@@ -16803,10 +17000,14 @@ internal sealed class AlphaDesktopState
         LatestSummary = result.Summary;
     }
 
-    private void SetScenarioSnapshot(NewGmScenarioSnapshot scenario)
+    private void SetScenarioSnapshot(NewGmScenarioSnapshot scenario, bool rebuildAssetEvaluations = true)
     {
-        ScenarioSnapshot = _assetEvaluation.EnsureEvaluations(_rosterAllocation.EnsureAllocation(scenario, _registry.Rulebook ?? scenario.LeagueProfile.Rulebook));
+        ScenarioSnapshot = rebuildAssetEvaluations
+            ? _assetEvaluation.EnsureEvaluations(_rosterAllocation.EnsureAllocation(scenario, _registry.Rulebook ?? scenario.LeagueProfile.Rulebook))
+            : scenario;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        _cachedScoutProfilesScenario = null;
+        _cachedScoutProfiles = null;
         ClearDraftPresentationCache();
     }
 
@@ -17001,7 +17202,9 @@ internal sealed class AlphaDesktopState
     {
         if (result.Success)
         {
-            SetScenarioSnapshot(result.ScenarioSnapshot);
+            // A scouting assignment changes intelligence and availability, not roster allocation
+            // or player asset values. Preserve the established derived evaluations here.
+            SetScenarioSnapshot(result.ScenarioSnapshot, rebuildAssetEvaluations: false);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
         }
