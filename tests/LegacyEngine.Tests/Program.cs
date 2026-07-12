@@ -119,6 +119,7 @@ var alpha852InternalPlayerKnowledgeTests = new Alpha852InternalPlayerKnowledgeTe
 var alpha853ExistingNhlWorkforceTests = new Alpha853ExistingNhlWorkforceTests();
 var alpha854FirstDayWorkloadTests = new Alpha854FirstDayWorkloadTests();
 var alpha86DailyHockeyWorldTests = new Alpha86DailyHockeyWorldTests();
+var alpha87ContractsMarketTests = new Alpha87ContractsMarketTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1015,6 +1016,7 @@ runner.Run("alpha 5.9 save load preserves AI profiles", alpha59LeagueAiV2Tests.S
 runner.Run("alpha 5.9 no hidden ratings or forbidden systems added", alpha59LeagueAiV2Tests.NoHiddenRatingsOrForbiddenSystemsAdded);
 runner.Run("NHL realism dashboard View All Actions opens Action Center", nhlScenarioRealismTests.DashboardViewAllActionsTargetsActionCenter);
 runner.Run("NHL realism roster has veterans and young players", nhlScenarioRealismTests.NhlRosterHasVeteransAndYoungPlayers);
+runner.Run("NHL roster does not apply junior overage limit", nhlScenarioRealismTests.NhlRosterDoesNotApplyJuniorOverageLimit);
 runner.Run("NHL realism scenario starts with prospects", nhlScenarioRealismTests.NhlScenarioStartsWithProspects);
 runner.Run("NHL realism draft ages are 17-20 weighted to 18-19", nhlScenarioRealismTests.NhlDraftAgeDistributionUsesSeventeenToTwenty);
 runner.Run("NHL realism roster contracts use professional scale", nhlScenarioRealismTests.NhlRosterContractsUseProfessionalScale);
@@ -1559,6 +1561,16 @@ runner.Run("alpha 8.6 prospect wire schedule and calendar have states", alpha86D
 runner.Run("alpha 8.6 cards are clickable and advance opens daily world", alpha86DailyHockeyWorldTests.DailyWorldCardsAreClickableAndDesktopOpensAfterAdvance);
 runner.Run("alpha 8.6 multi-day briefings store urgency without duplicates", alpha86DailyHockeyWorldTests.MultiDayBriefingIsStoredWithoutDuplicatesAndPreservesUrgency);
 runner.Run("alpha 8.6 daily briefing archive survives save load", alpha86DailyHockeyWorldTests.DailyBriefingArchiveSurvivesSaveLoad);
+runner.Run("alpha 8.7 contract market summary includes decision sources", alpha87ContractsMarketTests.ContractMarketSummaryIncludesAllDecisionSources);
+runner.Run("alpha 8.7 contract negotiation starts with demand and deadline", alpha87ContractsMarketTests.NegotiationStartsWithDemandAndDeadline);
+runner.Run("alpha 8.7 offer produces response without signing automatically", alpha87ContractsMarketTests.OfferProducesResponseWithoutSigningAutomatically);
+runner.Run("alpha 8.7 negotiation history persists on snapshot", alpha87ContractsMarketTests.NegotiationHistorySurvivesSnapshotRoundTrip);
+runner.Run("alpha 8.7 contract comparables avoid hidden ratings", alpha87ContractsMarketTests.ContractComparablesUseVisibleContractInformationOnly);
+runner.Run("alpha 8.7 arbitration v2 models validate", alpha87ContractsMarketTests.ArbitrationV2SubmissionAndSettlementModelsValidate);
+runner.Run("alpha 8.7 free agency target board shows timing", alpha87ContractsMarketTests.FreeAgencyTargetBoardShowsCompetitionAndTiming);
+runner.Run("alpha 8.7 save load preserves contract negotiation", alpha87ContractsMarketTests.SaveLoadPreservesContractNegotiation);
+runner.Run("alpha 8.7 desktop exposes contract market", alpha87ContractsMarketTests.AlphaDesktopExposesContractMarketWorkspace);
+runner.Run("alpha 8.7 has no Godot or full CBA", alpha87ContractsMarketTests.Alpha87DoesNotAddGodotOrFullCba);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

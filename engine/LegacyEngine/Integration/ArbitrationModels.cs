@@ -12,9 +12,12 @@ public enum ArbitrationCaseStatus
 {
     NotEligible,
     Eligible,
+    FilingWindowOpen,
     PlayerFiled,
     TeamFiled,
+    SettlementNegotiation,
     HearingScheduled,
+    HearingCompleted,
     SettledBeforeHearing,
     AwardIssued,
     Accepted,
@@ -136,10 +139,25 @@ public sealed record ArbitrationCase(
     string Recommendation,
     string AgentComment)
 {
+    public ArbitrationSubmission? PlayerSubmission { get; init; }
+
+    public ArbitrationSubmission? TeamSubmission { get; init; }
+
+    public IReadOnlyList<ArbitrationEvidence> Evidence { get; init; } = Array.Empty<ArbitrationEvidence>();
+
+    public IReadOnlyList<ArbitrationComparable> Comparables { get; init; } = Array.Empty<ArbitrationComparable>();
+
+    public ArbitrationHearing? Hearing { get; init; }
+
+    public ArbitrationSettlementOffer? SettlementOffer { get; init; }
+
     public bool IsOpen => Status is ArbitrationCaseStatus.Eligible
+        or ArbitrationCaseStatus.FilingWindowOpen
         or ArbitrationCaseStatus.PlayerFiled
         or ArbitrationCaseStatus.TeamFiled
+        or ArbitrationCaseStatus.SettlementNegotiation
         or ArbitrationCaseStatus.HearingScheduled
+        or ArbitrationCaseStatus.HearingCompleted
         or ArbitrationCaseStatus.AwardIssued;
 
     public void Validate()
@@ -157,6 +175,131 @@ public sealed record ArbitrationCase(
 
         Filing?.Validate();
         Award?.Validate();
+        PlayerSubmission?.Validate();
+        TeamSubmission?.Validate();
+        foreach (var evidence in Evidence)
+        {
+            evidence.Validate();
+        }
+
+        foreach (var comparable in Comparables)
+        {
+            comparable.Validate();
+        }
+
+        Hearing?.Validate();
+        SettlementOffer?.Validate();
+    }
+}
+
+public sealed record ArbitrationSubmission(
+    string SubmissionId,
+    string CaseId,
+    string PersonId,
+    string FiledBy,
+    DateOnly FiledOn,
+    decimal SalaryPosition,
+    string RolePosition,
+    string Summary)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(SubmissionId)
+            || string.IsNullOrWhiteSpace(CaseId)
+            || string.IsNullOrWhiteSpace(PersonId)
+            || string.IsNullOrWhiteSpace(FiledBy)
+            || string.IsNullOrWhiteSpace(RolePosition)
+            || string.IsNullOrWhiteSpace(Summary)
+            || SalaryPosition < 0)
+        {
+            throw new ArgumentException("Arbitration submission requires filer, salary position, role, and summary.");
+        }
+    }
+}
+
+public sealed record ArbitrationEvidence(
+    string EvidenceId,
+    string Label,
+    string Value,
+    string Source,
+    bool IsPlayerProvided)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(EvidenceId)
+            || string.IsNullOrWhiteSpace(Label)
+            || string.IsNullOrWhiteSpace(Value)
+            || string.IsNullOrWhiteSpace(Source))
+        {
+            throw new ArgumentException("Arbitration evidence requires label, value, and source.");
+        }
+    }
+}
+
+public sealed record ArbitrationComparable(
+    string ComparableId,
+    string PlayerName,
+    RosterPosition Position,
+    int? Age,
+    decimal AnnualSalary,
+    int TermYears,
+    string Source,
+    string Relevance)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(ComparableId)
+            || string.IsNullOrWhiteSpace(PlayerName)
+            || string.IsNullOrWhiteSpace(Source)
+            || string.IsNullOrWhiteSpace(Relevance)
+            || AnnualSalary < 0
+            || TermYears <= 0)
+        {
+            throw new ArgumentException("Arbitration comparable requires player, source, relevance, and terms.");
+        }
+    }
+}
+
+public sealed record ArbitrationHearing(
+    string HearingId,
+    DateOnly ScheduledOn,
+    string Venue,
+    string Status,
+    string PreparationNote)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(HearingId)
+            || string.IsNullOrWhiteSpace(Venue)
+            || string.IsNullOrWhiteSpace(Status)
+            || string.IsNullOrWhiteSpace(PreparationNote))
+        {
+            throw new ArgumentException("Arbitration hearing requires venue, status, and preparation note.");
+        }
+    }
+}
+
+public sealed record ArbitrationSettlementOffer(
+    string SettlementOfferId,
+    string PersonId,
+    decimal AnnualSalary,
+    int TermYears,
+    DateOnly OfferedOn,
+    DateOnly ExpiresOn,
+    string Summary,
+    bool Accepted)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(SettlementOfferId)
+            || string.IsNullOrWhiteSpace(PersonId)
+            || string.IsNullOrWhiteSpace(Summary)
+            || AnnualSalary < 0
+            || TermYears <= 0
+            || ExpiresOn < OfferedOn)
+        {
+            throw new ArgumentException("Arbitration settlement offer requires valid terms and dates.");
+        }
     }
 }
 

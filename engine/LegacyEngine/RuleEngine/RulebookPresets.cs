@@ -54,7 +54,9 @@ public static class RulebookPresets
                 MaxRoster = maxRoster,
                 ActiveRoster = activeRoster,
                 GoaliesRequired = 2,
-                OverageSlots = 3,
+                // Overage slots are a junior-roster restriction. Professional
+                // leagues can carry veteran players without an age-based roster cap.
+                OverageSlots = leagueType.Equals("junior", StringComparison.OrdinalIgnoreCase) ? 3 : 0,
                 ImportSlots = 2,
                 InjuredReserveEnabled = true,
                 ReserveListEnabled = true
@@ -78,7 +80,15 @@ public static class RulebookPresets
                 NoTradeClausesEnabled = false,
                 NoMoveClausesEnabled = false,
                 ArbitrationEnabled = false,
-                OfferSheetsEnabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase)
+                OfferSheetsEnabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase),
+                NegotiationRules = new ContractNegotiationRules
+                {
+                    MaxRounds = 3,
+                    ResponseDays = 7,
+                    ExtensionWindowDays = 45,
+                    OfferExpirationDays = 14,
+                    ComparablesLookbackYears = 3
+                }
             },
             DraftRules = new DraftRules
             {

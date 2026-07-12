@@ -1,5 +1,6 @@
 using LegacyEngine.Integration;
 using LegacyEngine.RuleEngine;
+using LegacyEngine.Rosters;
 
 internal sealed class NhlScenarioRealismTests
 {
@@ -21,6 +22,17 @@ internal sealed class NhlScenarioRealismTests
         Assert.True(ages.Any(age => age >= 30), "NHL roster should include older veterans.");
         Assert.True(ages.Any(age => age <= 21), "NHL roster should include young roster players/rookies.");
         Assert.True(ages.Max() > 21, "Oldest NHL roster player should not be only 21.");
+    }
+
+    public void NhlRosterDoesNotApplyJuniorOverageLimit()
+    {
+        var scenario = CreateNhlScenario().ScenarioSnapshot;
+        var validation = new RosterEngine().ValidateRoster(
+            scenario.AlphaSnapshot.Roster,
+            new RosterRuleValidator(RulebookPresets.CreateNhlStyle()));
+
+        Assert.True(validation.IsValid, validation.Message);
+        Assert.Equal(0, RulebookPresets.CreateNhlStyle().RosterRules!.OverageSlots);
     }
 
     public void NhlScenarioStartsWithProspects()

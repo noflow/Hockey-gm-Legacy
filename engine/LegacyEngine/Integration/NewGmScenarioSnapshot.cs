@@ -22,6 +22,11 @@ public sealed record NewGmScenarioSnapshot(
 {
     public DateOnly CurrentDate => AlphaSnapshot.CurrentDate;
 
+    /// <summary>Persistent contract-market negotiations and their round-by-round history.</summary>
+    public IReadOnlyList<ContractNegotiation> ContractNegotiations { get; init; } = Array.Empty<ContractNegotiation>();
+
+    public ContractNegotiationHistory ContractNegotiationHistory { get; init; } = ContractNegotiationHistory.Empty;
+
     public int DaysUntilDraft => DraftDate.DayNumber - CurrentDate.DayNumber;
 
     public DraftExperienceState? DraftExperience { get; init; }
@@ -305,6 +310,13 @@ public sealed record NewGmScenarioSnapshot(
         {
             contract.Validate();
         }
+
+        foreach (var negotiation in ContractNegotiations)
+        {
+            negotiation.Validate();
+        }
+
+        ContractNegotiationHistory.Validate();
 
         foreach (var assignment in ScoutingAssignments)
         {

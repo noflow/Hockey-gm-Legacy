@@ -37,7 +37,12 @@ public sealed class RosterRuleValidator
             return Failure(RuleErrorCodes.NotEnoughGoalies, "Roster does not have enough goalies.", "goalies", request.Goalies, "goalies_required", rules.GoaliesRequired);
         }
 
-        if (request.OveragePlayers > rules.OverageSlots)
+        // A zero value means the rulebook does not apply an age-based overage
+        // restriction. This is how NHL/AHL-style presets distinguish themselves
+        // from junior rosters while preserving explicit limits in junior/custom data.
+        if (!IsProfessionalLeague(_rulebook.LeagueType)
+            && rules.OverageSlots > 0
+            && request.OveragePlayers > rules.OverageSlots)
         {
             return Failure(RuleErrorCodes.TooManyOveragePlayers, "Roster has too many overage players.", "overage_players", request.OveragePlayers, "overage_slots", rules.OverageSlots);
         }
@@ -58,4 +63,8 @@ public sealed class RosterRuleValidator
 
     private static RuleValidationResult Failure(string code, string message, string keyA, object valueA, string keyB, object valueB) =>
         RuleValidationResult.Failure(code, message, details: new Dictionary<string, object?> { [keyA] = valueA, [keyB] = valueB });
+
+    private static bool IsProfessionalLeague(string leagueType) =>
+        leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase)
+        || leagueType.Contains("ahl", StringComparison.OrdinalIgnoreCase);
 }

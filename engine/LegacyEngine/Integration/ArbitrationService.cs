@@ -257,6 +257,131 @@ public sealed class ArbitrationService
         return Result(true, updated, updatedCase, inbox, transactions, $"{updatedCase.PlayerName}'s arbitration case ended with a walk-away.");
     }
 
+    /// <summary>Records the team's evidence without issuing an award or signing anything.</summary>
+    public ArbitrationResult SubmitTeamPosition(EngineRegistry registry, NewGmScenarioSnapshot scenario, string personId, decimal salary, string summary)
+    {
+        return SubmitPosition(registry, scenario, personId, ArbitrationFilingType.TeamElected, salary, summary);
+    }
+
+    /// <summary>Records the player's evidence without issuing an award or signing anything.</summary>
+    public ArbitrationResult SubmitPlayerPosition(EngineRegistry registry, NewGmScenarioSnapshot scenario, string personId, decimal salary, string summary)
+    {
+        return SubmitPosition(registry, scenario, personId, ArbitrationFilingType.PlayerElected, salary, summary);
+    }
+
+    public ArbitrationResult OfferSettlement(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        string personId,
+        decimal annualSalary,
+        int termYears,
+        int expiryDays = 7)
+    {
+        var prepared = EnsureArbitration(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook);
+        var current = prepared.ArbitrationCases.FirstOrDefault(item => item.PersonId == personId);
+        if (current is null || !current.IsOpen)
+        {
+            return Result(false, prepared, current, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), "No open arbitration case is available for settlement.");
+        }
+
+        var offer = new ArbitrationSettlementOffer(
+            $"arbitration-settlement-offer:{personId}:{Guid.NewGuid():N}",
+            personId,
+            annualSalary,
+            termYears,
+            prepared.CurrentDate,
+            prepared.CurrentDate.AddDays(Math.Max(1, expiryDays)),
+            $"Settlement proposal for {current.PlayerName}: {annualSalary:C0} for {termYears} year(s).",
+            false);
+        var updatedCase = current with
+        {
+            Status = ArbitrationCaseStatus.SettlementNegotiation,
+            SettlementOffer = offer,
+            Recommendation = "Review the settlement before the hearing; accepting it will create the contract through the normal resolution path.",
+            AgentComment = "The agent is reviewing a settlement proposal before the hearing."
+        };
+        var updated = ReplaceCase(prepared, updatedCase);
+        updated = AddHistory(updated, updatedCase, ArbitrationDecisionType.NegotiateSettlement, offer.Summary);
+        var inbox = new[] { Inbox(updatedCase, LegacyEventType.ArbitrationSettled, LegacyEventSeverity.Warning, $"Settlement proposal: {updatedCase.PlayerName}", $"A settlement proposal of {annualSalary:C0} for {termYears} year(s) is open until {offer.ExpiresOn:yyyy-MM-dd}.") };
+        return Result(true, updated, updatedCase, inbox, Array.Empty<LeagueTransaction>(), $"Settlement proposal recorded for {updatedCase.PlayerName}; no contract was created.");
+    }
+
+    public ArbitrationResult ProceedToHearing(EngineRegistry registry, NewGmScenarioSnapshot scenario, string personId)
+    {
+        var prepared = EnsureArbitration(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook);
+        var current = prepared.ArbitrationCases.FirstOrDefault(item => item.PersonId == personId);
+        if (current is null || !current.IsOpen)
+        {
+            return Result(false, prepared, current, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), "No open arbitration case is available for a hearing.");
+        }
+
+        var hearingDate = current.HearingDate ?? prepared.CurrentDate.AddDays(14);
+        var hearing = new ArbitrationHearing(
+            $"arbitration-hearing:{current.CaseId}",
+            hearingDate,
+            "League arbitration hearing",
+            "Scheduled",
+            "Prepare recent production, role, comparables, prior salary, and budget context.");
+        var updatedCase = current with
+        {
+            Status = ArbitrationCaseStatus.HearingScheduled,
+            HearingDate = hearingDate,
+            Hearing = hearing,
+            Comparables = BuildComparables(prepared, personId)
+        };
+        var updated = ReplaceCase(prepared, updatedCase);
+        updated = AddHistory(updated, updatedCase, ArbitrationDecisionType.FileTeamElected, $"Hearing confirmed for {hearingDate:yyyy-MM-dd}.");
+        return Result(true, updated, updatedCase, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), $"Hearing confirmed for {updatedCase.PlayerName} on {hearingDate:yyyy-MM-dd}.");
+    }
+
+    private ArbitrationResult SubmitPosition(
+        EngineRegistry registry,
+        NewGmScenarioSnapshot scenario,
+        string personId,
+        ArbitrationFilingType filingType,
+        decimal salary,
+        string summary)
+    {
+        var prepared = EnsureArbitration(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook);
+        var current = prepared.ArbitrationCases.FirstOrDefault(item => item.PersonId == personId);
+        if (current is null || !current.IsOpen)
+        {
+            return Result(false, prepared, current, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), "No open arbitration case is available for a submission.");
+        }
+
+        var submission = new ArbitrationSubmission(
+            $"arbitration-submission:{personId}:{filingType}:{Guid.NewGuid():N}",
+            current.CaseId,
+            personId,
+            filingType == ArbitrationFilingType.TeamElected ? prepared.Organization.Name : "Player agent",
+            prepared.CurrentDate,
+            salary,
+            current.Position.ToString(),
+            summary);
+        var updatedCase = filingType == ArbitrationFilingType.TeamElected
+            ? current with { TeamSubmission = submission, Comparables = BuildComparables(prepared, personId), Evidence = BuildEvidence(current, prepared, salary, "Team submission") }
+            : current with { PlayerSubmission = submission, Comparables = BuildComparables(prepared, personId), Evidence = BuildEvidence(current, prepared, salary, "Player submission") };
+        var updated = ReplaceCase(prepared, updatedCase);
+        updated = AddHistory(updated, updatedCase, filingType == ArbitrationFilingType.TeamElected ? ArbitrationDecisionType.FileTeamElected : ArbitrationDecisionType.PlayerFiled, summary);
+        return Result(true, updated, updatedCase, Array.Empty<AlphaInboxItem>(), Array.Empty<LeagueTransaction>(), $"{updatedCase.PlayerName} arbitration submission recorded.");
+    }
+
+    private static IReadOnlyList<ArbitrationEvidence> BuildEvidence(ArbitrationCase current, NewGmScenarioSnapshot scenario, decimal salary, string source)
+    {
+        var evidence = current.Evidence.ToList();
+        evidence.Add(new ArbitrationEvidence($"evidence:salary:{Guid.NewGuid():N}", "Salary position", salary.ToString("C0"), source, source.StartsWith("Player", StringComparison.Ordinal)));
+        evidence.Add(new ArbitrationEvidence($"evidence:role:{Guid.NewGuid():N}", "Role", current.Position.ToString(), source, false));
+        evidence.Add(new ArbitrationEvidence($"evidence:season:{Guid.NewGuid():N}", "Season", scenario.Season.Year.ToString(), source, false));
+        return evidence;
+    }
+
+    private static IReadOnlyList<ArbitrationComparable> BuildComparables(NewGmScenarioSnapshot scenario, string personId)
+    {
+        return new ContractMarketService().BuildComparables(scenario, personId, 5)
+            .Select(item => new ArbitrationComparable(item.ComparableId, item.PlayerName, item.Position, item.Age, item.AnnualSalary, item.TermYears, item.Source, item.Context))
+            .ToArray();
+    }
+
     public IReadOnlyList<ActionCenterItem> BuildActionItems(NewGmScenarioSnapshot scenario, Rulebook? rulebook = null)
     {
         var prepared = EnsureArbitration(scenario, rulebook);

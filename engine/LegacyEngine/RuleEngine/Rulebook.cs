@@ -129,6 +129,27 @@ public sealed class ContractRules
 
     [JsonPropertyName("offer_sheets_enabled")]
     public bool OfferSheetsEnabled { get; init; }
+
+    [JsonPropertyName("negotiation_rules")]
+    public ContractNegotiationRules? NegotiationRules { get; init; }
+}
+
+public sealed class ContractNegotiationRules
+{
+    [JsonPropertyName("max_rounds")]
+    public int MaxRounds { get; init; } = 3;
+
+    [JsonPropertyName("response_days")]
+    public int ResponseDays { get; init; } = 7;
+
+    [JsonPropertyName("extension_window_days")]
+    public int ExtensionWindowDays { get; init; } = 45;
+
+    [JsonPropertyName("offer_expiration_days")]
+    public int OfferExpirationDays { get; init; } = 14;
+
+    [JsonPropertyName("comparables_lookback_years")]
+    public int ComparablesLookbackYears { get; init; } = 3;
 }
 
 public sealed class DraftRules

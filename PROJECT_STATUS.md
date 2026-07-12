@@ -139,26 +139,27 @@ The five foundation pillars remain:
 - Alpha 8.5.3 - Existing NHL Workforce, Free Agents & Expiring Contracts
 - Alpha 8.5.4 - New GM Inheritance & First-Day Workload
 - Alpha 8.6 - Daily Hockey World
+- Alpha 8.7 - Contracts V4, Arbitration V2 & Free Agency V3
 
 ## Current Milestone
 
-Alpha 8.6 - Daily Hockey World
+Alpha 8.7 - Contracts V4, Arbitration V2 & Free Agency V3
 
 ## Current Goal
 
-Make every advance land in a short, readable daily hockey briefing that separates organization context, league information, and player decisions.
+Make the contract market a single, explainable offseason workspace for extensions, RFA/UFA rights, arbitration preparation, and free-agent competition while keeping final signings under explicit GM approval.
 
-## Why Daily Hockey World Was Next
+## Why Contracts V4 Was Next
 
-Alpha 8.6 turns the existing office data into a daily arrival ritual. It summarizes the organization, league pulse, reports, schedule, calendar, and decision queue without adding another simulation system or duplicating the Action Center.
+Alpha 8.7 connects the existing contract, rights, arbitration, free-agency, agent, budget, and cap systems without replacing them. Negotiations now persist with demands, rounds, responses, deadlines, comparables, and history; arbitration can carry submissions and hearing preparation; and free agency exposes a target board with timing and competition.
 
 ## Next Build Target
 
-Alpha 8.6 - TBD
+Alpha 8.8 - Contract Market polish and offseason soak testing
 
 ## Next Milestones
 
-1. Alpha 8.6 - TBD
+1. Alpha 8.8 - Contract Market polish and offseason soak testing
 
 ## Build Rule
 

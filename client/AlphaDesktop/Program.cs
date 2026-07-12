@@ -26,7 +26,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -807,6 +807,7 @@ internal sealed class MainWindow : Window
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
             new("Contracts", CreateSelectablePeopleContent("Contracts")),
+            new("Contract Market", CreateSelectablePeopleContent("Contract Market")),
             new("Contract Rights", CreateSelectablePeopleContent("Contract Rights")),
             new("Arbitration", CreateTextScreen("Arbitration")),
             new("Buyouts", CreateTextScreen("Buyouts")),
@@ -913,7 +914,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = $"Hockey GM Legacy - Alpha 8.5 - GM Office | {teamBrand.OrganizationDisplayName}",
+            Text = $"Hockey GM Legacy - Alpha 8.7 - GM Office | {teamBrand.OrganizationDisplayName}",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -3456,6 +3457,9 @@ internal sealed class MainWindow : Window
             case ("Hockey Operations", "Contracts"):
                 RefreshSelectableTab("Contracts", BuildContractRows());
                 break;
+            case ("Hockey Operations", "Contract Market"):
+                RefreshSelectableTab("Contract Market", BuildContractMarketRows());
+                break;
             case ("Hockey Operations", "Contract Rights"):
                 RefreshSelectableTab("Contract Rights", BuildContractRightsRows());
                 break;
@@ -3602,6 +3606,7 @@ internal sealed class MainWindow : Window
             RefreshSelectableTab("Recruits", BuildRecruitRows());
             RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
             RefreshSelectableTab("Contracts", BuildContractRows());
+            RefreshSelectableTab("Contract Market", BuildContractMarketRows());
             RefreshSelectableTab("Contract Rights", BuildContractRightsRows());
             _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
             _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
@@ -4547,6 +4552,7 @@ internal sealed class MainWindow : Window
             "Free Agents" => BuildPlayerDetail(title, row),
             "League Free Agents" => BuildPlayerDetail("Free Agents", row),
             "Contracts" => BuildContractDetail(row),
+            "Contract Market" => BuildContractMarketDetail(row),
             "Contract Rights" => BuildContractRightsDetail(row),
             "Teams" => BuildTeamDetail(row),
             "Scouting" => BuildPlayerDetail(title, row),
@@ -9245,6 +9251,88 @@ internal sealed class MainWindow : Window
         return rows;
     }
 
+    private IReadOnlyList<SelectablePersonRow> BuildContractMarketRows()
+    {
+        var market = State.ContractMarket;
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "contract-market-summary",
+                "Contract Market",
+                "ContractMarketSummary",
+                $"{market.OpenNegotiations} open negotiation(s) | {market.ExpiringContracts.Count} expiring contract(s)",
+                $"{market.RightsDecisions.Count} rights decision(s) | {market.FreeAgents.Count} available free agent(s)",
+                market.Summary)
+        };
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var negotiation in market.Negotiations)
+        {
+            if (!seen.Add(negotiation.PersonId))
+            {
+                continue;
+            }
+
+            rows.Add(new SelectablePersonRow(
+                negotiation.PersonId,
+                negotiation.PersonName,
+                "ContractMarket",
+                $"{negotiation.Status} | {negotiation.MarketStatus} | round {negotiation.Round}",
+                $"Demand {negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | deadline {negotiation.DecisionDeadline?.ToString("yyyy-MM-dd") ?? "n/a"}",
+                negotiation.NextAction));
+        }
+
+        foreach (var contract in market.ExpiringContracts)
+        {
+            if (!seen.Add(contract.PersonId))
+            {
+                continue;
+            }
+
+            rows.Add(new SelectablePersonRow(
+                contract.PersonId,
+                FindPersonName(contract.PersonId),
+                "ContractMarket",
+                $"Expiring | {contract.ContractType}",
+                $"{contract.Money.SalaryOrStipend:C0} annually | expires {contract.Term.EndDate:yyyy-MM-dd}",
+                "Open extension talks, prepare a qualifying offer, or let the player enter the appropriate rights market."));
+        }
+
+        foreach (var decision in market.RightsDecisions)
+        {
+            if (!seen.Add(decision.PersonId))
+            {
+                continue;
+            }
+
+            rows.Add(new SelectablePersonRow(
+                decision.PersonId,
+                decision.PlayerName,
+                "ContractMarket",
+                $"{State.DisplayRightsStatus(decision.RightsStatus)} | {State.PositionShortText(decision.Position)}",
+                $"Deadline {decision.ExpiryRule?.Deadline.ToString("yyyy-MM-dd") ?? "n/a"} | {decision.Recommendation}",
+                decision.AgentNote));
+        }
+
+        foreach (var agent in market.FreeAgents)
+        {
+            if (!seen.Add(agent.PersonId))
+            {
+                continue;
+            }
+
+            rows.Add(new SelectablePersonRow(
+                agent.PersonId,
+                agent.Name,
+                "ContractMarket",
+                $"Free agent | {State.PositionShortText(agent.Position)} | {agent.Status}",
+                $"Ask {agent.ContractAsk.AnnualAmount:C0} x {agent.ContractAsk.TermYears} | interest {agent.Interest.PlayerOrganizationInterest}/100",
+                $"{agent.FitSummary.RosterNeed} {agent.FitSummary.StaffRecommendation}"));
+        }
+
+        return rows;
+    }
+
     private UIElement BuildContractDetail(SelectablePersonRow? row)
     {
         if (row is null || row.Kind == "ContractSummary")
@@ -9283,6 +9371,72 @@ internal sealed class MainWindow : Window
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Open Contract Rights", () => OpenContractRightsFor(row.PersonId), State.HasContractRightsDecision(row.PersonId)));
+        return panel;
+    }
+
+    private UIElement BuildContractMarketDetail(SelectablePersonRow? row)
+    {
+        if (row is null || row.Kind == "ContractMarketSummary")
+        {
+            return EmptyDetail("Contract Market", "Select a player to review demand, market status, deadlines, comparables, and negotiation history.");
+        }
+
+        var panel = CreateDetailPanel(row.Name, row.Primary);
+        var market = State.ContractMarket;
+        var negotiation = market.Negotiations.FirstOrDefault(item => item.PersonId == row.PersonId && item.IsOpen)
+            ?? market.Negotiations.FirstOrDefault(item => item.PersonId == row.PersonId);
+        var contract = market.ExpiringContracts.FirstOrDefault(item => item.PersonId == row.PersonId);
+        var rights = market.RightsDecisions.FirstOrDefault(item => item.PersonId == row.PersonId);
+        var freeAgent = market.FreeAgents.FirstOrDefault(item => item.PersonId == row.PersonId);
+
+        AddLine(panel, "Market status", negotiation?.MarketStatus.ToString() ?? (rights?.RightsStatus.ToString() ?? (freeAgent is null ? "Expiring / under contract" : "Free agent")));
+        if (contract is not null)
+        {
+            AddLine(panel, "Current contract", $"{contract.Money.SalaryOrStipend:C0} annually | expires {contract.Term.EndDate:yyyy-MM-dd}");
+        }
+
+        if (rights is not null)
+        {
+            AddLine(panel, "Rights", $"{State.DisplayRightsStatus(rights.RightsStatus)} | deadline {rights.ExpiryRule?.Deadline.ToString("yyyy-MM-dd") ?? "n/a"}");
+        }
+
+        if (freeAgent is not null)
+        {
+            AddLine(panel, "Free-agent ask", $"{freeAgent.ContractAsk.AnnualAmount:C0} x {freeAgent.ContractAsk.TermYears}");
+            AddLine(panel, "Market interest", $"{freeAgent.Interest.PlayerOrganizationInterest}/100 | competition {State.FreeAgentCompetitionSummary(row.PersonId)}");
+        }
+
+        if (negotiation is not null)
+        {
+            AddLine(panel, "Negotiation", $"{negotiation.Status} | round {negotiation.Round} | deadline {negotiation.DecisionDeadline?.ToString("yyyy-MM-dd") ?? "n/a"}");
+            AddLine(panel, "Demand", $"{negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | {negotiation.Demand.DesiredRole}");
+            AddLine(panel, "Agent / player context", negotiation.Demand.AgentComment);
+            AddLine(panel, "Next action", negotiation.NextAction);
+        }
+
+        var comparables = State.ContractComparablesFor(row.PersonId);
+        AddSubHeader(panel, "Comparable contracts");
+        if (comparables.Count == 0)
+        {
+            AddParagraph(panel, "No comparable contracts are available yet.");
+        }
+        else
+        {
+            foreach (var comparable in comparables.Take(5))
+            {
+                AddParagraph(panel, $"{comparable.PlayerName} | {State.PositionShortText(comparable.Position)} | {comparable.AnnualSalary:C0} x {comparable.TermYears} | {comparable.Context}");
+            }
+        }
+
+        var actions = new List<Button>
+        {
+            CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
+            CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Start Contract Talks", () => State.StartContractNegotiationFor(row.PersonId), negotiation is null || !negotiation.IsOpen),
+            CreateDetailButton("Submit Market Offer", () => State.SubmitContractMarketOfferFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Open talks first or review the pending GM approval"),
+            CreateDetailButton("Withdraw Talks", () => State.WithdrawContractNegotiationFor(row.PersonId), negotiation?.IsOpen == true)
+        };
+        AddActions(panel, actions.ToArray());
         return panel;
     }
 
@@ -12377,6 +12531,7 @@ internal sealed class AlphaDesktopState
     private readonly SaveGameService _saveGameService = new();
     private readonly SeasonRolloverService _seasonRollover = new();
     private readonly ContractManagementService _contracts = new();
+    private readonly ContractMarketService _contractMarket = new();
     private readonly PlayabilityPolishService _playability = new();
     private readonly AgentEngine _agents = new();
     private readonly PlayerLifeCycleService _lifeCycle = new();
@@ -13071,7 +13226,10 @@ internal sealed class AlphaDesktopState
                 return age is >= 18 and <= 19;
             });
             var overage = active.Count(player => (PersonAge(player.PersonId) ?? player.Age ?? 0) >= 20);
-            return $"{under18} under 18 | {middle} age 18-19 | {overage} age 20+";
+            var age20Label = string.Equals(_registry.Rulebook?.LeagueType, "junior", StringComparison.OrdinalIgnoreCase)
+                ? $"{overage} overage"
+                : $"{overage} age 20+";
+            return $"{under18} under 18 | {middle} age 18-19 | {age20Label}";
         }
     }
 
@@ -13169,6 +13327,45 @@ internal sealed class AlphaDesktopState
             return _cachedDraftWarRoom;
         }
     }
+
+    public ContractMarketSummary ContractMarket =>
+        _contractMarket.BuildSummary(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public IReadOnlyList<ContractNegotiation> ContractNegotiations =>
+        ScenarioSnapshot.ContractNegotiations
+            .OrderByDescending(item => item.LastUpdatedOn)
+            .ThenBy(item => item.PersonName, StringComparer.Ordinal)
+            .ToArray();
+
+    public IReadOnlyList<ContractComparable> ContractComparablesFor(string personId) =>
+        _contractMarket.BuildComparables(ScenarioSnapshot, personId);
+
+    public void StartContractNegotiationFor(string personId) =>
+        ApplyContractMarketResult(_contractMarket.StartNegotiation(_registry, ScenarioSnapshot, personId));
+
+    public void SubmitContractMarketOfferFor(string personId)
+    {
+        var negotiation = ScenarioSnapshot.ContractNegotiations
+            .Where(item => item.PersonId == personId && item.IsOpen)
+            .OrderByDescending(item => item.LastUpdatedOn)
+            .FirstOrDefault();
+        if (negotiation is null)
+        {
+            LatestSummary = "Open contract talks before submitting an offer.";
+            return;
+        }
+
+        ApplyContractMarketResult(_contractMarket.SubmitOffer(
+            _registry,
+            ScenarioSnapshot,
+            personId,
+            negotiation.Demand.AnnualSalary,
+            negotiation.Demand.TermYears,
+            negotiation.Demand.DesiredRole));
+    }
+
+    public void WithdrawContractNegotiationFor(string personId) =>
+        ApplyContractMarketResult(_contractMarket.Withdraw(_registry, ScenarioSnapshot, personId));
 
     public IReadOnlyList<DraftBoardEntry> DraftBoardEntriesByCurrentWarRoom
     {
@@ -17249,6 +17446,19 @@ internal sealed class AlphaDesktopState
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
             AddLeagueTransactions(result.LeagueTransactions);
+        }
+
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyContractMarketResult(ContractMarketResult result)
+    {
+        if (result.Success)
+        {
+            SetScenarioSnapshot(result.ScenarioSnapshot);
+            EnsureSelectedDossierStillExists();
+            AddInboxItems(result.InboxItems);
         }
 
         LastProcessedEventCount = 0;

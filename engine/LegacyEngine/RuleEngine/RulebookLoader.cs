@@ -139,6 +139,16 @@ public sealed class RulebookLoader
             return InvalidField("contract_rules.salary_cap_amount", "Enabled salary caps require a non-negative amount.");
         }
 
+        if (contracts.NegotiationRules is { } negotiation
+            && (negotiation.MaxRounds <= 0
+                || negotiation.ResponseDays <= 0
+                || negotiation.ExtensionWindowDays <= 0
+                || negotiation.OfferExpirationDays <= 0
+                || negotiation.ComparablesLookbackYears <= 0))
+        {
+            return InvalidField("contract_rules.negotiation_rules", "Contract negotiation settings must use positive rounds, response days, windows, and lookback years.");
+        }
+
         var draft = rulebook.DraftRules!;
         if (draft.DraftEnabled && draft.Rounds <= 0)
         {

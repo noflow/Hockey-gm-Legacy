@@ -120,6 +120,11 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 8.4 Alpha UX Playtest, Accessibility & Navigation Pass
 - Alpha 8.5 Immersive GM Office Experience
 - Alpha 8.5.1 NHL Organization Roster Structure & Contract Slide Fix
+- Alpha 8.5.2 Internal Player Knowledge & Career Rating Curve
+- Alpha 8.5.3 Existing NHL Workforce, Free Agents & Expiring Contracts
+- Alpha 8.5.4 New GM Inheritance & First-Day Workload
+- Alpha 8.6 Daily Hockey World
+- Alpha 8.7 Contracts V4, Arbitration V2 & Free Agency V3
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -162,6 +167,8 @@ Alpha 8.5 - Immersive GM Office Experience replaces the old metric-heavy dashboa
 Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix gives NHL careers a 23-player NHL active roster plus separately tracked AHL affiliate players, all signed contracts, unsigned prospect rights, and signed junior returns. Hockey Operations now surfaces those groups and the organization contract inventory. Eligible junior-returned entry-level players can preserve a contract year below the rulebook game threshold; the existing contract is extended on the common expiry calendar rather than recreated.
 
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
+
+Alpha 8.7 - Contracts V4, Arbitration V2 & Free Agency V3 adds a unified Contract Market workspace over the existing contract, rights, arbitration, agent, budget, cap, and free-agency services. The GM can open extension or market negotiations, review player/agent demands, submit limited-round offers, see accepted-in-principle deals remain pending GM approval, compare nearby contracts, track deadlines, and preserve negotiation history. Arbitration cases can now carry player/team submissions, evidence, comparables, settlement proposals, and hearing preparation. Free Agency v3 exposes a target board with shortlist state, timing, player interest, competing offers, and market recommendations. No full CBA, conversation tree, automatic signing, or game simulation was added.
 
 The Alpha UI Interaction Pass replaces major text-dump people screens with selectable rows and detail/action panels. Staff, roster, recruits, scouting, scouting operations, draft board, prospect list, training camp, and dossier entry points now let the GM select the person first, then take valid staff/player/prospect actions from that selected detail panel.
 
