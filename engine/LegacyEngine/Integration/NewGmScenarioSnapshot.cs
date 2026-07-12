@@ -270,6 +270,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public TeamTactics? CurrentTactics { get; init; }
 
+    public IReadOnlyList<DailyBriefingRecord> DailyBriefings { get; init; } = Array.Empty<DailyBriefingRecord>();
+
     public UiBrandingRegistry BrandingRegistry { get; init; } = UiBrandingRegistry.Empty;
 
     public void Validate()
@@ -406,6 +408,11 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var recap in GameRecaps)
         {
             recap.Validate();
+        }
+
+        foreach (var briefing in DailyBriefings)
+        {
+            briefing.Validate();
         }
 
         foreach (var summary in MonthlySummaries)

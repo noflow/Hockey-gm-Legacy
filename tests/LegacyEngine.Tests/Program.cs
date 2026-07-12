@@ -117,6 +117,7 @@ var alpha85GmOfficeExperienceTests = new Alpha85GmOfficeExperienceTests();
 var alpha852InternalPlayerKnowledgeTests = new Alpha852InternalPlayerKnowledgeTests();
 var alpha853ExistingNhlWorkforceTests = new Alpha853ExistingNhlWorkforceTests();
 var alpha854FirstDayWorkloadTests = new Alpha854FirstDayWorkloadTests();
+var alpha86DailyHockeyWorldTests = new Alpha86DailyHockeyWorldTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1544,6 +1545,15 @@ runner.Run("alpha 8.5.4 Day 1 inbox is small and organization focused", alpha854
 runner.Run("alpha 8.5.4 first-week rollout surfaces deferred work", alpha854FirstDayWorkloadTests.FirstWeekGraduallySurfacesDeferredWork);
 runner.Run("alpha 8.5.4 Assistant GM briefing is actionable", alpha854FirstDayWorkloadTests.AssistantGmBriefingIsConciseAndActionable);
 runner.Run("alpha 8.5.4 desktop uses first-week workload routing", alpha854FirstDayWorkloadTests.DesktopRoutesActionCenterThroughFirstWeekOnboarding);
+runner.Run("alpha 8.6 morning briefing is concise", alpha86DailyHockeyWorldTests.MorningBriefingIsConciseAndActionable);
+runner.Run("alpha 8.6 organization cards cover daily club context", alpha86DailyHockeyWorldTests.OrganizationCardsCoverDailyClubContext);
+runner.Run("alpha 8.6 League Pulse and snapshot are readable", alpha86DailyHockeyWorldTests.LeaguePulseAndSnapshotAreReadable);
+runner.Run("alpha 8.6 Today's Actions are limited", alpha86DailyHockeyWorldTests.TodayActionsAreLimitedAndDoNotDuplicateActionCenter);
+runner.Run("alpha 8.6 coach scout and medical reports are available", alpha86DailyHockeyWorldTests.CoachScoutAndMedicalReportsAreAvailable);
+runner.Run("alpha 8.6 prospect wire schedule and calendar have states", alpha86DailyHockeyWorldTests.ProspectWatchTransactionWireScheduleAndCalendarHaveStates);
+runner.Run("alpha 8.6 cards are clickable and advance opens daily world", alpha86DailyHockeyWorldTests.DailyWorldCardsAreClickableAndDesktopOpensAfterAdvance);
+runner.Run("alpha 8.6 multi-day briefings store urgency without duplicates", alpha86DailyHockeyWorldTests.MultiDayBriefingIsStoredWithoutDuplicatesAndPreservesUrgency);
+runner.Run("alpha 8.6 daily briefing archive survives save load", alpha86DailyHockeyWorldTests.DailyBriefingArchiveSurvivesSaveLoad);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

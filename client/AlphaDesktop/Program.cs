@@ -26,7 +26,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.5 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.6 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -94,6 +94,10 @@ internal sealed class MainWindow : Window
     private string? _selectedOrganizationStaffPersonId;
     private TabControl? _mainTabs;
     private StackPanel? _dashboardPanel;
+    private StackPanel? _dailyHockeyWorldPanel;
+    private ListBox? _dailyBriefingArchiveList;
+    private StackPanel? _dailyBriefingArchiveDetail;
+    private string? _selectedDailyBriefingId;
     private TextBox? _rosterSearchInput;
     private ComboBox? _rosterPositionFilter;
     private ComboBox? _rosterStatusFilter;
@@ -731,6 +735,7 @@ internal sealed class MainWindow : Window
         AddWorkspaceTab(tabs, "Dashboard", new[]
         {
             new WorkspaceScreen("Dashboard", CreateDashboardContent()),
+            new WorkspaceScreen("Daily Hockey World", CreateDailyHockeyWorldContent()),
             new WorkspaceScreen("Action Center / Pending Decisions", BuildActionCenterLayout())
         });
 
@@ -837,6 +842,7 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Champions", CreateTextScreen("Champions")),
             new WorkspaceScreen("Draft Recaps", CreateTextScreen("Draft Recaps")),
             new WorkspaceScreen("Monthly Summaries", CreateTextScreen("Monthly Summaries")),
+            new WorkspaceScreen("Daily Briefings", CreateDailyBriefingArchiveContent()),
             new WorkspaceScreen("Career History", CreateTextScreen("Career History")),
             new WorkspaceScreen("Journal", CreateTextScreen("Journal")),
             new WorkspaceScreen("Global Search", CreateTextScreen("Global Search")),
@@ -1127,6 +1133,119 @@ internal sealed class MainWindow : Window
             Background = Brushes.White,
             Content = _dashboardPanel
         };
+    }
+
+    private UIElement CreateDailyHockeyWorldContent()
+    {
+        _dailyHockeyWorldPanel = new StackPanel { Margin = new Thickness(16) };
+        return new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Background = Brushes.White,
+            Content = _dailyHockeyWorldPanel
+        };
+    }
+
+    private UIElement CreateDailyBriefingArchiveContent()
+    {
+        _dailyBriefingArchiveList = new ListBox { MinWidth = 300, Margin = new Thickness(0, 0, 12, 0) };
+        _dailyBriefingArchiveDetail = new StackPanel { Margin = new Thickness(12) };
+        _dailyBriefingArchiveList.SelectionChanged += (_, _) =>
+        {
+            if (_dailyBriefingArchiveList.SelectedItem is ListBoxItem item && item.Tag is string briefingId)
+            {
+                _selectedDailyBriefingId = briefingId;
+                RenderDailyBriefingArchiveDetail();
+            }
+        };
+        var grid = new Grid { Margin = new Thickness(12), Background = Brushes.White };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(340) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid.SetColumn(_dailyBriefingArchiveList, 0);
+        Grid.SetColumn(_dailyBriefingArchiveDetail, 1);
+        grid.Children.Add(_dailyBriefingArchiveList);
+        grid.Children.Add(_dailyBriefingArchiveDetail);
+        return grid;
+    }
+
+    private void RefreshDailyBriefingArchive()
+    {
+        if (_dailyBriefingArchiveList is null || _dailyBriefingArchiveDetail is null || _state is null)
+        {
+            return;
+        }
+
+        var briefings = State.DailyBriefings;
+        if (_selectedDailyBriefingId is null || briefings.All(item => item.BriefingId != _selectedDailyBriefingId))
+        {
+            _selectedDailyBriefingId = briefings.FirstOrDefault()?.BriefingId;
+        }
+
+        _dailyBriefingArchiveList.Items.Clear();
+        foreach (var briefing in briefings)
+        {
+            _dailyBriefingArchiveList.Items.Add(new ListBoxItem
+            {
+                Tag = briefing.BriefingId,
+                Content = $"{briefing.DateRangeText} | {briefing.TeamRecord} | {(briefing.IsViewed ? "Read" : "New")}",
+                Padding = new Thickness(10),
+                ToolTip = briefing.TopHeadline
+            });
+        }
+
+        if (_dailyBriefingArchiveList.Items.Count == 0)
+        {
+            _dailyBriefingArchiveDetail.Children.Clear();
+            _dailyBriefingArchiveDetail.Children.Add(UiPresentation.UiEmptyState("No daily briefings yet.", "Advance the calendar to create the first briefing."));
+            return;
+        }
+
+        var selected = _dailyBriefingArchiveList.Items.Cast<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, _selectedDailyBriefingId));
+        _dailyBriefingArchiveList.SelectedItem = selected ?? _dailyBriefingArchiveList.Items[0];
+        RenderDailyBriefingArchiveDetail();
+    }
+
+    private void RenderDailyBriefingArchiveDetail()
+    {
+        if (_dailyBriefingArchiveDetail is null || _state is null || string.IsNullOrWhiteSpace(_selectedDailyBriefingId))
+        {
+            return;
+        }
+
+        var briefing = State.DailyBriefings.FirstOrDefault(item => item.BriefingId == _selectedDailyBriefingId);
+        if (briefing is null)
+        {
+            return;
+        }
+
+        State.MarkDailyBriefingViewed(briefing.BriefingId);
+        briefing = State.DailyBriefings.First(item => item.BriefingId == briefing.BriefingId);
+        _dailyBriefingArchiveDetail.Children.Clear();
+        _dailyBriefingArchiveDetail.Children.Add(new TextBlock
+        {
+            Text = $"Daily Briefing: {briefing.DateRangeText}",
+            FontSize = UiTypography.CardTitle,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text,
+            TextWrapping = TextWrapping.Wrap
+        });
+        AddLine(_dailyBriefingArchiveDetail, "Advanced", $"{briefing.DaysAdvanced} day(s)");
+        AddLine(_dailyBriefingArchiveDetail, "Stopped", briefing.StopReason);
+        AddLine(_dailyBriefingArchiveDetail, "Team record", briefing.TeamRecord);
+        AddLine(_dailyBriefingArchiveDetail, "Top headline", briefing.TopHeadline);
+        AddLine(_dailyBriefingArchiveDetail, "Important actions", briefing.ImportantActionCount.ToString());
+        foreach (var item in briefing.ImportantItems)
+        {
+            AddParagraph(_dailyBriefingArchiveDetail, item);
+        }
+
+        AddActions(_dailyBriefingArchiveDetail,
+            CreateDetailButton("Open Daily Hockey World", () => SelectWorkspaceScreen("Dashboard", "Daily Hockey World")),
+            CreateDetailButton("Dismiss", () =>
+            {
+                State.DismissDailyBriefing(briefing.BriefingId);
+                RefreshDailyBriefingArchive();
+            }, !briefing.IsDismissed, briefing.IsDismissed ? "Already dismissed" : null));
     }
 
     private UIElement CreateDraftWarRoomWorkspace()
@@ -2616,11 +2735,39 @@ internal sealed class MainWindow : Window
     private static string NavigationHeaderText(string title, string header) =>
         $"{MainNavigationIcon(title)} {header}";
 
-    private void Advance(int days) => State.Advance(days);
+    private void Advance(int days)
+    {
+        PushNavigationSnapshot();
+        State.Advance(days);
+        OpenDailyWorldAfterAdvance();
+    }
 
-    private void AdvanceToNextGame() => State.AdvanceToNextGame();
+    private void AdvanceToNextGame()
+    {
+        PushNavigationSnapshot();
+        State.AdvanceToNextGame();
+        OpenDailyWorldAfterAdvance();
+    }
 
-    private void AdvanceToMonthEnd() => State.AdvanceToMonthEnd();
+    private void AdvanceToMonthEnd()
+    {
+        PushNavigationSnapshot();
+        State.AdvanceToMonthEnd();
+        OpenDailyWorldAfterAdvance();
+    }
+
+    private void OpenDailyWorldAfterAdvance()
+    {
+        if (State.IsDraftModalVisible)
+        {
+            RefreshDraftModal();
+            SetFeedback("Draft event takes priority. Today's Daily Hockey World remains available from Dashboard.");
+            return;
+        }
+
+        SelectWorkspaceScreen("Dashboard", "Daily Hockey World");
+        SetFeedback($"Advanced to {State.Snapshot.CurrentDate:MMM d, yyyy}. Daily briefing ready.");
+    }
 
     private void MoveDraftBoardPlayerUp() => State.MoveDraftBoardPlayer(direction: -1);
 
@@ -3148,6 +3295,9 @@ internal sealed class MainWindow : Window
             case ("Dashboard", "Dashboard"):
                 RefreshDashboard();
                 break;
+            case ("Dashboard", "Daily Hockey World"):
+                RefreshDailyHockeyWorld();
+                break;
             case ("Dashboard", "Action Center / Pending Decisions"):
                 RefreshActionCenter();
                 break;
@@ -3335,6 +3485,7 @@ internal sealed class MainWindow : Window
             case "Champions": SetTextTab("Champions", BuildChampionsReport()); break;
             case "Draft Recaps": SetTextTab("Draft Recaps", BuildDraftRecaps()); break;
             case "Monthly Summaries": SetTextTab("Monthly Summaries", BuildMonthlySummaries()); break;
+            case "Daily Briefings": RefreshDailyBriefingArchive(); break;
             case "Career History": SetTextTab("Career History", BuildCareerHistory()); break;
             case "Journal": SetTextTab("Journal", BuildJournal()); break;
             case "Global Search": SetTextTab("Global Search", BuildGlobalSearch()); break;
@@ -3479,6 +3630,236 @@ internal sealed class MainWindow : Window
             OwnerMoodText(),
             cap.IsEnabled ? cap.Status.ToString() : State.BudgetOverview.Status.ToString()));
         _dashboardPanel.Children.Add(BuildGmOfficeHome());
+    }
+
+    private void RefreshDailyHockeyWorld()
+    {
+        if (_dailyHockeyWorldPanel is null || _state is null)
+        {
+            return;
+        }
+
+        var world = State.DailyHockeyWorld;
+        if (world.LatestBriefing is { IsViewed: false } latest)
+        {
+            State.MarkDailyBriefingViewed(latest.BriefingId);
+            world = State.DailyHockeyWorld;
+        }
+        _dailyHockeyWorldPanel.Children.Clear();
+        _dailyHockeyWorldPanel.Children.Add(new TextBlock
+        {
+            Text = "Daily Hockey World",
+            FontSize = 26,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text,
+            Margin = new Thickness(0, 0, 0, 4)
+        });
+        _dailyHockeyWorldPanel.Children.Add(new TextBlock
+        {
+            Text = $"{world.Date:dddd, MMMM d} | A concise view of what changed, what matters, and what is moving around the league.",
+            FontSize = UiTypography.Body,
+            Foreground = UiTheme.MutedText,
+            Margin = new Thickness(0, 0, 0, 14),
+            TextWrapping = TextWrapping.Wrap
+        });
+        if (world.LatestBriefing is { } briefing)
+        {
+            var summary = CreateDetailPanel("Advance Summary", briefing.DateRangeText);
+            AddLine(summary, "Previous date", briefing.PreviousDate.ToString("yyyy-MM-dd"));
+            AddLine(summary, "Current date", briefing.CurrentDate.ToString("yyyy-MM-dd"));
+            AddLine(summary, "Days advanced", briefing.DaysAdvanced.ToString());
+            AddLine(summary, "Stopped", briefing.StopReason);
+            AddLine(summary, "Team record", briefing.TeamRecord);
+            foreach (var item in briefing.ImportantItems.Take(4))
+            {
+                AddParagraph(summary, item);
+            }
+
+            AddActions(summary,
+                CreateDetailButton("Open Briefing Archive", () => SelectWorkspaceScreen("Reports / History", "Daily Briefings")),
+                CreateDetailButton("Dismiss", () =>
+                {
+                    State.DismissDailyBriefing(briefing.BriefingId);
+                    RefreshDailyHockeyWorld();
+                }, !briefing.IsDismissed, briefing.IsDismissed ? "Already dismissed" : null));
+            _dailyHockeyWorldPanel.Children.Add(UiPresentation.Card(summary));
+        }
+
+        var urgent = world.TodayActions.FirstOrDefault(card => card.IsUrgent);
+        if (urgent is not null)
+        {
+            var urgentPanel = CreateDetailPanel("URGENT DECISION", urgent.Title);
+            AddParagraph(urgentPanel, urgent.Summary);
+            AddActions(urgentPanel,
+                CreateDetailButton("Review Now", () => NavigateDailyWorldCard(urgent)),
+                CreateDetailButton("View Daily Briefing First", () => { }));
+            _dailyHockeyWorldPanel.Children.Add(UiPresentation.Card(urgentPanel));
+        }
+
+        var columns = new Grid();
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var organization = BuildDailyWorldColumn("Today's Organization", world.OrganizationCards, "Organization health, games, cap, contracts, and availability.");
+        var league = BuildDailyWorldColumn("League Pulse", world.LeaguePulseCards.Concat(world.LeagueSnapshotCards).Concat(world.TransactionWireCards), "Stories, leaders, market movement, and the league wire.");
+        var actions = BuildDailyWorldColumn("Today's Actions", world.TodayActions, "Only decisions that need your attention.");
+        Grid.SetColumn(organization, 0);
+        Grid.SetColumn(league, 1);
+        Grid.SetColumn(actions, 2);
+        columns.Children.Add(organization);
+        columns.Children.Add(league);
+        columns.Children.Add(actions);
+        _dailyHockeyWorldPanel.Children.Add(columns);
+
+        _dailyHockeyWorldPanel.Children.Add(BuildDailyWorldReportGrid(world));
+        _dailyHockeyWorldPanel.Children.Add(BuildDailyWorldBottomGrid(world));
+        _dailyHockeyWorldPanel.Children.Add(BuildDailyWorldHighlights(world));
+    }
+
+    private UIElement BuildDailyWorldColumn(string title, IEnumerable<DailyHockeyWorldCard> cards, string emptyText)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 17,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text,
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+        var rows = cards.Take(8).ToArray();
+        if (rows.Length == 0)
+        {
+            panel.Children.Add(UiPresentation.UiEmptyState("Nothing urgent here.", emptyText));
+        }
+        else
+        {
+            foreach (var card in rows)
+            {
+                panel.Children.Add(BuildDailyWorldCard(card));
+            }
+        }
+
+        return panel;
+    }
+
+    private UIElement BuildDailyWorldCard(DailyHockeyWorldCard card)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(new TextBlock
+        {
+            Text = card.Title,
+            FontSize = UiTypography.Body,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text,
+            TextWrapping = TextWrapping.Wrap
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = card.Summary,
+            FontSize = UiTypography.Small,
+            Foreground = UiTheme.MutedText,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 3, 0, 0)
+        });
+        var button = new Button
+        {
+            Content = panel,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(10),
+            Margin = new Thickness(0, 0, 0, 8),
+            Background = card.IsImportant ? UiTheme.Hover : UiTheme.Surface,
+            BorderBrush = card.IsImportant ? UiTheme.Attention : UiTheme.Border,
+            ToolTip = $"Open {card.Destination}"
+        };
+        button.Click += (_, _) => NavigateDailyWorldCard(card);
+        return button;
+    }
+
+    private UIElement BuildDailyWorldReportGrid(DailyHockeyWorldSnapshot world)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 4, 0, 0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var assistant = BuildDailyReportCard("Morning Briefing", world.MorningBriefing.DefaultIfEmpty("No Assistant GM recommendation today."), "Dashboard/Action Center");
+        var coach = BuildDailyReportCard("Coach Report", new[] { world.CoachReport }, "Hockey Operations/Lineup");
+        var scout = BuildDailyReportCard("Head Scout Report", new[] { world.ScoutReport }, "Hockey Operations/Scouting");
+        Grid.SetColumn(assistant, 0);
+        Grid.SetColumn(coach, 1);
+        Grid.SetColumn(scout, 2);
+        grid.Children.Add(assistant);
+        grid.Children.Add(coach);
+        grid.Children.Add(scout);
+        return grid;
+    }
+
+    private UIElement BuildDailyWorldBottomGrid(DailyHockeyWorldSnapshot world)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var medical = BuildDailyReportCard("Medical Report", new[] { world.MedicalReport }, "Hockey Operations/Roster");
+        var watch = BuildDailyWorldColumn("Prospect Watch", world.ProspectWatchCards, "No prospect performance needs attention today.");
+        var schedule = BuildDailyWorldColumn("Schedule & Calendar", world.ScheduleCards.Concat(world.CalendarCards), "No immediate game or calendar event.");
+        Grid.SetColumn(medical, 0);
+        Grid.SetColumn(watch, 1);
+        Grid.SetColumn(schedule, 2);
+        grid.Children.Add(medical);
+        grid.Children.Add(watch);
+        grid.Children.Add(schedule);
+        return grid;
+    }
+
+    private UIElement BuildDailyWorldHighlights(DailyHockeyWorldSnapshot world)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 12, 0, 0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var player = BuildDailyWorldColumn("Player of the Day", new[] { world.PlayerOfTheDay }, "No player spotlight today.");
+        var team = BuildDailyWorldColumn("Team of the Day", new[] { world.TeamOfTheDay }, "No team spotlight today.");
+        Grid.SetColumn(player, 0);
+        Grid.SetColumn(team, 1);
+        grid.Children.Add(player);
+        grid.Children.Add(team);
+        return grid;
+    }
+
+    private UIElement BuildDailyReportCard(string title, IEnumerable<string> lines, string destination)
+    {
+        var panel = CreateDetailPanel(title, "Short daily report");
+        foreach (var line in lines.Take(3))
+        {
+            AddParagraph(panel, line);
+        }
+
+        AddActions(panel, CreateDetailButton("Open", () => NavigateDailyWorldDestination(destination)));
+        return UiPresentation.Card(panel);
+    }
+
+    private void NavigateDailyWorldCard(DailyHockeyWorldCard card)
+    {
+        if (!string.IsNullOrWhiteSpace(card.RelatedPersonId))
+        {
+            OpenUniversalPersonCard(card.RelatedPersonId);
+            return;
+        }
+
+        NavigateDailyWorldDestination(card.Destination);
+    }
+
+    private void NavigateDailyWorldDestination(string destination)
+    {
+        var pieces = destination.Split('/', 2, StringSplitOptions.TrimEntries);
+        if (pieces.Length == 2)
+        {
+            SelectWorkspaceScreen(pieces[0], pieces[1]);
+        }
+        else
+        {
+            SelectTab(destination);
+        }
     }
 
     private UIElement BuildGmOfficeHome()
@@ -11876,6 +12257,53 @@ internal sealed class AlphaDesktopState
             .ThenBy(entry => entry.Title, StringComparer.Ordinal)
             .ToArray();
 
+    public DailyHockeyWorldSnapshot DailyHockeyWorld =>
+        new DailyHockeyWorldService().Build(
+            ScenarioSnapshot,
+            ActionCenterItems,
+            InboxManager.AllMessages,
+            LeagueTransactions,
+            _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public IReadOnlyList<DailyBriefingRecord> DailyBriefings =>
+        ScenarioSnapshot.DailyBriefings
+            .OrderByDescending(item => item.CurrentDate)
+            .ThenByDescending(item => item.GeneratedAt)
+            .ToArray();
+
+    public void MarkDailyBriefingViewed(string briefingId)
+    {
+        var briefing = ScenarioSnapshot.DailyBriefings.FirstOrDefault(item => item.BriefingId == briefingId);
+        if (briefing is null || briefing.IsViewed)
+        {
+            return;
+        }
+
+        SetScenarioSnapshot(ScenarioSnapshot with
+        {
+            DailyBriefings = ScenarioSnapshot.DailyBriefings
+                .Select(item => item.BriefingId == briefingId ? item with { IsViewed = true } : item)
+                .ToArray()
+        });
+    }
+
+    public void DismissDailyBriefing(string briefingId)
+    {
+        var briefing = ScenarioSnapshot.DailyBriefings.FirstOrDefault(item => item.BriefingId == briefingId);
+        if (briefing is null || briefing.IsDismissed)
+        {
+            return;
+        }
+
+        SetScenarioSnapshot(ScenarioSnapshot with
+        {
+            DailyBriefings = ScenarioSnapshot.DailyBriefings
+                .Select(item => item.BriefingId == briefingId ? item with { IsDismissed = true, IsViewed = true } : item)
+                .ToArray()
+        });
+        LatestSummary = "Daily briefing dismissed. It remains available in the archive.";
+    }
+
     public IReadOnlyList<FreeAgent> FreeAgents =>
         ScenarioSnapshot.FreeAgentMarket?.FreeAgents ?? Array.Empty<FreeAgent>();
 
@@ -16336,6 +16764,9 @@ internal sealed class AlphaDesktopState
 
     private void ApplyAdvanceResult(FirstMonthAdvanceResult result)
     {
+        var previousScenario = ScenarioSnapshot;
+        var newlyGeneratedInbox = result.InboxItems.ToList();
+        var newlyGeneratedTransactions = result.LeagueTransactions.ToList();
         SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
@@ -16346,7 +16777,19 @@ internal sealed class AlphaDesktopState
             SetScenarioSnapshot(freeAgency.ScenarioSnapshot);
             AddInboxItems(freeAgency.InboxItems);
             AddLeagueTransactions(freeAgency.LeagueTransactions);
+            newlyGeneratedInbox.AddRange(freeAgency.InboxItems);
+            newlyGeneratedTransactions.AddRange(freeAgency.LeagueTransactions);
         }
+
+        var dailyWorld = new DailyHockeyWorldService();
+        var briefing = dailyWorld.CreateBriefing(
+            previousScenario,
+            ScenarioSnapshot,
+            result,
+            ActionCenterItems,
+            newlyGeneratedInbox,
+            newlyGeneratedTransactions);
+        SetScenarioSnapshot(dailyWorld.MergeBriefing(ScenarioSnapshot, briefing));
 
         LastProcessedEventCount = result.ProcessedEventCount;
         LastStopReason = result.StopReason;

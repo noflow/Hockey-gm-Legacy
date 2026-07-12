@@ -138,18 +138,19 @@ The five foundation pillars remain:
 - Alpha 8.5.2 - Internal Player Knowledge & Career Rating Curve
 - Alpha 8.5.3 - Existing NHL Workforce, Free Agents & Expiring Contracts
 - Alpha 8.5.4 - New GM Inheritance & First-Day Workload
+- Alpha 8.6 - Daily Hockey World
 
 ## Current Milestone
 
-Alpha 8.5.4 - New GM Inheritance & First-Day Workload
+Alpha 8.6 - Daily Hockey World
 
 ## Current Goal
 
-Start NHL careers inside a believable, functioning professional organization while presenting a manageable first-day briefing and a staged first-week workload.
+Make every advance land in a short, readable daily hockey briefing that separates organization context, league information, and player decisions.
 
-## Why First-Day Workload Was Next
+## Why Daily Hockey World Was Next
 
-Alpha 8.5.4 makes the inherited organization approachable. Contracts, staff, scouting, assignments, and roster decisions remain real and available, but the new GM receives only a concise owner, assistant GM, coach, and scout briefing plus three opening priorities.
+Alpha 8.6 turns the existing office data into a daily arrival ritual. It summarizes the organization, league pulse, reports, schedule, calendar, and decision queue without adding another simulation system or duplicating the Action Center.
 
 ## Next Build Target
 
