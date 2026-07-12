@@ -75,6 +75,8 @@ internal sealed class Alpha86DailyHockeyWorldTests
         Assert.True(source.Contains("PushNavigationSnapshot();", StringComparison.Ordinal), "Advancing should preserve the previous workspace for Back navigation.");
         Assert.True(source.Contains("OpenDailyWorldAfterAdvance", StringComparison.Ordinal), "All advance paths should share Daily Hockey World routing.");
         Assert.True(source.Contains("Daily Briefings", StringComparison.Ordinal), "Reports and History should expose the briefing archive.");
+        Assert.True(source.Contains("var contentHost = new ContentControl();", StringComparison.Ordinal), "Workspace screens should be attached by the selected sidebar item rather than attached twice at startup.");
+        Assert.True(source.Contains("if (!ReferenceEquals(contentHost.Content, content))", StringComparison.Ordinal), "Workspace navigation should not reattach an already-parented visual.");
     }
 
     public void MultiDayBriefingIsStoredWithoutDuplicatesAndPreservesUrgency()

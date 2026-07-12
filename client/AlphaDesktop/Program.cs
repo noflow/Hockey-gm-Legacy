@@ -2239,10 +2239,9 @@ internal sealed class MainWindow : Window
             Padding = new Thickness(8),
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
-        var contentHost = new ContentControl
-        {
-            Content = screens.FirstOrDefault()?.Content
-        };
+        // The sidebar owns initial screen selection. Attaching it here as well would
+        // try to place the same visual in the ContentControl twice during startup.
+        var contentHost = new ContentControl();
         var breadcrumb = new TextBlock
         {
             Text = BuildBreadcrumb(title, screens.FirstOrDefault()?.Label ?? string.Empty),
@@ -2273,7 +2272,10 @@ internal sealed class MainWindow : Window
                     PushNavigationSnapshot();
                 }
 
-                contentHost.Content = content;
+                if (!ReferenceEquals(contentHost.Content, content))
+                {
+                    contentHost.Content = content;
+                }
                 breadcrumb.Text = BuildBreadcrumb(title, item.Content?.ToString() ?? string.Empty);
                 Keyboard.Focus(navigation);
                 if (_layoutReady && item.Content is string screen)
