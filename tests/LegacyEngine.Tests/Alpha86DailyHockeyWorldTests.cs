@@ -77,6 +77,11 @@ internal sealed class Alpha86DailyHockeyWorldTests
         Assert.True(source.Contains("Daily Briefings", StringComparison.Ordinal), "Reports and History should expose the briefing archive.");
         Assert.True(source.Contains("var contentHost = new ContentControl();", StringComparison.Ordinal), "Workspace screens should be attached by the selected sidebar item rather than attached twice at startup.");
         Assert.True(source.Contains("if (!ReferenceEquals(contentHost.Content, content))", StringComparison.Ordinal), "Workspace navigation should not reattach an already-parented visual.");
+        Assert.True(source.Contains("Content = null;", StringComparison.Ordinal), "Starting or loading a career should disconnect the creation screen before the office layout is attached.");
+        Assert.True(source.Contains("DetachFromLogicalParent(content);", StringComparison.Ordinal), "Workspace navigation should safely detach a stale visual before attaching it to the active content host.");
+        Assert.True(source.Contains("Tag = screen.Label", StringComparison.Ordinal), "Workspace sidebar metadata should store a screen key, not a live visual element.");
+        Assert.True(source.Contains("var screensByLabel", StringComparison.Ordinal), "Workspace screen controls should resolve from a local label lookup.");
+        Assert.True(source.Contains("PrepareOfficeVisuals();", StringComparison.Ordinal), "A retry after a partial office build should detach persistent header visuals before rebuilding.");
     }
 
     public void MultiDayBriefingIsStoredWithoutDuplicatesAndPreservesUrgency()

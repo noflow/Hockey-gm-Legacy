@@ -543,8 +543,7 @@ internal sealed class MainWindow : Window
             var organizationId = team.OrganizationId;
             var created = await Task.Run(() => AlphaDesktopState.Create(settings, league, organizationId));
             _state = created;
-            Content = BuildLayout();
-            RefreshAll();
+            ShowOfficeLayout();
         }
         catch (Exception ex)
         {
@@ -617,8 +616,7 @@ internal sealed class MainWindow : Window
         }
 
         _state = loaded;
-        Content = BuildLayout();
-        RefreshAll();
+        ShowOfficeLayout();
         MessageBox.Show(result.Message, "Load Career", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -668,8 +666,7 @@ internal sealed class MainWindow : Window
         }
 
         _state = loaded;
-        Content = BuildLayout();
-        RefreshAll();
+        ShowOfficeLayout();
         MessageBox.Show(result.Message, "Load Career", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -687,6 +684,15 @@ internal sealed class MainWindow : Window
             FileName = "hockey-gm-career.json"
         };
         return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    private void ShowOfficeLayout()
+    {
+        // Disconnect the creation/load tree before creating office screens. Some inputs
+        // remain as fields on MainWindow, and WPF allows each visual only one logical parent.
+        Content = null;
+        Content = BuildLayout();
+        RefreshAll();
     }
 
     private static string? PromptForLoadPath()
@@ -712,6 +718,7 @@ internal sealed class MainWindow : Window
     private UIElement BuildLayout()
     {
         _layoutReady = false;
+        PrepareOfficeVisuals();
         var root = new Grid();
         var app = new DockPanel();
 
@@ -2225,6 +2232,7 @@ internal sealed class MainWindow : Window
 
     private void AddWorkspaceTab(TabControl tabs, string title, IReadOnlyList<WorkspaceScreen> screens)
     {
+        var screensByLabel = screens.ToDictionary(screen => screen.Label, StringComparer.Ordinal);
         var root = new Grid { Background = Brushes.White };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -2256,7 +2264,7 @@ internal sealed class MainWindow : Window
             navigation.Items.Add(new ListBoxItem
             {
                 Content = screen.Label,
-                Tag = screen.Content,
+                Tag = screen.Label,
                 Padding = new Thickness(10, 8, 10, 8),
                 Margin = new Thickness(0, 0, 0, 4),
                 FontWeight = FontWeights.SemiBold
@@ -2265,8 +2273,11 @@ internal sealed class MainWindow : Window
 
         navigation.SelectionChanged += (_, _) =>
         {
-            if (navigation.SelectedItem is ListBoxItem item && item.Tag is UIElement content)
+            if (navigation.SelectedItem is ListBoxItem item
+                && item.Tag is string screenLabel
+                && screensByLabel.TryGetValue(screenLabel, out var screenEntry))
             {
+                var content = screenEntry.Content;
                 if (_layoutReady && !_isRestoringNavigation)
                 {
                     PushNavigationSnapshot();
@@ -2274,13 +2285,15 @@ internal sealed class MainWindow : Window
 
                 if (!ReferenceEquals(contentHost.Content, content))
                 {
+                    contentHost.Content = null;
+                    DetachFromLogicalParent(content);
                     contentHost.Content = content;
                 }
                 breadcrumb.Text = BuildBreadcrumb(title, item.Content?.ToString() ?? string.Empty);
                 Keyboard.Focus(navigation);
-                if (_layoutReady && item.Content is string screen)
+                if (_layoutReady && item.Content is string activeScreen)
                 {
-                    RefreshWorkspaceScreen(title, screen);
+                    RefreshWorkspaceScreen(title, activeScreen);
                 }
             }
         };
@@ -2310,6 +2323,41 @@ internal sealed class MainWindow : Window
         _workspaceNavigations[title] = navigation;
         _workspaceBreadcrumbs[title] = breadcrumb;
         tabs.Items.Add(tab);
+    }
+
+    private static void DetachFromLogicalParent(UIElement element)
+    {
+        switch (LogicalTreeHelper.GetParent(element))
+        {
+            case Panel panel:
+                panel.Children.Remove(element);
+                break;
+            case Decorator decorator when ReferenceEquals(decorator.Child, element):
+                decorator.Child = null;
+                break;
+            case ContentControl contentControl when ReferenceEquals(contentControl.Content, element):
+                contentControl.Content = null;
+                break;
+            case ItemsControl itemsControl:
+                itemsControl.Items.Remove(element);
+                break;
+        }
+    }
+
+    private void PrepareOfficeVisuals()
+    {
+        // These status elements intentionally live for the life of MainWindow so header
+        // updates stay cheap. If a previous office build stopped midway, detach them
+        // before they are added to the next header tree.
+        DetachFromLogicalParent(_dateText);
+        DetachFromLogicalParent(_summaryText);
+        DetachFromLogicalParent(_processedText);
+        DetachFromLogicalParent(_feedbackText);
+        _draftModalOverlay = null;
+        _dashboardPanel = null;
+        _dailyHockeyWorldPanel = null;
+        _dailyBriefingArchiveList = null;
+        _dailyBriefingArchiveDetail = null;
     }
 
     private UIElement BuildRosterFilters()
