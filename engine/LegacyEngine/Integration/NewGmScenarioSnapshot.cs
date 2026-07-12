@@ -95,6 +95,15 @@ public sealed record NewGmScenarioSnapshot(
 
     public FreeAgentMarket? FreeAgentMarket { get; init; }
 
+    public LeagueWorkforceProfile? LeagueWorkforce { get; init; }
+
+    public IReadOnlyList<RetirementConsideration> RetirementConsiderations { get; init; } = Array.Empty<RetirementConsideration>();
+
+    public WorkforceValidationResult? WorkforceValidation { get; init; }
+
+    /// <summary>Curates the first week without removing underlying work from its normal workspace.</summary>
+    public FirstWeekOnboardingPlan? OnboardingPlan { get; init; }
+
     public FreeAgencyMarketState? FreeAgencyMarketState { get; init; }
 
     public TradeBlock? TradeBlock { get; init; }
@@ -172,6 +181,10 @@ public sealed record NewGmScenarioSnapshot(
     public IReadOnlyList<PlayerRatingSnapshot> PlayerRatings { get; init; } = Array.Empty<PlayerRatingSnapshot>();
 
     public PlayerRatingHistory PlayerRatingHistory { get; init; } = PlayerRatingHistory.Empty;
+
+    public IReadOnlyList<InternalPlayerKnowledge> InternalPlayerKnowledge { get; init; } = Array.Empty<InternalPlayerKnowledge>();
+
+    public IReadOnlyList<PlayerCareerRatingCurve> CareerRatingCurves { get; init; } = Array.Empty<PlayerCareerRatingCurve>();
 
     public IReadOnlyList<PlayerDevelopmentCurve> DevelopmentCurves { get; init; } = Array.Empty<PlayerDevelopmentCurve>();
 
@@ -273,6 +286,8 @@ public sealed record NewGmScenarioSnapshot(
         {
             throw new ArgumentException("New GM scenario must include first-day inbox items.", nameof(FirstDayInbox));
         }
+
+        OnboardingPlan?.Validate();
 
         if (string.IsNullOrWhiteSpace(ScenarioSummary))
         {
@@ -426,6 +441,12 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         FreeAgentMarket?.Validate();
+        LeagueWorkforce?.Validate();
+        foreach (var consideration in RetirementConsiderations)
+        {
+            consideration.Validate();
+        }
+        WorkforceValidation?.Validate();
         FreeAgencyMarketState?.Validate();
         TradeBlock?.Validate();
         foreach (var offer in TradeOffers)
@@ -559,6 +580,16 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         PlayerRatingHistory.Validate();
+
+        foreach (var knowledge in InternalPlayerKnowledge)
+        {
+            knowledge.Validate();
+        }
+
+        foreach (var curve in CareerRatingCurves)
+        {
+            curve.Validate();
+        }
 
         foreach (var curve in DevelopmentCurves)
         {

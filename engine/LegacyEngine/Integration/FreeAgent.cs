@@ -28,6 +28,14 @@ public sealed record FreeAgent(
     FreeAgentStatus Status,
     bool IsShortlisted)
 {
+    public FreeAgentMarketTier MarketTier { get; init; } = FreeAgentMarketTier.RolePlayer;
+
+    public WorkforceCareerStage CareerStage { get; init; } = WorkforceCareerStage.YoungDeveloping;
+
+    public RetirementRisk RetirementRisk { get; init; } = RetirementRisk.None;
+
+    public FinalContractPreference? FinalContractPreference { get; init; }
+
     public string HeightDisplay => $"{HeightInches / 12}'{HeightInches % 12}\"";
 
     public string WeightDisplay => $"{WeightPounds} lbs";
@@ -64,5 +72,6 @@ public sealed record FreeAgent(
         ContractAsk.Validate();
         Interest.Validate();
         FitSummary.Validate();
+        FinalContractPreference?.Validate();
     }
 }

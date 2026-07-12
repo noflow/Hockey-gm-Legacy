@@ -37,6 +37,7 @@ public sealed class ActionCenterService
         AddTacticalRecommendations(scenario, items);
         AddStaffCoachingItems(scenario, items);
         AddOwnerOfficeItems(scenario, budget, items);
+        new FirstWeekOnboardingService().AddOpeningActions(scenario, items);
         AddUpcomingGames(scenario, items);
         AddPlayoffItems(scenario, items);
         AddInjuryIssues(scenario, items);

@@ -16,9 +16,19 @@ public sealed partial class ScoutingIntelligenceService
             throw new ArgumentException("Player id is required.", nameof(playerId));
         }
 
-        var prepared = new HockeyIntelligenceRatingService().EnsureRatings(scenario);
+        var prepared = new InternalPlayerKnowledgeService().EnsureKnowledge(scenario);
+        return CreateKnowledgeProfileCore(prepared, playerId);
+    }
+
+    private ScoutingKnowledgeProfile CreateKnowledgeProfileCore(NewGmScenarioSnapshot prepared, string playerId)
+    {
         var playerName = PersonNameForKnowledge(prepared, playerId);
         var scouted = prepared.ScoutedRatings.FirstOrDefault(rating => rating.PersonId == playerId);
+        var internalKnowledge = prepared.InternalPlayerKnowledge.FirstOrDefault(item => item.PersonId == playerId);
+        if (internalKnowledge is not null)
+        {
+            return BuildInternalKnowledgeProfile(prepared, internalKnowledge);
+        }
         var existing = prepared.ScoutingKnowledgeProfiles.FirstOrDefault(profile =>
             profile.OrganizationId == prepared.Organization.OrganizationId && profile.PlayerId == playerId);
         if (existing is not null)
@@ -85,15 +95,14 @@ public sealed partial class ScoutingIntelligenceService
     public NewGmScenarioSnapshot EnsureKnowledgeProfiles(NewGmScenarioSnapshot scenario)
     {
         ArgumentNullException.ThrowIfNull(scenario);
-        var prepared = new HockeyIntelligenceRatingService().EnsureRatings(scenario);
-        var existing = prepared.ScoutingKnowledgeProfiles.ToDictionary(profile => (profile.OrganizationId, profile.PlayerId));
+        var prepared = new InternalPlayerKnowledgeService().EnsureKnowledge(scenario);
+        var organizationPlayerIds = prepared.InternalPlayerKnowledge.Select(item => item.PersonId);
         var profiles = prepared.AlphaSnapshot.DraftBoard.Entries
-            .Select(entry =>
-            {
-                var key = (prepared.Organization.OrganizationId, entry.ProspectPersonId);
-                return existing.TryGetValue(key, out var profile) ? RefreshStaleProfile(prepared, profile) : CreateKnowledgeProfile(prepared, entry.ProspectPersonId);
-            })
-            .Concat(prepared.ScoutingKnowledgeProfiles.Where(profile => prepared.AlphaSnapshot.DraftBoard.Entries.All(entry => entry.ProspectPersonId != profile.PlayerId)))
+            .Select(entry => entry.ProspectPersonId)
+            .Concat(organizationPlayerIds)
+            .Distinct(StringComparer.Ordinal)
+            .Select(playerId => CreateKnowledgeProfileCore(prepared, playerId))
+            .Concat(prepared.ScoutingKnowledgeProfiles.Where(profile => prepared.AlphaSnapshot.DraftBoard.Entries.All(entry => entry.ProspectPersonId != profile.PlayerId) && !organizationPlayerIds.Contains(profile.PlayerId)))
             .GroupBy(profile => (profile.OrganizationId, profile.PlayerId))
             .Select(group => group.First())
             .OrderBy(profile => profile.PlayerName, StringComparer.Ordinal)
@@ -101,6 +110,47 @@ public sealed partial class ScoutingIntelligenceService
         var updated = prepared with { ScoutingKnowledgeProfiles = profiles };
         updated.Validate();
         return updated;
+    }
+
+    private static ScoutingKnowledgeProfile BuildInternalKnowledgeProfile(NewGmScenarioSnapshot scenario, InternalPlayerKnowledge knowledge)
+    {
+        var attributes = knowledge.Attributes
+            .Select(attribute => new AttributeKnowledgeState(
+                attribute.Attribute,
+                attribute.Category,
+                new PlayerRatingRange(attribute.Estimate, attribute.Estimate),
+                PlayerRatingColor.Black,
+                attribute.LastEvaluated,
+                null,
+                attribute.Source.ToString(),
+                0,
+                false,
+                attribute.Note))
+            .ToArray();
+        var consensus = new ScoutingConsensus(
+            knowledge.PersonId,
+            knowledge.PlayerName,
+            new PlayerRatingRange(knowledge.OverallEstimate, knowledge.OverallEstimate),
+            new PlayerRatingRange(knowledge.PotentialEstimate, knowledge.PotentialEstimate),
+            PlayerRatingColor.Black,
+            0,
+            "Internal organizational evaluation is current.",
+            "No material internal disagreement.",
+            Array.Empty<ScoutAttributeOpinion>());
+        var profile = new ScoutingKnowledgeProfile(
+            scenario.Organization.OrganizationId,
+            knowledge.PersonId,
+            knowledge.PlayerName,
+            knowledge.Position,
+            knowledge.LastEvaluated,
+            knowledge.LastEvaluated,
+            attributes,
+            Array.Empty<ScoutAttributeOpinion>(),
+            consensus,
+            false,
+            "Internal staff already have a current evaluation; use scouting to monitor external leagues or specific concerns.");
+        profile.Validate();
+        return profile;
     }
 
     public ScoutingKnowledgeUpdate UpdateKnowledgeFromReport(NewGmScenarioSnapshot scenario, ScoutingReport report, ScoutingOperationAssignment? assignment = null)
@@ -209,7 +259,7 @@ public sealed partial class ScoutingIntelligenceService
         var profile = CreateKnowledgeProfile(scenario, personId);
         var lines = new List<string>
         {
-            $"Scouting intelligence: OVR {profile.Consensus.OverallEstimate.Display} | POT {profile.Consensus.PotentialEstimate.Display} | Confidence {profile.Consensus.ConfidenceColor}.",
+            $"Scouting intelligence: OVR {VisibleEstimate(profile.Consensus.OverallEstimate)} | POT {VisibleEstimate(profile.Consensus.PotentialEstimate)} | Confidence {profile.Consensus.ConfidenceColor}.",
             $"Known attributes: {profile.KnownAttributeCount}/{profile.Attributes.Count}; stale: {(profile.IsStale ? "yes" : "no")}.",
             $"Consensus: {profile.Consensus.Summary}",
             $"Disagreement: {profile.Consensus.BiggestDisagreement}",
@@ -218,7 +268,7 @@ public sealed partial class ScoutingIntelligenceService
         lines.Add("Attribute confidence grid:");
         foreach (var group in profile.Attributes.GroupBy(attribute => attribute.Category).OrderBy(group => group.Key))
         {
-            var summary = string.Join(", ", group.Take(4).Select(attribute => $"{ReadableAttribute(attribute.Attribute)} {attribute.Estimate.Display} {attribute.ConfidenceColor}"));
+            var summary = string.Join(", ", group.Take(4).Select(attribute => $"{ReadableAttribute(attribute.Attribute)} {VisibleEstimate(attribute.Estimate)} {attribute.ConfidenceColor}"));
             lines.Add($"{group.Key}: {summary}");
         }
 
@@ -232,6 +282,8 @@ public sealed partial class ScoutingIntelligenceService
         lines.Add("Internal engine ratings are not shown; these are organization scouting estimates.");
         return lines;
     }
+
+    private static string VisibleEstimate(PlayerRatingRange rating) => rating.IsUnknown ? "???" : rating.Midpoint.ToString();
 
     public IReadOnlyList<ActionCenterItem> BuildActionItems(NewGmScenarioSnapshot scenario)
     {

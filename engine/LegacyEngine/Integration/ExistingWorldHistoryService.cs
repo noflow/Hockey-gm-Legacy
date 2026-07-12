@@ -43,7 +43,7 @@ public sealed class ExistingWorldHistoryService
                 player.Position,
                 scenario.Season.Year - 1,
                 TeamForRosterIndex(scenario, player.PersonId),
-                "Prairie Junior League",
+                scenario.LeagueProfile.Identity.Name,
                 scenario.CurrentDate);
         }
 
@@ -71,7 +71,9 @@ public sealed class ExistingWorldHistoryService
         foreach (var stat in priorStats)
         {
             var age = FindPerson(scenario, stat.PersonId)?.CalculateAge(scenario.CurrentDate) ?? 16;
-            var seasons = Math.Clamp(age - 15, 1, age >= 20 ? 4 : 2);
+            var seasons = scenario.LeagueProfile.Experience == LeagueExperience.Nhl
+                ? Math.Clamp(age - 18, 1, 18)
+                : Math.Clamp(age - 15, 1, age >= 20 ? 4 : 2);
             var multiplier = seasons == 1 ? 1 : seasons + 1;
 
             yield return new CareerStatSummary(
@@ -106,7 +108,7 @@ public sealed class ExistingWorldHistoryService
                 person.PersonId,
                 person.Identity.DisplayName,
                 scenario.Organization.Name,
-                "Prairie Junior League",
+                scenario.LeagueProfile.Identity.Name,
                 Math.Max(scenario.Season.Year - Math.Clamp(age - 16, 1, 4), scenario.Season.Year - 4),
                 scenario.Season.Year - 1,
                 RoleFor(player.Position, age),
@@ -199,7 +201,9 @@ public sealed class ExistingWorldHistoryService
             GoalsAgainst: 205,
             PlayoffResult: "Lost in second round",
             PreviousLeagueChampion: "Regina Plainsmen",
-            Summary: $"{scenario.Organization.Name} finished as a competitive but uneven club last season. Ownership wants development without losing the room.");
+            Summary: scenario.LeagueProfile.Experience == LeagueExperience.Nhl
+                ? $"{scenario.Organization.Name} finished as a competitive but uneven pro club last season. Ownership expects a plan for veteran contracts, young players, and the cap window."
+                : $"{scenario.Organization.Name} finished as a competitive but uneven club last season. Ownership wants development without losing the room.");
 
     private static IEnumerable<DraftHistoryRecord> BuildDraftHistory(NewGmScenarioSnapshot scenario)
     {

@@ -52,12 +52,12 @@ public sealed class NewGmFirstDayInboxFactory
                 Summary: $"The current roster has {roster.Players.Count} players. Coaching wants another defense option, more center depth, and clarity on injured players before camp.",
                 PrimaryPersonId: headCoach.PersonId),
             new(
-                InboxItemId: "new-gm-inbox-draft-timeline",
+                InboxItemId: "new-gm-inbox-assistant-gm",
                 Date: at.AddHours(1),
-                EventType: LegacyEventType.MilestoneReached,
+                EventType: LegacyEventType.Generic,
                 Severity: LegacyEventSeverity.Notice,
-                Title: "League draft timeline",
-                Summary: $"The league office confirms draft preparation is underway. Current season phase is {season.CurrentPhase}; draft day is {draftDate:yyyy-MM-dd}.",
+                Title: "Assistant GM briefing",
+                Summary: $"The club enters {season.CurrentPhase} with inherited staff, contracts, line combinations, and scouting work. Review one priority at a time; the rest remains available in its normal workspace.",
                 PrimaryPersonId: generalManager.PersonId)
         };
 

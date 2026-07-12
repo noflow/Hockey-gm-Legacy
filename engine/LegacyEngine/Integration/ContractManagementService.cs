@@ -15,7 +15,7 @@ public sealed class ContractManagementService
         ArgumentNullException.ThrowIfNull(scenario);
         scenario.Validate();
 
-        var budget = new BudgetOverviewService().Build(scenario, RulebookPresets.CreateJuniorMajor());
+        var budget = new BudgetOverviewService().Build(scenario, scenario.LeagueProfile.Rulebook);
         var ask = askType switch
         {
             ContractAskType.FreeAgent => BuildFreeAgentAsk(scenario, personId, budget),
@@ -158,8 +158,11 @@ public sealed class ContractManagementService
         scenario.Validate();
 
         var budget = new BudgetOverviewService().Build(scenario, rulebook ?? RulebookPresets.CreateJuniorMajor());
+        var expiringDeadline = scenario.LeagueProfile.Experience == LeagueExperience.Nhl
+            ? ContractExpiryCalendar.CommonExpiryDate(scenario.Season.Year + 1, scenario.Season.Settings)
+            : scenario.CurrentDate.AddDays(60);
         var expiring = ActiveContracts(scenario)
-            .Where(contract => contract.Term.EndDate <= scenario.CurrentDate.AddDays(60))
+            .Where(contract => contract.Term.EndDate <= expiringDeadline)
             .ToArray();
         var expiringPlayers = expiring
             .Where(contract => contract.ContractType == ContractType.JuniorPlayerAgreement)
@@ -167,6 +170,8 @@ public sealed class ContractManagementService
             .ToArray();
         var expiringStaff = expiring
             .Where(contract => contract.ContractType != ContractType.JuniorPlayerAgreement)
+            .Where(contract => scenario.StaffMembers.Any(staff => staff.PersonId == contract.PersonId)
+                || scenario.StaffCandidates.Any(candidate => candidate.Person.PersonId == contract.PersonId))
             .Select(contract => BuildStaffAsk(scenario, contract.PersonId, budget))
             .ToArray();
         var unsignedProspects = scenario.ProspectRights

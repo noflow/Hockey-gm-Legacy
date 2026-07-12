@@ -22,7 +22,11 @@ public sealed class AttributeDevelopmentService
             throw new ArgumentException("Person id is required.", nameof(personId));
         }
 
-        var prepared = new DevelopmentCurveService().EnsureCurves(_planning.EnsureScenarioPlans(_ratings.EnsureRatings(scenario)));
+        // Existing saves and newly added organization-depth players may not yet
+        // have a development profile. Generate the missing profile/plan first so
+        // a GM-facing report action never crashes on a valid player.
+        var planned = _planning.EnsureScenarioPlanForPerson(scenario, personId);
+        var prepared = new DevelopmentCurveService().EnsureCurves(_planning.EnsureScenarioPlans(_ratings.EnsureRatings(planned)));
         var plan = prepared.DevelopmentPlans.FirstOrDefault(item => item.PersonId == personId)
             ?? throw new ArgumentException("Development plan was not found.", nameof(personId));
         var before = prepared.TrueRatings.FirstOrDefault(item => item.PersonId == personId)
@@ -64,6 +68,7 @@ public sealed class AttributeDevelopmentService
             CareerTimeline = timeline
         };
 
+        finalScenario = new PlayerRatingService().EnsureRatings(finalScenario);
         QueueMeaningfulEvents(registry, finalScenario, snapshot);
         var actionItems = BuildActionItems(finalScenario, snapshot).ToArray();
         var result = new AttributeDevelopmentResult(

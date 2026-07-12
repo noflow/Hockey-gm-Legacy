@@ -135,18 +135,21 @@ The five foundation pillars remain:
 - Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass
 - Alpha 8.5 - Immersive GM Office Experience
 - Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix
+- Alpha 8.5.2 - Internal Player Knowledge & Career Rating Curve
+- Alpha 8.5.3 - Existing NHL Workforce, Free Agents & Expiring Contracts
+- Alpha 8.5.4 - New GM Inheritance & First-Day Workload
 
 ## Current Milestone
 
-Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix
+Alpha 8.5.4 - New GM Inheritance & First-Day Workload
 
 ## Current Goal
 
-Give NHL organizations a clear, rulebook-driven separation between the active roster, AHL affiliate, signed contract inventory, unsigned rights, and signed junior returns while preserving entry-level contract slides across season rollover.
+Start NHL careers inside a believable, functioning professional organization while presenting a manageable first-day briefing and a staged first-week workload.
 
-## Why Immersive GM Office Was Next
+## Why First-Day Workload Was Next
 
-Alpha 8.5.1 fixes the NHL organization shape that the front office needs to manage: a legal 23-player active roster, AHL depth, unsigned prospect rights, signed junior returns, a 50-contract inventory, and ELC slide tracking without treating every signed player as an NHL roster player.
+Alpha 8.5.4 makes the inherited organization approachable. Contracts, staff, scouting, assignments, and roster decisions remain real and available, but the new GM receives only a concise owner, assistant GM, coach, and scout briefing plus three opening priorities.
 
 ## Next Build Target
 

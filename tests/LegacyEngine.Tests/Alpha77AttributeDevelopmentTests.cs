@@ -16,6 +16,33 @@ internal sealed class Alpha77AttributeDevelopmentTests
         Assert.True(result.Summary.Contains(result.Snapshot.PlayerName, StringComparison.Ordinal), "Result summary should name the player.");
     }
 
+    public void MissingPlanForKnownPlayerIsCreatedBeforeAttributeReport()
+    {
+        var scenario = Scenario(out var registry);
+        var personId = scenario.AlphaSnapshot.Roster.Players.First().PersonId;
+        var withoutPlan = scenario with
+        {
+            AlphaSnapshot = scenario.AlphaSnapshot with
+            {
+                DevelopmentProfiles = scenario.AlphaSnapshot.DevelopmentProfiles
+                    .Where(profile => profile.PersonId != personId)
+                    .ToArray()
+            },
+            DevelopmentPlans = scenario.DevelopmentPlans
+                .Where(plan => plan.PersonId != personId)
+                .ToArray()
+        };
+
+        var result = new AttributeDevelopmentService().ApplyMonthlyDevelopment(
+            registry,
+            withoutPlan,
+            personId,
+            Modifier(age: 22, updateVisible: true));
+
+        Assert.True(result.ScenarioSnapshot.DevelopmentPlans.Any(plan => plan.PersonId == personId), "A known player should receive a default development plan before a report is generated.");
+        Assert.True(result.ScenarioSnapshot.AlphaSnapshot.DevelopmentProfiles.Any(profile => profile.PersonId == personId), "A known player should receive a generated development profile when an older save lacks one.");
+    }
+
     public void SpeedDevelopsEarlierThanLateCareer()
     {
         var scenario = Scenario(out var registry);

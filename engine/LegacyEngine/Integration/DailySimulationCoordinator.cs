@@ -69,7 +69,13 @@ public sealed class DailySimulationCoordinator
         finalScenario = new HockeyIntelligenceRatingService().EnsureRatings(finalScenario);
         finalScenario = new DevelopmentCurveService().EnsureCurves(finalScenario);
         finalScenario = new PlayerRatingService().EnsureRatings(finalScenario);
+        finalScenario = new ScoutingIntelligenceService().EnsureKnowledgeProfiles(finalScenario);
         finalScenario = new RosterAllocationService().EnsureAllocation(finalScenario, registry.Rulebook ?? finalScenario.LeagueProfile.Rulebook);
+        finalScenario = new RetirementWatchService().EnsureRetirementWatch(finalScenario);
+        if (finalScenario.LeagueProfile.Experience == LeagueExperience.Nhl)
+        {
+            finalScenario = finalScenario with { WorkforceValidation = new WorkforceRealismValidator().Validate(finalScenario) };
+        }
         var aiFrontOffice = new AiFrontOfficeDecisionService().RunCycle(finalScenario);
         finalScenario = aiFrontOffice.ScenarioSnapshot;
         leagueTransactions = leagueTransactions.Concat(aiFrontOffice.LeagueNews).ToArray();

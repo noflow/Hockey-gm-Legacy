@@ -79,6 +79,7 @@ public sealed class RfaUfaService
         return withRights.PlayerRightsDecisions
             .Where(decision => decision.IsOpenDecision)
             .Where(decision => decision.ExpiryRule is not null)
+            .Where(decision => decision.ContractExpiryDate is null || decision.ContractExpiryDate <= withRights.CurrentDate.AddDays(400))
             .Select(decision =>
             {
                 var days = decision.ExpiryRule!.Deadline.DayNumber - withRights.CurrentDate.DayNumber;

@@ -312,7 +312,11 @@ public sealed class DevelopmentPlanningService
         return plan;
     }
 
-    private NewGmScenarioSnapshot EnsureScenarioPlanForPerson(NewGmScenarioSnapshot scenario, string personId)
+    /// <summary>
+    /// Ensures a known player can be safely addressed by any development-facing
+    /// workflow, including scenarios created before their profile was generated.
+    /// </summary>
+    public NewGmScenarioSnapshot EnsureScenarioPlanForPerson(NewGmScenarioSnapshot scenario, string personId)
     {
         if (string.IsNullOrWhiteSpace(personId))
         {

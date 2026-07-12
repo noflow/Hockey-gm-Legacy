@@ -111,7 +111,10 @@ public sealed record DraftProspectIntelligenceCard(
     IReadOnlyList<DraftAttributeIntelligenceLine> Attributes,
     IReadOnlyList<DraftIntelligenceAlert> Alerts)
 {
-    public string RatingDisplay => $"OVR {OverallEstimate.Display} {RatingConfidenceColor} | POT {PotentialEstimate.Display} {RatingConfidenceColor}";
+    // The range remains available to engine/scouting logic. The GM-facing draft card uses one current estimate plus confidence.
+    public string RatingDisplay => $"OVR {VisibleEstimate(OverallEstimate)} {RatingConfidenceColor} | POT {VisibleEstimate(PotentialEstimate)} {RatingConfidenceColor}";
+
+    private static string VisibleEstimate(PlayerRatingRange rating) => rating.IsUnknown ? "???" : rating.Midpoint.ToString();
 
     public void Validate()
     {

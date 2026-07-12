@@ -100,6 +100,7 @@ internal sealed class MainWindow : Window
     private ComboBox? _rosterPlayerTypeFilter;
     private ComboBox? _rosterRoleFilter;
     private ComboBox? _rosterAgeFilter;
+    private ComboBox? _freeAgentMarketFilter;
     private TextBox? _globalSearchInput;
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
@@ -1879,6 +1880,13 @@ internal sealed class MainWindow : Window
             Grid.SetColumnSpan(filters, 2);
             root.Children.Add(filters);
         }
+        else if (title is "Free Agents" or "League Free Agents")
+        {
+            var filters = BuildFreeAgentMarketFilters(title);
+            Grid.SetRow(filters, 0);
+            Grid.SetColumnSpan(filters, 2);
+            root.Children.Add(filters);
+        }
 
         Grid.SetRow(list, 1);
         Grid.SetColumn(list, 0);
@@ -3533,6 +3541,9 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Last game", State.LastGameRecap is null ? "No completed game yet." : $"{State.LastGameRecap.BoxScore.FinalScore} | {State.LastGameRecap.TopLineSummary}");
         AddLine(panel, "Assistant GM", MorningAssistantQuote());
         AddLine(panel, "Top headline", State.TopMediaHeadline?.Headline ?? "No major league headline yet.");
+        AddLine(panel, "Contracts", $"{State.ContractManagement.ExpiringPlayers.Count} expiring this league year | {State.ScenarioSnapshot.PlayerRightsDecisions.Count(decision => decision.IsOpenDecision)} RFA/UFA reviews");
+        AddLine(panel, "Retirement watch", $"{State.ScenarioSnapshot.RetirementConsiderations.Count(item => item.Risk >= RetirementRisk.ConsideringRetirement)} player(s) flagged");
+        AddLine(panel, "Free-agent market", $"{State.FreeAgents.Count} available | {State.FreeAgents.Count(agent => agent.IsShortlisted)} shortlisted");
         AddActions(panel,
             CreateDetailButton("Advance Day", () => Advance(1)),
             CreateDetailButton("Review Action Center", () => SelectWorkspaceScreen("Dashboard", "Action Center / Pending Decisions")),
@@ -3753,7 +3764,8 @@ internal sealed class MainWindow : Window
         ?? BuildRosterRows().FirstOrDefault(IsLikelyPersonRow);
 
     private string MorningAssistantQuote() =>
-        State.AssistantGmRecommendations.FirstOrDefault()
+        State.ScenarioSnapshot.OnboardingPlan?.AssistantGmBriefing.RecommendedFirstAction
+        ?? State.AssistantGmRecommendations.FirstOrDefault()
         ?? State.ActionCenterItems.FirstOrDefault(item => item.Status == ActionCenterStatus.Open)?.RecommendedAction
         ?? "No urgent move this morning. Review the roster and scouting board when ready.";
 
@@ -5686,7 +5698,7 @@ internal sealed class MainWindow : Window
                     player.PersonId,
                     FindPersonName(player.PersonId),
                     "RosterPlayer",
-                    $"{State.PositionShortText(player.Position)} | {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} | {State.RatingText(player.PersonId)}",
+                    $"{State.PositionShortText(player.Position)} | {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} | {State.RatingText(player.PersonId)} | {State.RatingTrendText(player.PersonId)}",
                     $"{State.CurrentLineupRole(player.PersonId)} | {State.CurrentLinePair(player.PersonId)} | {State.ContractRightsStatus(player.PersonId)}",
                     $"{State.PlayerType(player.PersonId)} | {State.DevelopmentTrend(player.PersonId)} | {State.InjuryStatus(player.PersonId)}");
             })
@@ -5709,7 +5721,7 @@ internal sealed class MainWindow : Window
                 player.PersonId,
                 player.PlayerName,
                 "OrganizationPlayer",
-                $"{State.PositionShortText(player.Position)} | Age {player.Age} | {State.RatingText(player.PersonId)}",
+                $"{State.PositionShortText(player.Position)} | Age {player.Age} | {State.RatingText(player.PersonId)} | {State.RatingTrendText(player.PersonId)}",
                 $"{ReadableOrganizationRosterGroup(player.Group)} | {player.CurrentTeamName ?? player.CurrentLevel}",
                 $"{player.ContractCountReason} {player.SlideEligibility?.Reason ?? string.Empty}".Trim()))
             .ToArray();
@@ -6300,6 +6312,7 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildFreeAgentRows() =>
         State.FreeAgents
+            .Where(MatchesFreeAgentFilter)
             .OrderByDescending(agent => agent.IsShortlisted)
             .ThenByDescending(agent => agent.FitSummary.FitScore)
             .ThenBy(agent => agent.Name, StringComparer.Ordinal)
@@ -6307,10 +6320,37 @@ internal sealed class MainWindow : Window
                 agent.PersonId,
                 agent.Name,
                 "FreeAgent",
-                $"{agent.Position} - age {agent.Age} - {State.RatingText(agent.PersonId)} - {agent.Status}",
-                $"{agent.PreviousTeam} | ask {agent.ContractAsk.AnnualAmount:C0} | {State.AgentSummary(agent.PersonId)}",
-                $"Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.PositionMarketNote(agent.PersonId)} | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
+                $"{agent.Position} - age {agent.Age} - {State.RatingText(agent.PersonId)} - {agent.CareerStage} - {agent.Status}",
+                $"{agent.MarketTier} | {agent.PreviousTeam} | {agent.LastSeasonStats.SummaryText} | ask {agent.ContractAsk.TermYears} year(s) {agent.ContractAsk.AnnualAmount:C0}",
+                $"Retirement: {agent.RetirementRisk} | Interest {agent.Interest.PlayerOrganizationInterest}/100 | {State.PositionMarketNote(agent.PersonId)} | {State.FreeAgentOfferResponseText(agent.PersonId)} | {State.FreeAgentCompetitionSummary(agent.PersonId)}"))
             .ToArray();
+
+    private UIElement BuildFreeAgentMarketFilters(string title)
+    {
+        _freeAgentMarketFilter ??= new ComboBox
+        {
+            ItemsSource = new[] { "All", "Impact Players", "NHL Regulars", "Veterans", "Young Players", "Goalies", "Camp Invites", "Near Retirement", "Short-Term Deals", "Interested", "Shortlisted" },
+            SelectedItem = "All",
+            MinWidth = 180
+        };
+        _freeAgentMarketFilter.SelectionChanged += (_, _) => RefreshVisibleWorkspace();
+        return LabeledControl("Free-agent filter", _freeAgentMarketFilter);
+    }
+
+    private bool MatchesFreeAgentFilter(FreeAgent agent) => (_freeAgentMarketFilter?.SelectedItem?.ToString() ?? "All") switch
+    {
+        "Impact Players" => agent.MarketTier == FreeAgentMarketTier.ImpactFreeAgent,
+        "NHL Regulars" => agent.MarketTier == FreeAgentMarketTier.NhlRegular,
+        "Veterans" => agent.Age >= 30,
+        "Young Players" => agent.Age <= 24,
+        "Goalies" => agent.Position == RosterPosition.Goalie,
+        "Camp Invites" => agent.MarketTier == FreeAgentMarketTier.CampInvite,
+        "Near Retirement" => agent.RetirementRisk >= RetirementRisk.ConsideringRetirement,
+        "Short-Term Deals" => agent.ContractAsk.TermYears == 1,
+        "Interested" => agent.Interest.PlayerOrganizationInterest >= 60,
+        "Shortlisted" => agent.IsShortlisted,
+        _ => true
+    };
 
     private IReadOnlyList<SelectablePersonRow> BuildTradeRows() =>
         State.TradeBlockEntries
@@ -6371,7 +6411,7 @@ internal sealed class MainWindow : Window
                     prospect.ProspectPersonId,
                     prospect.ProspectName,
                     "Prospect",
-                    $"{prospect.Position} - {card.RatingDisplay} - {prospect.Status} | {State.PipelineText(prospect.ProspectPersonId)}",
+                    $"{prospect.Position} - {card.RatingDisplay} - {prospect.Status} | {State.RatingTrendText(prospect.ProspectPersonId)} | {State.PipelineText(prospect.ProspectPersonId)}",
                     $"Age {prospect.Age} | {prospect.CurrentTeam} {prospect.CurrentLeague} | {State.PositionMarketNote(prospect.ProspectPersonId)} | scout #{card.ScoutBoardRank} | consensus #{card.ConsensusBoardRank}",
                     $"Recommended assignment: {State.PipelineRecommendationText(prospect.ProspectPersonId)} | Projection: {prospect.ProjectionText} | Fit {card.TeamFitScore}/100");
             })
@@ -6708,6 +6748,10 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Previous team", agent.PreviousTeam);
                 AddLine(panel, "Last-season stats", agent.LastSeasonStats.SummaryText);
                 AddLine(panel, "Career summary", agent.CareerStats.DisplaySummary);
+                AddLine(panel, "Market tier", agent.MarketTier);
+                AddLine(panel, "Career stage", agent.CareerStage);
+                AddLine(panel, "Retirement status", agent.RetirementRisk);
+                AddLine(panel, "Final-contract preference", agent.FinalContractPreference?.Summary ?? "No final-contract preference currently flagged.");
                 AddLine(panel, "Player type", agent.PlayerType);
                 AddLine(panel, "Projected role", agent.ProjectedLineupRole);
                 AddLine(panel, "Contract ask", $"{agent.ContractAsk.TermYears} year(s), {agent.ContractAsk.AnnualAmount:C0} {agent.ContractAsk.Currency} - {agent.ContractAsk.Notes}");
@@ -8649,6 +8693,24 @@ internal sealed class MainWindow : Window
         builder.AppendLine();
 
         AppendContractSection(builder, "Expiring Player Contracts", summary.ExpiringPlayers);
+        builder.AppendLine("NHL Contract Context");
+        builder.AppendLine("--------------------");
+        builder.AppendLine($"Expiring this league year: {summary.ExpiringPlayers.Count}");
+        builder.AppendLine($"Pending RFA/UFA decisions: {State.ScenarioSnapshot.PlayerRightsDecisions.Count(decision => decision.IsOpenDecision)}");
+        builder.AppendLine($"Veterans on retirement watch: {State.ScenarioSnapshot.RetirementConsiderations.Count(item => item.Risk >= RetirementRisk.ConsideringRetirement)}");
+        foreach (var decision in State.ScenarioSnapshot.PlayerRightsDecisions.Where(decision => decision.IsOpenDecision).OrderBy(decision => decision.ContractExpiryDate).Take(5))
+        {
+            builder.AppendLine($"  {decision.PlayerName}: {decision.RightsStatus} | expires {decision.ContractExpiryDate:yyyy-MM-dd} | {decision.Recommendation}");
+        }
+        if (State.ScenarioSnapshot.LeagueWorkforce is { } workforce)
+        {
+            builder.AppendLine("League Market Watch");
+            foreach (var player in workforce.LeaguePlayers.Where(player => player.OrganizationId != State.ScenarioSnapshot.Organization.OrganizationId && player.ContractYearsRemaining <= 1).OrderByDescending(player => player.EstimatedOverall).Take(5))
+            {
+                builder.AppendLine($"  {player.PlayerName} ({player.OrganizationName}) | {player.Position} | age {player.Age} | projected {player.ProjectedRightsStatus} | expires {player.ContractExpiryDate:yyyy-MM-dd}");
+            }
+        }
+        builder.AppendLine();
         AppendContractSection(builder, "Expiring Staff Contracts", summary.ExpiringStaff);
         AppendContractSection(builder, "Unsigned Prospects / Draft Rights", summary.UnsignedProspects);
         AppendContractSection(builder, "Pending Contract Decisions", summary.PendingOffers);
@@ -11769,6 +11831,7 @@ internal sealed class AlphaDesktopState
         prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
         prepared = new DevelopmentCurveService().EnsureCurves(prepared);
         prepared = _ratings.EnsureRatings(prepared);
+        prepared = _scoutingIntelligence.EnsureKnowledgeProfiles(prepared);
         prepared = _warRoom.EnsureWarRoom(prepared);
         prepared = _assetEvaluation.EnsureEvaluations(prepared);
         prepared = _organizationPlanning.EnsurePlans(prepared);
@@ -12180,7 +12243,8 @@ internal sealed class AlphaDesktopState
         get
         {
             EnsureLifeCycleState();
-            return _playability.CleanActionCenterItems(_actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses));
+            var allItems = _playability.CleanActionCenterItems(_actionCenter.BuildItems(ScenarioSnapshot, InboxManager.AllMessages, BudgetOverview, SeasonReadinessReport, StaffVacancies, _actionCenterStatuses));
+            return new FirstWeekOnboardingService().FilterActionCenterItems(ScenarioSnapshot, allItems);
         }
     }
 
@@ -14229,7 +14293,7 @@ internal sealed class AlphaDesktopState
             return rating;
         }
 
-        var updated = _ratings.EnsureRatings(new DevelopmentCurveService().EnsureCurves(new HockeyIntelligenceRatingService().EnsureRatings(ScenarioSnapshot)));
+        var updated = _scoutingIntelligence.EnsureKnowledgeProfiles(_ratings.EnsureRatings(new DevelopmentCurveService().EnsureCurves(new HockeyIntelligenceRatingService().EnsureRatings(ScenarioSnapshot))));
         ScenarioSnapshot = updated;
         Snapshot = updated.AlphaSnapshot;
         return updated.PlayerRatings.FirstOrDefault(item => item.PersonId == personId)
@@ -14240,16 +14304,29 @@ internal sealed class AlphaDesktopState
     {
         var rating = RatingFor(personId);
         var intelligence = ScenarioSnapshot.ScoutedRatings.FirstOrDefault(item => item.PersonId == personId);
-        return intelligence is null
-            ? $"OVR {rating.Overall.Display} | POT {rating.Potential.Display}"
-            : $"OVR {intelligence.Overall.Display} | POT {intelligence.Potential.Display} | {intelligence.ConfidenceColor}";
+        var internalKnowledge = ScenarioSnapshot.InternalPlayerKnowledge.Any(item => item.PersonId == personId);
+        if (internalKnowledge)
+        {
+            return $"OVR {rating.Overall.Midpoint} | POT {rating.Potential.Midpoint} | {RatingTrendText(personId)}";
+        }
+
+        if (intelligence is null || intelligence.Overall.IsUnknown || intelligence.Potential.IsUnknown)
+        {
+            return "OVR ??? | POT ??? | Unknown";
+        }
+
+        return $"OVR {intelligence.Overall.Midpoint} | POT {intelligence.Potential.Midpoint} | {intelligence.ConfidenceColor}";
     }
 
     public string RatingContextText(string personId)
     {
         var rating = RatingFor(personId);
-        return $"{rating.ShortDisplay} | {rating.RoleLabel} | source {rating.RatingSource}";
+        var curve = ScenarioSnapshot.CareerRatingCurves.FirstOrDefault(item => item.PersonId == personId);
+        return $"{rating.ShortDisplay} | {rating.RoleLabel} | {curve?.GrowthStage.ToString() ?? "Career stage pending"} | source {rating.RatingSource}";
     }
+
+    public string RatingTrendText(string personId) =>
+        ScenarioSnapshot.CareerRatingCurves.FirstOrDefault(item => item.PersonId == personId)?.Trajectory.Trend ?? "Current";
 
     public int DevelopmentActionCount =>
         ScenarioSnapshot.DevelopmentRecommendations.Count(recommendation => recommendation.IsActive);
@@ -14357,8 +14434,7 @@ internal sealed class AlphaDesktopState
                 RushedTooEarly: false,
                 PoorRole: false,
                 UpdateVisibleEstimate: true));
-        ScenarioSnapshot = result.ScenarioSnapshot;
-        Snapshot = ScenarioSnapshot.AlphaSnapshot;
+        SetScenarioSnapshot(result.ScenarioSnapshot);
         AddInboxItems(result.InboxItems);
         LatestSummary = result.Summary;
         EnsureSelectedDossierStillExists();

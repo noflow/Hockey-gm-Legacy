@@ -124,6 +124,7 @@ public sealed class SeasonRolloverService
         updated = new HockeyIntelligenceRatingService().EnsureRatings(updated);
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = new PlayerRatingService().EnsureRatings(updated);
+        updated = new ScoutingIntelligenceService().EnsureKnowledgeProfiles(updated);
         updated = new RfaUfaService().EnsureRights(updated, registry.Rulebook ?? updated.LeagueProfile.Rulebook);
         updated = new RosterAllocationService().EnsureAllocation(updated, registry.Rulebook ?? updated.LeagueProfile.Rulebook);
 

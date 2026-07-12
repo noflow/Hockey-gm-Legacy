@@ -172,18 +172,23 @@ public sealed class FreeAgentMarketService
 
     private static FreeAgent CreateFreeAgent(NewGmScenarioSnapshot scenario, Person person, int index)
     {
+        var nhl = scenario.LeagueProfile.Experience == LeagueExperience.Nhl;
         var position = PositionFor(index);
         var seed = Math.Abs(HashCode.Combine(person.PersonId, index));
         var age = person.CalculateAge(scenario.CurrentDate);
-        var previousTeam = PreviousTeam(index);
-        var league = index % 4 == 0 ? "Prairie Junior League" : index % 4 == 1 ? "CSSHL U18" : index % 4 == 2 ? "AEHL U18" : "Independent Junior";
+        var previousTeam = PreviousTeam(index, nhl);
+        var league = nhl ? "North American Pro Alpha" : index % 4 == 0 ? "Prairie Junior League" : index % 4 == 1 ? "CSSHL U18" : index % 4 == 2 ? "AEHL U18" : "Independent Junior";
         var stats = StatLineFor(person, position, scenario.Season.Year - 1, previousTeam, league, scenario.CurrentDate);
-        var career = CareerFor(stats, Math.Clamp(age - 15, 1, 5), age);
-        var ask = new FreeAgentContractAsk(ContractType.JuniorPlayerAgreement, 1_100m + (index % 9 * 175m), "CAD", index % 7 == 0 ? 2 : 1, AskNotes(index));
+        var career = CareerFor(stats, nhl ? Math.Clamp(age - 18, 1, 18) : Math.Clamp(age - 15, 1, 5), age);
+        var retirementRisk = nhl ? ExistingWorkforceGenerator.RetirementRiskFor(age, seed) : RetirementRisk.None;
+        var tier = MarketTierFor(nhl, age, position, index, retirementRisk);
+        var ask = nhl
+            ? NhlAskFor(tier, age, index, retirementRisk)
+            : new FreeAgentContractAsk(ContractType.JuniorPlayerAgreement, 1_100m + (index % 9 * 175m), "CAD", index % 7 == 0 ? 2 : 1, AskNotes(index));
         var interest = new FreeAgentInterest(
             Math.Clamp(38 + (index * 7 % 55), 15, 92),
-            index % 5 == 0 ? "Two rival clubs have checked in." : index % 4 == 0 ? "One nearby team has mild interest." : "No strong competing offer yet.",
-            index % 3 == 0 ? "Wants clear ice-time opportunity." : index % 3 == 1 ? "Values development and coaching fit." : "Looking for a stable role and quick decision.");
+            nhl && retirementRisk >= RetirementRisk.ConsideringRetirement ? "Several contenders have asked about a short-term veteran fit." : index % 5 == 0 ? "Two rival clubs have checked in." : index % 4 == 0 ? "One nearby team has mild interest." : "No strong competing offer yet.",
+            nhl && retirementRisk >= RetirementRisk.ConsideringRetirement ? "Wants an NHL role, a competitive team, and clarity on whether this is a final contract." : index % 3 == 0 ? "Wants clear ice-time opportunity." : index % 3 == 1 ? "Values development and coaching fit." : "Looking for a stable role and quick decision.");
         var fit = new FreeAgentFitSummary(
             RosterNeedFor(position),
             $"Estimated impact {ask.AnnualAmount:C0}; {ask.Notes}",
@@ -214,7 +219,15 @@ public sealed class FreeAgentMarketService
             index < 6 ? ScoutingConfidenceLevel.Medium : ScoutingConfidenceLevel.Low,
             fit,
             FreeAgentStatus.Available,
-            IsShortlisted: index is 0 or 3);
+            IsShortlisted: index is 0 or 3)
+        {
+            MarketTier = tier,
+            CareerStage = StageFor(age, position),
+            RetirementRisk = retirementRisk,
+            FinalContractPreference = retirementRisk >= RetirementRisk.ConsideringRetirement
+                ? new FinalContractPreference(true, true, true, "Veteran prefers one NHL season with a defined role and contender opportunity.")
+                : null
+        };
         agent.Validate();
         return agent;
     }
@@ -262,8 +275,51 @@ public sealed class FreeAgentMarketService
             _ => 162 + seed % 58
         };
 
-    private static string PreviousTeam(int index) =>
-        new[] { "Swift Current U18", "Moose Jaw North", "Brandon Academy", "Regina Valley", "Saskatoon East", "Calgary Selects", "Winnipeg South", "Red Deer U18" }[index % 8];
+    private static string PreviousTeam(int index, bool nhl) => nhl
+        ? new[] { "Seattle Cascades", "Anaheim Orange", "Calgary Summit", "Toronto Monarchs", "New York Harbor", "Denver Peaks", "Boston Foundry", "Vancouver Orcas" }[index % 8]
+        : new[] { "Swift Current U18", "Moose Jaw North", "Brandon Academy", "Regina Valley", "Saskatoon East", "Calgary Selects", "Winnipeg South", "Red Deer U18" }[index % 8];
+
+    private static FreeAgentMarketTier MarketTierFor(bool nhl, int age, RosterPosition position, int index, RetirementRisk retirementRisk)
+    {
+        if (!nhl)
+        {
+            return index < 2 ? FreeAgentMarketTier.RolePlayer : FreeAgentMarketTier.CampInvite;
+        }
+
+        if (retirementRisk >= RetirementRisk.RetirementRisk) return FreeAgentMarketTier.RetirementRisk;
+        if (index == 0) return FreeAgentMarketTier.ImpactFreeAgent;
+        if (index < 4) return FreeAgentMarketTier.NhlRegular;
+        if (age >= 33) return FreeAgentMarketTier.VeteranDepth;
+        if (position == RosterPosition.Goalie && age >= 28) return FreeAgentMarketTier.RolePlayer;
+        return age <= 24 ? FreeAgentMarketTier.DevelopmentPlayer : index % 4 == 0 ? FreeAgentMarketTier.AhlDepth : FreeAgentMarketTier.RolePlayer;
+    }
+
+    private static FreeAgentContractAsk NhlAskFor(FreeAgentMarketTier tier, int age, int index, RetirementRisk retirementRisk)
+    {
+        var amount = tier switch
+        {
+            FreeAgentMarketTier.ImpactFreeAgent => 6_750_000m,
+            FreeAgentMarketTier.NhlRegular => 3_250_000m + index * 250_000m,
+            FreeAgentMarketTier.RolePlayer => 1_400_000m + index % 4 * 225_000m,
+            FreeAgentMarketTier.VeteranDepth or FreeAgentMarketTier.RetirementRisk => 900_000m + index % 3 * 175_000m,
+            FreeAgentMarketTier.DevelopmentPlayer => 875_000m + index % 3 * 75_000m,
+            _ => 775_000m
+        };
+        var years = retirementRisk >= RetirementRisk.ConsideringRetirement || age >= 33 ? 1 : tier is FreeAgentMarketTier.ImpactFreeAgent or FreeAgentMarketTier.NhlRegular ? 2 : 1;
+        var notes = retirementRisk >= RetirementRisk.ConsideringRetirement
+            ? "Seeking one NHL season, a defined role, and a contender opportunity."
+            : tier == FreeAgentMarketTier.DevelopmentPlayer ? "Wants an NHL opportunity or a credible development path." : "Market ask reflects role, age, and expected opportunity.";
+        return new FreeAgentContractAsk(ContractType.JuniorPlayerAgreement, amount, "USD", years, notes);
+    }
+
+    private static WorkforceCareerStage StageFor(int age, RosterPosition position) =>
+        age <= 21 ? WorkforceCareerStage.Rookie :
+        age <= 24 ? WorkforceCareerStage.YoungDeveloping :
+        age <= 26 ? WorkforceCareerStage.EmergingNhlPlayer :
+        age <= 29 ? WorkforceCareerStage.Prime :
+        age <= 33 ? WorkforceCareerStage.EstablishedVeteran :
+        age <= 36 ? WorkforceCareerStage.AgingVeteran :
+        age <= (position == RosterPosition.Goalie ? 39 : 38) ? WorkforceCareerStage.LateCareerDepth : WorkforceCareerStage.NearRetirement;
 
     private static string RosterNeedFor(RosterPosition position) =>
         position switch

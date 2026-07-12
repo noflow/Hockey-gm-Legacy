@@ -168,7 +168,27 @@ public sealed class HockeyIntelligenceRatingService
 
     public IReadOnlyList<string> BuildDossierLines(NewGmScenarioSnapshot scenario, string personId)
     {
-        var withRatings = EnsureRatings(scenario);
+        var withRatings = new InternalPlayerKnowledgeService().EnsureKnowledge(EnsureRatings(scenario));
+        var internalKnowledge = withRatings.InternalPlayerKnowledge.FirstOrDefault(knowledge => knowledge.PersonId == personId);
+        if (internalKnowledge is not null)
+        {
+            var internalLines = new List<string>
+            {
+                $"Overall / Potential: OVR {internalKnowledge.OverallEstimate} | POT {internalKnowledge.PotentialEstimate} | Confidence: {internalKnowledge.Confidence}",
+                $"Source: internal organizational evaluation ({string.Join(", ", internalKnowledge.Sources)})",
+                $"Last evaluated: {internalKnowledge.LastEvaluated.ToString("yyyy-MM-dd")}",
+                $"Staff note: {internalKnowledge.Summary}"
+            };
+            foreach (var group in internalKnowledge.Attributes.GroupBy(attribute => attribute.Category).OrderBy(group => group.Key))
+            {
+                internalLines.Add($"{group.Key}:");
+                internalLines.AddRange(group.Select(attribute => $"  {Readable(attribute.Attribute)}: {attribute.Estimate} {attribute.Confidence}"));
+            }
+
+            internalLines.Add("Internal evaluations are organization assessments, not hidden engine ratings.");
+            return internalLines;
+        }
+
         var scouted = withRatings.ScoutedRatings.FirstOrDefault(rating => rating.PersonId == personId);
         if (scouted is null)
         {
@@ -177,7 +197,7 @@ public sealed class HockeyIntelligenceRatingService
 
         var lines = new List<string>
         {
-            $"Overall / Potential: OVR {scouted.Overall.Display} | POT {scouted.Potential.Display} | Confidence: {scouted.ConfidenceColor}",
+            $"Overall / Potential: OVR {VisibleEstimate(scouted.Overall)} | POT {VisibleEstimate(scouted.Potential)} | Confidence: {scouted.ConfidenceColor}",
             $"Source: {scouted.Source} - {scouted.ScoutSource}",
             $"Last updated: {(scouted.LastScoutedDate is null ? "not scouted" : scouted.LastScoutedDate.Value.ToString("yyyy-MM-dd"))}",
             $"Scout note: {scouted.ScoutNote}"
@@ -198,8 +218,10 @@ public sealed class HockeyIntelligenceRatingService
             ?? EnsureRatings(scenario).ScoutedRatings.FirstOrDefault(rating => rating.PersonId == personId);
         return scouted is null
             ? "OVR ??? | POT ??? | Confidence Unknown"
-            : $"OVR {scouted.Overall.Display} | POT {scouted.Potential.Display} | {scouted.ConfidenceColor}";
+            : $"OVR {VisibleEstimate(scouted.Overall)} | POT {VisibleEstimate(scouted.Potential)} | {scouted.ConfidenceColor}";
     }
+
+    private static string VisibleEstimate(PlayerRatingRange rating) => rating.IsUnknown ? "???" : rating.Midpoint.ToString();
 
     private static PlayerScoutedRatings BuildScoutedFromTruth(
         PlayerTrueRatings truth,

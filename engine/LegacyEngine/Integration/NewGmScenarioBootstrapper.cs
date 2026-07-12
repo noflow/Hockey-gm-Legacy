@@ -71,7 +71,7 @@ public sealed class NewGmScenarioBootstrapper
         var regionalScoutPerson = CreatePerson("person-scout-west", regionalScoutName.FirstName, regionalScoutName.LastName, Gender.Male, new DateOnly(1982, 9, 8), regionalScoutName.Nationality, regionalScoutName.Birthplace, 44, 39, 8)
             .AddRole(new PersonRole("role-regional-scout", PersonRoleType.Scout, scenarioSettings.OrganizationId, new DateOnly(2025, 8, 1), null, "Regional Scout"));
 
-        var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
+        var rosterPlayers = CreateRosterPlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience, teamSelection.DisplayCurrentStrategy);
         var affiliatePlayers = CreateAffiliatePlayers(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
         var existingProspectPeople = CreateExistingProspectPeople(startDate, scenarioSettings.OrganizationId, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
         var recruits = CreateRecruitPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, activeRulebook);
@@ -85,7 +85,7 @@ public sealed class NewGmScenarioBootstrapper
             recruits.Count,
             Math.Max(0, draftProspectCount - recruits.Count));
         var draftPeople = recruits.Concat(draftOnlyProspects).ToArray();
-        var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear);
+        var freeAgentPeople = CreateFreeAgentPeople(startDate, nameGenerator, nameRegistry, scenarioSettings.SeasonYear, leagueProfile.Experience);
         var tradeBlockPeople = TradeService.CreateTradeBlockPeople(startDate, scenarioSettings.SeasonYear, nameGenerator, nameRegistry);
         var people = new[] { gm, ownerPerson, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson }
             .Concat(rosterPlayers)
@@ -138,7 +138,10 @@ public sealed class NewGmScenarioBootstrapper
         var inheritedScoutingReports = CreateInheritedScoutingReports(draftBoard, draftPeople, scout, startDate);
 
         var relationships = CreateRelationships(owner, gm, headCoach, assistantCoach, headScoutPerson, regionalScoutPerson, rosterPlayers, startDate);
-        var developmentProfiles = CreateDevelopmentProfiles(registry, rosterPlayers, startDate);
+        var developmentProfiles = CreateDevelopmentProfiles(
+            registry,
+            rosterPlayers.Concat(affiliatePlayers).Concat(existingProspectPeople).ToArray(),
+            startDate);
         var injuries = new[]
         {
             registry.InjuryEngine.CreateInjury(
@@ -253,6 +256,17 @@ public sealed class NewGmScenarioBootstrapper
         scenarioSnapshot = new HockeyIntelligenceRatingService().EnsureRatings(scenarioSnapshot);
         scenarioSnapshot = new DevelopmentCurveService().EnsureCurves(scenarioSnapshot);
         scenarioSnapshot = new PlayerRatingService().EnsureRatings(scenarioSnapshot);
+        scenarioSnapshot = new ScoutingIntelligenceService().EnsureKnowledgeProfiles(scenarioSnapshot);
+        scenarioSnapshot = new RfaUfaService().EnsureRights(scenarioSnapshot, activeRulebook);
+        scenarioSnapshot = new ExistingWorkforceGenerator().EnsureWorkforce(scenarioSnapshot);
+        scenarioSnapshot = new RetirementWatchService().EnsureRetirementWatch(scenarioSnapshot);
+        scenarioSnapshot = scenarioSnapshot with { WorkforceValidation = new WorkforceRealismValidator().Validate(scenarioSnapshot) };
+        var onboardingService = new FirstWeekOnboardingService();
+        scenarioSnapshot = scenarioSnapshot with { OnboardingPlan = onboardingService.CreatePlan(scenarioSnapshot) };
+        scenarioSnapshot = scenarioSnapshot with
+        {
+            FirstDayInbox = onboardingService.ApplyAssistantGmBriefing(scenarioSnapshot, scenarioSnapshot.FirstDayInbox)
+        };
         scenarioSnapshot = new UiBrandingService().EnsureBranding(scenarioSnapshot);
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.FreeAgentMarketOpened, "Free agent market opened", $"{freeAgentMarket.FreeAgents.Count} unsigned players are available for review.");
         QueueScenarioEvent(registry.EventEngine, startDate, scenarioSettings.OrganizationId, gm.PersonId, draftDate, LegacyEventType.TradeBlockUpdated, "League trade block updated", $"{tradeBlock.Entries.Count} players are available on the league trade block.");
@@ -262,7 +276,7 @@ public sealed class NewGmScenarioBootstrapper
             Registry: registry,
             ScenarioSnapshot: scenarioSnapshot,
             AlphaSnapshot: scenarioSnapshot.AlphaSnapshot,
-            FirstDayInbox: firstDayInbox,
+            FirstDayInbox: scenarioSnapshot.FirstDayInbox,
             Summary: scenarioSnapshot.ScenarioSummary);
     }
 
@@ -869,7 +883,8 @@ public sealed class NewGmScenarioBootstrapper
         NameGenerator nameGenerator,
         NameUniquenessRegistry nameRegistry,
         int seasonYear,
-        LeagueExperience experience)
+        LeagueExperience experience,
+        string teamStrategy)
     {
         return Enumerable.Range(0, experience == LeagueExperience.Nhl ? 23 : 26)
             .Select(index =>
@@ -879,7 +894,7 @@ public sealed class NewGmScenarioBootstrapper
                 $"person-roster-{index + 1:000}",
                     name.FirstName,
                     name.LastName,
-                    RosterBirthDateFor(startDate, index, experience),
+                    RosterBirthDateFor(startDate, index, experience, teamStrategy),
                     name.Nationality,
                     name.Birthplace,
                 organizationId,
@@ -888,7 +903,7 @@ public sealed class NewGmScenarioBootstrapper
             .ToArray();
     }
 
-    private static DateOnly RosterBirthDateFor(DateOnly startDate, int index, LeagueExperience experience)
+    private static DateOnly RosterBirthDateFor(DateOnly startDate, int index, LeagueExperience experience, string teamStrategy)
     {
         if (experience == LeagueExperience.Nhl)
         {
@@ -903,6 +918,14 @@ public sealed class NewGmScenarioBootstrapper
                 >= 18 and < 23 => 21 + (index % 3),
                 _ => 18 + (index % 3)
             };
+            if (teamStrategy.Contains("prospect", StringComparison.OrdinalIgnoreCase))
+            {
+                age = index < 10 ? Math.Max(24, age - 2) : age;
+            }
+            else if (teamStrategy.Contains("win", StringComparison.OrdinalIgnoreCase))
+            {
+                age = index < 8 ? Math.Min(38, age + 1) : age;
+            }
             return startDate.AddYears(-age).AddDays(-(index * 29 + 11));
         }
 
@@ -1180,17 +1203,31 @@ public sealed class NewGmScenarioBootstrapper
         DateOnly startDate,
         NameGenerator nameGenerator,
         NameUniquenessRegistry nameRegistry,
-        int seasonYear) =>
+        int seasonYear,
+        LeagueExperience experience) =>
         Enumerable.Range(0, 28)
             .Select(index =>
             {
                 var name = nameGenerator.Generate(nameRegistry, ClassScope(seasonYear, "free-agent-market"), PlayerOrigins());
-                var birthDate = index switch
-                {
-                    < 4 => startDate.AddYears(-20).AddDays(-(index * 47 + 12)),
-                    < 12 => startDate.AddYears(-18).AddDays(-(index * 31 + 7)),
-                    _ => startDate.AddYears(-17).AddDays(-(index * 29 + 5))
-                };
+                var age = experience == LeagueExperience.Nhl
+                    ? index switch
+                    {
+                        0 => 29,
+                        1 => 28,
+                        2 or 3 => 31,
+                        >= 4 and < 10 => 34 + (index % 3),
+                        >= 10 and < 16 => 25 + (index % 5),
+                        >= 16 and < 22 => 22 + (index % 3),
+                        22 or 23 => 37 + (index % 2),
+                        _ => 27 + (index % 6)
+                    }
+                    : index switch
+                    {
+                        < 4 => 20,
+                        < 12 => 18,
+                        _ => 17
+                    };
+                var birthDate = startDate.AddYears(-age).AddDays(-(index * 31 + 7));
                 return CreatePerson(
                         $"person-free-agent-{index + 1:000}",
                         name.FirstName,

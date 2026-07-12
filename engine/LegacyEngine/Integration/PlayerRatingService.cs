@@ -11,12 +11,14 @@ public sealed class PlayerRatingService
     public NewGmScenarioSnapshot EnsureRatings(NewGmScenarioSnapshot scenario)
     {
         ArgumentNullException.ThrowIfNull(scenario);
-        var ids = PlayerIds(scenario).ToArray();
+        var prepared = new CareerRatingCurveService().EnsureCurves(scenario);
+        prepared = new InternalPlayerKnowledgeService().EnsureKnowledge(prepared);
+        var ids = PlayerIds(prepared).ToArray();
         var snapshots = ids
-            .Select(id => BuildSnapshot(scenario, id))
+            .Select(id => BuildSnapshot(prepared, id))
             .ToArray();
-        var history = scenario.PlayerRatingHistory.Merge(snapshots);
-        var updated = scenario with
+        var history = prepared.PlayerRatingHistory.Merge(snapshots);
+        var updated = prepared with
         {
             PlayerRatings = snapshots,
             PlayerRatingHistory = history
@@ -43,6 +45,27 @@ public sealed class PlayerRatingService
             .OrderByDescending(report => report.CreatedOn)
             .FirstOrDefault();
         var scouted = scenario.ScoutedRatings.FirstOrDefault(rating => rating.PersonId == personId);
+        var internalKnowledge = scenario.InternalPlayerKnowledge.FirstOrDefault(knowledge => knowledge.PersonId == personId);
+        if (internalKnowledge is not null)
+        {
+            var internalOverall = new PlayerRating(internalKnowledge.OverallEstimate, internalKnowledge.OverallEstimate);
+            var internalPotential = new PlayerPotential(internalKnowledge.PotentialEstimate, internalKnowledge.PotentialEstimate);
+            var internalSnapshot = new PlayerRatingSnapshot(
+                personId,
+                name,
+                position,
+                age,
+                internalOverall,
+                internalPotential,
+                BandFor(internalOverall.Midpoint, internalPotential.Midpoint, scenario.LeagueProfile.Experience, draft is not null),
+                internalKnowledge.Confidence,
+                internalKnowledge.LastEvaluated,
+                $"Internal organizational evaluation ({internalKnowledge.KnowledgeLevel})",
+                RoleLabelFor(internalOverall.Midpoint, position),
+                internalKnowledge.Summary);
+            internalSnapshot.Validate();
+            return internalSnapshot;
+        }
         if (scouted is not null && draft?.ScoutingConfidence is { } draftConfidence && ConfidenceFromColor(scouted.ConfidenceColor) != MapConfidence(draftConfidence))
         {
             scouted = null;

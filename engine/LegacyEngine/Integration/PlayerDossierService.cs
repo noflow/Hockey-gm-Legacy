@@ -41,6 +41,7 @@ public sealed class PlayerDossierService
             BuildScoutingReports(scenario, personId),
             BuildDevelopment(scenario, personId),
             BuildDevelopmentCurve(scenario, personId),
+            BuildCareerRatingCurve(scenario, personId),
             BuildAttributeDevelopment(scenario, personId),
             BuildRoleUsage(scenario, personId),
             BuildGameUsage(scenario, personId),
@@ -363,6 +364,17 @@ public sealed class PlayerDossierService
     {
         var lines = new DevelopmentCurveService().BuildDossierLines(scenario, personId);
         return new PlayerDossierSection("Development Curve", lines);
+    }
+
+    private static PlayerDossierSection BuildCareerRatingCurve(NewGmScenarioSnapshot scenario, string personId)
+    {
+        var lines = new CareerRatingCurveService().BuildDossierLines(scenario, personId);
+        var history = scenario.PlayerRatingHistory.ForPerson(personId)
+            .Select(snapshot => $"Age {snapshot.Age?.ToString() ?? "?"}: OVR {snapshot.Overall.Midpoint} | POT {snapshot.Potential.Midpoint}")
+            .ToArray();
+        return new PlayerDossierSection(
+            "Career Rating Curve",
+            lines.Concat(history.Length == 0 ? new[] { "Rating history: no prior snapshots." } : new[] { "Rating history:" }.Concat(history)).ToArray());
     }
 
     private static PlayerDossierSection BuildAttributeDevelopment(NewGmScenarioSnapshot scenario, string personId)
