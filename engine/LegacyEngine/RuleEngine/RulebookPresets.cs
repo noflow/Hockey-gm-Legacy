@@ -187,7 +187,12 @@ public static class RulebookPresets
             OneNineteenYearOldChlExceptionEnabled = false,
             EuropeanAndCollegeProspectsCanPlayAhlAt18 = true,
             ElcSlideAgeCutoff = 19,
-            ElcSlideNhlGameThreshold = 10
+            ElcSlideNhlGameThreshold = 10,
+            ElcSlideEnabled = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase),
+            ElcSlideMaximumSeasons = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase) ? 2 : 0,
+            ElcSlideRequiresJuniorReturn = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase),
+            JuniorReturnContractCountExempt = leagueType.Contains("nhl", StringComparison.OrdinalIgnoreCase),
+            JuniorReturnContractCountGamesThreshold = 10
         };
 
     private static SalaryCapRules CreateSalaryCapRules(string leagueType, int activeRoster) =>

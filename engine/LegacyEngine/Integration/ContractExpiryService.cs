@@ -20,6 +20,7 @@ public sealed class ContractExpiryService
         };
 
         updated = new RfaUfaService().EnsureRights(updated, rulebook ?? scenario.LeagueProfile.Rulebook);
+        updated = new RosterAllocationService().EnsureAllocation(updated, rulebook ?? scenario.LeagueProfile.Rulebook);
         updated.Validate();
         return updated;
     }

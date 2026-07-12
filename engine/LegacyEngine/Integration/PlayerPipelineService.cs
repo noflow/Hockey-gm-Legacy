@@ -349,6 +349,11 @@ public sealed class PlayerPipelineService
             return PlayerPipelineStatus.Released;
         }
 
+        if (player.Status == RosterStatus.AssignedToAffiliate)
+        {
+            return PlayerPipelineStatus.AssignedToAhl;
+        }
+
         return scenario.LeagueProfile.Experience switch
         {
             LeagueExperience.Nhl => PlayerPipelineStatus.NhlRoster,

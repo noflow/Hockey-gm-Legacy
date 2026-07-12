@@ -119,6 +119,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 8.3 Team Branding, Icons & Visual Identity
 - Alpha 8.4 Alpha UX Playtest, Accessibility & Navigation Pass
 - Alpha 8.5 Immersive GM Office Experience
+- Alpha 8.5.1 NHL Organization Roster Structure & Contract Slide Fix
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -157,6 +158,8 @@ Alpha 7.13 - AI Front Office Decision Cycle v1 lets AI-controlled organizations 
 Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass improves real playtest comfort in AlphaDesktop. The GM Office now has compact breadcrumbs, bounded Back/Forward context history, focusable buttons, Ctrl+S save, Ctrl+F search, Escape-to-close safe popups, reset filters, clearer empty states, persistent success/status feedback, destructive-action confirmations, display density options, save/load metadata, and a documented UX findings checklist without adding gameplay systems.
 
 Alpha 8.5 - Immersive GM Office Experience replaces the old metric-heavy dashboard with a morning briefing built around the GM's office. The home screen now shows a Good Morning card, today's agenda, Assistant GM recommendations, coach, scout, medical, owner, recent transaction, organization snapshot, league snapshot, and Player of Interest cards. Each card links into the existing workspace it belongs to, keeping the pass presentation-only with no gameplay, AI, simulation, Godot, voice, or music additions.
+
+Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix gives NHL careers a 23-player NHL active roster plus separately tracked AHL affiliate players, all signed contracts, unsigned prospect rights, and signed junior returns. Hockey Operations now surfaces those groups and the organization contract inventory. Eligible junior-returned entry-level players can preserve a contract year below the rulebook game threshold; the existing contract is extended on the common expiry calendar rather than recreated.
 
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
 

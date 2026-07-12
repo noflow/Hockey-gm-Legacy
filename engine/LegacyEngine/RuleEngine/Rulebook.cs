@@ -231,6 +231,21 @@ public sealed class PlayerAssignmentRules
 
     [JsonPropertyName("elc_slide_nhl_game_threshold")]
     public int ElcSlideNhlGameThreshold { get; init; } = 10;
+
+    [JsonPropertyName("elc_slide_enabled")]
+    public bool ElcSlideEnabled { get; init; } = true;
+
+    [JsonPropertyName("elc_slide_maximum_seasons")]
+    public int ElcSlideMaximumSeasons { get; init; } = 2;
+
+    [JsonPropertyName("elc_slide_requires_junior_return")]
+    public bool ElcSlideRequiresJuniorReturn { get; init; } = true;
+
+    [JsonPropertyName("junior_return_contract_count_exempt")]
+    public bool JuniorReturnContractCountExempt { get; init; }
+
+    [JsonPropertyName("junior_return_contract_count_games_threshold")]
+    public int JuniorReturnContractCountGamesThreshold { get; init; } = 10;
 }
 
 public sealed class SalaryCapRules

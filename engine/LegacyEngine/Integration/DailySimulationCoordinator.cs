@@ -69,6 +69,7 @@ public sealed class DailySimulationCoordinator
         finalScenario = new HockeyIntelligenceRatingService().EnsureRatings(finalScenario);
         finalScenario = new DevelopmentCurveService().EnsureCurves(finalScenario);
         finalScenario = new PlayerRatingService().EnsureRatings(finalScenario);
+        finalScenario = new RosterAllocationService().EnsureAllocation(finalScenario, registry.Rulebook ?? finalScenario.LeagueProfile.Rulebook);
         var aiFrontOffice = new AiFrontOfficeDecisionService().RunCycle(finalScenario);
         finalScenario = aiFrontOffice.ScenarioSnapshot;
         leagueTransactions = leagueTransactions.Concat(aiFrontOffice.LeagueNews).ToArray();

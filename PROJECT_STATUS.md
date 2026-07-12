@@ -134,18 +134,19 @@ The five foundation pillars remain:
 - Alpha 8.3 - Team Branding, Icons & Visual Identity
 - Alpha 8.4 - Alpha UX Playtest, Accessibility & Navigation Pass
 - Alpha 8.5 - Immersive GM Office Experience
+- Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix
 
 ## Current Milestone
 
-Alpha 8.5 - Immersive GM Office Experience
+Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix
 
 ## Current Goal
 
-Transform the AlphaDesktop home experience into a believable GM office morning briefing that connects agenda, staff reports, medical updates, owner context, league news, organization status, and player-of-interest workflows without adding gameplay systems.
+Give NHL organizations a clear, rulebook-driven separation between the active roster, AHL affiliate, signed contract inventory, unsigned rights, and signed junior returns while preserving entry-level contract slides across season rollover.
 
 ## Why Immersive GM Office Was Next
 
-Alpha 8.0 through Alpha 8.4 added the presentation layer, major workspace redesigns, branding, and playtest usability improvements. Alpha 8.5 now makes the first screen feel like a connected hockey front office instead of a database dashboard by surfacing the morning briefing, assistant GM, coach, scout, medical, owner, league, and player-of-interest cards.
+Alpha 8.5.1 fixes the NHL organization shape that the front office needs to manage: a legal 23-player active roster, AHL depth, unsigned prospect rights, signed junior returns, a 50-contract inventory, and ELC slide tracking without treating every signed player as an NHL roster player.
 
 ## Next Build Target
 

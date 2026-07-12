@@ -112,6 +112,7 @@ var alpha81HockeyOperationsVisualTests = new Alpha81HockeyOperationsVisualTests(
 var alpha82DraftTradeVisualTests = new Alpha82DraftTradeVisualTests();
 var alpha83TeamBrandingTests = new Alpha83TeamBrandingTests();
 var alpha84UxNavigationTests = new Alpha84UxNavigationTests();
+var alpha851OrganizationRosterTests = new Alpha851OrganizationRosterTests();
 var alpha85GmOfficeExperienceTests = new Alpha85GmOfficeExperienceTests();
 var runner = new TestRunner(args);
 
@@ -1501,6 +1502,13 @@ runner.Run("alpha 8.4 save load and density UX visible", alpha84UxNavigationTest
 runner.Run("alpha 8.4 Action Center Go To opens specific context", alpha84UxNavigationTests.ActionCenterGoToOpensSpecificContext);
 runner.Run("alpha 8.4 playtest findings documented", alpha84UxNavigationTests.PlaytestFindingsAreDocumented);
 runner.Run("alpha 8.4 no hidden ratings or remote telemetry", alpha84UxNavigationTests.NoHiddenRatingsOrRemoteTelemetryAdded);
+runner.Run("alpha 8.5.1 NHL organization starts with separate roster groups", alpha851OrganizationRosterTests.NhlScenarioStartsWithOrganizationGroups);
+runner.Run("alpha 8.5.1 contract inventory separates active and signed players", alpha851OrganizationRosterTests.ContractInventorySeparatesActiveRosterAndSignedContracts);
+runner.Run("alpha 8.5.1 unsigned rights and AHL contracts count correctly", alpha851OrganizationRosterTests.UnsignedRightsDoNotCountButAhlContractsDo);
+runner.Run("alpha 8.5.1 junior return ELC slides without duplicating contract", alpha851OrganizationRosterTests.JuniorReturnElcSlidesWithoutReplacingContract);
+runner.Run("alpha 8.5.1 save load preserves allocation and slide history", alpha851OrganizationRosterTests.SaveLoadPreservesAllocationAndSlideHistory);
+runner.Run("alpha 8.5.1 slide evaluation cannot duplicate contract history", alpha851OrganizationRosterTests.SlideEvaluationDoesNotDuplicateContractOrHistory);
+runner.Run("alpha 8.5.1 desktop exposes organization allocation surfaces", alpha851OrganizationRosterTests.DesktopExposesOrganizationAllocationSurfaces);
 runner.Run("alpha 8.5 GM Office home replaces metric dashboard", alpha85GmOfficeExperienceTests.GmOfficeHomeReplacesMetricDashboard);
 runner.Run("alpha 8.5 morning briefing panels exist", alpha85GmOfficeExperienceTests.MorningBriefingPanelsExist);
 runner.Run("alpha 8.5 office sidebar snapshots exist", alpha85GmOfficeExperienceTests.OfficeSidebarSnapshotsExist);

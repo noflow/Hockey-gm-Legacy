@@ -59,6 +59,9 @@ public sealed class SeasonRolloverService
         };
         registry.WorldEngine.SetPhase(WorldPhase.Offseason);
 
+        // Slide eligible junior returns move the existing contract year forward before
+        // expiry processing. The contract id, salary, and signing history remain intact.
+        reportScenario = new EntryLevelSlideService().EvaluateSeasonRollover(reportScenario, registry.Rulebook ?? reportScenario.LeagueProfile.Rulebook);
         var expiredContracts = ExpiringContracts(reportScenario, reportScenario.CurrentDate).ToArray();
         var pending = CreateContractPendingActions(reportScenario, expiredContracts);
         var draftClass = GenerateNextDraftClass(reportScenario, transition.ToSeasonYear);
@@ -122,6 +125,7 @@ public sealed class SeasonRolloverService
         updated = new DevelopmentCurveService().EnsureCurves(updated);
         updated = new PlayerRatingService().EnsureRatings(updated);
         updated = new RfaUfaService().EnsureRights(updated, registry.Rulebook ?? updated.LeagueProfile.Rulebook);
+        updated = new RosterAllocationService().EnsureAllocation(updated, registry.Rulebook ?? updated.LeagueProfile.Rulebook);
 
         QueueSeasonEnded(registry, updated, archive);
         var inbox = BuildInbox(updated, archive, expiredContracts.Length);

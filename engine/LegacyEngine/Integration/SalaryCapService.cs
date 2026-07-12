@@ -59,14 +59,15 @@ public sealed class SalaryCapService
         var commitments = PlayerContracts(scenario)
             .Select(contract => CommitmentFor(scenario, contract))
             .ToArray();
+        var contractInventory = new RosterAllocationService().BuildContractInventory(scenario, rulebook ?? scenario.LeagueProfile.Rulebook);
         var buyoutPenalties = BuyoutPenaltiesFor(scenario).ToArray();
         var currentBuyoutPenalty = buyoutPenalties.Where(penalty => penalty.SeasonYear == scenario.Season.Year).Sum(penalty => penalty.Amount);
         var used = commitments.Sum(commitment => commitment.CapHit) + currentBuyoutPenalty;
         var remaining = profile.CapAmount - used;
         var floorRemaining = Math.Max(0m, profile.SalaryFloor - used);
         var percent = profile.CapAmount <= 0 ? 0m : Math.Round(used / profile.CapAmount * 100m, 2);
-        var warnings = ReasonsFor(profile, used, remaining, commitments.Length, includeFloor: scenario.Season.CurrentPhase != LegacyEngine.Seasons.SeasonPhase.Offseason).ToList();
-        var status = StatusFor(scenario, profile, used, remaining, commitments.Length);
+        var warnings = ReasonsFor(profile, used, remaining, contractInventory.ContractsUsed, includeFloor: scenario.Season.CurrentPhase != LegacyEngine.Seasons.SeasonPhase.Offseason).ToList();
+        var status = StatusFor(scenario, profile, used, remaining, contractInventory.ContractsUsed);
         var snapshot = new SalaryCapSnapshot(
             profile,
             new SalaryCapSpace(profile.CapAmount, used, remaining, profile.SalaryFloor, floorRemaining, percent),
@@ -75,7 +76,7 @@ public sealed class SalaryCapService
             commitments.Sum(commitment => commitment.TotalRemainingValue) + buyoutPenalties.Where(penalty => penalty.SeasonYear > scenario.Season.Year).Sum(penalty => penalty.Amount),
             commitments.Where(commitment => commitment.ExpiresOn <= scenario.CurrentDate.AddDays(365)).Sum(commitment => commitment.CapHit),
             currentBuyoutPenalty,
-            commitments.Length,
+            contractInventory.ContractsUsed,
             commitments,
             buyoutPenalties,
             status,

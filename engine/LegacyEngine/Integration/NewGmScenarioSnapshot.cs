@@ -38,6 +38,11 @@ public sealed record NewGmScenarioSnapshot(
 
     public IReadOnlyList<PlayerPipelineRecord> PlayerPipeline { get; init; } = Array.Empty<PlayerPipelineRecord>();
 
+    /// <summary>Organization-wide allocation; distinct from the game-day roster.</summary>
+    public OrganizationRoster? OrganizationRoster { get; init; }
+
+    public IReadOnlyList<ContractSlideHistory> ContractSlideHistory { get; init; } = Array.Empty<ContractSlideHistory>();
+
     public TrainingCamp? TrainingCamp { get; init; }
 
     public IReadOnlyList<PendingGmAction> PendingActions { get; init; } = Array.Empty<PendingGmAction>();
@@ -349,6 +354,12 @@ public sealed record NewGmScenarioSnapshot(
         foreach (var pipelineRecord in PlayerPipeline)
         {
             pipelineRecord.Validate();
+        }
+
+        OrganizationRoster?.Validate();
+        foreach (var history in ContractSlideHistory)
+        {
+            history.Validate();
         }
 
         TrainingCamp?.Validate();

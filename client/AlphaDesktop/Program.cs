@@ -1943,10 +1943,11 @@ internal sealed class MainWindow : Window
             ItemsSource = new[]
             {
                 "NHL Roster",
-                "AHL Roster",
-                "Junior / Returned Prospects",
-                "Unsigned Rights",
-                "Injured Players",
+                "AHL Affiliate",
+                "All Contracted Players",
+                "Unsigned Prospects",
+                "Junior Returns",
+                "Injured / Unavailable",
                 "Waiver Wire",
                 "Free Agents",
                 "Trade Targets",
@@ -4119,26 +4120,17 @@ internal sealed class MainWindow : Window
         {
             "Drafted Prospects" => BuildProspectRows(),
             "Prospects" => BuildProspectRows(),
-            "AHL Roster" => BuildProspectRows()
-                .Where(row => CommandCenterMatches(row, "AHL", "affiliate", "assigned"))
-                .ToArray(),
-            "Junior / Returned Prospects" => BuildProspectRows()
-                .Where(row => CommandCenterMatches(row, "junior", "youth", "returned"))
-                .ToArray(),
-            "Unsigned Rights" => BuildProspectRows()
-                .Where(row => CommandCenterMatches(row, "rights", "unsigned", "DraftRightsHeld"))
-                .ToArray(),
-            "Injured Players" => BuildRosterRows()
-                .Where(row => row.Kind != "RosterSummary" && !State.InjuryStatus(row.PersonId).Equals("Available", StringComparison.OrdinalIgnoreCase))
-                .ToArray(),
+            "AHL Affiliate" => BuildOrganizationAllocationRows(OrganizationRosterGroup.AhlAffiliateRoster),
+            "All Contracted Players" => BuildOrganizationAllocationRows(),
+            "Unsigned Prospects" => BuildOrganizationAllocationRows(OrganizationRosterGroup.UnsignedProspectRights),
+            "Junior Returns" => BuildOrganizationAllocationRows(OrganizationRosterGroup.SignedJuniorReturn),
+            "Injured / Unavailable" => BuildOrganizationAllocationRows(OrganizationRosterGroup.InjuredOrUnavailable),
             "Waiver Wire" => BuildRosterRows()
                 .Where(row => row.Kind != "RosterSummary" && CommandCenterMatches(row, "waiver", "AHL Eligible", "exempt"))
                 .ToArray(),
             "Free Agents" => BuildFreeAgentRows(),
             "Trade Targets" => BuildTradeRows(),
-            _ => BuildRosterRows()
-                .Where(row => row.Kind != "RosterSummary")
-                .ToArray()
+            _ => BuildOrganizationAllocationRows(OrganizationRosterGroup.NhlActiveRoster)
         };
 
         var query = _commandCenterSearchInput?.Text?.Trim();
@@ -4175,6 +4167,7 @@ internal sealed class MainWindow : Window
     private UIElement BuildHockeyOperationsTeamSummaryStrip()
     {
         var grid = new UniformGrid { Columns = 4, Margin = new Thickness(0, 0, 0, 12) };
+        var organizationRoster = State.OrganizationRosterSummary;
         var active = State.Snapshot.Roster.ActivePlayers;
         var averageAge = active.Count == 0
             ? "n/a"
@@ -4182,7 +4175,10 @@ internal sealed class MainWindow : Window
         var injured = active.Count(player => !State.InjuryStatus(player.PersonId).Equals("Available", StringComparison.OrdinalIgnoreCase));
         var cap = State.SalaryCap;
 
-        grid.Children.Add(UiPresentation.UiMetricCard("Roster", State.RosterBreakdownTitle, State.RosterBreakdownSecondary));
+        grid.Children.Add(UiPresentation.UiMetricCard("NHL Roster", $"{organizationRoster.NhlActiveCount} / {organizationRoster.NhlActiveMaximum}", "Active NHL roster"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Contracts", $"{organizationRoster.ContractInventory.ContractsUsed} / {organizationRoster.ContractInventory.MaximumContracts}", $"{organizationRoster.ContractInventory.OpenSlots} open slot(s)"));
+        grid.Children.Add(UiPresentation.UiMetricCard("AHL Affiliate", $"{organizationRoster.AhlCount} players", "Signed NHL organization depth"));
+        grid.Children.Add(UiPresentation.UiMetricCard("Prospect Rights", $"{organizationRoster.UnsignedRightsCount} unsigned", $"{organizationRoster.JuniorReturnCount} junior return(s)"));
         grid.Children.Add(UiPresentation.UiMetricCard("Average Age", averageAge, State.RosterAgeBreakdown));
         grid.Children.Add(UiPresentation.UiMetricCard("Player Payroll", cap.IsEnabled ? $"{cap.CapUsed:C0}" : "Budget league", cap.IsEnabled ? $"{cap.CapRemaining:C0} remaining" : "Salary cap disabled"));
         grid.Children.Add(UiPresentation.UiMetricCard("Health", $"{injured} injured", $"{State.ContractDecisionCount} contract decisions"));
@@ -5699,6 +5695,38 @@ internal sealed class MainWindow : Window
         return rows;
     }
 
+    private IReadOnlyList<SelectablePersonRow> BuildOrganizationAllocationRows(OrganizationRosterGroup? group = null)
+    {
+        var allocation = State.OrganizationRoster;
+        var players = allocation.Players
+            .Where(player => group is null
+                ? player.CountsTowardContractLimit
+                : player.Group == group)
+            .OrderBy(player => player.Group)
+            .ThenBy(player => player.Position)
+            .ThenBy(player => player.PlayerName, StringComparer.Ordinal)
+            .Select(player => new SelectablePersonRow(
+                player.PersonId,
+                player.PlayerName,
+                "OrganizationPlayer",
+                $"{State.PositionShortText(player.Position)} | Age {player.Age} | {State.RatingText(player.PersonId)}",
+                $"{ReadableOrganizationRosterGroup(player.Group)} | {player.CurrentTeamName ?? player.CurrentLevel}",
+                $"{player.ContractCountReason} {player.SlideEligibility?.Reason ?? string.Empty}".Trim()))
+            .ToArray();
+        return players;
+    }
+
+    private static string ReadableOrganizationRosterGroup(OrganizationRosterGroup group) => group switch
+    {
+        OrganizationRosterGroup.NhlActiveRoster => "NHL Active",
+        OrganizationRosterGroup.AhlAffiliateRoster => "AHL Affiliate",
+        OrganizationRosterGroup.OtherContracted => "Other Contracted",
+        OrganizationRosterGroup.UnsignedProspectRights => "Unsigned Rights",
+        OrganizationRosterGroup.SignedJuniorReturn => "Junior Return",
+        OrganizationRosterGroup.InjuredOrUnavailable => "Injured / Unavailable",
+        _ => group.ToString()
+    };
+
     private IReadOnlyList<SelectablePersonRow> BuildLineupRows()
     {
         var lineup = State.CurrentLineup;
@@ -6574,6 +6602,18 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Pipeline", State.PipelineText(row.PersonId));
         AddLine(panel, "GM relationship", $"{State.RelationshipWithGm(row.PersonId)}/100");
         AddParagraph(panel, row.Summary);
+
+        var organizationAllocation = State.OrganizationRoster.Players.FirstOrDefault(player => player.PersonId == row.PersonId);
+        if (organizationAllocation is not null)
+        {
+            AddSubHeader(panel, "Organization Status");
+            AddLine(panel, "Current group", ReadableOrganizationRosterGroup(organizationAllocation.Group));
+            AddLine(panel, "Current level", organizationAllocation.CurrentLevel);
+            AddLine(panel, "Assignment", organizationAllocation.CurrentTeamName ?? "not assigned");
+            AddLine(panel, "Contract limit", organizationAllocation.ContractCountReason);
+            AddLine(panel, "ELC slide", organizationAllocation.SlideEligibility?.Reason ?? "not applicable");
+            AddLine(panel, "Contract year", organizationAllocation.ContractYearStatus?.Summary ?? "not applicable");
+        }
 
         if (row.Kind == "RosterSummary")
         {
@@ -11685,6 +11725,7 @@ internal sealed class AlphaDesktopState
     private readonly ArbitrationService _arbitration = new();
     private readonly BuyoutService _buyouts = new();
     private readonly OfferSheetService _offerSheets = new();
+    private readonly RosterAllocationService _rosterAllocation = new();
     private readonly DraftIntelligenceService _draftIntelligence = new();
     private readonly AssetEvaluationService _assetEvaluation = new();
     private readonly OrganizationPlanningService _organizationPlanning = new();
@@ -11735,6 +11776,7 @@ internal sealed class AlphaDesktopState
         prepared = _rfaUfa.EnsureRights(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         prepared = _arbitration.EnsureArbitration(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         prepared = new UiBrandingService().EnsureBranding(prepared);
+        prepared = _rosterAllocation.EnsureAllocation(prepared, registry.Rulebook ?? prepared.LeagueProfile.Rulebook);
         ScenarioSnapshot = prepared;
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         _selectedDossierPersonId = FirstDossierPersonId();
@@ -11910,6 +11952,12 @@ internal sealed class AlphaDesktopState
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
     public SalaryCapSnapshot SalaryCap => new SalaryCapService().BuildSnapshot(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public OrganizationRoster OrganizationRoster =>
+        ScenarioSnapshot.OrganizationRoster ?? _rosterAllocation.BuildOrganizationRoster(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public RosterAllocationSummary OrganizationRosterSummary =>
+        _rosterAllocation.BuildSummary(ScenarioSnapshot with { OrganizationRoster = OrganizationRoster }, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
 
     public OwnerOfficeSummary OwnerOffice => _ownerOffice.BuildSummary(ScenarioSnapshot, BudgetOverview);
 
@@ -14138,7 +14186,7 @@ internal sealed class AlphaDesktopState
 
     private void ApplyWaiverResult(WaiverResult result)
     {
-        ScenarioSnapshot = result.ScenarioSnapshot;
+        ScenarioSnapshot = _rosterAllocation.EnsureAllocation(result.ScenarioSnapshot, _registry.Rulebook ?? result.ScenarioSnapshot.LeagueProfile.Rulebook);
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         AddInboxItems(result.InboxItems);
         AddLeagueTransactions(result.LeagueTransactions);
@@ -16197,7 +16245,7 @@ internal sealed class AlphaDesktopState
 
     private void SetScenarioSnapshot(NewGmScenarioSnapshot scenario)
     {
-        ScenarioSnapshot = _assetEvaluation.EnsureEvaluations(scenario);
+        ScenarioSnapshot = _assetEvaluation.EnsureEvaluations(_rosterAllocation.EnsureAllocation(scenario, _registry.Rulebook ?? scenario.LeagueProfile.Rulebook));
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         ClearDraftPresentationCache();
     }
