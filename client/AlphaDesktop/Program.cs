@@ -2096,11 +2096,11 @@ internal sealed class MainWindow : Window
             ItemsSource = new[]
             {
                 "NHL Roster",
-                "AHL Affiliate",
+                "AHL Roster",
                 "All Contracted Players",
-                "Unsigned Prospects",
-                "Junior Returns",
-                "Injured / Unavailable",
+                "Unsigned Rights",
+                "Junior / Returned Prospects",
+                "Injured Players",
                 "Waiver Wire",
                 "Free Agents",
                 "Trade Targets",
@@ -4676,11 +4676,11 @@ internal sealed class MainWindow : Window
         {
             "Drafted Prospects" => BuildProspectRows(),
             "Prospects" => BuildProspectRows(),
-            "AHL Affiliate" => BuildOrganizationAllocationRows(OrganizationRosterGroup.AhlAffiliateRoster),
+            "AHL Roster" or "AHL Affiliate" => BuildOrganizationAllocationRows(OrganizationRosterGroup.AhlAffiliateRoster),
             "All Contracted Players" => BuildOrganizationAllocationRows(),
-            "Unsigned Prospects" => BuildOrganizationAllocationRows(OrganizationRosterGroup.UnsignedProspectRights),
-            "Junior Returns" => BuildOrganizationAllocationRows(OrganizationRosterGroup.SignedJuniorReturn),
-            "Injured / Unavailable" => BuildOrganizationAllocationRows(OrganizationRosterGroup.InjuredOrUnavailable),
+            "Unsigned Rights" or "Unsigned Prospects" => BuildOrganizationAllocationRows(OrganizationRosterGroup.UnsignedProspectRights),
+            "Junior / Returned Prospects" or "Junior Returns" => BuildOrganizationAllocationRows(OrganizationRosterGroup.SignedJuniorReturn),
+            "Injured Players" or "Injured / Unavailable" => BuildOrganizationAllocationRows(OrganizationRosterGroup.InjuredOrUnavailable),
             "Waiver Wire" => BuildRosterRows()
                 .Where(row => row.Kind != "RosterSummary" && CommandCenterMatches(row, "waiver", "AHL Eligible", "exempt"))
                 .ToArray(),
