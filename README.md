@@ -128,6 +128,7 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 8.8 Offseason Contract Cycle & Market Polish
 - Alpha 8.9 Offseason Roster Readiness & Camp Transition
 - Alpha 8.10 Opening Night Launch & Season Continuity
+- Alpha 8.11 Contract Offer UI & Market Workflow
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -178,6 +179,8 @@ Alpha 8.8 - Offseason Contract Cycle & Market Polish connects those systems to t
 Alpha 8.9 - Offseason Roster Readiness & Camp Transition adds a dedicated readiness layer for the period between the contract market and opening night. It tracks camp and opening-night dates, roster and cap compliance, unsigned prospects, open contract decisions, pending actions, and staff vacancies. The desktop now exposes an Offseason Readiness workspace, and phase transitions produce concise notices without automatically signing, cutting, releasing, or assigning players.
 
 Alpha 8.10 - Opening Night Launch & Season Continuity adds a dedicated Opening Night Preview and explicit season-start confirmation. The GM can review the calendar date, first opponent, roster and payroll compliance, goalie coverage, lineup balance, injuries, owner expectations, strengths, and concerns before beginning the regular season. A single briefing is added after launch, and the opening-night state survives the existing JSON career persistence path. The launch layer coordinates the existing readiness and SeasonEngine behavior without adding automatic roster decisions or a game-simulation overhaul.
+
+Alpha 8.11 - Contract Offer UI & Market Workflow adds a unified readable offer form to Contract Rights, Contract Market, Contracts, and Free Agents. The GM can select an eligible player, enter annual salary and term, review the demand and market context, and submit an offer. Accepted-in-principle deals remain pending for explicit approval, so the UI never signs a player automatically.
 
 The Alpha UI Interaction Pass replaces major text-dump people screens with selectable rows and detail/action panels. Staff, roster, recruits, scouting, scouting operations, draft board, prospect list, training camp, and dossier entry points now let the GM select the person first, then take valid staff/player/prospect actions from that selected detail panel.
 

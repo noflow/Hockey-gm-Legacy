@@ -143,6 +143,7 @@ The five foundation pillars remain:
 - Alpha 8.8 - Offseason Contract Cycle & Market Polish
 - Alpha 8.9 - Offseason Roster Readiness & Camp Transition
 - Alpha 8.10 - Opening Night Launch & Season Continuity
+- Alpha 8.11 - Contract Offer UI & Market Workflow
 
 ## Current Milestone
 
@@ -159,6 +160,8 @@ Alpha 8.8 runs one scenario-level offseason contract cycle after each world day.
 Alpha 8.9 adds persistent offseason roster-readiness state. Each day now reports the current phase, camp and opening-night countdowns, roster compliance, cap status, unsigned prospects, open contract decisions, pending GM actions, and staff vacancies. Camp-preparation, training-camp, opening-roster, and ready-for-season transitions create at most one useful notice each, while Action Center receives compact, direct next steps. No signing, cut, release, or assignment is performed automatically.
 
 Alpha 8.10 adds a calendar-driven Opening Night Preview and explicit season launch gate. The preview shows the opening date, first opponent, roster and player-payroll compliance, goalie coverage, lineup balance, injuries, strengths, concerns, and owner expectation. Begin Season now requires deliberate confirmation, moves the world and SeasonEngine into Regular Season through the existing readiness service, delivers one concise briefing, and preserves the launch marker through JSON career persistence. No roster, contract, assignment, or game simulation decisions are made automatically.
+
+Alpha 8.11 adds a readable contract offer workflow to Contract Rights, Contract Market, Contracts, and Free Agents. Selecting an eligible player opens an offer form with annual salary, term, demand context, and agent evaluation; accepted-in-principle offers remain pending for explicit GM approval and never sign automatically.
 
 ## Next Build Target
 

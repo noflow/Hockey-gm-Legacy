@@ -16,6 +16,8 @@ obj/
 .alpha-desktop-bin-alpha11/
 .alpha-desktop-bin-alpha12/
 .alpha-desktop-bin-alpha*/
+.verify-*/
+.obj-verify-*/
 
 # Python
 __pycache__/

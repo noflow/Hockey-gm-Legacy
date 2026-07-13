@@ -3100,6 +3100,71 @@ internal sealed class MainWindow : Window
         ShowPopup("Contract Offer", panel, 520, 360);
     }
 
+    private void ShowContractOfferDialog(string personId)
+    {
+        var negotiation = State.ContractNegotiationFor(personId);
+        if (negotiation is null || !negotiation.IsOpen)
+        {
+            State.StartContractNegotiationFor(personId);
+            negotiation = State.ContractNegotiationFor(personId);
+        }
+
+        if (negotiation is null)
+        {
+            MessageBox.Show(State.LatestSummary, "Contract Offer", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var panel = CreateDetailPanel(negotiation.PersonName, "Contract Offer");
+        AddParagraph(panel, "Set the annual salary and term. The agent response will be evaluated immediately, but an accepted deal still requires explicit GM approval before signing.");
+        AddLine(panel, "Market status", negotiation.MarketStatus.ToString());
+        AddLine(panel, "Player/agent demand", $"{negotiation.Demand.AnnualSalary:C0} per year for {negotiation.Demand.TermYears} year(s)");
+        AddLine(panel, "Desired role", negotiation.Demand.DesiredRole);
+        AddLine(panel, "Priorities", negotiation.Demand.Priorities);
+
+        var salaryInput = new TextBox
+        {
+            Text = negotiation.Demand.AnnualSalary.ToString("0"),
+            MinWidth = 220,
+            MinHeight = 30,
+            Margin = new Thickness(0, 4, 0, 10),
+            ToolTip = "Annual salary, not total contract value"
+        };
+        var termInput = new ComboBox
+        {
+            ItemsSource = Enumerable.Range(1, 8).ToArray(),
+            SelectedItem = negotiation.Demand.TermYears,
+            MinWidth = 220,
+            MinHeight = 30,
+            Margin = new Thickness(0, 4, 0, 10),
+            ToolTip = "Contract length in years"
+        };
+        panel.Children.Add(LabeledControl("Annual salary", salaryInput));
+        panel.Children.Add(LabeledControl("Term (years)", termInput));
+
+        AddActions(panel,
+            CreateDetailButton("Submit Offer", () =>
+            {
+                if (!decimal.TryParse(salaryInput.Text.Trim(), out var salary) || salary < 0)
+                {
+                    MessageBox.Show("Enter a valid annual salary.", "Contract Offer", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var term = termInput.SelectedItem is int selectedTerm ? selectedTerm : negotiation.Demand.TermYears;
+                State.SubmitContractMarketOfferFor(personId, salary, term);
+                Window.GetWindow(panel)?.Close();
+            }, negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "This offer is already accepted in principle; review the pending approval."),
+            CreateDetailButton("View Contract Market", () =>
+            {
+                Window.GetWindow(panel)?.Close();
+                SelectWorkspaceScreen("Hockey Operations", "Contract Market");
+                SelectPersonInList("Contract Market", personId);
+            }),
+            CreateDetailButton("Cancel", () => Window.GetWindow(panel)?.Close()));
+        ShowPopup($"Contract Offer - {negotiation.PersonName}", panel, 620, 620, includeCloseButton: false);
+    }
+
     private void ShowStaffProfile(string personId)
     {
         State.FocusStaffProfile(personId);
@@ -7706,7 +7771,7 @@ internal sealed class MainWindow : Window
         {
             var agent = State.FreeAgentFor(row.PersonId);
             yield return CreateDetailButton(agent?.IsShortlisted == true ? "Remove Shortlist" : "Shortlist", () => State.ToggleFreeAgentShortlist(row.PersonId), agent is not null);
-            yield return CreateDetailButton("Offer Contract", () => State.OfferFreeAgentContractFor(row.PersonId), State.CanOfferFreeAgent(row.PersonId));
+            yield return CreateDetailButton("Offer Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "This free agent is not currently available for an offer.");
             yield return CreateDetailButton("Improve Offer", () => MessageBox.Show(State.AgentOfferComment(row.PersonId), "Improve Offer", MessageBoxButton.OK, MessageBoxImage.Information), agent is not null);
             yield return CreateDetailButton("Compare", () => MessageBox.Show(State.FreeAgentCompetitionSummary(row.PersonId), "Compare Offers", MessageBoxButton.OK, MessageBoxImage.Information), agent is not null);
             yield return CreateDetailButton("View Agent", () => MessageBox.Show(State.AgentDetails(row.PersonId), "Agent Card", MessageBoxButton.OK, MessageBoxImage.Information), agent is not null);
@@ -9392,6 +9457,7 @@ internal sealed class MainWindow : Window
         AddActions(panel,
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Offer Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "This player is not currently eligible for a contract offer."),
             CreateDetailButton("Open Contract Rights", () => OpenContractRightsFor(row.PersonId), State.HasContractRightsDecision(row.PersonId)));
         return panel;
     }
@@ -9454,6 +9520,7 @@ internal sealed class MainWindow : Window
         {
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Offer Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "This player is not currently eligible for a contract offer."),
             CreateDetailButton("Start Contract Talks", () => State.StartContractNegotiationFor(row.PersonId), negotiation is null || !negotiation.IsOpen),
             CreateDetailButton("Submit Market Offer", () => State.SubmitContractMarketOfferFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Open talks first or review the pending GM approval"),
             CreateDetailButton("Withdraw Talks", () => State.WithdrawContractNegotiationFor(row.PersonId), negotiation?.IsOpen == true)
@@ -9488,6 +9555,7 @@ internal sealed class MainWindow : Window
         AddActions(panel,
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
+            CreateDetailButton("Offer Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "Open a valid player or free-agent contract record first."),
             CreateDetailButton("Qualify", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId)),
             CreateDetailButton("Do Not Qualify", () => State.DeclineRightsFor(row.PersonId), State.CanDeclineRights(row.PersonId)),
             CreateDetailButton("Open Contracts", () => OpenContractFor(row.PersonId)));
@@ -13470,10 +13538,31 @@ internal sealed class AlphaDesktopState
     public IReadOnlyList<ContractComparable> ContractComparablesFor(string personId) =>
         _contractMarket.BuildComparables(ScenarioSnapshot, personId);
 
+    public ContractNegotiation? ContractNegotiationFor(string personId) =>
+        ScenarioSnapshot.ContractNegotiations
+            .Where(item => item.PersonId == personId && item.IsOpen)
+            .OrderByDescending(item => item.LastUpdatedOn)
+            .FirstOrDefault();
+
+    public bool CanOpenContractOffer(string personId)
+    {
+        var negotiation = ContractNegotiationFor(personId);
+        if (negotiation is not null)
+        {
+            return negotiation.Status is not (ContractNegotiationStatus.Signed or ContractNegotiationStatus.Withdrawn or ContractNegotiationStatus.Rejected);
+        }
+
+        var isFreeAgent = ScenarioSnapshot.FreeAgentMarket?.Find(personId) is not null;
+        var isRightsRecord = ScenarioSnapshot.PlayerRightsDecisions.Any(item => item.PersonId == personId);
+        var isExpiring = ScenarioSnapshot.Contracts.Any(contract => contract.PersonId == personId && contract.Status == ContractStatus.Signed && contract.Term.EndDate <= ScenarioSnapshot.CurrentDate.AddDays(365));
+        var isRosterPlayer = Snapshot.Roster.CurrentPlayers.Any(player => player.PersonId == personId);
+        return isFreeAgent || isRightsRecord || isExpiring || isRosterPlayer;
+    }
+
     public void StartContractNegotiationFor(string personId) =>
         ApplyContractMarketResult(_contractMarket.StartNegotiation(_registry, ScenarioSnapshot, personId));
 
-    public void SubmitContractMarketOfferFor(string personId)
+    public void SubmitContractMarketOfferFor(string personId, decimal? annualSalary = null, int? termYears = null)
     {
         var negotiation = ScenarioSnapshot.ContractNegotiations
             .Where(item => item.PersonId == personId && item.IsOpen)
@@ -13489,8 +13578,8 @@ internal sealed class AlphaDesktopState
             _registry,
             ScenarioSnapshot,
             personId,
-            negotiation.Demand.AnnualSalary,
-            negotiation.Demand.TermYears,
+            annualSalary ?? negotiation.Demand.AnnualSalary,
+            termYears ?? negotiation.Demand.TermYears,
             negotiation.Demand.DesiredRole));
     }
 

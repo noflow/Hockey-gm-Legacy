@@ -123,6 +123,7 @@ var alpha87ContractsMarketTests = new Alpha87ContractsMarketTests();
 var alpha88OffseasonContractCycleTests = new Alpha88OffseasonContractCycleTests();
 var alpha89OffseasonReadinessTests = new Alpha89OffseasonReadinessTests();
 var alpha810OpeningNightTests = new Alpha810OpeningNightTests();
+var alpha811ContractOfferUiTests = new Alpha811ContractOfferUiTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1593,6 +1594,9 @@ runner.Run("alpha 8.10 opening night does not approve or move players", alpha810
 runner.Run("alpha 8.10 opening night state survives save load", alpha810OpeningNightTests.OpeningNightStatePreservesThroughSaveLoad);
 runner.Run("alpha 8.10 action center exposes season launch", alpha810OpeningNightTests.ActionCenterExposesSeasonLaunchWhenReady);
 runner.Run("alpha 8.10 desktop exposes opening night surface", alpha810OpeningNightTests.DesktopExposesOpeningNightSurface);
+runner.Run("alpha 8.11 expiring player can open contract negotiation", alpha811ContractOfferUiTests.ExistingPlayerCanOpenContractNegotiation);
+runner.Run("alpha 8.11 contract UI exposes offer form", alpha811ContractOfferUiTests.ContractUiExposesOfferFormFromRightsAndFreeAgents);
+runner.Run("alpha 8.11 contract UI submits salary and term", alpha811ContractOfferUiTests.ContractMarketOfferAcceptsUserEnteredSalaryAndTerm);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
