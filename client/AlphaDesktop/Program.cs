@@ -3136,6 +3136,10 @@ internal sealed class MainWindow : Window
         }
         AddLine(panel, "Desired role", negotiation.Demand.DesiredRole);
         AddLine(panel, "Priorities", negotiation.Demand.Priorities);
+        AddSubHeader(panel, "Contract promises");
+        AddParagraph(panel, "These commitments are part of the offer. Only promise a role you can realistically honor.");
+        var counterRequestsCenter = negotiation.LastEvaluation?.AgentCounterSuggestion?.Contains("center", StringComparison.OrdinalIgnoreCase) == true
+            || negotiation.LastEvaluation?.AgentBiggestConcern?.Contains("center", StringComparison.OrdinalIgnoreCase) == true;
 
         var salaryInput = new TextBox
         {
@@ -3156,8 +3160,38 @@ internal sealed class MainWindow : Window
             Margin = new Thickness(0, 4, 0, 10),
             ToolTip = "Contract length in years"
         };
+        var positionInput = new ComboBox
+        {
+            ItemsSource = new[] { "No position guarantee", "Center", "Left wing", "Right wing", "Defense", "Goalie" },
+            SelectedItem = negotiation.CurrentOffer?.PositionPromise ?? (counterRequestsCenter ? "Center" : "No position guarantee"),
+            MinWidth = 220,
+            MinHeight = 30,
+            Margin = new Thickness(0, 4, 0, 10),
+            ToolTip = "Position the organization is promising to prioritize"
+        };
+        var iceTimeInput = new ComboBox
+        {
+            ItemsSource = new[] { "No ice-time guarantee", "Top-six role", "Middle-six role", "Bottom-six/depth role", "Top-pair role", "Starting goalie" },
+            SelectedItem = negotiation.CurrentOffer?.IceTimePromise ?? "No ice-time guarantee",
+            MinWidth = 220,
+            MinHeight = 30,
+            Margin = new Thickness(0, 4, 0, 10),
+            ToolTip = "Expected ice-time or lineup role"
+        };
+        var nhlRosterInput = new ComboBox
+        {
+            ItemsSource = new[] { "No NHL roster guarantee", "NHL roster", "NHL/AHL development pathway" },
+            SelectedItem = negotiation.CurrentOffer?.NhlRosterPromise ?? "No NHL roster guarantee",
+            MinWidth = 220,
+            MinHeight = 30,
+            Margin = new Thickness(0, 4, 0, 10),
+            ToolTip = "Whether the offer includes an NHL roster or development pathway commitment"
+        };
         panel.Children.Add(LabeledControl("Annual salary", salaryInput));
         panel.Children.Add(LabeledControl("Term (years)", termInput));
+        panel.Children.Add(LabeledControl("Position guarantee", positionInput));
+        panel.Children.Add(LabeledControl("Ice-time promise", iceTimeInput));
+        panel.Children.Add(LabeledControl("NHL status", nhlRosterInput));
 
         AddActions(panel,
             CreateDetailButton(negotiation.Status == ContractNegotiationStatus.Countered ? "Submit Revised Offer" : "Submit Offer", () =>
@@ -3169,7 +3203,17 @@ internal sealed class MainWindow : Window
                 }
 
                 var term = termInput.SelectedItem is int selectedTerm ? selectedTerm : negotiation.Demand.TermYears;
-                State.SubmitContractMarketOfferFor(personId, salary, term);
+                var positionPromise = positionInput.SelectedItem as string;
+                var iceTimePromise = iceTimeInput.SelectedItem as string;
+                var nhlRosterPromise = nhlRosterInput.SelectedItem as string;
+                State.SubmitContractMarketOfferFor(
+                    personId,
+                    salary,
+                    term,
+                    positionPromise == "No position guarantee" ? null : positionPromise,
+                    iceTimePromise == "No ice-time guarantee" ? null : iceTimePromise,
+                    nhlRosterPromise == "No NHL roster guarantee" ? null : nhlRosterPromise,
+                    "GM contract offer with explicit role, ice-time, position, and NHL status terms.");
                 Window.GetWindow(panel)?.Close();
             }, negotiation.IsOpen, "This negotiation is complete. Open a new contract decision only if the player becomes available again."),
             CreateDetailButton("View Contract Market", () =>
@@ -9539,6 +9583,7 @@ internal sealed class MainWindow : Window
                 AddLine(panel, "Annual salary / stipend", $"{contract.Money.Currency} {contract.Money.SalaryOrStipend:C0}");
                 AddLine(panel, "Signing bonus", $"{contract.Money.Currency} {contract.Money.SigningBonus:C0}");
                 AddLine(panel, "Clauses", contract.Clauses.Count == 0 ? "None" : string.Join(", ", contract.Clauses.Select(clause => clause.ClauseType)));
+                AddLine(panel, "Promises", PromiseSummary(contract.PositionPromise, contract.IceTimePromise, contract.NhlRosterPromise));
                 AddLine(panel, "Contract ID", contract.ContractId);
             }
         }
@@ -9553,9 +9598,14 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildContractMarketDetail(SelectablePersonRow? row)
     {
-        if (row is null || row.Kind == "ContractMarketSummary")
+        if (row is null)
         {
             return EmptyDetail("Contract Market", "Select a player to review demand, market status, deadlines, comparables, and negotiation history.");
+        }
+
+        if (row.Kind == "ContractMarketSummary")
+        {
+            return BuildExpiringContractsQuickView();
         }
 
         var panel = CreateDetailPanel(row.Name, row.Primary);
@@ -9569,7 +9619,10 @@ internal sealed class MainWindow : Window
         AddLine(panel, "Market status", negotiation?.MarketStatus.ToString() ?? (rights?.RightsStatus.ToString() ?? (freeAgent is null ? "Expiring / under contract" : "Free agent")));
         if (contract is not null)
         {
+            AddSubHeader(panel, "Current contract");
             AddLine(panel, "Current contract", $"{contract.Money.SalaryOrStipend:C0} annually | expires {contract.Term.EndDate:yyyy-MM-dd}");
+            AddLine(panel, "Term", $"{contract.Term.StartDate:yyyy-MM-dd} to {contract.Term.EndDate:yyyy-MM-dd}");
+            AddLine(panel, "Promises", PromiseSummary(contract.PositionPromise, contract.IceTimePromise, contract.NhlRosterPromise));
         }
 
         if (rights is not null)
@@ -9585,17 +9638,24 @@ internal sealed class MainWindow : Window
 
         if (negotiation is not null)
         {
+            AddSubHeader(panel, "Negotiation");
             AddLine(panel, "Negotiation", $"{negotiation.Status} | round {negotiation.Round} | deadline {negotiation.DecisionDeadline?.ToString("yyyy-MM-dd") ?? "n/a"}");
-        AddLine(panel, "Demand", $"{negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | {negotiation.Demand.DesiredRole}");
-        AddLine(panel, "Agent / player context", negotiation.Demand.AgentComment);
-        AddLine(panel, "Team preference", negotiation.Demand.TeamPreference.Summary);
-        if (negotiation.LastEvaluation is not null)
-        {
-            AddLine(panel, "Team fit", $"{negotiation.LastEvaluation.TeamFit.Label} ({negotiation.LastEvaluation.TeamFit.TeamFitScore}/100)");
-            AddLine(panel, "Team-fit risk", negotiation.LastEvaluation.TeamFit.Risk);
-            AddLine(panel, "Agent response", negotiation.LastEvaluation.AgentOpinion);
-        }
-        AddLine(panel, "Next action", negotiation.NextAction);
+            AddLine(panel, "Opening ask", $"{negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | {negotiation.Demand.DesiredRole}");
+            AddLine(panel, "Agent / player context", negotiation.Demand.AgentComment);
+            AddLine(panel, "Team preference", negotiation.Demand.TeamPreference.Summary);
+            if (negotiation.CurrentOffer is not null)
+            {
+                AddLine(panel, "Current proposal", $"{negotiation.CurrentOffer.Money.SalaryOrStipend:C0} x {Math.Max(1, negotiation.CurrentOffer.Term.EndDate.Year - negotiation.CurrentOffer.Term.StartDate.Year + 1)}");
+                AddLine(panel, "Proposed promises", PromiseSummary(negotiation.CurrentOffer.PositionPromise, negotiation.CurrentOffer.IceTimePromise, negotiation.CurrentOffer.NhlRosterPromise));
+            }
+            if (negotiation.LastEvaluation is not null)
+            {
+                AddLine(panel, "Team fit", $"{negotiation.LastEvaluation.TeamFit.Label} ({negotiation.LastEvaluation.TeamFit.TeamFitScore}/100)");
+                AddLine(panel, "Team-fit risk", negotiation.LastEvaluation.TeamFit.Risk);
+                AddLine(panel, "Agent response", negotiation.LastEvaluation.AgentOpinion);
+                AddLine(panel, "Agent concern", negotiation.LastEvaluation.AgentBiggestConcern);
+            }
+            AddLine(panel, "Next action", negotiation.NextAction);
         }
 
         var comparables = State.ContractComparablesFor(row.PersonId);
@@ -9625,6 +9685,47 @@ internal sealed class MainWindow : Window
         };
         AddActions(panel, actions.ToArray());
         return panel;
+    }
+
+    private UIElement BuildExpiringContractsQuickView()
+    {
+        var panel = CreateDetailPanel("Contract Market", "Expiring Contracts Quick View");
+        var market = State.ContractMarket;
+        AddParagraph(panel, "Start here for contracts that need attention soon. Select a player below to open the full negotiation workspace.");
+        AddLine(panel, "Expiring within one year", market.ExpiringContracts.Count);
+        AddLine(panel, "Open negotiations", market.OpenNegotiations);
+        AddLine(panel, "Rights decisions", market.RightsDecisions.Count);
+        AddSubHeader(panel, "Expiring contracts");
+        if (market.ExpiringContracts.Count == 0)
+        {
+            AddParagraph(panel, "No signed contracts expire within the current review window.");
+        }
+        else
+        {
+            foreach (var contract in market.ExpiringContracts.Take(8))
+            {
+                var name = FindPersonName(contract.PersonId);
+                AddParagraph(panel, $"{name} | {contract.Money.SalaryOrStipend:C0} annually | expires {contract.Term.EndDate:yyyy-MM-dd}");
+                AddActions(panel, CreateDetailButton("Open contract", () => SelectPersonInList("Contract Market", contract.PersonId)));
+            }
+        }
+
+        AddSubHeader(panel, "What needs attention");
+        AddParagraph(panel, market.Deadlines.Count(deadline => deadline.IsActionable) == 0
+            ? "No contract deadline requires action today."
+            : $"{market.Deadlines.Count(deadline => deadline.IsActionable)} contract deadline(s) are actionable. Review rights and negotiations before the deadline.");
+        return panel;
+    }
+
+    private static string PromiseSummary(string? position, string? iceTime, string? nhlRoster)
+    {
+        var promises = new[]
+        {
+            string.IsNullOrWhiteSpace(position) ? null : $"Position: {position}",
+            string.IsNullOrWhiteSpace(iceTime) ? null : $"Ice time: {iceTime}",
+            string.IsNullOrWhiteSpace(nhlRoster) ? null : $"NHL status: {nhlRoster}"
+        }.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+        return promises.Length == 0 ? "No special promises" : string.Join(" | ", promises);
     }
 
     private UIElement BuildContractRightsDetail(SelectablePersonRow? row)
@@ -13679,7 +13780,14 @@ internal sealed class AlphaDesktopState
     public void StartContractNegotiationFor(string personId) =>
         ApplyContractMarketResult(_contractMarket.StartNegotiation(_registry, ScenarioSnapshot, personId));
 
-    public void SubmitContractMarketOfferFor(string personId, decimal? annualSalary = null, int? termYears = null)
+    public void SubmitContractMarketOfferFor(
+        string personId,
+        decimal? annualSalary = null,
+        int? termYears = null,
+        string? positionPromise = null,
+        string? iceTimePromise = null,
+        string? nhlRosterPromise = null,
+        string? notes = null)
     {
         var negotiation = ScenarioSnapshot.ContractNegotiations
             .Where(item => item.PersonId == personId && item.IsOpen)
@@ -13697,7 +13805,11 @@ internal sealed class AlphaDesktopState
             personId,
             annualSalary ?? negotiation.Demand.AnnualSalary,
             termYears ?? negotiation.Demand.TermYears,
-            negotiation.Demand.DesiredRole));
+            negotiation.Demand.DesiredRole,
+            notes,
+            positionPromise,
+            iceTimePromise,
+            nhlRosterPromise));
     }
 
     public void AcceptCurrentContractOfferFor(string personId)
@@ -13717,7 +13829,10 @@ internal sealed class AlphaDesktopState
             negotiation.CurrentOffer.Money.SalaryOrStipend,
             termYears,
             negotiation.Demand.DesiredRole,
-            "GM accepted the agent counteroffer and is requesting final approval."));
+            "GM accepted the agent counteroffer and is requesting final approval.",
+            negotiation.CurrentOffer.PositionPromise,
+            negotiation.CurrentOffer.IceTimePromise,
+            negotiation.CurrentOffer.NhlRosterPromise));
     }
 
     public void WithdrawContractNegotiationFor(string personId) =>

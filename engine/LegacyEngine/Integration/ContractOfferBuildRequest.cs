@@ -14,6 +14,12 @@ public sealed record ContractOfferBuildRequest(
     string Notes,
     ContractType? ContractType = null)
 {
+    public string? PositionPromise { get; init; }
+
+    public string? IceTimePromise { get; init; }
+
+    public string? NhlRosterPromise { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(PersonId)

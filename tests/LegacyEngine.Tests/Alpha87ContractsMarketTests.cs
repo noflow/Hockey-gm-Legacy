@@ -100,6 +100,59 @@ internal sealed class Alpha87ContractsMarketTests
         Assert.True(board.Summary.Contains("target", StringComparison.OrdinalIgnoreCase), "Target board should summarize the market.");
     }
 
+    public void ContractOfferCarriesExplicitRolePromises()
+    {
+        var created = NewGmScenarioBootstrapper.CreateScenario();
+        var freeAgent = created.ScenarioSnapshot.FreeAgentMarket!.FreeAgents.First();
+        var service = new ContractManagementService();
+        var ask = service.BuildAsk(created.ScenarioSnapshot, ContractAskType.FreeAgent, freeAgent.PersonId);
+        var request = new ContractOfferBuildRequest(
+            freeAgent.PersonId,
+            ContractAskType.FreeAgent,
+            ask.RequestedSalary,
+            ask.RequestedTermYears,
+            ask.DesiredRole,
+            "A defined development plan",
+            false,
+            "No staff promise",
+            "Explicit promise test")
+        {
+            PositionPromise = "Center",
+            IceTimePromise = "Top-six role",
+            NhlRosterPromise = "NHL roster"
+        };
+
+        var evaluation = service.BuildOffer(created.Registry, created.ScenarioSnapshot, request);
+
+        Assert.True(evaluation.Explanation.Reasons.Any(reason => reason.Contains("Position promise: Center", StringComparison.Ordinal)), "Position promise should be part of the offer explanation.");
+        Assert.True(evaluation.Explanation.Reasons.Any(reason => reason.Contains("Ice-time promise: Top-six role", StringComparison.Ordinal)), "Ice-time promise should be part of the offer explanation.");
+        Assert.True(evaluation.Explanation.Reasons.Any(reason => reason.Contains("NHL status promise: NHL roster", StringComparison.Ordinal)), "NHL status promise should be part of the offer explanation.");
+    }
+
+    public void MarketOfferPreservesPromisesOnCounterOrSigning()
+    {
+        var created = NewGmScenarioBootstrapper.CreateScenario();
+        var freeAgent = created.ScenarioSnapshot.FreeAgentMarket!.FreeAgents.First();
+        var service = new ContractMarketService();
+        var started = service.StartNegotiation(created.Registry, created.ScenarioSnapshot, freeAgent.PersonId);
+        var result = service.SubmitOffer(
+            created.Registry,
+            started.ScenarioSnapshot,
+            freeAgent.PersonId,
+            started.Negotiation!.Demand.AnnualSalary,
+            started.Negotiation.Demand.TermYears,
+            started.Negotiation.Demand.DesiredRole,
+            "Promise persistence test",
+            "Center",
+            "Top-six role",
+            "NHL roster");
+
+        Assert.True(result.Success, result.Message);
+        Assert.True(result.Negotiation?.CurrentOffer?.PositionPromise == "Center", "The current offer should retain the position promise.");
+        Assert.True(result.Negotiation?.CurrentOffer?.IceTimePromise == "Top-six role", "The current offer should retain the ice-time promise.");
+        Assert.True(result.Negotiation?.CurrentOffer?.NhlRosterPromise == "NHL roster", "The current offer should retain the NHL status promise.");
+    }
+
     public void SaveLoadPreservesContractNegotiation()
     {
         var created = NewGmScenarioBootstrapper.CreateScenario();

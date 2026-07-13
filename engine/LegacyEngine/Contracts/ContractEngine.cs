@@ -32,7 +32,12 @@ public sealed class ContractEngine
             SignedOn: null,
             RejectedOn: null,
             TerminatedOn: null,
-            ExpiredOn: null);
+            ExpiredOn: null)
+        {
+            PositionPromise = offer.PositionPromise,
+            IceTimePromise = offer.IceTimePromise,
+            NhlRosterPromise = offer.NhlRosterPromise
+        };
 
         contract.Validate();
         QueueContractEvent(

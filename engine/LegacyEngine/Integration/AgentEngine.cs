@@ -268,6 +268,12 @@ public sealed class AgentEngine
             modifier -= 7;
         }
 
+        if (ask.DesiredRole.Contains("center", StringComparison.OrdinalIgnoreCase)
+            && !PromiseText(request).Contains("center", StringComparison.OrdinalIgnoreCase))
+        {
+            modifier -= 6;
+        }
+
         if (style is AgentNegotiationStyle.Patient && request.AskType == ContractAskType.FreeAgent)
         {
             modifier -= 4;
@@ -312,6 +318,12 @@ public sealed class AgentEngine
             return "Term is shorter than the client wanted.";
         }
 
+        if (ask.DesiredRole.Contains("center", StringComparison.OrdinalIgnoreCase)
+            && !PromiseText(request).Contains("center", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The player wants a clear center-position guarantee.";
+        }
+
         if (fit.TeamFitScore < ask.TeamPreference.MinimumTeamFit)
         {
             return fit.Risk;
@@ -337,6 +349,12 @@ public sealed class AgentEngine
             return "Add another year or explain why the shorter term benefits the player.";
         }
 
+        if (ask.DesiredRole.Contains("center", StringComparison.OrdinalIgnoreCase)
+            && !PromiseText(request).Contains("center", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Add a center position guarantee or clarify the player's position pathway.";
+        }
+
         if (fit.TeamFitScore < ask.TeamPreference.MinimumTeamFit)
         {
             return "Show a stronger competitive plan, coaching fit, or role pathway before asking the player to commit.";
@@ -349,6 +367,15 @@ public sealed class AgentEngine
 
         return "Keep the role, budget, and communication commitments clear.";
     }
+
+    private static string PromiseText(ContractOfferBuildRequest request) =>
+        string.Join("; ", new[]
+        {
+            request.RolePromise,
+            request.PositionPromise,
+            request.IceTimePromise,
+            request.NhlRosterPromise
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     private static string OpinionFor(string agentName, string clientName, AgentNegotiationDecision decision, AgentNegotiationStyle style, string concern) =>
         decision switch

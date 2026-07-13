@@ -67,7 +67,7 @@ public sealed class ContractManagementService
             BudgetRemainingAfter: budgetAfter,
             CurrentContractSummary: currentCost > 0 ? $"Current annual cost {currentCost:C0}." : "No active contract on file.",
             RoleRequested: ask.DesiredRole,
-            RoleOffered: request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : request.RolePromise,
+            RoleOffered: request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : PromiseRoleText(request),
             TermRequestedYears: ask.RequestedTermYears,
             TermOfferedYears: request.TermYears,
             LikelyReaction: explanation.Summary);
@@ -222,7 +222,21 @@ public sealed class ContractManagementService
                 scenario.FreeAgentMarket?.Find(request.PersonId)?.ContractAsk.Currency ?? "USD"),
             Clauses: Array.Empty<ContractClause>(),
             OfferedOn: scenario.CurrentDate,
-            Notes: request.Notes);
+            Notes: request.Notes)
+        {
+            PositionPromise = request.PositionPromise,
+            IceTimePromise = request.IceTimePromise,
+            NhlRosterPromise = request.NhlRosterPromise
+        };
+
+    private static string PromiseRoleText(ContractOfferBuildRequest request) =>
+        string.Join("; ", new[]
+        {
+            request.RolePromise,
+            request.PositionPromise,
+            request.IceTimePromise,
+            request.NhlRosterPromise
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
     private static PendingGmActionType SourceActionType(ContractAskType askType) =>
         askType switch
@@ -323,7 +337,7 @@ public sealed class ContractManagementService
             ContractType: request.ContractType ?? DefaultContractType(request.AskType),
             OfferedSalary: request.AnnualSalary,
             OfferedTermYears: request.TermYears,
-            RolePromise: request.RolePromise,
+            RolePromise: PromiseRoleText(request),
             DevelopmentPromise: request.DevelopmentPromise,
             ContractNotes: request.Notes);
         action.Validate();
@@ -534,7 +548,7 @@ public sealed class ContractManagementService
         var salaryTarget = new ContractTeamFitService().EffectiveSalaryTarget(ask, teamFit);
         var salaryScore = salaryTarget <= 0 ? 100 : Math.Clamp((int)Math.Round((request.AnnualSalary / salaryTarget) * 100m), 0, 125);
         var termScore = request.TermYears >= ask.RequestedTermYears ? 80 : 45;
-        var roleText = request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : request.RolePromise;
+        var roleText = request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : PromiseRoleText(request);
         var roleScore = ContainsRoleSignal(roleText, ask.DesiredRole) ? 85 : 45;
         var developmentScore = string.IsNullOrWhiteSpace(request.DevelopmentPromise) ? 45 : 75;
         var relationshipScore = RelationshipWithGm(scenario, ask.PersonId);
@@ -582,7 +596,7 @@ public sealed class ContractManagementService
             request.TermYears >= ask.RequestedTermYears
                 ? $"Term matches the requested {ask.RequestedTermYears} year(s)."
                 : "Term is shorter than requested.",
-            ContainsRoleSignal(request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : request.RolePromise, ask.DesiredRole)
+            ContainsRoleSignal(request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : PromiseRoleText(request), ask.DesiredRole)
                 ? $"Role promise supports {ask.DesiredRole}."
                 : $"Role promise does not clearly match {ask.DesiredRole}.",
             budgetAfter < 0
@@ -600,6 +614,21 @@ public sealed class ContractManagementService
         if (!string.IsNullOrWhiteSpace(request.DevelopmentPromise))
         {
             reasons.Add($"Development/pathway promise: {request.DevelopmentPromise}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PositionPromise))
+        {
+            reasons.Add($"Position promise: {request.PositionPromise}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.IceTimePromise))
+        {
+            reasons.Add($"Ice-time promise: {request.IceTimePromise}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.NhlRosterPromise))
+        {
+            reasons.Add($"NHL status promise: {request.NhlRosterPromise}");
         }
 
         var summary = decision switch
@@ -678,7 +707,7 @@ public sealed class ContractManagementService
 
     private static string RoleFitWarning(NewGmScenarioSnapshot scenario, ContractOfferBuildRequest request)
     {
-        if (request.AskType == ContractAskType.StaffMember || string.IsNullOrWhiteSpace(request.RolePromise))
+        if (request.AskType == ContractAskType.StaffMember || string.IsNullOrWhiteSpace(PromiseRoleText(request)))
         {
             return "No role promise capacity warning.";
         }
@@ -689,7 +718,7 @@ public sealed class ContractManagementService
             return "No role promise capacity warning.";
         }
 
-        var role = request.RolePromise;
+        var role = PromiseRoleText(request);
         if (role.Contains("first", StringComparison.OrdinalIgnoreCase)
             || role.Contains("top six", StringComparison.OrdinalIgnoreCase)
             || role.Contains("top-six", StringComparison.OrdinalIgnoreCase))

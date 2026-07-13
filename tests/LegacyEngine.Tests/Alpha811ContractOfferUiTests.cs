@@ -30,8 +30,18 @@ internal sealed class Alpha811ContractOfferUiTests
     {
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
 
-        Assert.True(source.Contains("SubmitContractMarketOfferFor(string personId, decimal? annualSalary = null, int? termYears = null)", StringComparison.Ordinal), "The UI should pass salary and term into the contract market.");
-        Assert.True(source.Contains("State.SubmitContractMarketOfferFor(personId, salary, term)", StringComparison.Ordinal), "Submitting the form should use the entered offer values.");
+        Assert.True(source.Contains("SubmitContractMarketOfferFor(\n        string personId", StringComparison.Ordinal), "The UI should pass salary and term into the contract market.");
+        Assert.True(source.Contains("State.SubmitContractMarketOfferFor(\n                    personId,", StringComparison.Ordinal), "Submitting the form should use the entered offer values.");
+    }
+
+    public void ContractUiExposesRoleAndRosterPromiseControls()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
+
+        Assert.True(source.Contains("Position guarantee", StringComparison.Ordinal), "The offer form should let the GM answer position guarantees.");
+        Assert.True(source.Contains("Ice-time promise", StringComparison.Ordinal), "The offer form should let the GM offer an ice-time role.");
+        Assert.True(source.Contains("NHL status", StringComparison.Ordinal), "The offer form should let the GM offer an NHL roster pathway.");
+        Assert.True(source.Contains("Expiring Contracts Quick View", StringComparison.Ordinal), "The contract market should expose a quick expiring-contract view.");
     }
 
     private static string FindRepositoryRoot()

@@ -15,6 +15,12 @@ public sealed record Contract(
     DateOnly? TerminatedOn,
     DateOnly? ExpiredOn)
 {
+    public string? PositionPromise { get; init; }
+
+    public string? IceTimePromise { get; init; }
+
+    public string? NhlRosterPromise { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(ContractId))

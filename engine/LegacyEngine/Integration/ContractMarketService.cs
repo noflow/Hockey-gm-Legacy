@@ -175,7 +175,10 @@ public sealed class ContractMarketService
         decimal annualSalary,
         int termYears,
         string? rolePromise = null,
-        string? notes = null)
+        string? notes = null,
+        string? positionPromise = null,
+        string? iceTimePromise = null,
+        string? nhlRosterPromise = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(scenario);
@@ -207,7 +210,12 @@ public sealed class ContractMarketService
             negotiation.AskType is ContractAskType.Prospect or ContractAskType.Recruit,
             "No additional staff promise",
             notes ?? "Contract Market v4 offer",
-            ContractTypeFor(negotiation.AskType));
+            ContractTypeFor(negotiation.AskType))
+        {
+            PositionPromise = positionPromise,
+            IceTimePromise = iceTimePromise,
+            NhlRosterPromise = nhlRosterPromise
+        };
         ContractManagementResult contractResult;
         try
         {
@@ -242,7 +250,12 @@ public sealed class ContractMarketService
             new ContractMoney(annualSalary, 0m, scenario.FreeAgentMarket?.Find(personId)?.ContractAsk.Currency ?? "USD"),
             Array.Empty<ContractClause>(),
             scenario.CurrentDate,
-            request.Notes);
+            request.Notes)
+        {
+            PositionPromise = request.PositionPromise,
+            IceTimePromise = request.IceTimePromise,
+            NhlRosterPromise = request.NhlRosterPromise
+        };
         var nextNegotiation = negotiation with
         {
             Status = status,

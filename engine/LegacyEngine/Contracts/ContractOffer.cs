@@ -11,6 +11,12 @@ public sealed record ContractOffer(
     DateOnly OfferedOn,
     string Notes)
 {
+    public string? PositionPromise { get; init; }
+
+    public string? IceTimePromise { get; init; }
+
+    public string? NhlRosterPromise { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(OfferId))

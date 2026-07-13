@@ -1585,6 +1585,8 @@ runner.Run("alpha 8.7 free agency target board shows timing", alpha87ContractsMa
 runner.Run("alpha 8.7 save load preserves contract negotiation", alpha87ContractsMarketTests.SaveLoadPreservesContractNegotiation);
 runner.Run("alpha 8.7 desktop exposes contract market", alpha87ContractsMarketTests.AlphaDesktopExposesContractMarketWorkspace);
 runner.Run("alpha 8.7 has no Godot or full CBA", alpha87ContractsMarketTests.Alpha87DoesNotAddGodotOrFullCba);
+runner.Run("contract offer carries explicit role promises", alpha87ContractsMarketTests.ContractOfferCarriesExplicitRolePromises);
+runner.Run("market offer preserves promises", alpha87ContractsMarketTests.MarketOfferPreservesPromisesOnCounterOrSigning);
 runner.Run("alpha 8.8 contract cycle expires contracts and refreshes market", alpha88OffseasonContractCycleTests.CycleExpiresContractsAndRefreshesMarket);
 runner.Run("alpha 8.8 contract expiry notice is idempotent", alpha88OffseasonContractCycleTests.CycleIsIdempotentForContractExpiryNotice);
 runner.Run("alpha 8.8 cycle does not approve contracts or move players", alpha88OffseasonContractCycleTests.CycleDoesNotApproveContractsOrMoveRosterPlayers);
@@ -1607,6 +1609,7 @@ runner.Run("alpha 8.10 desktop exposes opening night surface", alpha810OpeningNi
 runner.Run("alpha 8.11 expiring player can open contract negotiation", alpha811ContractOfferUiTests.ExistingPlayerCanOpenContractNegotiation);
 runner.Run("alpha 8.11 contract UI exposes offer form", alpha811ContractOfferUiTests.ContractUiExposesOfferFormFromRightsAndFreeAgents);
 runner.Run("alpha 8.11 contract UI submits salary and term", alpha811ContractOfferUiTests.ContractMarketOfferAcceptsUserEnteredSalaryAndTerm);
+runner.Run("alpha 8.11 contract UI exposes promise controls", alpha811ContractOfferUiTests.ContractUiExposesRoleAndRosterPromiseControls);
 runner.Run("alpha 8.11 RFA/UFA negotiation includes salary and term", alpha811AgentContractNegotiationTests.RfaUfaNegotiationIncludesSalaryAndTermDemand);
 runner.Run("alpha 8.11 agents expose team fit and hometown discounts", alpha811AgentContractNegotiationTests.AgentPreferencesIncludeTeamFitAndHometownDiscounts);
 runner.Run("alpha 8.11 poor team fit adds rejection risk", alpha811AgentContractNegotiationTests.ContenderPreferenceAddsPoorTeamRejectionRisk);
