@@ -281,6 +281,8 @@ public sealed record ContractMarketResult(
     IReadOnlyList<AlphaInboxItem> InboxItems,
     string Message)
 {
+    public IReadOnlyList<LeagueTransaction> LeagueTransactions { get; init; } = Array.Empty<LeagueTransaction>();
+
     public void Validate()
     {
         ScenarioSnapshot.Validate();
@@ -289,6 +291,11 @@ public sealed record ContractMarketResult(
         if (string.IsNullOrWhiteSpace(Message))
         {
             throw new ArgumentException("Contract market result requires a message.");
+        }
+
+        foreach (var transaction in LeagueTransactions)
+        {
+            transaction.Validate();
         }
     }
 }

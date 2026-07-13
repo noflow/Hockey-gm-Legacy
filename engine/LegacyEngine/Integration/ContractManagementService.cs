@@ -102,7 +102,8 @@ public sealed class ContractManagementService
     public ContractManagementResult SubmitOffer(
         EngineRegistry registry,
         NewGmScenarioSnapshot scenario,
-        ContractOfferBuildRequest request)
+        ContractOfferBuildRequest request,
+        bool completeAcceptedOffer = false)
     {
         var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, request.AnnualSalary, request.TermYears);
         if (!cap.IsCompliant)
@@ -120,19 +121,68 @@ public sealed class ContractManagementService
         var evaluation = BuildOffer(registry, scenario, request);
         QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferSubmitted, $"Offer sent to {evaluation.AgentName}", $"{evaluation.AgentName} is reviewing a {request.TermYears}-year offer worth {request.AnnualSalary:C0} per year for {evaluation.Ask.PersonName}.", request.PersonId, evaluation);
 
-        var inbox = new List<AlphaInboxItem>
+        var inbox = new List<AlphaInboxItem>();
+        if (evaluation.Decision != ContractOfferDecision.Accepted || !completeAcceptedOffer)
         {
-            Inbox(scenario, LegacyEventType.ContractOfferSubmitted, $"Agent reviewing offer: {evaluation.AgentName}", evaluation.AgentOpinion, request.PersonId)
-        };
+            inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferSubmitted, $"Agent reviewing offer: {evaluation.AgentName}", evaluation.AgentOpinion, request.PersonId));
+        }
         var next = scenario;
+        var transactions = new List<LeagueTransaction>();
+        var message = $"{evaluation.AgentName}: {evaluation.AgentOpinion}";
 
         if (evaluation.Decision == ContractOfferDecision.Accepted)
         {
-            QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferAccepted, $"Agent acceptance: {evaluation.AgentName}", $"{evaluation.AgentName} says {evaluation.Ask.PersonName} is ready to proceed, pending GM approval.", request.PersonId, evaluation);
-            var pending = CreateAcceptedPendingAction(registry, scenario, request, evaluation);
-            next = pending.ScenarioSnapshot;
-            inbox.AddRange(pending.InboxItems);
-            inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferAccepted, $"Agent acceptance pending approval: {evaluation.Ask.PersonName}", evaluation.AgentOpinion, request.PersonId, LegacyEventSeverity.Warning));
+            var acceptanceDescription = completeAcceptedOffer
+                ? $"{evaluation.AgentName} accepted the terms and {evaluation.Ask.PersonName}'s contract is now signed."
+                : $"{evaluation.AgentName} says {evaluation.Ask.PersonName} is ready to proceed, pending GM approval.";
+            QueueContractEvent(registry, scenario, LegacyEventType.ContractOfferAccepted, $"Agent acceptance: {evaluation.AgentName}", acceptanceDescription, request.PersonId, evaluation);
+
+            if (completeAcceptedOffer)
+            {
+                var offered = registry.ContractEngine.CreateOffer(
+                    BuildAcceptedContractOffer(scenario, request, evaluation),
+                    registry.Rulebook is null ? null : new ContractRuleValidator(registry.Rulebook));
+                var signed = registry.ContractEngine.SignContract(offered, scenario.CurrentDate).Contract;
+                var contracts = scenario.Contracts
+                    .Where(contract => contract.ContractId != signed.ContractId)
+                    .Append(signed)
+                    .ToArray();
+                next = scenario with
+                {
+                    Contracts = contracts,
+                    AlphaSnapshot = scenario.AlphaSnapshot with { Contracts = contracts }
+                };
+                next = new CareerHistoryService().RecordContractSigned(
+                    next,
+                    signed,
+                    evaluation.Ask.PersonName,
+                    SourceActionType(request.AskType));
+                transactions.Add(new LeagueTransaction(
+                    $"league-contract:{signed.ContractId}",
+                    new DateTimeOffset(scenario.CurrentDate.Year, scenario.CurrentDate.Month, scenario.CurrentDate.Day, 12, 0, 0, TimeSpan.Zero),
+                    scenario.Organization.OrganizationId,
+                    scenario.Organization.Name,
+                    signed.PersonId,
+                    evaluation.Ask.PersonName,
+                    LeagueTransactionType.ContractSigned,
+                    LeagueNewsCategory.Signings,
+                    $"{scenario.Organization.Name} signed {evaluation.Ask.PersonName} for {signed.Money.SalaryOrStipend:C0} per year over {request.TermYears} year(s)."));
+                inbox.Add(Inbox(
+                    scenario,
+                    LegacyEventType.ContractSigned,
+                    $"Contract signed: {evaluation.Ask.PersonName}",
+                    $"The agent accepted {signed.Money.SalaryOrStipend:C0} per year for {request.TermYears} year(s). The agreement is complete and no further GM approval is required.",
+                    request.PersonId));
+                message = $"{evaluation.Ask.PersonName}'s contract is signed at {signed.Money.SalaryOrStipend:C0} per year for {request.TermYears} year(s).";
+            }
+            else
+            {
+                var pending = CreateAcceptedPendingAction(registry, scenario, request, evaluation);
+                next = pending.ScenarioSnapshot;
+                inbox.AddRange(pending.InboxItems);
+                inbox.Add(Inbox(scenario, LegacyEventType.ContractOfferAccepted, $"Agent acceptance pending approval: {evaluation.Ask.PersonName}", evaluation.AgentOpinion, request.PersonId, LegacyEventSeverity.Warning));
+                message = $"{evaluation.AgentName} accepted terms for {evaluation.Ask.PersonName}; GM approval is required before signing.";
+            }
         }
         else if (evaluation.Decision == ContractOfferDecision.Rejected)
         {
@@ -150,13 +200,38 @@ public sealed class ContractManagementService
             ScenarioSnapshot: next,
             Evaluation: evaluation,
             InboxItems: inbox,
-            LeagueTransactions: Array.Empty<LeagueTransaction>(),
-            Message: evaluation.Decision == ContractOfferDecision.Accepted
-                ? $"{evaluation.AgentName} accepted terms for {evaluation.Ask.PersonName}; GM approval is required before signing."
-                : $"{evaluation.AgentName}: {evaluation.AgentOpinion}");
+            LeagueTransactions: transactions,
+            Message: message);
         result.Validate();
         return result;
     }
+
+    private static ContractOffer BuildAcceptedContractOffer(
+        NewGmScenarioSnapshot scenario,
+        ContractOfferBuildRequest request,
+        ContractOfferEvaluation evaluation) =>
+        new(
+            OfferId: $"contract-market:{evaluation.EvaluationId}",
+            PersonId: request.PersonId,
+            OrganizationId: scenario.Organization.OrganizationId,
+            ContractType: request.ContractType ?? DefaultContractType(request.AskType),
+            Term: evaluation.Term,
+            Money: new ContractMoney(
+                request.AnnualSalary,
+                0m,
+                scenario.FreeAgentMarket?.Find(request.PersonId)?.ContractAsk.Currency ?? "USD"),
+            Clauses: Array.Empty<ContractClause>(),
+            OfferedOn: scenario.CurrentDate,
+            Notes: request.Notes);
+
+    private static PendingGmActionType SourceActionType(ContractAskType askType) =>
+        askType switch
+        {
+            ContractAskType.FreeAgent => PendingGmActionType.SignFreeAgent,
+            ContractAskType.Prospect => PendingGmActionType.SignDraftPick,
+            ContractAskType.Recruit => PendingGmActionType.SignRecruit,
+            _ => PendingGmActionType.ApproveContract
+        };
 
     public ContractManagementSummary BuildSummary(NewGmScenarioSnapshot scenario, Rulebook? rulebook = null)
     {

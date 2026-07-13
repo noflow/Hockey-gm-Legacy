@@ -7,8 +7,8 @@ namespace LegacyEngine.Integration;
 
 /// <summary>
 /// Coordinates contract decisions across extensions, rights, arbitration, and free agency.
-/// It deliberately stops at an accepted-in-principle deal: signing still requires the
-/// existing pending GM approval path.
+/// Explicit offers submitted from this market complete immediately when the agent accepts;
+/// counteroffers remain open for another GM revision.
 /// </summary>
 public sealed class ContractMarketService
 {
@@ -211,7 +211,7 @@ public sealed class ContractMarketService
         ContractManagementResult contractResult;
         try
         {
-            contractResult = _contracts.SubmitOffer(registry, scenario, request);
+            contractResult = _contracts.SubmitOffer(registry, scenario, request, completeAcceptedOffer: true);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {
@@ -228,7 +228,7 @@ public sealed class ContractMarketService
         };
         var status = response switch
         {
-            ContractOfferResponse.Accepted => ContractNegotiationStatus.AcceptedInPrinciple,
+            ContractOfferResponse.Accepted => ContractNegotiationStatus.Signed,
             ContractOfferResponse.Rejected => ContractNegotiationStatus.Rejected,
             ContractOfferResponse.Countered => ContractNegotiationStatus.Countered,
             _ => ContractNegotiationStatus.AgentReviewing
@@ -246,7 +246,7 @@ public sealed class ContractMarketService
         var nextNegotiation = negotiation with
         {
             Status = status,
-            MarketStatus = status == ContractNegotiationStatus.AcceptedInPrinciple ? ContractMarketStatus.Negotiating : negotiation.MarketStatus,
+            MarketStatus = status == ContractNegotiationStatus.Signed ? ContractMarketStatus.Signed : negotiation.MarketStatus,
             CurrentOffer = offer,
             LastEvaluation = evaluation,
             LastUpdatedOn = scenario.CurrentDate,
@@ -255,7 +255,7 @@ public sealed class ContractMarketService
             LastResponse = evaluation.Explanation.Summary,
             NextAction = status switch
             {
-                ContractNegotiationStatus.AcceptedInPrinciple => "Review the pending GM approval before signing.",
+                ContractNegotiationStatus.Signed => "Complete. The accepted offer has been signed.",
                 ContractNegotiationStatus.Countered => $"Respond to the counter. {evaluation.AgentCounterSuggestion}",
                 ContractNegotiationStatus.Rejected => "Withdraw, change the role, or revisit the market later.",
                 _ => "Wait for the agent response."
@@ -274,7 +274,7 @@ public sealed class ContractMarketService
             $"Offer {annualSalary:C0} for {termYears} year(s): {evaluation.Decision}. {evaluation.Explanation.Summary}");
         next = next with { ContractNegotiationHistory = next.ContractNegotiationHistory.Add(history) };
         QueueEvent(registry, next, LegacyEventType.ContractOfferSubmitted, $"Contract offer submitted: {negotiation.PersonName}", $"The GM offered {annualSalary:C0} per year for {termYears} year(s). {evaluation.Decision}.", personId);
-        return Success(next, nextNegotiation, evaluation, contractResult.InboxItems, contractResult.Message);
+        return Success(next, nextNegotiation, evaluation, contractResult.InboxItems, contractResult.Message, contractResult.LeagueTransactions);
     }
 
     public ContractMarketResult Respond(
@@ -496,9 +496,18 @@ public sealed class ContractMarketService
             summary,
             personId);
 
-    private static ContractMarketResult Success(NewGmScenarioSnapshot scenario, ContractNegotiation negotiation, ContractOfferEvaluation? evaluation, IReadOnlyList<AlphaInboxItem> inbox, string message)
+    private static ContractMarketResult Success(
+        NewGmScenarioSnapshot scenario,
+        ContractNegotiation negotiation,
+        ContractOfferEvaluation? evaluation,
+        IReadOnlyList<AlphaInboxItem> inbox,
+        string message,
+        IReadOnlyList<LeagueTransaction>? leagueTransactions = null)
     {
-        var result = new ContractMarketResult(true, scenario, negotiation, evaluation, inbox, message);
+        var result = new ContractMarketResult(true, scenario, negotiation, evaluation, inbox, message)
+        {
+            LeagueTransactions = leagueTransactions ?? Array.Empty<LeagueTransaction>()
+        };
         result.Validate();
         return result;
     }

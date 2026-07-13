@@ -1576,7 +1576,7 @@ runner.Run("alpha 8.6 multi-day briefings store urgency without duplicates", alp
 runner.Run("alpha 8.6 daily briefing archive survives save load", alpha86DailyHockeyWorldTests.DailyBriefingArchiveSurvivesSaveLoad);
 runner.Run("alpha 8.7 contract market summary includes decision sources", alpha87ContractsMarketTests.ContractMarketSummaryIncludesAllDecisionSources);
 runner.Run("alpha 8.7 contract negotiation starts with demand and deadline", alpha87ContractsMarketTests.NegotiationStartsWithDemandAndDeadline);
-runner.Run("alpha 8.7 offer produces response without signing automatically", alpha87ContractsMarketTests.OfferProducesResponseWithoutSigningAutomatically);
+runner.Run("alpha 8.7 accepted offer completes signing", alpha87ContractsMarketTests.AcceptedOfferCompletesSigningWithoutPendingApproval);
 runner.Run("alpha 8.7 negotiation history persists on snapshot", alpha87ContractsMarketTests.NegotiationHistorySurvivesSnapshotRoundTrip);
 runner.Run("alpha 8.7 contract comparables avoid hidden ratings", alpha87ContractsMarketTests.ContractComparablesUseVisibleContractInformationOnly);
 runner.Run("alpha 8.7 arbitration v2 models validate", alpha87ContractsMarketTests.ArbitrationV2SubmissionAndSettlementModelsValidate);

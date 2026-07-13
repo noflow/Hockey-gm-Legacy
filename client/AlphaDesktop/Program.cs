@@ -3117,15 +3117,29 @@ internal sealed class MainWindow : Window
         }
 
         var panel = CreateDetailPanel(negotiation.PersonName, "Contract Offer");
-        AddParagraph(panel, "Set the annual salary and term. The agent response will be evaluated immediately, but an accepted deal still requires explicit GM approval before signing.");
+        AddParagraph(panel, negotiation.Status == ContractNegotiationStatus.Countered
+            ? "The agent countered your last offer. Adjust the terms below and submit a revised offer."
+            : "The agent's opening ask is prefilled below. Adjust the salary and term, then submit your offer. If the agent accepts, the contract is signed immediately.");
         AddLine(panel, "Market status", negotiation.MarketStatus.ToString());
-        AddLine(panel, "Player/agent demand", $"{negotiation.Demand.AnnualSalary:C0} per year for {negotiation.Demand.TermYears} year(s)");
+        AddLine(panel, "Agent opening ask", $"{negotiation.Demand.AnnualSalary:C0} per year for {negotiation.Demand.TermYears} year(s)");
+        if (negotiation.CurrentOffer is not null)
+        {
+            AddLine(panel, "Current offer", $"{negotiation.CurrentOffer.Money.SalaryOrStipend:C0} per year for {Math.Max(1, negotiation.CurrentOffer.Term.EndDate.Year - negotiation.CurrentOffer.Term.StartDate.Year + 1)} year(s)");
+        }
+        if (negotiation.LastEvaluation is not null)
+        {
+            AddLine(panel, "Agent response", negotiation.LastEvaluation.AgentOpinion);
+            if (negotiation.Status == ContractNegotiationStatus.Countered)
+            {
+                AddLine(panel, "Counter request", negotiation.LastEvaluation.AgentCounterSuggestion);
+            }
+        }
         AddLine(panel, "Desired role", negotiation.Demand.DesiredRole);
         AddLine(panel, "Priorities", negotiation.Demand.Priorities);
 
         var salaryInput = new TextBox
         {
-            Text = negotiation.Demand.AnnualSalary.ToString("0"),
+            Text = (negotiation.CurrentOffer?.Money.SalaryOrStipend ?? negotiation.Demand.AnnualSalary).ToString("0"),
             MinWidth = 220,
             MinHeight = 30,
             Margin = new Thickness(0, 4, 0, 10),
@@ -3134,7 +3148,9 @@ internal sealed class MainWindow : Window
         var termInput = new ComboBox
         {
             ItemsSource = Enumerable.Range(1, 8).ToArray(),
-            SelectedItem = negotiation.Demand.TermYears,
+            SelectedItem = negotiation.CurrentOffer is null
+                ? negotiation.Demand.TermYears
+                : Math.Max(1, negotiation.CurrentOffer.Term.EndDate.Year - negotiation.CurrentOffer.Term.StartDate.Year + 1),
             MinWidth = 220,
             MinHeight = 30,
             Margin = new Thickness(0, 4, 0, 10),
@@ -3144,7 +3160,7 @@ internal sealed class MainWindow : Window
         panel.Children.Add(LabeledControl("Term (years)", termInput));
 
         AddActions(panel,
-            CreateDetailButton("Submit Offer", () =>
+            CreateDetailButton(negotiation.Status == ContractNegotiationStatus.Countered ? "Submit Revised Offer" : "Submit Offer", () =>
             {
                 if (!decimal.TryParse(salaryInput.Text.Trim(), out var salary) || salary < 0)
                 {
@@ -3155,7 +3171,7 @@ internal sealed class MainWindow : Window
                 var term = termInput.SelectedItem is int selectedTerm ? selectedTerm : negotiation.Demand.TermYears;
                 State.SubmitContractMarketOfferFor(personId, salary, term);
                 Window.GetWindow(panel)?.Close();
-            }, negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "This offer is already accepted in principle; review the pending approval."),
+            }, negotiation.IsOpen, "This negotiation is complete. Open a new contract decision only if the player becomes available again."),
             CreateDetailButton("View Contract Market", () =>
             {
                 Window.GetWindow(panel)?.Close();
@@ -17827,6 +17843,7 @@ internal sealed class AlphaDesktopState
             SetScenarioSnapshot(result.ScenarioSnapshot);
             EnsureSelectedDossierStillExists();
             AddInboxItems(result.InboxItems);
+            AddLeagueTransactions(result.LeagueTransactions);
         }
 
         LastProcessedEventCount = 0;

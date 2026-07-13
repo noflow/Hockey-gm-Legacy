@@ -22,7 +22,8 @@ internal sealed class Alpha811ContractOfferUiTests
         Assert.True(source.Contains("Offer Contract", StringComparison.Ordinal), "Expiring players and free agents should expose Offer Contract.");
         Assert.True(source.Contains("Annual salary", StringComparison.Ordinal), "The offer form should explain annual salary.");
         Assert.True(source.Contains("Term (years)", StringComparison.Ordinal), "The offer form should capture contract term.");
-        Assert.True(source.Contains("accepted deal still requires explicit GM approval", StringComparison.Ordinal), "The UI should explain that offers do not auto-sign players.");
+        Assert.True(source.Contains("Agent opening ask", StringComparison.Ordinal), "The UI should show the agent's opening salary and term before the GM edits an offer.");
+        Assert.True(source.Contains("contract is signed immediately", StringComparison.Ordinal), "The UI should explain that an accepted submitted offer completes the contract.");
     }
 
     public void ContractMarketOfferAcceptsUserEnteredSalaryAndTerm()

@@ -83,7 +83,7 @@ internal sealed class Alpha811AgentContractNegotiationTests
 
         Assert.True(source.Contains("Accept Counter", StringComparison.Ordinal), "The contract market should let the GM accept a counteroffer.");
         Assert.True(source.Contains("Reject / Walk Away", StringComparison.Ordinal), "The contract market should let the GM reject or walk away.");
-        Assert.True(source.Contains("Review Approval", StringComparison.Ordinal), "Accepted terms should route to explicit GM approval.");
+        Assert.True(source.Contains("Submit Revised Offer", StringComparison.Ordinal), "A counteroffer should return the GM to an editable revised offer flow.");
         Assert.True(source.Contains("Team preference", StringComparison.Ordinal), "The contract UI should explain player team preferences.");
         Assert.True(source.Contains("Team-fit risk", StringComparison.Ordinal), "The contract UI should explain poor-team rejection risk.");
     }

@@ -29,7 +29,7 @@ internal sealed class Alpha87ContractsMarketTests
         Assert.True(result.ScenarioSnapshot.ContractNegotiationHistory.ForPlayer(agent.PersonId).Count == 1, "Negotiation history should be stored.");
     }
 
-    public void OfferProducesResponseWithoutSigningAutomatically()
+    public void AcceptedOfferCompletesSigningWithoutPendingApproval()
     {
         var created = NewGmScenarioBootstrapper.CreateScenario();
         var agent = created.ScenarioSnapshot.FreeAgentMarket!.FreeAgents
@@ -42,7 +42,16 @@ internal sealed class Alpha87ContractsMarketTests
 
         Assert.True(result.Success, result.Message);
         Assert.True(result.Negotiation!.LastEvaluation is not null, "Offer should return an explainable evaluation.");
-        Assert.False(result.ScenarioSnapshot.Contracts.Any(contract => contract.PersonId == agent.PersonId && contract.Status == ContractStatus.Signed), "Contract market offers must still require explicit GM approval.");
+        if (result.Evaluation!.Decision == ContractOfferDecision.Accepted)
+        {
+            Assert.True(result.Negotiation.Status == ContractNegotiationStatus.Signed, "An accepted contract-market offer should close as signed.");
+            Assert.True(result.ScenarioSnapshot.Contracts.Any(contract => contract.PersonId == agent.PersonId && contract.Status == ContractStatus.Signed), "An accepted offer should create the signed contract immediately.");
+            Assert.False(result.ScenarioSnapshot.PendingActions.Any(action => action.PersonId == agent.PersonId && action.ActionType == PendingGmActionType.ApproveContract && action.IsOpen), "An accepted contract-market offer should not create a second GM approval step.");
+        }
+        else
+        {
+            Assert.True(result.Negotiation.Status is ContractNegotiationStatus.Countered or ContractNegotiationStatus.Rejected, "A non-accepted offer should remain a negotiation response.");
+        }
     }
 
     public void NegotiationHistorySurvivesSnapshotRoundTrip()
