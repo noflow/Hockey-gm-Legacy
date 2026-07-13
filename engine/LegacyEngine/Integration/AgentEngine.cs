@@ -64,7 +64,8 @@ public sealed class AgentEngine
         NewGmScenarioSnapshot scenario,
         ContractAsk ask,
         ContractOfferBuildRequest request,
-        int baseScore)
+        int baseScore,
+        ContractTeamFitEvaluation? teamFit = null)
     {
         ArgumentNullException.ThrowIfNull(scenario);
         ArgumentNullException.ThrowIfNull(ask);
@@ -74,9 +75,10 @@ public sealed class AgentEngine
         var agent = representation?.AgentId is null ? null : FindAgent(scenario, representation.AgentId);
         var style = agent?.NegotiationStyle ?? StyleForRepresentation(representation?.RepresentationType ?? PlayerRepresentationType.NoAgent);
         var relationship = agent?.GmRelationship.Score ?? 50;
+        var fit = teamFit ?? new ContractTeamFitService().Evaluate(scenario, ask);
         var salaryGap = ask.RequestedSalary <= 0 ? 0 : (request.AnnualSalary - ask.RequestedSalary) / ask.RequestedSalary;
         var termGap = request.TermYears - ask.RequestedTermYears;
-        var modifier = StyleModifier(style, salaryGap, termGap, relationship, ask, request);
+        var modifier = StyleModifier(style, salaryGap, termGap, relationship, ask, request, fit);
         var likelihood = Math.Clamp(baseScore + modifier, 0, 100);
         var decision = likelihood switch
         {
@@ -91,8 +93,8 @@ public sealed class AgentEngine
             decision = AgentNegotiationDecision.Waiting;
         }
 
-        var concern = BiggestConcern(ask, request, salaryGap, termGap, style);
-        var improvement = RequestedImprovement(ask, request, salaryGap, termGap, style);
+        var concern = BiggestConcern(ask, request, salaryGap, termGap, style, fit);
+        var improvement = RequestedImprovement(ask, request, salaryGap, termGap, style, fit);
         var agentName = agent?.Name ?? RepresentationLabel(representation?.RepresentationType ?? PlayerRepresentationType.NoAgent);
         var agency = agent?.Profile.AgencyName ?? "No formal agency";
         var opinion = OpinionFor(agentName, ask.PersonName, decision, style, concern);
@@ -253,7 +255,7 @@ public sealed class AgentEngine
             ? new[] { ContractType.JuniorPlayerAgreement, ContractType.GMContract }
             : new[] { ContractType.JuniorPlayerAgreement, ContractType.StaffContract, ContractType.CoachContract };
 
-    private static int StyleModifier(AgentNegotiationStyle style, decimal salaryGap, int termGap, int relationship, ContractAsk ask, ContractOfferBuildRequest request)
+    private static int StyleModifier(AgentNegotiationStyle style, decimal salaryGap, int termGap, int relationship, ContractAsk ask, ContractOfferBuildRequest request, ContractTeamFitEvaluation fit)
     {
         var modifier = 0;
         if (style is AgentNegotiationStyle.MoneyFocused or AgentNegotiationStyle.HardLine && salaryGap < 0.05m)
@@ -286,10 +288,19 @@ public sealed class AgentEngine
             modifier += 5;
         }
 
+        if (fit.TeamFitScore < ask.TeamPreference.MinimumTeamFit)
+        {
+            modifier -= ask.TeamPreference.PrefersContender ? 12 : 6;
+        }
+        else if (fit.TeamFitScore >= 80)
+        {
+            modifier += 4;
+        }
+
         return Math.Clamp(modifier, -20, 15);
     }
 
-    private static string BiggestConcern(ContractAsk ask, ContractOfferBuildRequest request, decimal salaryGap, int termGap, AgentNegotiationStyle style)
+    private static string BiggestConcern(ContractAsk ask, ContractOfferBuildRequest request, decimal salaryGap, int termGap, AgentNegotiationStyle style, ContractTeamFitEvaluation fit)
     {
         if (salaryGap < 0)
         {
@@ -301,6 +312,11 @@ public sealed class AgentEngine
             return "Term is shorter than the client wanted.";
         }
 
+        if (fit.TeamFitScore < ask.TeamPreference.MinimumTeamFit)
+        {
+            return fit.Risk;
+        }
+
         if (style is AgentNegotiationStyle.DevelopmentFocused && !request.DevelopmentPromise.Contains("development", StringComparison.OrdinalIgnoreCase))
         {
             return "The development plan is not specific enough.";
@@ -309,7 +325,7 @@ public sealed class AgentEngine
         return ask.DevelopmentPathwayConcern;
     }
 
-    private static string RequestedImprovement(ContractAsk ask, ContractOfferBuildRequest request, decimal salaryGap, int termGap, AgentNegotiationStyle style)
+    private static string RequestedImprovement(ContractAsk ask, ContractOfferBuildRequest request, decimal salaryGap, int termGap, AgentNegotiationStyle style, ContractTeamFitEvaluation fit)
     {
         if (salaryGap < 0)
         {
@@ -319,6 +335,11 @@ public sealed class AgentEngine
         if (termGap < 0)
         {
             return "Add another year or explain why the shorter term benefits the player.";
+        }
+
+        if (fit.TeamFitScore < ask.TeamPreference.MinimumTeamFit)
+        {
+            return "Show a stronger competitive plan, coaching fit, or role pathway before asking the player to commit.";
         }
 
         if (style is AgentNegotiationStyle.DevelopmentFocused)

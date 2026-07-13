@@ -129,7 +129,10 @@ public sealed class ContractMarketService
             ask.DesiredRole,
             $"Money {ask.Preference.MoneyImportance}/100; term {ask.Preference.TermImportance}/100; role {ask.Preference.RoleImportance}/100; development {ask.Preference.DevelopmentImportance}/100; relationship {ask.Preference.RelationshipImportance}/100.",
             string.Join(" ", ask.SigningPriority, ask.DevelopmentPathwayConcern, ask.StaffCoachConfidence),
-            scenario.CurrentDate);
+            scenario.CurrentDate)
+        {
+            TeamPreference = ask.TeamPreference
+        };
         var negotiation = new ContractNegotiation(
             $"contract-negotiation:{personId}:{Guid.NewGuid():N}",
             personId,

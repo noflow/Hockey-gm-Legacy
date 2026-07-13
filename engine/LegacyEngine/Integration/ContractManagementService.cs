@@ -24,6 +24,10 @@ public sealed class ContractManagementService
             ContractAskType.StaffMember => BuildStaffAsk(scenario, personId, budget),
             _ => BuildRosterAsk(scenario, personId, budget)
         };
+        ask = ask with
+        {
+            TeamPreference = new ContractTeamFitService().BuildPreference(scenario, ask)
+        };
         ask.Validate();
         return ask;
     }
@@ -47,12 +51,13 @@ public sealed class ContractManagementService
         var budgetAfter = budget.RemainingBudget - annual;
         var cap = new SalaryCapService().ProjectAfterSigning(scenario, registry.Rulebook ?? scenario.LeagueProfile.Rulebook, annual, request.TermYears);
         var relationshipImpact = new RelationshipExpansionService().BuildContractImpact(scenario, request.PersonId);
-        var baseScore = Math.Clamp(ScoreOffer(scenario, ask, request, budgetAfter, cap) + relationshipImpact.Modifier, 0, 100);
-        var agentReview = new AgentEngine().ReviewOffer(scenario, ask, request, baseScore);
+        var teamFit = new ContractTeamFitService().Evaluate(scenario, ask);
+        var baseScore = Math.Clamp(ScoreOffer(scenario, ask, request, budgetAfter, cap, teamFit) + relationshipImpact.Modifier, 0, 100);
+        var agentReview = new AgentEngine().ReviewOffer(scenario, ask, request, baseScore, teamFit);
         var score = Math.Clamp(baseScore + agentReview.ScoreModifier, 0, 100);
         var likelihood = LikelihoodFor(score);
         var decision = DecisionFor(score, ask, request);
-        var explanation = Explain(ask, request, decision, score, budgetAfter, cap, agentReview, relationshipImpact);
+        var explanation = Explain(ask, request, decision, score, budgetAfter, cap, agentReview, relationshipImpact, teamFit);
         var currentCost = CurrentAnnualCost(scenario, request.PersonId);
         var comparison = new ContractComparison(
             CurrentAnnualCost: currentCost,
@@ -87,7 +92,8 @@ public sealed class ContractManagementService
             CapRemainingAfter = cap.After.AvailableCapSpace,
             CapWarning = CapWarning(cap),
             RoleFitWarning = RoleFitWarning(scenario, request),
-            AgentReview = agentReview
+            AgentReview = agentReview,
+            TeamFit = teamFit
         };
         evaluation.Validate();
         return evaluation;
@@ -448,9 +454,10 @@ public sealed class ContractManagementService
             string.IsNullOrWhiteSpace(action.DevelopmentPromise) ? "Pending GM decision." : action.DevelopmentPromise,
             action.Reason);
 
-    private static int ScoreOffer(NewGmScenarioSnapshot scenario, ContractAsk ask, ContractOfferBuildRequest request, decimal budgetAfter, SalaryCapCalculation cap)
+    private static int ScoreOffer(NewGmScenarioSnapshot scenario, ContractAsk ask, ContractOfferBuildRequest request, decimal budgetAfter, SalaryCapCalculation cap, ContractTeamFitEvaluation teamFit)
     {
-        var salaryScore = ask.RequestedSalary <= 0 ? 100 : Math.Clamp((int)Math.Round((request.AnnualSalary / ask.RequestedSalary) * 100m), 0, 125);
+        var salaryTarget = new ContractTeamFitService().EffectiveSalaryTarget(ask, teamFit);
+        var salaryScore = salaryTarget <= 0 ? 100 : Math.Clamp((int)Math.Round((request.AnnualSalary / salaryTarget) * 100m), 0, 125);
         var termScore = request.TermYears >= ask.RequestedTermYears ? 80 : 45;
         var roleText = request.AskType == ContractAskType.StaffMember ? request.StaffRoleOrFocusPromise : request.RolePromise;
         var roleScore = ContainsRoleSignal(roleText, ask.DesiredRole) ? 85 : 45;
@@ -474,18 +481,23 @@ public sealed class ContractManagementService
             budgetScore * 40 +
             capScore * 35 +
             ask.PreferredOrganizationFit * 30 +
-            careerFit * 35;
+            careerFit * 35 +
+            teamFit.TeamFitScore * 55;
         var weight =
             ask.Preference.MoneyImportance +
             ask.Preference.TermImportance +
             ask.Preference.RoleImportance +
             ask.Preference.DevelopmentImportance +
             ask.Preference.RelationshipImportance +
-            40 + 35 + 30 + 35;
+            40 + 35 + 30 + 35 + 55;
+        if (teamFit.TeamFitScore < ask.TeamPreference.MinimumTeamFit && request.AnnualSalary < ask.RequestedSalary * 1.18m)
+        {
+            score -= 12 * weight;
+        }
         return Math.Clamp((int)Math.Round(score / Math.Max(1m, weight)), 0, 100);
     }
 
-    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap, AgentNegotiationReview agentReview, RelationshipImpactSummary relationshipImpact)
+    private static ContractDecisionExplanation Explain(ContractAsk ask, ContractOfferBuildRequest request, ContractOfferDecision decision, int score, decimal budgetAfter, SalaryCapCalculation cap, AgentNegotiationReview agentReview, RelationshipImpactSummary relationshipImpact, ContractTeamFitEvaluation teamFit)
     {
         var reasons = new List<string>
         {
@@ -503,6 +515,8 @@ public sealed class ContractManagementService
                 : "Budget impact is manageable.",
             CapWarning(cap)
         };
+        reasons.Add($"Team fit: {teamFit.Summary}");
+        reasons.Add($"Team-fit risk: {teamFit.Risk}");
         reasons.Add($"Relationship impact: {relationshipImpact.Explanation}");
         reasons.Add($"Agent opinion: {agentReview.Opinion}");
         reasons.Add($"Agent concern: {agentReview.BiggestConcern}");

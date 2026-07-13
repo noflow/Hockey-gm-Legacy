@@ -16,6 +16,8 @@ public sealed record ContractAsk(
     string DevelopmentPathwayConcern,
     string StaffCoachConfidence)
 {
+    public ContractTeamPreference TeamPreference { get; init; } = ContractTeamPreference.Neutral;
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(PersonId)
@@ -39,5 +41,6 @@ public sealed record ContractAsk(
         }
 
         Preference.Validate();
+        TeamPreference.Validate();
     }
 }

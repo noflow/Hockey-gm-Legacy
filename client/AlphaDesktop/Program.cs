@@ -9497,9 +9497,16 @@ internal sealed class MainWindow : Window
         if (negotiation is not null)
         {
             AddLine(panel, "Negotiation", $"{negotiation.Status} | round {negotiation.Round} | deadline {negotiation.DecisionDeadline?.ToString("yyyy-MM-dd") ?? "n/a"}");
-            AddLine(panel, "Demand", $"{negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | {negotiation.Demand.DesiredRole}");
-            AddLine(panel, "Agent / player context", negotiation.Demand.AgentComment);
-            AddLine(panel, "Next action", negotiation.NextAction);
+        AddLine(panel, "Demand", $"{negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | {negotiation.Demand.DesiredRole}");
+        AddLine(panel, "Agent / player context", negotiation.Demand.AgentComment);
+        AddLine(panel, "Team preference", negotiation.Demand.TeamPreference.Summary);
+        if (negotiation.LastEvaluation is not null)
+        {
+            AddLine(panel, "Team fit", $"{negotiation.LastEvaluation.TeamFit.Label} ({negotiation.LastEvaluation.TeamFit.TeamFitScore}/100)");
+            AddLine(panel, "Team-fit risk", negotiation.LastEvaluation.TeamFit.Risk);
+            AddLine(panel, "Agent response", negotiation.LastEvaluation.AgentOpinion);
+        }
+        AddLine(panel, "Next action", negotiation.NextAction);
         }
 
         var comparables = State.ContractComparablesFor(row.PersonId);
@@ -9523,7 +9530,9 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Offer Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "This player is not currently eligible for a contract offer."),
             CreateDetailButton("Start Contract Talks", () => State.StartContractNegotiationFor(row.PersonId), negotiation is null || !negotiation.IsOpen),
             CreateDetailButton("Submit Market Offer", () => State.SubmitContractMarketOfferFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Open talks first or review the pending GM approval"),
-            CreateDetailButton("Withdraw Talks", () => State.WithdrawContractNegotiationFor(row.PersonId), negotiation?.IsOpen == true)
+            CreateDetailButton("Accept Counter", () => State.AcceptCurrentContractOfferFor(row.PersonId), negotiation?.Status == ContractNegotiationStatus.Countered, "Accept a counter by submitting its current salary and term."),
+            CreateDetailButton("Reject / Walk Away", () => State.WithdrawContractNegotiationFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Accepted terms are waiting for GM approval; decline them from Pending Actions."),
+            CreateDetailButton("Review Approval", () => SelectWorkspaceScreen("Dashboard", "Action Center"), negotiation?.Status == ContractNegotiationStatus.AcceptedInPrinciple, "Review the pending contract decision in Action Center")
         };
         AddActions(panel, actions.ToArray());
         return panel;
@@ -9552,6 +9561,12 @@ internal sealed class MainWindow : Window
             : $"{decision.QualifyingOffer.RequiredSalary:C0} {decision.QualifyingOffer.Currency} | {(decision.QualifyingOffer.IsIssued ? "issued" : "not issued")}");
         AddLine(panel, "Recommendation", decision.Recommendation);
         AddLine(panel, "Agent note", decision.AgentNote);
+        var negotiation = State.ContractNegotiationFor(row.PersonId);
+        if (negotiation is not null)
+        {
+            AddLine(panel, "Negotiation", $"{negotiation.Status} | {negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears}");
+            AddLine(panel, "Team preference", negotiation.Demand.TeamPreference.Summary);
+        }
         AddActions(panel,
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
@@ -13581,6 +13596,26 @@ internal sealed class AlphaDesktopState
             annualSalary ?? negotiation.Demand.AnnualSalary,
             termYears ?? negotiation.Demand.TermYears,
             negotiation.Demand.DesiredRole));
+    }
+
+    public void AcceptCurrentContractOfferFor(string personId)
+    {
+        var negotiation = ContractNegotiationFor(personId);
+        if (negotiation?.CurrentOffer is null)
+        {
+            LatestSummary = "There is no current counteroffer to accept.";
+            return;
+        }
+
+        var termYears = Math.Max(1, negotiation.CurrentOffer.Term.EndDate.Year - negotiation.CurrentOffer.Term.StartDate.Year + 1);
+        ApplyContractMarketResult(_contractMarket.SubmitOffer(
+            _registry,
+            ScenarioSnapshot,
+            personId,
+            negotiation.CurrentOffer.Money.SalaryOrStipend,
+            termYears,
+            negotiation.Demand.DesiredRole,
+            "GM accepted the agent counteroffer and is requesting final approval."));
     }
 
     public void WithdrawContractNegotiationFor(string personId) =>

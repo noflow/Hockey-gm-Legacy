@@ -44,6 +44,12 @@ public sealed record ContractOfferEvaluation(
 
     public AgentNegotiationStyle AgentNegotiationStyle => AgentReview?.NegotiationStyle ?? AgentNegotiationStyle.Collaborative;
 
+    public ContractTeamFitEvaluation TeamFit { get; init; } = ContractTeamFitEvaluation.Neutral;
+
+    public string TeamFitSummary => TeamFit.Summary;
+
+    public string TeamFitRisk => TeamFit.Risk;
+
     public int AgentLikelihood => AgentReview?.Likelihood ?? Likelihood switch
     {
         ContractLikelihood.VeryLikely => 90,
@@ -66,6 +72,7 @@ public sealed record ContractOfferEvaluation(
         Explanation.Validate();
         Comparison.Validate();
         AgentReview?.Validate();
+        TeamFit.Validate();
         if (TotalCost < 0 || AnnualCost < 0 || CapHit < 0 || CapRemainingBefore < 0 || CapRemainingAfter < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(TotalCost), "Contract offer costs cannot be negative.");

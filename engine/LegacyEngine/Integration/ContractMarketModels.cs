@@ -61,6 +61,8 @@ public sealed record ContractDemand(
     string AgentComment,
     DateOnly RequestedOn)
 {
+    public ContractTeamPreference TeamPreference { get; init; } = ContractTeamPreference.Neutral;
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(PersonId)
@@ -73,6 +75,8 @@ public sealed record ContractDemand(
         {
             throw new ArgumentException("Contract demand requires player, role, priorities, salary, and term.");
         }
+
+        TeamPreference.Validate();
     }
 }
 

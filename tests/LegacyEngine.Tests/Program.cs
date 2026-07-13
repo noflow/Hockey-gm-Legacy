@@ -124,6 +124,7 @@ var alpha88OffseasonContractCycleTests = new Alpha88OffseasonContractCycleTests(
 var alpha89OffseasonReadinessTests = new Alpha89OffseasonReadinessTests();
 var alpha810OpeningNightTests = new Alpha810OpeningNightTests();
 var alpha811ContractOfferUiTests = new Alpha811ContractOfferUiTests();
+var alpha811AgentContractNegotiationTests = new Alpha811AgentContractNegotiationTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1597,6 +1598,10 @@ runner.Run("alpha 8.10 desktop exposes opening night surface", alpha810OpeningNi
 runner.Run("alpha 8.11 expiring player can open contract negotiation", alpha811ContractOfferUiTests.ExistingPlayerCanOpenContractNegotiation);
 runner.Run("alpha 8.11 contract UI exposes offer form", alpha811ContractOfferUiTests.ContractUiExposesOfferFormFromRightsAndFreeAgents);
 runner.Run("alpha 8.11 contract UI submits salary and term", alpha811ContractOfferUiTests.ContractMarketOfferAcceptsUserEnteredSalaryAndTerm);
+runner.Run("alpha 8.11 RFA/UFA negotiation includes salary and term", alpha811AgentContractNegotiationTests.RfaUfaNegotiationIncludesSalaryAndTermDemand);
+runner.Run("alpha 8.11 agents expose team fit and hometown discounts", alpha811AgentContractNegotiationTests.AgentPreferencesIncludeTeamFitAndHometownDiscounts);
+runner.Run("alpha 8.11 poor team fit adds rejection risk", alpha811AgentContractNegotiationTests.ContenderPreferenceAddsPoorTeamRejectionRisk);
+runner.Run("alpha 8.11 UI exposes approval and rejection controls", alpha811AgentContractNegotiationTests.ContractUiExposesNegotiationApprovalAndRejectionControls);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;
