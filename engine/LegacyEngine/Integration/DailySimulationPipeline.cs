@@ -134,8 +134,8 @@ public sealed class DailySimulationPipeline
 
         log.Add(Log(
             DailySimulationStep.CheckContractStatuses,
-            "Contract status checks skipped; Alpha snapshot does not track contracts yet.",
-            new Dictionary<string, object?> { ["contracts_tracked"] = 0 }));
+            "Scenario-level contract status checks are deferred to the offseason contract cycle.",
+            new Dictionary<string, object?> { ["contracts_deferred_to_scenario_cycle"] = true }));
 
         var recruits = ProgressRecruiting(registry, snapshot, currentDate);
         log.Add(Log(

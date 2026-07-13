@@ -6,7 +6,6 @@ public sealed class FirstMonthAdvanceService
 {
     private readonly DailySimulationCoordinator _coordinator = new();
     private readonly MonthlyGmSummaryService _monthlySummaries = new();
-    private readonly FreeAgencyV2Service _freeAgency = new();
 
     public FirstMonthAdvanceResult AdvanceDays(EngineRegistry registry, NewGmScenarioSnapshot scenario, int days) =>
         Advance(registry, scenario, Math.Max(1, days), FirstMonthAdvanceMode.FixedDays);
@@ -54,11 +53,6 @@ public sealed class FirstMonthAdvanceService
             inbox.AddRange(daily.InboxItems);
             leagueTransactions.AddRange(daily.LeagueTransactions);
             processed += daily.SimulationResult.ProcessedEventCount;
-
-            var freeAgency = _freeAgency.ProgressMarket(registry, current);
-            current = freeAgency.ScenarioSnapshot;
-            inbox.AddRange(freeAgency.InboxItems);
-            leagueTransactions.AddRange(freeAgency.LeagueTransactions);
 
             var newRecaps = current.GameRecaps.Skip(previousRecapCount).ToArray();
             var playerRecap = newRecaps.FirstOrDefault(recap =>

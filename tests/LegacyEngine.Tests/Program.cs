@@ -120,6 +120,9 @@ var alpha853ExistingNhlWorkforceTests = new Alpha853ExistingNhlWorkforceTests();
 var alpha854FirstDayWorkloadTests = new Alpha854FirstDayWorkloadTests();
 var alpha86DailyHockeyWorldTests = new Alpha86DailyHockeyWorldTests();
 var alpha87ContractsMarketTests = new Alpha87ContractsMarketTests();
+var alpha88OffseasonContractCycleTests = new Alpha88OffseasonContractCycleTests();
+var alpha89OffseasonReadinessTests = new Alpha89OffseasonReadinessTests();
+var alpha810OpeningNightTests = new Alpha810OpeningNightTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1571,6 +1574,25 @@ runner.Run("alpha 8.7 free agency target board shows timing", alpha87ContractsMa
 runner.Run("alpha 8.7 save load preserves contract negotiation", alpha87ContractsMarketTests.SaveLoadPreservesContractNegotiation);
 runner.Run("alpha 8.7 desktop exposes contract market", alpha87ContractsMarketTests.AlphaDesktopExposesContractMarketWorkspace);
 runner.Run("alpha 8.7 has no Godot or full CBA", alpha87ContractsMarketTests.Alpha87DoesNotAddGodotOrFullCba);
+runner.Run("alpha 8.8 contract cycle expires contracts and refreshes market", alpha88OffseasonContractCycleTests.CycleExpiresContractsAndRefreshesMarket);
+runner.Run("alpha 8.8 contract expiry notice is idempotent", alpha88OffseasonContractCycleTests.CycleIsIdempotentForContractExpiryNotice);
+runner.Run("alpha 8.8 cycle does not approve contracts or move players", alpha88OffseasonContractCycleTests.CycleDoesNotApproveContractsOrMoveRosterPlayers);
+runner.Run("alpha 8.8 Action Center routes contract market decisions", alpha88OffseasonContractCycleTests.ContractMarketActionCenterUsesContractWorkspaceContext);
+runner.Run("alpha 8.8 save load preserves cycle state", alpha88OffseasonContractCycleTests.SaveLoadPreservesOffseasonCycleState);
+runner.Run("alpha 8.8 short offseason soak avoids duplicate notices", alpha88OffseasonContractCycleTests.ShortOffseasonSoakDoesNotDuplicateContractNotices);
+runner.Run("alpha 8.8 desktop exposes offseason contract context", alpha88OffseasonContractCycleTests.AlphaDesktopExposesOffseasonContractCycleContext);
+runner.Run("alpha 8.9 readiness report shows camp roster and market state", alpha89OffseasonReadinessTests.ReadinessReportShowsCampRosterAndMarketState);
+runner.Run("alpha 8.9 draft to camp transition creates one notice", alpha89OffseasonReadinessTests.DraftToCampTransitionCreatesOneUsefulNotice);
+runner.Run("alpha 8.9 readiness does not approve or move players", alpha89OffseasonReadinessTests.ReadinessDoesNotApproveOrMovePlayers);
+runner.Run("alpha 8.9 readiness state survives save load", alpha89OffseasonReadinessTests.ReadinessPreservesStateThroughSaveLoad);
+runner.Run("alpha 8.9 desktop exposes offseason readiness workspace", alpha89OffseasonReadinessTests.DesktopExposesOffseasonReadinessWorkspace);
+runner.Run("alpha 8.9 readiness has no Godot save or game simulation dependency", alpha89OffseasonReadinessTests.ReadinessSourceHasNoGodotSaveOrGameSimulationDependency);
+runner.Run("alpha 8.10 opening night preview explains blocked launch", alpha810OpeningNightTests.PreviewExplainsBlockedOpeningNight);
+runner.Run("alpha 8.10 ready organization begins season with briefing", alpha810OpeningNightTests.ReadyOrganizationBeginsSeasonWithBriefing);
+runner.Run("alpha 8.10 opening night does not approve or move players", alpha810OpeningNightTests.BeginSeasonDoesNotApproveOrMovePlayers);
+runner.Run("alpha 8.10 opening night state survives save load", alpha810OpeningNightTests.OpeningNightStatePreservesThroughSaveLoad);
+runner.Run("alpha 8.10 action center exposes season launch", alpha810OpeningNightTests.ActionCenterExposesSeasonLaunchWhenReady);
+runner.Run("alpha 8.10 desktop exposes opening night surface", alpha810OpeningNightTests.DesktopExposesOpeningNightSurface);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

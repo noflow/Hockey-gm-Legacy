@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "LegacyEngine.Tests/1.0.0": {
+        "dependencies": {
+          "LegacyEngine": "1.0.0"
+        },
+        "runtime": {
+          "LegacyEngine.Tests.dll": {}
+        }
+      },
+      "LegacyEngine/1.0.0": {
+        "runtime": {
+          "LegacyEngine.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "LegacyEngine.Tests/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "LegacyEngine/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

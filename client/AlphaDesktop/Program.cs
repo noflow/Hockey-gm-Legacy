@@ -26,7 +26,7 @@ public static class Program
         if (args.Contains("--smoke-test", StringComparer.OrdinalIgnoreCase))
         {
             var state = AlphaDesktopState.Create();
-            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.7 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
+            Console.WriteLine($"AlphaDesktop smoke test: Hockey GM Legacy Alpha 8.10 {state.Snapshot.CurrentDate:yyyy-MM-dd} {state.ScenarioSnapshot.LeagueProfile.Identity.ShortName} draft in {state.ScenarioSnapshot.DaysUntilDraft} days");
             return;
         }
 
@@ -833,7 +833,9 @@ internal sealed class MainWindow : Window
             new WorkspaceScreen("Stats", CreateTextScreen("Stats")),
             new WorkspaceScreen("Monthly Summary", CreateTextScreen("Monthly Summary")),
             new WorkspaceScreen("Season Archive", CreateTextScreen("Season Archive")),
-            new WorkspaceScreen("Season Readiness", CreateTextScreen("Season Readiness"))
+            new WorkspaceScreen("Season Readiness", CreateTextScreen("Season Readiness")),
+            new WorkspaceScreen("Opening Night", CreateTextScreen("Opening Night")),
+            new WorkspaceScreen("Offseason Readiness", CreateTextScreen("Offseason Readiness"))
         });
 
         AddWorkspaceTab(tabs, "Reports / History", new[]
@@ -914,7 +916,7 @@ internal sealed class MainWindow : Window
         var textPanel = new StackPanel();
         textPanel.Children.Add(new TextBlock
         {
-            Text = $"Hockey GM Legacy - Alpha 8.7 - GM Office | {teamBrand.OrganizationDisplayName}",
+            Text = $"Hockey GM Legacy - Alpha 8.10 - GM Office | {teamBrand.OrganizationDisplayName}",
             Foreground = Brushes.White,
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -2728,7 +2730,7 @@ internal sealed class MainWindow : Window
     {
         var target = item.Category switch
         {
-            ActionCenterCategory.Contracts => ("Hockey Operations", "Contracts"),
+            ActionCenterCategory.Contracts => ("Hockey Operations", "Contract Market"),
             ActionCenterCategory.Roster => ("Hockey Operations", "Roster"),
             ActionCenterCategory.Recruiting => ("Hockey Operations", "Recruits"),
             ActionCenterCategory.Scouting => ("Hockey Operations", "Scouting Operations"),
@@ -2912,7 +2914,19 @@ internal sealed class MainWindow : Window
 
     private void GenerateSeasonReadinessReviews() => State.GenerateSeasonReadinessReviews();
 
-    private void BeginSeason() => State.BeginSeason();
+    private void BeginSeason() => OpenOpeningNightPreview();
+
+    private void OpenOpeningNightPreview()
+    {
+        var preview = State.OpeningNightPreview;
+        var action = preview.CanBegin
+            ? MessageBox.Show(BuildOpeningNightPreview(), "Opening Night Preview", MessageBoxButton.YesNo, MessageBoxImage.Information)
+            : MessageBox.Show(BuildOpeningNightPreview(), "Opening Night Preview", MessageBoxButton.OK, MessageBoxImage.Warning);
+        if (action == MessageBoxResult.Yes)
+        {
+            State.BeginSeasonConfirmed();
+        }
+    }
 
     private void GenerateFrontOfficeReadinessReport() => State.GenerateFrontOfficeReadinessReport();
 
@@ -3514,6 +3528,12 @@ internal sealed class MainWindow : Window
             case ("Season", "Season Readiness"):
                 SetTextTab("Season Readiness", BuildSeasonReadiness());
                 break;
+            case ("Season", "Opening Night"):
+                SetTextTab("Opening Night", BuildOpeningNightPreview());
+                break;
+            case ("Season", "Offseason Readiness"):
+                SetTextTab("Offseason Readiness", BuildOffseasonReadiness());
+                break;
             case ("Settings placeholder", "Settings"):
                 SetTextTab("Settings", BuildSettings());
                 break;
@@ -3636,6 +3656,8 @@ internal sealed class MainWindow : Window
             RefreshSelectableTab("Prospect List", BuildProspectRows());
             RefreshSelectableTab("Training Camp", BuildTrainingCampRows());
             _tabs["Season Readiness"].Text = BuildSeasonReadiness();
+            _tabs["Opening Night"].Text = BuildOpeningNightPreview();
+            _tabs["Offseason Readiness"].Text = BuildOffseasonReadiness();
             _tabs["Schedule"].Text = BuildSchedule();
             _tabs["Standings"].Text = BuildStandings();
             _tabs["Playoffs"].Text = BuildPlayoffs();
@@ -12372,6 +12394,107 @@ internal sealed class MainWindow : Window
         return builder.ToString();
     }
 
+    private string BuildOffseasonReadiness()
+    {
+        var report = State.OffseasonReadinessReport;
+        var builder = new StringBuilder();
+        builder.AppendLine("Offseason Roster Readiness");
+        builder.AppendLine("==========================");
+        builder.AppendLine($"Phase: {ReadableOffseasonPhase(report.Phase)}");
+        builder.AppendLine($"Camp opens: {report.CampOpensOn:yyyy-MM-dd} ({Math.Max(0, report.DaysUntilCamp)} day(s))");
+        builder.AppendLine($"Opening night: {report.OpeningNightOn:yyyy-MM-dd} ({Math.Max(0, report.DaysUntilOpeningNight)} day(s))");
+        builder.AppendLine();
+        builder.AppendLine("Roster and market snapshot");
+        builder.AppendLine($"  Active roster: {report.ActiveRosterCount}/{report.OpeningRosterTarget}");
+        builder.AppendLine($"  Roster compliance: {(report.IsRosterCompliant ? "Compliant" : report.RosterValidationResult.Message)}");
+        builder.AppendLine($"  Player payroll: {(report.CapCompliant ? "Cap compliant" : "Cap attention required")} ({report.CapStatus})");
+        builder.AppendLine($"  Unsigned prospects: {report.UnsignedProspectCount}");
+        builder.AppendLine($"  Open contract decisions: {report.OpenContractDecisionCount}");
+        builder.AppendLine($"  Pending GM decisions: {report.OpenPendingActionCount}");
+        builder.AppendLine($"  Staff vacancies: {report.StaffVacancyCount}");
+        builder.AppendLine();
+        builder.AppendLine("Status");
+        builder.AppendLine(report.Summary);
+        builder.AppendLine();
+        builder.AppendLine("Important decisions");
+        if (report.Issues.Count == 0)
+        {
+            builder.AppendLine("- No urgent offseason readiness issues. Keep reviewing the relevant workspaces as camp approaches.");
+        }
+        else
+        {
+            foreach (var issue in report.Issues)
+            {
+                var due = issue.DueDate is null ? string.Empty : $" | due {issue.DueDate:yyyy-MM-dd}";
+                builder.AppendLine($"- {issue.Severity}: {issue.Title}{due}");
+                builder.AppendLine($"  Why: {issue.Reason}");
+                builder.AppendLine($"  Next: {issue.RecommendedAction}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("No automatic moves");
+        builder.AppendLine("The readiness system reports deadlines and consequences. It does not sign contracts, cut players, release players, or assign players without an explicit GM action.");
+        return builder.ToString();
+    }
+
+    private string BuildOpeningNightPreview()
+    {
+        var preview = State.OpeningNightPreview;
+        var builder = new StringBuilder();
+        builder.AppendLine("Opening Night Preview");
+        builder.AppendLine("=====================");
+        builder.AppendLine($"Status: {preview.Status}");
+        builder.AppendLine($"Opening night: {preview.OpeningNightOn:yyyy-MM-dd}");
+        builder.AppendLine($"First opponent: {preview.OpponentName ?? "Not scheduled"}");
+        builder.AppendLine($"Roster: {preview.ActiveRosterCount}/{preview.OpeningRosterTarget} | {preview.RosterStatus}");
+        builder.AppendLine($"Player payroll: {(preview.CapCompliant ? "Compliant" : "Needs attention")} | {preview.CapStatus}");
+        builder.AppendLine($"Goalies: {preview.GoaliePlan}");
+        builder.AppendLine($"Lineup: {preview.LineupSummary}");
+        builder.AppendLine();
+        builder.AppendLine("Strengths");
+        foreach (var strength in preview.Strengths)
+        {
+            builder.AppendLine($"- {strength}");
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Concerns");
+        if (preview.Concerns.Count == 0)
+        {
+            builder.AppendLine("- No major front-office concerns identified.");
+        }
+        else
+        {
+            foreach (var concern in preview.Concerns)
+            {
+                builder.AppendLine($"- {concern}");
+            }
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("Injuries");
+        builder.AppendLine(preview.InjuryConcerns.Count == 0 ? "- No active injury concerns." : string.Join(Environment.NewLine, preview.InjuryConcerns.Select(item => $"- {item}")));
+        builder.AppendLine();
+        builder.AppendLine("Owner expectation");
+        builder.AppendLine(preview.OwnerExpectation);
+        builder.AppendLine();
+        builder.AppendLine(preview.Summary);
+        builder.AppendLine(preview.CanBegin ? "Use the Begin Season control after reviewing this preview." : "Resolve the listed readiness issues before beginning the season.");
+        return builder.ToString();
+    }
+
+    private static string ReadableOffseasonPhase(OffseasonReadinessPhase phase) => phase switch
+    {
+        OffseasonReadinessPhase.ContractReview => "Contract review",
+        OffseasonReadinessPhase.MarketReview => "Market review",
+        OffseasonReadinessPhase.CampPreparation => "Camp preparation",
+        OffseasonReadinessPhase.TrainingCamp => "Training camp",
+        OffseasonReadinessPhase.OpeningRosterReview => "Opening roster review",
+        OffseasonReadinessPhase.ReadyForSeason => "Ready for season",
+        _ => phase.ToString()
+    };
+
     private string BuildExecutiveReports()
     {
         var archive = State.ScenarioSnapshot.ExecutiveReports;
@@ -12504,6 +12627,8 @@ internal sealed class AlphaDesktopState
     private readonly PendingGmActionService _pendingActions = new();
     private readonly ProspectDecisionService _prospectDecisions = new();
     private readonly SeasonReadinessService _seasonReadiness = new();
+    private readonly OpeningNightService _openingNight = new();
+    private readonly OffseasonRosterReadinessService _offseasonReadiness = new();
     private readonly ExecutiveReportService _executiveReports = new();
     private readonly ScoutingOperationsService _scoutingOperations = new();
     private readonly ScoutingIntelligenceService _scoutingIntelligence = new();
@@ -12835,6 +12960,11 @@ internal sealed class AlphaDesktopState
     public ProspectListSummary ProspectSummary => _prospectDecisions.BuildSummary(ScenarioSnapshot);
 
     public SeasonReadinessReport SeasonReadinessReport => _seasonReadiness.Evaluate(_registry, ScenarioSnapshot);
+
+    public OpeningNightPreview OpeningNightPreview => _openingNight.BuildPreview(_registry, ScenarioSnapshot);
+
+    public OffseasonRosterReadinessReport OffseasonReadinessReport =>
+        _offseasonReadiness.BuildReport(ScenarioSnapshot, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
 
     public BudgetSnapshot BudgetOverview => _budgetOverview.Build(ScenarioSnapshot, _registry.Rulebook ?? RulebookPresets.CreateJuniorMajor());
 
@@ -17110,7 +17240,9 @@ internal sealed class AlphaDesktopState
         ApplySeasonReadinessResult(_seasonReadiness.GenerateReviews(_registry, ScenarioSnapshot));
 
     public void BeginSeason() =>
-        ApplySeasonReadinessResult(_seasonReadiness.BeginSeason(_registry, ScenarioSnapshot));
+        ApplyOpeningNightResult(_openingNight.Begin(_registry, ScenarioSnapshot));
+
+    public void BeginSeasonConfirmed() => BeginSeason();
 
     public void GenerateFrontOfficeReadinessReport() =>
         ApplyExecutiveReportResult(_executiveReports.GenerateFrontOfficeReadinessReport(_registry, ScenarioSnapshot));
@@ -17364,6 +17496,19 @@ internal sealed class AlphaDesktopState
         SetScenarioSnapshot(result.ScenarioSnapshot);
         EnsureSelectedDossierStillExists();
         AddInboxItems(result.InboxItems);
+        LastProcessedEventCount = 0;
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyOpeningNightResult(OpeningNightResult result)
+    {
+        if (result.Success)
+        {
+            SetScenarioSnapshot(result.ScenarioSnapshot);
+            EnsureSelectedDossierStillExists();
+            AddInboxItems(result.InboxItems);
+        }
+
         LastProcessedEventCount = 0;
         LatestSummary = result.Message;
     }

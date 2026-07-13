@@ -70,6 +70,8 @@ public sealed record NewGmScenarioSnapshot(
 
     public SeasonReadinessState SeasonReadiness { get; init; } = new();
 
+    public OpeningNightState OpeningNight { get; init; } = OpeningNightState.Empty;
+
     public ExecutiveReportArchive ExecutiveReports { get; init; } = ExecutiveReportArchive.Empty;
 
     public GameSchedule? Schedule { get; init; }
@@ -110,6 +112,11 @@ public sealed record NewGmScenarioSnapshot(
     public FirstWeekOnboardingPlan? OnboardingPlan { get; init; }
 
     public FreeAgencyMarketState? FreeAgencyMarketState { get; init; }
+
+    public OffseasonContractCycleState OffseasonContractCycle { get; init; } = OffseasonContractCycleState.Empty;
+
+    /// <summary>Persistent phase and transition state for offseason roster preparation.</summary>
+    public OffseasonRosterReadinessState OffseasonRosterReadinessState { get; init; } = OffseasonRosterReadinessState.Empty;
 
     public TradeBlock? TradeBlock { get; init; }
 
@@ -398,6 +405,7 @@ public sealed record NewGmScenarioSnapshot(
         }
 
         SeasonReadiness.Validate();
+        OpeningNight.Validate();
         ExecutiveReports.Validate();
         Schedule?.Validate();
         Standings?.Validate();
@@ -467,6 +475,8 @@ public sealed record NewGmScenarioSnapshot(
         }
         WorkforceValidation?.Validate();
         FreeAgencyMarketState?.Validate();
+        OffseasonContractCycle.Validate();
+        OffseasonRosterReadinessState.Validate();
         TradeBlock?.Validate();
         foreach (var offer in TradeOffers)
         {

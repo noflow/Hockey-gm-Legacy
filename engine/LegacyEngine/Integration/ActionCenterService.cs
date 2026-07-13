@@ -1,5 +1,6 @@
 using LegacyEngine.Events;
 using LegacyEngine.Injuries;
+using LegacyEngine.Seasons;
 
 namespace LegacyEngine.Integration;
 
@@ -21,8 +22,10 @@ public sealed class ActionCenterService
 
         var items = new List<ActionCenterItem>();
         AddPendingActions(scenario, items);
+        AddOffseasonRosterReadiness(scenario, items);
         AddPendingFreeAgentResponses(scenario, items);
         AddContractRightsItems(scenario, items);
+        AddContractMarketItems(scenario, items);
         AddUrgentInbox(scenario, inboxMessages, items);
         AddRosterWarnings(scenario, readiness, items);
         AddStaffVacancies(staffVacancies, items);
@@ -49,6 +52,7 @@ public sealed class ActionCenterService
         AddOwnerLifeCycleItems(scenario, items);
         AddRelationshipItems(scenario, items);
         AddStoryItems(scenario, items);
+        AddOpeningNight(scenario, readiness, items);
 
         var output = items
             .GroupBy(item => item.ActionCenterItemId, StringComparer.Ordinal)
@@ -240,12 +244,97 @@ public sealed class ActionCenterService
         }
     }
 
+    private static void AddOffseasonRosterReadiness(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var report = new OffseasonRosterReadinessService().BuildReport(scenario, scenario.LeagueProfile.Rulebook);
+        foreach (var issue in report.Issues.Take(4))
+        {
+            var category = issue.IssueId switch
+            {
+                "salary-cap" or "contract-market" => ActionCenterCategory.Contracts,
+                "staff-vacancies" => ActionCenterCategory.Staff,
+                "unsigned-prospects" => ActionCenterCategory.PlayerDevelopment,
+                _ => ActionCenterCategory.Roster
+            };
+            var priority = issue.Severity switch
+            {
+                OffseasonReadinessSeverity.Urgent => ActionCenterPriority.Urgent,
+                OffseasonReadinessSeverity.Important => ActionCenterPriority.Important,
+                _ => ActionCenterPriority.Normal
+            };
+            items.Add(new ActionCenterItem(
+                $"action-center:offseason-readiness:{issue.IssueId}",
+                issue.Title,
+                category,
+                priority,
+                issue.DueDate,
+                issue.RelatedPersonId,
+                issue.RelatedPersonName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                issue.Reason,
+                issue.Consequence,
+                issue.RecommendedAction,
+                null,
+                null,
+                null));
+        }
+    }
+
     private static void AddContractRightsItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
     {
         items.AddRange(new RfaUfaService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
         items.AddRange(new ArbitrationService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
         items.AddRange(new BuyoutService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
         items.AddRange(new OfferSheetService().BuildActionItems(scenario, scenario.LeagueProfile.Rulebook));
+    }
+
+    private static void AddContractMarketItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
+    {
+        var market = new ContractMarketService().BuildSummary(scenario, scenario.LeagueProfile.Rulebook);
+        foreach (var negotiation in market.Negotiations.Where(item => item.IsOpen).Take(3))
+        {
+            items.Add(new ActionCenterItem(
+                $"action-center:contract-market:negotiation:{negotiation.NegotiationId}",
+                $"Contract negotiation: {negotiation.PersonName}",
+                ActionCenterCategory.Contracts,
+                negotiation.Status == ContractNegotiationStatus.AcceptedInPrinciple ? ActionCenterPriority.Important : ActionCenterPriority.Normal,
+                negotiation.DecisionDeadline,
+                negotiation.PersonId,
+                negotiation.PersonName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                negotiation.LastResponse,
+                "Contract talks can affect the cap, rights status, roster plan, and relationship with the player or agent.",
+                negotiation.NextAction,
+                null,
+                null,
+                null));
+        }
+
+        foreach (var deadline in market.Deadlines
+            .Where(deadline => deadline.IsActionable && deadline.DueOn <= scenario.CurrentDate.AddDays(60))
+            .Take(5))
+        {
+            var days = deadline.DueOn.DayNumber - scenario.CurrentDate.DayNumber;
+            var priority = days <= 3 ? ActionCenterPriority.Urgent : days <= 14 ? ActionCenterPriority.Important : ActionCenterPriority.Normal;
+            items.Add(new ActionCenterItem(
+                $"action-center:contract-market:deadline:{deadline.DeadlineId}",
+                $"{deadline.Type}: {deadline.PersonName}",
+                ActionCenterCategory.Contracts,
+                priority,
+                deadline.DueOn,
+                deadline.PersonId,
+                deadline.PersonName,
+                scenario.Organization.OrganizationId,
+                scenario.Organization.Name,
+                deadline.Consequence,
+                "Contract deadlines can change rights, cap room, and market access if ignored.",
+                "Open Contract Market and make the decision before the deadline.",
+                null,
+                null,
+                null));
+        }
     }
 
     private static void AddStaffCoachingItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)
@@ -828,6 +917,35 @@ public sealed class ActionCenterService
                 null,
                 null));
         }
+    }
+
+    private static void AddOpeningNight(NewGmScenarioSnapshot scenario, SeasonReadinessReport readiness, List<ActionCenterItem> items)
+    {
+        if (scenario.SeasonReadiness.SeasonBegun || !readiness.CanBeginSeason)
+        {
+            return;
+        }
+
+        var openingNight = SeasonCalendar.Build(scenario.CurrentDate.Year, scenario.Season.Settings)
+            .Milestones
+            .Single(milestone => milestone.Type == SeasonMilestoneType.SeasonBegins)
+            .Date.Value;
+        items.Add(new ActionCenterItem(
+            "action-center:opening-night:begin",
+            "Begin the regular season",
+            ActionCenterCategory.GameDay,
+            ActionCenterPriority.Important,
+            openingNight,
+            null,
+            null,
+            scenario.Organization.OrganizationId,
+            scenario.Organization.Name,
+            "Opening roster, camp, owner review, and contract decisions are complete.",
+            "Beginning the season moves the organization into the regular-season calendar and activates game-day operations.",
+            "Open the Opening Night Preview, review the first opponent and goalie plan, then click Begin Season.",
+            null,
+            null,
+            null));
     }
 
     private static void AddTradeDeadlineItems(NewGmScenarioSnapshot scenario, List<ActionCenterItem> items)

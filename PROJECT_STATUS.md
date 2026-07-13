@@ -140,26 +140,33 @@ The five foundation pillars remain:
 - Alpha 8.5.4 - New GM Inheritance & First-Day Workload
 - Alpha 8.6 - Daily Hockey World
 - Alpha 8.7 - Contracts V4, Arbitration V2 & Free Agency V3
+- Alpha 8.8 - Offseason Contract Cycle & Market Polish
+- Alpha 8.9 - Offseason Roster Readiness & Camp Transition
+- Alpha 8.10 - Opening Night Launch & Season Continuity
 
 ## Current Milestone
 
-Alpha 8.7 - Contracts V4, Arbitration V2 & Free Agency V3
+Alpha 8.10 - Opening Night Launch & Season Continuity
 
 ## Current Goal
 
-Make the contract market a single, explainable offseason workspace for extensions, RFA/UFA rights, arbitration preparation, and free-agent competition while keeping final signings under explicit GM approval.
+Move the organization from offseason readiness into an explicit, understandable Opening Night launch without making roster or contract decisions automatically.
 
 ## Why Contracts V4 Was Next
 
-Alpha 8.7 connects the existing contract, rights, arbitration, free-agency, agent, budget, and cap systems without replacing them. Negotiations now persist with demands, rounds, responses, deadlines, comparables, and history; arbitration can carry submissions and hearing preparation; and free agency exposes a target board with timing and competition.
+Alpha 8.8 runs one scenario-level offseason contract cycle after each world day. The cycle expires contracts on their configured date, refreshes RFA/UFA rights and arbitration state, advances the free-agent market once, records useful expiry/market notices without duplicates, and routes Action Center contract decisions to Contract Market. It never approves a GM decision automatically.
+
+Alpha 8.9 adds persistent offseason roster-readiness state. Each day now reports the current phase, camp and opening-night countdowns, roster compliance, cap status, unsigned prospects, open contract decisions, pending GM actions, and staff vacancies. Camp-preparation, training-camp, opening-roster, and ready-for-season transitions create at most one useful notice each, while Action Center receives compact, direct next steps. No signing, cut, release, or assignment is performed automatically.
+
+Alpha 8.10 adds a calendar-driven Opening Night Preview and explicit season launch gate. The preview shows the opening date, first opponent, roster and player-payroll compliance, goalie coverage, lineup balance, injuries, strengths, concerns, and owner expectation. Begin Season now requires deliberate confirmation, moves the world and SeasonEngine into Regular Season through the existing readiness service, delivers one concise briefing, and preserves the launch marker through JSON career persistence. No roster, contract, assignment, or game simulation decisions are made automatically.
 
 ## Next Build Target
 
-Alpha 8.8 - Contract Market polish and offseason soak testing
+Alpha 9.0 - Season rollover and opening-night continuity
 
 ## Next Milestones
 
-1. Alpha 8.8 - Contract Market polish and offseason soak testing
+1. Alpha 9.0 - Season rollover and opening-night continuity
 
 ## Build Rule
 

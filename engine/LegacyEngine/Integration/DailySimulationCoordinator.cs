@@ -35,7 +35,10 @@ public sealed class DailySimulationCoordinator
             ? new ExecutiveReportService().GenerateEndOfSeasonExecutiveReview(registry, playoffs.ScenarioSnapshot)
             : null;
         var finalScenario = report?.Success == true ? report.ScenarioSnapshot : playoffs.ScenarioSnapshot;
-        finalScenario = new ContractExpiryService().ProcessExpiredContracts(finalScenario, registry.Rulebook ?? finalScenario.LeagueProfile.Rulebook);
+        var offseason = new OffseasonContractCycleService().Process(registry, finalScenario);
+        finalScenario = offseason.ScenarioSnapshot;
+        var readiness = new OffseasonRosterReadinessService().Process(registry, finalScenario);
+        finalScenario = readiness.ScenarioSnapshot;
         finalScenario = new DevelopmentPlanningService().EnsureScenarioPlans(finalScenario);
         finalScenario = new StoryService().EnsureStories(finalScenario, registry);
         if (finalScenario.Schedule is { Games.Count: > 0 }
@@ -64,8 +67,14 @@ public sealed class DailySimulationCoordinator
             .Concat(games.InboxItems)
             .Concat(playoffs.InboxItems)
             .Concat(report?.InboxItems ?? Array.Empty<AlphaInboxItem>())
+            .Concat(offseason.InboxItems)
+            .Concat(readiness.InboxItems)
             .ToArray();
-        var leagueTransactions = simulation.LeagueTransactions.Concat(deadline.LeagueTransactions).Concat(playoffs.LeagueNews).ToArray();
+        var leagueTransactions = simulation.LeagueTransactions
+            .Concat(deadline.LeagueTransactions)
+            .Concat(playoffs.LeagueNews)
+            .Concat(offseason.LeagueTransactions)
+            .ToArray();
         finalScenario = new HockeyIntelligenceRatingService().EnsureRatings(finalScenario);
         finalScenario = new DevelopmentCurveService().EnsureCurves(finalScenario);
         finalScenario = new PlayerRatingService().EnsureRatings(finalScenario);
@@ -80,9 +89,9 @@ public sealed class DailySimulationCoordinator
         finalScenario = aiFrontOffice.ScenarioSnapshot;
         leagueTransactions = leagueTransactions.Concat(aiFrontOffice.LeagueNews).ToArray();
         finalScenario = new MediaService().EnsureMediaFeed(finalScenario, leagueTransactions, registry);
-        var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && deadline.InboxItems.Count == 0 && games.SimulatedGames.Count == 0 && playoffs.GameRecaps.Count == 0 && report?.Success != true
+        var summary = camp.InboxItems.Count == 0 && scouting.InboxItems.Count == 0 && deadline.InboxItems.Count == 0 && games.SimulatedGames.Count == 0 && playoffs.GameRecaps.Count == 0 && report?.Success != true && offseason.ExpiredContractCount == 0 && offseason.InboxItems.Count == 0 && readiness.InboxItems.Count == 0
             ? simulation.Summary
-            : $"{simulation.Summary} {camp.Summary} {scouting.Message} {deadline.Summary} {games.Summary} {playoffs.Message}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
+            : $"{simulation.Summary} {camp.Summary} {scouting.Message} {deadline.Summary} {games.Summary} {playoffs.Message} {offseason.Message} {readiness.Summary}{(report?.Success == true ? $" {report.Message}" : string.Empty)}";
         if (aiFrontOffice.Cycle.Candidates.Count > 0)
         {
             summary = $"{summary} {aiFrontOffice.Message}";

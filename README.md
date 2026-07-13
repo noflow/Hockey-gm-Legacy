@@ -125,6 +125,9 @@ The current implementation is focused on standalone LegacyEngine modules:
 - Alpha 8.5.4 New GM Inheritance & First-Day Workload
 - Alpha 8.6 Daily Hockey World
 - Alpha 8.7 Contracts V4, Arbitration V2 & Free Agency V3
+- Alpha 8.8 Offseason Contract Cycle & Market Polish
+- Alpha 8.9 Offseason Roster Readiness & Camp Transition
+- Alpha 8.10 Opening Night Launch & Season Continuity
 
 Alpha 1.3 - GM Character Creation + First GM Actions starts AlphaDesktop on a GM creation screen, then drops the created GM into the Prairie Falcons scenario two weeks before the draft. The player can review the club, re-rank the draft board, assign a scout focus, make a recruiting offer, and advance days to process responses.
 
@@ -169,6 +172,12 @@ Alpha 8.5.1 - NHL Organization Roster Structure & Contract Slide Fix gives NHL c
 Alpha 2.1 - Staff Control v2 turns the Staff tab into a front-office workspace. The GM can review full staff profiles, contract references, strengths, weaknesses, GM relationships, chemistry warnings, current assignments, current focus areas, candidate pool recommendations, and recent evaluations. Staff actions now include candidate generation/hiring, role changes, releases, development/medical/scouting focus changes, and staff evaluation messages while preserving Alpha 1.9 Scouting Operations.
 
 Alpha 8.7 - Contracts V4, Arbitration V2 & Free Agency V3 adds a unified Contract Market workspace over the existing contract, rights, arbitration, agent, budget, cap, and free-agency services. The GM can open extension or market negotiations, review player/agent demands, submit limited-round offers, see accepted-in-principle deals remain pending GM approval, compare nearby contracts, track deadlines, and preserve negotiation history. Arbitration cases can now carry player/team submissions, evidence, comparables, settlement proposals, and hearing preparation. Free Agency v3 exposes a target board with shortlist state, timing, player interest, competing offers, and market recommendations. No full CBA, conversation tree, automatic signing, or game simulation was added.
+
+Alpha 8.8 - Offseason Contract Cycle & Market Polish connects those systems to the daily scenario loop. After each world day, contracts are expired on their configured date, salary commitments leave active payroll, RFA/UFA rights and arbitration state refresh, free agency advances once, and only useful contract/market notices are generated. Contract deadlines and open negotiations appear in Action Center and route directly to Contract Market. The cycle is deterministic, save/load friendly, and advisory: it does not sign players, approve offers, or move roster players automatically.
+
+Alpha 8.9 - Offseason Roster Readiness & Camp Transition adds a dedicated readiness layer for the period between the contract market and opening night. It tracks camp and opening-night dates, roster and cap compliance, unsigned prospects, open contract decisions, pending actions, and staff vacancies. The desktop now exposes an Offseason Readiness workspace, and phase transitions produce concise notices without automatically signing, cutting, releasing, or assigning players.
+
+Alpha 8.10 - Opening Night Launch & Season Continuity adds a dedicated Opening Night Preview and explicit season-start confirmation. The GM can review the calendar date, first opponent, roster and payroll compliance, goalie coverage, lineup balance, injuries, owner expectations, strengths, and concerns before beginning the regular season. A single briefing is added after launch, and the opening-night state survives the existing JSON career persistence path. The launch layer coordinates the existing readiness and SeasonEngine behavior without adding automatic roster decisions or a game-simulation overhaul.
 
 The Alpha UI Interaction Pass replaces major text-dump people screens with selectable rows and detail/action panels. Staff, roster, recruits, scouting, scouting operations, draft board, prospect list, training camp, and dossier entry points now let the GM select the person first, then take valid staff/player/prospect actions from that selected detail panel.
 
