@@ -46,10 +46,17 @@ public sealed class PlayerRatingService
             .FirstOrDefault();
         var scouted = scenario.ScoutedRatings.FirstOrDefault(rating => rating.PersonId == personId);
         var internalKnowledge = scenario.InternalPlayerKnowledge.FirstOrDefault(knowledge => knowledge.PersonId == personId);
+        var injuryPenalty = ActiveInjuryPenalty(scenario, personId);
         if (internalKnowledge is not null)
         {
-            var internalOverall = new PlayerRating(internalKnowledge.OverallEstimate, internalKnowledge.OverallEstimate);
+            var internalOverallValue = Math.Clamp(internalKnowledge.OverallEstimate - injuryPenalty, 0, 100);
+            var internalOverall = new PlayerRating(internalOverallValue, internalOverallValue);
             var internalPotential = new PlayerPotential(internalKnowledge.PotentialEstimate, internalKnowledge.PotentialEstimate);
+            var internalNote = injuryPenalty > 0
+                ? "Injury context is lowering the current visible read."
+                : profile is not null && profile.Potential - profile.CurrentAbility <= 2
+                    ? "Capped out / plateaued: staff estimate little remaining rating runway."
+                    : internalKnowledge.Summary;
             var internalSnapshot = new PlayerRatingSnapshot(
                 personId,
                 name,
@@ -62,7 +69,7 @@ public sealed class PlayerRatingService
                 internalKnowledge.LastEvaluated,
                 $"Internal organizational evaluation ({internalKnowledge.KnowledgeLevel})",
                 RoleLabelFor(internalOverall.Midpoint, position),
-                internalKnowledge.Summary);
+                internalNote);
             internalSnapshot.Validate();
             return internalSnapshot;
         }
@@ -71,12 +78,11 @@ public sealed class PlayerRatingService
             scouted = null;
         }
         var confidence = ResolveConfidence(scenario, personId, draft, latestReport);
-        var injuryPenalty = ActiveInjuryPenalty(scenario, personId);
         if (scouted is not null && !scouted.Overall.IsUnknown && !scouted.Potential.IsUnknown)
         {
             confidence = ConfidenceFromColor(scouted.ConfidenceColor);
-            var scoutedOverall = ToVisibleOverall(scouted.Overall, injuryPenalty);
-            var scoutedPotential = ToVisiblePotential(scouted.Potential, scoutedOverall.Low);
+            var scoutedOverall = ToVisibleOverall(scouted.Overall, injuryPenalty, age, confidence);
+            var scoutedPotential = ToVisiblePotential(scouted.Potential, scoutedOverall.Midpoint, age, confidence);
             var scoutedBand = BandFor(scoutedOverall.Midpoint, scoutedPotential.Midpoint, scenario.LeagueProfile.Experience, draft is not null);
             var scoutedSnapshot = new PlayerRatingSnapshot(
                 personId,
@@ -91,6 +97,7 @@ public sealed class PlayerRatingService
                 $"Hockey Intelligence scouted estimate ({scouted.ConfidenceColor})",
                 RoleLabelFor(scoutedOverall.Midpoint, position),
                 DevelopmentNoteFor(profile, (Overall: scoutedOverall.Midpoint, Potential: scoutedPotential.Midpoint, Source: scouted.ScoutSource), injuryPenalty, scoutedOverall, scoutedPotential));
+            scoutedSnapshot = ApplyAgeAwareVisibility(scoutedSnapshot);
             scoutedSnapshot.Validate();
             return scoutedSnapshot;
         }
@@ -106,8 +113,8 @@ public sealed class PlayerRatingService
         var adjustedOverall = Math.Clamp(raw.Overall - injuryPenalty, 0, 100);
         var curveCeiling = curve?.Variance.CurrentEstimatedCeiling ?? raw.Potential;
         var adjustedPotential = Math.Clamp(Math.Max(Math.Max(raw.Potential, curveCeiling), adjustedOverall), 0, 100);
-        var overall = VisibleOverall(adjustedOverall, confidence);
-        var potential = VisiblePotential(adjustedPotential, confidence);
+        var overall = VisibleOverall(adjustedOverall, confidence, age);
+        var potential = VisiblePotential(adjustedPotential, overall.Midpoint, age, confidence);
         var band = BandFor(overall.Midpoint, potential.Midpoint, scenario.LeagueProfile.Experience, draft is not null);
         var snapshot = new PlayerRatingSnapshot(
             personId,
@@ -122,6 +129,7 @@ public sealed class PlayerRatingService
             raw.Source,
             RoleLabelFor(overall.Midpoint, position),
             DevelopmentNoteFor(profile, raw, injuryPenalty, overall, potential));
+        snapshot = ApplyAgeAwareVisibility(snapshot);
         snapshot.Validate();
         return snapshot;
     }
@@ -317,30 +325,20 @@ public sealed class PlayerRatingService
             _ => 0
         };
 
-    private static PlayerRating VisibleOverall(int value, PlayerRatingConfidence confidence)
+    private static PlayerRating VisibleOverall(int value, PlayerRatingConfidence confidence, int? age)
     {
-        var spread = confidence switch
-        {
-            PlayerRatingConfidence.VeryHigh => 0,
-            PlayerRatingConfidence.High => 1,
-            PlayerRatingConfidence.Medium => 3,
-            PlayerRatingConfidence.Low => 6,
-            _ => 8
-        };
-        return new PlayerRating(Math.Clamp(value - spread, 0, 100), Math.Clamp(value + spread, 0, 100));
+        var range = AgeAwareRatingRules.Overall(value, age, confidence);
+        return new PlayerRating(range.Low, range.High);
     }
 
-    private static PlayerPotential VisiblePotential(int value, PlayerRatingConfidence confidence)
+    private static PlayerPotential VisiblePotential(
+        int value,
+        int currentOverall,
+        int? age,
+        PlayerRatingConfidence confidence)
     {
-        var spread = confidence switch
-        {
-            PlayerRatingConfidence.VeryHigh => 0,
-            PlayerRatingConfidence.High => 2,
-            PlayerRatingConfidence.Medium => 4,
-            PlayerRatingConfidence.Low => 8,
-            _ => 10
-        };
-        return new PlayerPotential(Math.Clamp(value - spread, 0, 100), Math.Clamp(value + spread, 0, 100));
+        var range = AgeAwareRatingRules.Potential(value, currentOverall, age, confidence);
+        return new PlayerPotential(range.Low, range.High);
     }
 
     private static PlayerRatingConfidence ResolveConfidence(NewGmScenarioSnapshot scenario, string personId, DraftBoardEntry? draft, ScoutingReport? latestReport)
@@ -365,6 +363,17 @@ public sealed class PlayerRatingService
             : PlayerRatingConfidence.Medium;
     }
 
+    private static PlayerRatingSnapshot ApplyAgeAwareVisibility(PlayerRatingSnapshot snapshot)
+    {
+        var overall = AgeAwareRatingRules.Overall(snapshot.Overall.Midpoint, snapshot.Age, snapshot.Confidence);
+        var potential = AgeAwareRatingRules.Potential(snapshot.Potential.Midpoint, (overall.Low + overall.High) / 2, snapshot.Age, snapshot.Confidence);
+        return snapshot with
+        {
+            Overall = new PlayerRating(overall.Low, overall.High),
+            Potential = new PlayerPotential(potential.Low, potential.High)
+        };
+    }
+
     private static PlayerRatingConfidence ConfidenceFromColor(PlayerRatingColor color) =>
         color switch
         {
@@ -375,18 +384,28 @@ public sealed class PlayerRatingService
             _ => PlayerRatingConfidence.Unknown
         };
 
-    private static PlayerRating ToVisibleOverall(PlayerRatingRange range, int injuryPenalty)
+    private static PlayerRating ToVisibleOverall(
+        PlayerRatingRange range,
+        int injuryPenalty,
+        int? age,
+        PlayerRatingConfidence confidence)
     {
         var low = Math.Clamp((range.Low ?? 0) - injuryPenalty, 0, 100);
         var high = Math.Clamp((range.High ?? low) - injuryPenalty, low, 100);
-        return new PlayerRating(low, high);
+        var estimate = (low + high) / 2;
+        var visible = AgeAwareRatingRules.Overall(estimate, age, confidence);
+        return new PlayerRating(visible.Low, visible.High);
     }
 
-    private static PlayerPotential ToVisiblePotential(PlayerRatingRange range, int minimumOverall)
+    private static PlayerPotential ToVisiblePotential(
+        PlayerRatingRange range,
+        int currentOverall,
+        int? age,
+        PlayerRatingConfidence confidence)
     {
-        var low = Math.Clamp(Math.Max(range.Low ?? minimumOverall, minimumOverall), 0, 100);
-        var high = Math.Clamp(Math.Max(range.High ?? low, low), 0, 100);
-        return new PlayerPotential(low, high);
+        var estimate = range.IsUnknown ? currentOverall : range.Midpoint;
+        var visible = AgeAwareRatingRules.Potential(estimate, currentOverall, age, confidence);
+        return new PlayerPotential(visible.Low, visible.High);
     }
 
     private static PlayerRatingConfidence MapConfidence(ScoutingConfidenceLevel confidence) =>
@@ -595,6 +614,9 @@ public sealed class PlayerRatingService
     private static int? PersonAge(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.People.FirstOrDefault(person => person.PersonId == personId)?.CalculateAge(scenario.CurrentDate)
         ?? scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Age
+        ?? (scenario.AlphaSnapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.BirthYear is int birthYear
+            ? (int?)(scenario.CurrentDate.Year - birthYear)
+            : null)
         ?? scenario.ProspectRights.FirstOrDefault(record => record.ProspectPersonId == personId)?.Age
         ?? scenario.FreeAgentMarket?.Find(personId)?.Age
         ?? scenario.TradeBlock?.Find(personId)?.Age;

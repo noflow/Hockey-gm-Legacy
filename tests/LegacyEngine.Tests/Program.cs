@@ -80,6 +80,7 @@ var alpha62OwnerLifeCycleTests = new Alpha62OwnerLifeCycleTests();
 var alpha621TradesV3Tests = new Alpha621TradesV3Tests();
 var alpha63RelationshipExpansionTests = new Alpha63RelationshipExpansionTests();
 var alpha64RosterLineupTests = new Alpha64RosterLineupTests();
+var rosterMovementOrganizationTests = new RosterMovementOrganizationTests();
 var alpha65LineChemistryTests = new Alpha65LineChemistryTests();
 var alpha66SpecialTeamsGameUsageTests = new Alpha66SpecialTeamsGameUsageTests();
 var alpha67TacticsCoachingStyleTests = new Alpha67TacticsCoachingStyleTests();
@@ -1124,6 +1125,11 @@ runner.Run("alpha 6.4 save load preserves lineup state", alpha64RosterLineupTest
 runner.Run("alpha 6.4 trade team browser exposes lineup role", alpha64RosterLineupTests.TradeTeamBrowserExposesLineupRole);
 runner.Run("alpha 6.4 no hidden ratings exposed", alpha64RosterLineupTests.NoHiddenRatingsExposed);
 runner.Run("alpha 6.4 no full tactical simulation added", alpha64RosterLineupTests.NoFullTacticalSimulationAdded);
+runner.Run("roster organization depth chart groups players", rosterMovementOrganizationTests.DepthChartGroupsOrganizationPlayersByPosition);
+runner.Run("roster depth chart shows lineup and organization context", rosterMovementOrganizationTests.DepthChartShowsLineupAndOrganizationContext);
+runner.Run("active player can move to reserve", rosterMovementOrganizationTests.ActivePlayerCanMoveToReserveAndIsRemovedFromLineup);
+runner.Run("roster movement options explain availability", rosterMovementOrganizationTests.ActivePlayerMovementOptionsExplainValidAndInvalidActions);
+runner.Run("desktop exposes roster depth and movement actions", rosterMovementOrganizationTests.DesktopExposesRosterDepthAndCoreMovementActions);
 runner.Run("alpha 6.5 forward line chemistry generated", alpha65LineChemistryTests.ForwardLineChemistryGenerated);
 runner.Run("alpha 6.5 defense pair chemistry generated", alpha65LineChemistryTests.DefensePairChemistryGenerated);
 runner.Run("alpha 6.5 goalie depth chemistry generated", alpha65LineChemistryTests.GoalieDepthChemistryGenerated);
@@ -1265,6 +1271,8 @@ runner.Run("alpha 6.17 elite draft prospects can reach low 80s", alpha617PlayerR
 runner.Run("alpha 6.17 rare 95+ potential uncommon", alpha617PlayerRatingsTests.RarePotentialNinetyFivePlusExistsButIsUncommon);
 runner.Run("alpha 6.17 low confidence shows ranges", alpha617PlayerRatingsTests.LowScoutingConfidenceShowsRatingRanges);
 runner.Run("alpha 6.17 high confidence tighter rating", alpha617PlayerRatingsTests.HighConfidenceShowsTighterRating);
+runner.Run("alpha 6.17 potential range narrows with age", alpha617PlayerRatingsTests.PotentialRangeNarrowsAsPlayersMature);
+runner.Run("alpha 6.17 overall range tightens with age", alpha617PlayerRatingsTests.OverallRangeTightensAsPlayersMature);
 runner.Run("alpha 6.17 development can increase overall", alpha617PlayerRatingsTests.DevelopmentCanIncreaseOverall);
 runner.Run("alpha 6.17 plateau can occur below potential", alpha617PlayerRatingsTests.PlateauCanOccurBelowPotential);
 runner.Run("alpha 6.17 injury can reduce overall", alpha617PlayerRatingsTests.InjuryCanReduceOverall);

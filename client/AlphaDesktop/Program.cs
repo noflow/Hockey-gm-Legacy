@@ -2130,6 +2130,7 @@ internal sealed class MainWindow : Window
             ItemsSource = new[]
             {
                 "Roster Overview",
+                "Roster & Depth",
                 "Lineup",
                 "Depth Chart",
                 "Prospects",
@@ -4773,6 +4774,7 @@ internal sealed class MainWindow : Window
         panel.Children.Add(_commandCenterView switch
         {
             "Lineup" => BuildHockeyOperationsLineupBoard(),
+            "Roster & Depth" => BuildHockeyOperationsRosterDepthBoard(),
             "Depth Chart" => BuildHockeyOperationsDepthChartBoard(),
             "Prospects" => BuildHockeyOperationsProspectPipeline(rows),
             "Development" => BuildHockeyOperationsDevelopmentBoard(rows),
@@ -4800,6 +4802,59 @@ internal sealed class MainWindow : Window
         }
 
         return grid;
+    }
+
+    private UIElement BuildHockeyOperationsRosterDepthBoard()
+    {
+        var chart = State.RosterDepthChart;
+        var panel = new StackPanel();
+        panel.Children.Add(UiPresentation.UiAlertBanner(chart.Summary, "info"));
+        AddActions(panel,
+            CreateDetailButton("Open Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup")),
+            CreateDetailButton("Open Organization Roster", () => SelectWorkspaceScreen("Hockey Operations", "Roster Overview")));
+
+        var grid = new UniformGrid { Columns = 3 };
+        foreach (var group in chart.Groups)
+        {
+            var card = new StackPanel();
+            card.Children.Add(new TextBlock
+            {
+                Text = $"{group.Label} ({group.Players.Count})",
+                FontWeight = FontWeights.SemiBold,
+                Foreground = UiTheme.Text
+            });
+            if (group.Players.Count == 0)
+            {
+                card.Children.Add(new TextBlock { Text = "No players in this position group.", Foreground = UiTheme.MutedText, Margin = new Thickness(0, 6, 0, 0) });
+            }
+            else
+            {
+                foreach (var player in group.Players)
+                {
+                    card.Children.Add(UiPresentation.UiPersonLink(player.PlayerName, () => OpenUniversalPersonCard(player.PersonId)));
+                    card.Children.Add(new TextBlock
+                    {
+                        Text = $"Age {player.Age} | {ReadableOrganizationRosterGroup(player.Group)} | {player.Team}",
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = UiTheme.MutedText,
+                        FontSize = UiTypography.Small
+                    });
+                    card.Children.Add(new TextBlock
+                    {
+                        Text = $"{player.LineupSlot} | {player.LineupRole} | {player.ContractSummary}",
+                        TextWrapping = TextWrapping.Wrap,
+                        Foreground = UiTheme.Text,
+                        Margin = new Thickness(0, 0, 0, 6),
+                        FontSize = UiTypography.Small
+                    });
+                }
+            }
+
+            grid.Children.Add(UiPresentation.Card(card));
+        }
+
+        panel.Children.Add(grid);
+        return panel;
     }
 
     private UIElement BuildHockeyOperationsPlayerCard(SelectablePersonRow row)
@@ -7802,6 +7857,19 @@ internal sealed class MainWindow : Window
 
         if (tab is "Roster" or "Prospect List" or "Training Camp")
         {
+            if (tab == "Roster")
+            {
+                yield return CreateDetailButton("Move to Active", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Activate), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Activate), RosterMovementReason(row.PersonId, RosterMovementType.Activate));
+                yield return CreateDetailButton("Move to Reserve", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Reserve), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Reserve), RosterMovementReason(row.PersonId, RosterMovementType.Reserve));
+                yield return CreateDetailButton("Place on Injured Reserve", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.InjuredReserve), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.InjuredReserve), RosterMovementReason(row.PersonId, RosterMovementType.InjuredReserve));
+                yield return CreateDetailButton("Release Player", () => ConfirmDestructiveAction(
+                    "Release Player",
+                    $"{row.Name} will be released from the game-day roster. Continue?",
+                    () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Release)),
+                    State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Release),
+                    RosterMovementReason(row.PersonId, RosterMovementType.Release));
+            }
+
             yield return CreateDetailButton("Balanced Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Balanced));
             yield return CreateDetailButton("Skating Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Skating));
             yield return CreateDetailButton("Shooting Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Shooting));
@@ -7871,6 +7939,11 @@ internal sealed class MainWindow : Window
             yield return CreateDetailButton("Mark Injured", () => State.ApplyCampDecisionFor(row.PersonId, TrainingCampDecisionType.MarkInjured), State.CanApplyCampDecision(row.PersonId));
         }
     }
+
+    private string RosterMovementReason(string personId, RosterMovementType movementType) =>
+        State.RosterMovementOptions(personId)
+            .FirstOrDefault(option => option.MovementType == movementType)?.Reason
+        ?? "This roster movement is not available for the selected person.";
 
     private StackPanel EmptyDetail(string title, string message)
     {
@@ -12760,6 +12833,7 @@ internal sealed class AlphaDesktopState
     private readonly BuyoutService _buyouts = new();
     private readonly OfferSheetService _offerSheets = new();
     private readonly RosterAllocationService _rosterAllocation = new();
+    private readonly RosterMovementService _rosterMovement = new();
     private readonly DraftIntelligenceService _draftIntelligence = new();
     private readonly AssetEvaluationService _assetEvaluation = new();
     private readonly OrganizationPlanningService _organizationPlanning = new();
@@ -13058,6 +13132,18 @@ internal sealed class AlphaDesktopState
 
     public RosterAllocationSummary OrganizationRosterSummary =>
         _rosterAllocation.BuildSummary(ScenarioSnapshot with { OrganizationRoster = OrganizationRoster }, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public RosterDepthChart RosterDepthChart =>
+        _rosterMovement.BuildDepthChart(ScenarioSnapshot with { OrganizationRoster = OrganizationRoster }, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public IReadOnlyList<RosterMovementOption> RosterMovementOptions(string personId) =>
+        _rosterMovement.BuildMovementOptions(ScenarioSnapshot, personId, _registry.Rulebook ?? ScenarioSnapshot.LeagueProfile.Rulebook);
+
+    public bool CanMoveRosterPlayer(string personId, RosterMovementType movementType) =>
+        RosterMovementOptions(personId).Any(option => option.MovementType == movementType && option.IsAvailable);
+
+    public void MoveRosterPlayer(string personId, RosterMovementType movementType) =>
+        ApplyRosterMovementResult(_rosterMovement.Move(_registry, ScenarioSnapshot, personId, movementType, "GM selected roster organization action."));
 
     public OwnerOfficeSummary OwnerOffice => _ownerOffice.BuildSummary(ScenarioSnapshot, BudgetOverview);
 
@@ -15386,6 +15472,19 @@ internal sealed class AlphaDesktopState
         Snapshot = ScenarioSnapshot.AlphaSnapshot;
         AddInboxItems(result.InboxItems);
         AddLeagueTransactions(result.LeagueTransactions);
+        LatestSummary = result.Message;
+    }
+
+    private void ApplyRosterMovementResult(RosterMovementResult result)
+    {
+        if (result.Success)
+        {
+            ScenarioSnapshot = result.ScenarioSnapshot;
+            Snapshot = ScenarioSnapshot.AlphaSnapshot;
+            EnsureSelectedDossierStillExists();
+        }
+
+        LastProcessedEventCount = 0;
         LatestSummary = result.Message;
     }
 

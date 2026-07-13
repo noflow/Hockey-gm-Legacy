@@ -59,7 +59,15 @@ public sealed class HockeyIntelligenceRatingService
             : scenario.AlphaSnapshot.Roster.FindPlayer(truth.PersonId) is not null
                 ? PlayerRatingSource.InternalTeamKnowledge
                 : PlayerRatingSource.Scout;
-        return BuildScoutedFromTruth(truth, color, source, scenario.CurrentDate, SourceName(source), NoteFor(color, source), null);
+        return BuildScoutedFromTruth(
+            truth,
+            color,
+            source,
+            scenario.CurrentDate,
+            SourceName(source),
+            NoteFor(color, source),
+            null,
+            PersonAge(scenario, truth.PersonId));
     }
 
     public NewGmScenarioSnapshot RecordScoutingReport(
@@ -92,7 +100,8 @@ public sealed class HockeyIntelligenceRatingService
             withRatings.CurrentDate,
             scoutName,
             $"{scoutName} updated the rating picture; confidence improved to {nextColor}.",
-            specialty);
+            specialty,
+            PersonAge(withRatings, truth.PersonId));
         var ratings = withRatings.ScoutedRatings
             .Where(rating => rating.PersonId != personId)
             .Concat(new[] { updatedScouted })
@@ -123,7 +132,8 @@ public sealed class HockeyIntelligenceRatingService
             withRatings.CurrentDate,
             string.IsNullOrWhiteSpace(staffName) ? "Development staff" : staffName.Trim(),
             string.IsNullOrWhiteSpace(note) ? "Development report updated the visible rating estimate." : note.Trim(),
-            focusCategory);
+            focusCategory,
+            PersonAge(withRatings, truth.PersonId));
         var ratings = withRatings.ScoutedRatings
             .Where(rating => rating.PersonId != personId)
             .Concat(new[] { updatedScouted })
@@ -230,7 +240,8 @@ public sealed class HockeyIntelligenceRatingService
         DateOnly date,
         string scoutSource,
         string note,
-        PlayerRatingCategory? specialty)
+        PlayerRatingCategory? specialty,
+        int? age)
     {
         var attributes = truth.Attributes
             .Select(attribute =>
@@ -248,12 +259,19 @@ public sealed class HockeyIntelligenceRatingService
                     note);
             })
             .ToArray();
+        var confidence = AgeAwareRatingRules.FromColor(color);
+        var overallRange = AgeAwareRatingRules.Overall(truth.Overall, age, confidence);
+        var potentialRange = AgeAwareRatingRules.Potential(
+            truth.Potential,
+            (overallRange.Low + overallRange.High) / 2,
+            age,
+            confidence);
         var ratings = new PlayerScoutedRatings(
             truth.PersonId,
             truth.PlayerName,
             truth.Position,
-            VisibleRange(truth.Overall, color, truth.PersonId, PlayerAttributeKey.Consistency),
-            VisibleRange(truth.Potential, color, truth.PersonId, PlayerAttributeKey.WorkEthic),
+            new PlayerRatingRange(overallRange.Low, overallRange.High),
+            new PlayerRatingRange(potentialRange.Low, potentialRange.High),
             color,
             source,
             color == PlayerRatingColor.Unknown ? null : date,
@@ -533,6 +551,9 @@ public sealed class HockeyIntelligenceRatingService
     private static int? PersonAge(NewGmScenarioSnapshot scenario, string personId) =>
         scenario.AlphaSnapshot.People.FirstOrDefault(person => person.PersonId == personId)?.CalculateAge(scenario.CurrentDate)
         ?? scenario.AlphaSnapshot.Roster.FindPlayer(personId)?.Age
+        ?? (scenario.AlphaSnapshot.DraftBoard.Entries.FirstOrDefault(entry => entry.ProspectPersonId == personId)?.Bio?.BirthYear is int birthYear
+            ? (int?)(scenario.CurrentDate.Year - birthYear)
+            : null)
         ?? scenario.ProspectRights.FirstOrDefault(record => record.ProspectPersonId == personId)?.Age
         ?? scenario.FreeAgentMarket?.Find(personId)?.Age
         ?? scenario.TradeBlock?.Find(personId)?.Age;
