@@ -433,10 +433,83 @@ public sealed class AlphaDraftExperienceService
     private static Rulebook ResolveRulebook(EngineRegistry registry) =>
         registry.Rulebook ?? RulebookPresets.CreateJuniorMajor();
 
-    private static IReadOnlyList<OrganizationStanding> BuildStandings(NewGmScenarioSnapshot scenario) =>
-        DraftTeams(scenario)
-            .Select((team, index) => new OrganizationStanding(team.OrganizationId, index + 1))
+    private static IReadOnlyList<OrganizationStanding> BuildStandings(NewGmScenarioSnapshot scenario)
+    {
+        var teams = DraftTeams(scenario);
+        var actualStandings = scenario.Standings?.Teams
+            .Where(team => teams.Any(candidate => candidate.OrganizationId == team.OrganizationId))
+            .Where(team => team.GamesPlayed > 0)
+            .OrderByDescending(team => team.Points)
+            .ThenByDescending(team => team.Wins)
+            .ThenByDescending(team => team.GoalsFor - team.GoalsAgainst)
+            .ThenBy(team => team.TeamName, StringComparer.Ordinal)
+            .Select(team => team.OrganizationId)
             .ToArray();
+
+        var orderedIds = actualStandings is { Length: > 0 } && actualStandings.Length == teams.Count
+            ? actualStandings
+            : teams
+                .OrderByDescending(team => PreviousRecordPoints(scenario, team.OrganizationId))
+                .ThenByDescending(team => PreviousRecordWins(scenario, team.OrganizationId))
+                .ThenBy(team => team.TeamName, StringComparer.Ordinal)
+                .Select(team => team.OrganizationId)
+                .ToArray();
+
+        // Keep the reigning champion at the top of the standings input so the
+        // reverse-standings draft order gives it the final pick.
+        var champion = teams.FirstOrDefault(team => string.Equals(
+            team.TeamName,
+            scenario.LeagueProfile.Identity.CurrentChampion,
+            StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(champion.OrganizationId))
+        {
+            orderedIds = orderedIds
+                .Where(organizationId => organizationId != champion.OrganizationId)
+                .Prepend(champion.OrganizationId)
+                .ToArray();
+        }
+
+        return orderedIds
+            .Select((organizationId, index) => new OrganizationStanding(organizationId, index + 1))
+            .ToArray();
+    }
+
+    private static int PreviousRecordPoints(NewGmScenarioSnapshot scenario, string organizationId)
+    {
+        var record = scenario.LeagueProfile.Teams
+            .FirstOrDefault(team => team.OrganizationId == organizationId)
+            ?.PreviousRecord;
+        return ParsePreviousRecord(record).Points;
+    }
+
+    private static int PreviousRecordWins(NewGmScenarioSnapshot scenario, string organizationId)
+    {
+        var record = scenario.LeagueProfile.Teams
+            .FirstOrDefault(team => team.OrganizationId == organizationId)
+            ?.PreviousRecord;
+        return ParsePreviousRecord(record).Wins;
+    }
+
+    private static (int Wins, int Points) ParsePreviousRecord(string? record)
+    {
+        if (string.IsNullOrWhiteSpace(record))
+        {
+            return (0, 0);
+        }
+
+        var parts = record.Split('-', StringSplitOptions.TrimEntries);
+        if (parts.Length < 2
+            || !int.TryParse(parts[0], out var wins)
+            || !int.TryParse(parts[1], out _))
+        {
+            return (0, 0);
+        }
+
+        var overtimeLosses = parts.Length >= 3 && int.TryParse(parts[2], out var parsedOvertime)
+            ? parsedOvertime
+            : 0;
+        return (Math.Max(0, wins), Math.Max(0, wins * 2 + overtimeLosses));
+    }
 
     private static IReadOnlyDictionary<string, string> OrganizationNamesFor(NewGmScenarioSnapshot scenario)
     {

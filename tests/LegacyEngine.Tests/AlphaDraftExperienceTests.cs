@@ -64,10 +64,13 @@ internal sealed class AlphaDraftExperienceTests
 
         var started = service.StartDraftDay(scenario.Registry, scenario.ScenarioSnapshot);
         var result = service.RunAiPicksUntilPlayerTurn(scenario.Registry, started.ScenarioSnapshot);
+        var expectedAiPicks = started.DraftState.Draft!.Picks
+            .TakeWhile(pick => pick.OwningOrganizationId != started.DraftState.PlayerOrganizationId)
+            .Count();
 
         Assert.Equal(DraftExperienceStatus.AwaitingPlayerPick, result.DraftState.Status);
         Assert.True(result.DraftState.IsPlayerTurn, "AI drafting should stop on the player's pick.");
-        Assert.Equal(scenario.ScenarioSnapshot.LeagueProfile.Teams.Count - 1, result.DraftState.Selections.Count);
+        Assert.Equal(expectedAiPicks, result.DraftState.Selections.Count);
     }
 
     public void StartDraftBeginsDraft()
@@ -87,6 +90,41 @@ internal sealed class AlphaDraftExperienceTests
 
         Assert.Equal(teamCount, result.DraftState.OrganizationNames.Count);
         Assert.Equal(teamCount * result.DraftState.TotalRounds, result.DraftState.Draft!.Picks.Count);
+    }
+
+    public void DraftOrderRunsFromWorstPreviousRecordToChampion()
+    {
+        var career = new MultiLeagueCareerService();
+        var team = career.TeamsFor(LeagueExperience.Nhl).First();
+        var selected = career.SelectLeagueAndTeam(LeagueExperience.Nhl, team.OrganizationId);
+        var scenario = AdvanceToDraftDay(career.CreateScenario(selected));
+        var result = new AlphaDraftExperienceService().StartDraftDay(scenario.Registry, scenario.ScenarioSnapshot);
+        var order = result.DraftState.Draft!.DraftOrder.OrganizationIds;
+        var teams = scenario.ScenarioSnapshot.LeagueProfile.Teams.ToDictionary(item => item.OrganizationId, StringComparer.Ordinal);
+        var champion = teams.Single(item => string.Equals(item.Value.TeamName, scenario.ScenarioSnapshot.LeagueProfile.Identity.CurrentChampion, StringComparison.OrdinalIgnoreCase)).Key;
+        var actualStandings = scenario.ScenarioSnapshot.Standings?.Teams
+            .Where(item => item.GamesPlayed > 0)
+            .ToArray();
+        var worst = actualStandings is { Length: > 0 } && actualStandings.Length == teams.Count
+            ? actualStandings
+                .OrderBy(item => item.Points)
+                .ThenBy(item => item.Wins)
+                .ThenBy(item => item.GoalsFor - item.GoalsAgainst)
+                .ThenBy(item => item.TeamName, StringComparer.Ordinal)
+                .Last()
+                .OrganizationId
+            : teams
+                .Where(item => item.Key != champion)
+                .OrderByDescending(item => PreviousRecordPoints(item.Value.PreviousRecord))
+                .ThenByDescending(item => PreviousRecordWins(item.Value.PreviousRecord))
+                .ThenBy(item => item.Value.TeamName, StringComparer.Ordinal)
+                .Last()
+                .Key;
+
+        Assert.True(worst == order[0], $"The worst prior-season team should receive the first overall pick. Expected {worst}, got {order[0]}.");
+        Assert.True(champion == order[^1], "The reigning champion should receive the last pick in each round.");
+        Assert.True(result.DraftState.Draft!.Picks[0].OwningOrganizationId == order[0], "Round one pick ownership should match draft order.");
+        Assert.True(result.DraftState.Draft!.Picks[order.Count].OwningOrganizationId == order[0], "Round two should repeat the same draft order.");
     }
 
     public void DraftBoardHasEnoughProspectsForFullLeagueDraft()
@@ -264,6 +302,20 @@ internal sealed class AlphaDraftExperienceTests
             AlphaSnapshot = snapshot,
             ScenarioSnapshot = scenarioSnapshot
         };
+    }
+
+    private static int PreviousRecordPoints(string record)
+    {
+        var parts = record.Split('-', StringSplitOptions.TrimEntries);
+        var wins = parts.Length > 0 && int.TryParse(parts[0], out var parsedWins) ? parsedWins : 0;
+        var overtime = parts.Length > 2 && int.TryParse(parts[2], out var parsedOvertime) ? parsedOvertime : 0;
+        return wins * 2 + overtime;
+    }
+
+    private static int PreviousRecordWins(string record)
+    {
+        var parts = record.Split('-', StringSplitOptions.TrimEntries);
+        return parts.Length > 0 && int.TryParse(parts[0], out var wins) ? wins : 0;
     }
 
     private static string FindRepositoryRoot()

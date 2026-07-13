@@ -401,6 +401,7 @@ runner.Run("alpha draft notes and stars work", alphaDraftExperienceTests.DraftNo
 runner.Run("alpha draft AI drafting runs until player pick", alphaDraftExperienceTests.AiDraftingRunsUntilPlayerPick);
 runner.Run("alpha live draft starts active draft", alphaDraftExperienceTests.StartDraftBeginsDraft);
 runner.Run("alpha draft includes every league team", alphaDraftExperienceTests.DraftIncludesEveryLeagueTeam);
+runner.Run("alpha draft order runs from worst previous record to champion", alphaDraftExperienceTests.DraftOrderRunsFromWorstPreviousRecordToChampion);
 runner.Run("alpha draft board has enough prospects for full league draft", alphaDraftExperienceTests.DraftBoardHasEnoughProspectsForFullLeagueDraft);
 runner.Run("alpha live draft automatically advances AI picks", alphaDraftExperienceTests.LiveDraftStartAdvancesAiPicksAutomatically);
 runner.Run("alpha draft player drafting records selection", alphaDraftExperienceTests.PlayerDraftingRecordsSelection);
