@@ -20,10 +20,8 @@ internal sealed class AlphaDesktopResponsivenessTests
     {
         var source = DesktopSource();
 
-        Assert.True(source.Contains("CreateSelectablePeopleContent(\"Contracts\")", StringComparison.Ordinal), "Contracts should use selectable rows.");
-        Assert.True(source.Contains("CreateSelectablePeopleContent(\"Contract Rights\")", StringComparison.Ordinal), "Contract Rights should use selectable rows.");
-        Assert.True(source.Contains("BuildContractDetail(row)", StringComparison.Ordinal), "Contract selection should render a detail panel.");
-        Assert.True(source.Contains("BuildContractRightsDetail(row)", StringComparison.Ordinal), "Rights selection should render a detail panel.");
+        Assert.True(source.Contains("CreateSelectablePeopleContent(\"Contract Management\")", StringComparison.Ordinal), "Contract Management should use selectable rows.");
+        Assert.True(source.Contains("BuildContractManagementDetail(row)", StringComparison.Ordinal), "Contract Management selection should render a detail panel.");
         Assert.True(source.Contains("View Player / Profile", StringComparison.Ordinal), "Contract details should link to the player or staff profile.");
     }
 

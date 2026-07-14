@@ -95,7 +95,7 @@ internal sealed class Alpha88OffseasonContractCycleTests
 
         Assert.True(source.Contains("Contract Market", StringComparison.Ordinal), "Contract Market should remain the primary contract workspace.");
         Assert.True(source.Contains("Contract decision", StringComparison.Ordinal), "Desktop should expose contract decision context.");
-        Assert.True(source.Contains("ActionCenterCategory.Contracts => (\"Hockey Operations\", \"Contract Market\")", StringComparison.Ordinal), "Contract actions should route directly to Contract Market.");
+        Assert.True(source.Contains("ActionCenterCategory.Contracts => (\"Hockey Operations\", \"Contract Management\")", StringComparison.Ordinal), "Contract actions should route directly to Contract Management.");
     }
 
     private static PreparedScenario ExpiringScenario()

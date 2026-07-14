@@ -235,7 +235,9 @@ internal sealed class Alpha87ContractsMarketTests
         var root = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(root, "client", "AlphaDesktop", "Program.cs"));
 
-        Assert.True(source.Contains("Contract Market", StringComparison.Ordinal), "Desktop should expose the unified Contract Market workspace.");
+        Assert.True(source.Contains("Contract Management", StringComparison.Ordinal), "Desktop should expose the unified Contract Management workspace.");
+        Assert.True(source.Contains("BuildContractManagementRows", StringComparison.Ordinal), "Desktop should expose the consolidated contract-management rows.");
+        Assert.True(source.Contains("BuildContractManagementDetail", StringComparison.Ordinal), "Desktop should expose the consolidated contract-management detail panel.");
         Assert.True(source.Contains("BuildContractMarketRows", StringComparison.Ordinal), "Desktop should expose selectable contract-market rows.");
         Assert.True(source.Contains("Start Contract Talks", StringComparison.Ordinal), "Desktop should expose contract negotiation actions.");
         Assert.True(source.Contains("Expiring / Expired", StringComparison.Ordinal), "Desktop should expose a dedicated expiry board.");

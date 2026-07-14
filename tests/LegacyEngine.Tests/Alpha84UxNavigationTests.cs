@@ -65,7 +65,7 @@ internal sealed class Alpha84UxNavigationTests
     {
         var source = AlphaDesktopSource("Program.cs");
 
-        Assert.True(source.Contains("ActionCenterCategory.Contracts => (\"Hockey Operations\", \"Contract Market\")", StringComparison.Ordinal), "Contract actions should open Contract Market.");
+        Assert.True(source.Contains("ActionCenterCategory.Contracts => (\"Hockey Operations\", \"Contract Management\")", StringComparison.Ordinal), "Contract actions should open Contract Management.");
         Assert.True(source.Contains("ActionCenterCategory.Scouting => (\"Hockey Operations\", \"Scouting Operations\")", StringComparison.Ordinal), "Scouting actions should open Scouting Operations.");
         Assert.True(source.Contains("ActionCenterCategory.GameDay => (\"Season\", \"Schedule\")", StringComparison.Ordinal), "Game-day actions should open Schedule.");
         Assert.True(source.Contains("Opened related context", StringComparison.Ordinal), "Action Center navigation should give feedback.");

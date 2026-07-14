@@ -806,10 +806,7 @@ internal sealed class MainWindow : Window
             new("Prospects", CreateSelectablePeopleContent("Prospect List")),
             new("Recruits", CreateSelectablePeopleContent("Recruits")),
             new("Free Agents", CreateSelectablePeopleContent("Free Agents")),
-            new("Contracts", CreateSelectablePeopleContent("Contracts")),
-            new("Expiring / Expired", CreateSelectablePeopleContent("Expiring / Expired")),
-            new("Contract Market", CreateSelectablePeopleContent("Contract Market")),
-            new("Contract Rights", CreateSelectablePeopleContent("Contract Rights")),
+            new("Contract Management", CreateSelectablePeopleContent("Contract Management")),
             new("Arbitration", CreateTextScreen("Arbitration")),
             new("Buyouts", CreateTextScreen("Buyouts")),
             new("Offer Sheets", CreateTextScreen("Offer Sheets")),
@@ -2732,7 +2729,7 @@ internal sealed class MainWindow : Window
     {
         var target = item.Category switch
         {
-            ActionCenterCategory.Contracts => ("Hockey Operations", "Contract Market"),
+            ActionCenterCategory.Contracts => ("Hockey Operations", "Contract Management"),
             ActionCenterCategory.Roster => ("Hockey Operations", "Roster"),
             ActionCenterCategory.Recruiting => ("Hockey Operations", "Recruits"),
             ActionCenterCategory.Scouting => ("Hockey Operations", "Scouting Operations"),
@@ -3220,8 +3217,8 @@ internal sealed class MainWindow : Window
             CreateDetailButton("View Contract Market", () =>
             {
                 Window.GetWindow(panel)?.Close();
-                SelectWorkspaceScreen("Hockey Operations", "Contract Market");
-                SelectPersonInList("Contract Market", personId);
+                SelectWorkspaceScreen("Hockey Operations", "Contract Management");
+                SelectPersonInList("Contract Management", personId);
             }),
             CreateDetailButton("Cancel", () => Window.GetWindow(panel)?.Close()));
         ShowPopup($"Contract Offer - {negotiation.PersonName}", panel, 620, 620, includeCloseButton: false);
@@ -3595,17 +3592,8 @@ internal sealed class MainWindow : Window
             case ("Hockey Operations", "Free Agents"):
                 RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
                 break;
-            case ("Hockey Operations", "Contracts"):
-                RefreshSelectableTab("Contracts", BuildContractRows());
-                break;
-            case ("Hockey Operations", "Expiring / Expired"):
-                RefreshSelectableTab("Expiring / Expired", BuildExpiringExpiredRows());
-                break;
-            case ("Hockey Operations", "Contract Market"):
-                RefreshSelectableTab("Contract Market", BuildContractMarketRows());
-                break;
-            case ("Hockey Operations", "Contract Rights"):
-                RefreshSelectableTab("Contract Rights", BuildContractRightsRows());
+            case ("Hockey Operations", "Contract Management"):
+                RefreshSelectableTab("Contract Management", BuildContractManagementRows());
                 break;
             case ("Hockey Operations", "Arbitration"):
                 SetTextTab("Arbitration", BuildArbitrationWorkspace());
@@ -3755,10 +3743,7 @@ internal sealed class MainWindow : Window
             RefreshSelectableTab("Tactics", BuildTacticsRows());
             RefreshSelectableTab("Recruits", BuildRecruitRows());
             RefreshSelectableTab("Free Agents", BuildFreeAgentRows("Free Agents"));
-            RefreshSelectableTab("Contracts", BuildContractRows());
-            RefreshSelectableTab("Expiring / Expired", BuildExpiringExpiredRows());
-            RefreshSelectableTab("Contract Market", BuildContractMarketRows());
-            RefreshSelectableTab("Contract Rights", BuildContractRightsRows());
+            RefreshSelectableTab("Contract Management", BuildContractManagementRows());
             _tabs["Arbitration"].Text = BuildArbitrationWorkspace();
             _tabs["Buyouts"].Text = BuildBuyoutWorkspace();
             _tabs["Offer Sheets"].Text = BuildOfferSheetWorkspace();
@@ -4528,7 +4513,9 @@ internal sealed class MainWindow : Window
     private string BuildBreadcrumb(string workspace, string screen)
     {
         var selected = _selectedPeopleByTab.GetValueOrDefault(screen);
-        var person = !string.IsNullOrWhiteSpace(selected) ? $" > {FindPersonName(selected)}" : string.Empty;
+        var person = !string.IsNullOrWhiteSpace(selected) && !selected.Contains(':', StringComparison.Ordinal)
+            ? $" > {FindPersonName(selected)}"
+            : string.Empty;
         return string.IsNullOrWhiteSpace(screen)
             ? workspace
             : $"{workspace} > {screen}{person}";
@@ -4704,10 +4691,7 @@ internal sealed class MainWindow : Window
             "Recruits" => BuildPlayerDetail(title, row),
             "Free Agents" => BuildPlayerDetail(title, row),
             "League Free Agents" => BuildPlayerDetail("Free Agents", row),
-            "Contracts" => BuildContractDetail(row),
-            "Expiring / Expired" => BuildExpiringExpiredDetail(row),
-            "Contract Market" => BuildContractMarketDetail(row),
-            "Contract Rights" => BuildContractRightsDetail(row),
+            "Contract Management" => BuildContractManagementDetail(row),
             "Teams" => BuildTeamDetail(row),
             "Scouting" => BuildPlayerDetail(title, row),
             "Scouting Operations" => BuildScoutingOperationDetail(row),
@@ -5453,7 +5437,7 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Dossier", () => OpenDossierFor(row.PersonId));
         yield return CreateDetailButton("Assign Line", () => SelectWorkspaceScreen("Hockey Operations", "Lineup"));
         yield return CreateDetailButton("Development", () => MessageBox.Show(State.DevelopmentReviewText(row.PersonId), "Development Review", MessageBoxButton.OK, MessageBoxImage.Information), CommandCenterHasDevelopmentProfile(row.PersonId), "No development profile is tracked for this person");
-        yield return CreateDetailButton("Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contracts"));
+        yield return CreateDetailButton("Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contract Management"));
         yield return CreateDetailButton("Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false);
         yield return CreateDetailButton("Trade", () => SelectWorkspaceScreen("Hockey Operations", "Trades"));
         yield return CreateDetailButton("History", () => MessageBox.Show(BuildCommandCenterCareerText(row.PersonId), "Player History", MessageBoxButton.OK, MessageBoxImage.Information));
@@ -5482,7 +5466,7 @@ internal sealed class MainWindow : Window
                 MessageBox.Show("No development profile is tracked for this person.", "Development Review", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         });
-        AddCommandCenterMenuItem(menu, "Contract View", _ => SelectWorkspaceScreen("Hockey Operations", "Contracts"));
+        AddCommandCenterMenuItem(menu, "Contract View", _ => SelectWorkspaceScreen("Hockey Operations", "Contract Management"));
         AddCommandCenterMenuItem(menu, "Assign Scout", row => ShowScoutAssignmentDialog(row.PersonId));
         AddCommandCenterMenuItem(menu, "Trade View", _ => SelectWorkspaceScreen("Hockey Operations", "Trades"));
         return menu;
@@ -7960,7 +7944,7 @@ internal sealed class MainWindow : Window
 
         yield return CreateDetailButton("Qualify", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId));
         yield return CreateDetailButton("Do Not Qualify", () => State.DeclineRightsFor(row.PersonId), State.CanDeclineRights(row.PersonId));
-        yield return CreateDetailButton("Negotiate Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contracts"), State.HasContractRightsDecision(row.PersonId));
+        yield return CreateDetailButton("Negotiate Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contract Management"), State.HasContractRightsDecision(row.PersonId));
         yield return CreateDetailButton("File Arbitration", () => State.FileArbitrationFor(row.PersonId), State.CanFileArbitration(row.PersonId));
         yield return CreateDetailButton("Settle Arbitration", () => State.SettleArbitrationFor(row.PersonId), State.CanSettleArbitration(row.PersonId));
         yield return CreateDetailButton("Accept Award", () => State.AcceptArbitrationAwardFor(row.PersonId), State.CanAcceptArbitrationAward(row.PersonId));
@@ -9532,8 +9516,8 @@ internal sealed class MainWindow : Window
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Open Contract Market", () =>
             {
-                SelectWorkspaceScreen("Hockey Operations", "Contract Market");
-                SelectPersonInList("Contract Market", row.PersonId);
+                SelectWorkspaceScreen("Hockey Operations", "Contract Management");
+                SelectPersonInList("Contract Management", row.PersonId);
             }),
             CreateDetailButton("Offer / Renew Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "This player is not currently eligible for a contract offer."),
             CreateDetailButton("Issue Qualifying Offer", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId), "Only eligible RFA rights records can receive a qualifying offer."),
@@ -9651,6 +9635,181 @@ internal sealed class MainWindow : Window
         return rows;
     }
 
+    private IReadOnlyList<SelectablePersonRow> BuildContractManagementRows()
+    {
+        var market = State.ContractMarket;
+        var today = State.ScenarioSnapshot.CurrentDate;
+        var allContracts = State.ScenarioSnapshot.Contracts
+            .Concat(State.Snapshot.Contracts)
+            .DistinctBy(contract => contract.ContractId)
+            .ToArray();
+        var currentSigned = allContracts
+            .Where(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate >= today)
+            .GroupBy(contract => contract.PersonId, StringComparer.Ordinal)
+            .Select(group => group.OrderBy(contract => contract.Term.EndDate).ThenByDescending(contract => contract.SignedOn ?? contract.OfferedOn).First())
+            .OrderBy(contract => contract.Term.EndDate)
+            .ThenBy(contract => FindPersonName(contract.PersonId), StringComparer.Ordinal)
+            .ToArray();
+        var expiring = market.ExpiringContracts
+            .Where(contract => contract.Term.EndDate.Year == today.Year)
+            .OrderBy(contract => contract.Term.EndDate)
+            .ThenBy(contract => FindPersonName(contract.PersonId), StringComparer.Ordinal)
+            .ToArray();
+        var expired = market.ExpiredContracts
+            .OrderByDescending(contract => contract.Term.EndDate)
+            .ThenBy(contract => FindPersonName(contract.PersonId), StringComparer.Ordinal)
+            .ToArray();
+
+        var rows = new List<SelectablePersonRow>
+        {
+            new(
+                "contract-management-summary",
+                "Contract Management",
+                "ContractManagementSummary",
+                $"{currentSigned.Length} active contract(s) | {expiring.Length} expiring this year | {expired.Length} expired",
+                $"{market.OpenNegotiations} negotiation(s) | {market.RightsDecisions.Count} rights record(s) | {market.FreeAgents.Count} free agent(s)",
+                "One workspace for contracts, expiring decisions, RFA/UFA rights, negotiations, and the free-agent market.")
+        };
+
+        void AddSection(string id, string name, int count, string secondary, string summary) =>
+            rows.Add(new SelectablePersonRow(id, name, "ContractManagementSection", $"{count} player(s)", secondary, summary));
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        void AddPerson(string personId, string name, string primary, string secondary, string summary)
+        {
+            if (seen.Add(personId))
+            {
+                rows.Add(new SelectablePersonRow(personId, name, "ContractManagementPerson", primary, secondary, summary));
+            }
+        }
+
+        AddSection(
+            "contract-management:expiring",
+            "Expiring This Year",
+            expiring.Length,
+            "Nearest expiry first | renew or issue qualifying offer",
+            "Contracts ending in the current calendar year appear here first. Select a player to see the contract, rights status, deadline, and offer actions.");
+        foreach (var contract in expiring)
+        {
+            AddPerson(
+                contract.PersonId,
+                FindPersonName(contract.PersonId),
+                $"Expires {contract.Term.EndDate:yyyy-MM-dd} | {contract.Money.SalaryOrStipend:C0} annually",
+                $"{State.PositionShortText(State.PersonPosition(contract.PersonId))} | {Math.Max(0, contract.Term.EndDate.DayNumber - today.DayNumber)} day(s) remaining",
+                "Renew this player, negotiate a new deal, or issue a qualifying offer if the player is RFA eligible.");
+        }
+
+        AddSection(
+            "contract-management:expired",
+            "Expired / Rights Decisions",
+            expired.Length + market.RightsDecisions.Count,
+            "Review RFA/UFA status before rights deadlines",
+            "Expired contracts stay visible until their rights path is resolved. A new signed contract removes the player from this work queue.");
+        foreach (var contract in expired)
+        {
+            AddPerson(
+                contract.PersonId,
+                FindPersonName(contract.PersonId),
+                $"Expired {contract.Term.EndDate:yyyy-MM-dd} | {contract.Money.SalaryOrStipend:C0} annually",
+                $"{State.PositionShortText(State.PersonPosition(contract.PersonId))} | {State.ContractRightsStatus(contract.PersonId)}",
+                "Review RFA/UFA rights, offer a new contract, or leave the player in free agency.");
+        }
+        foreach (var decision in market.RightsDecisions.OrderBy(decision => decision.ExpiryRule?.Deadline ?? DateOnly.MaxValue).ThenBy(decision => decision.PlayerName, StringComparer.Ordinal))
+        {
+            AddPerson(
+                decision.PersonId,
+                decision.PlayerName,
+                $"{State.DisplayRightsStatus(decision.RightsStatus)} | {State.PositionShortText(decision.Position)}",
+                $"Expires {decision.ContractExpiryDate?.ToString("yyyy-MM-dd") ?? "unknown"} | deadline {decision.ExpiryRule?.Deadline.ToString("yyyy-MM-dd") ?? "n/a"}",
+                decision.Recommendation);
+        }
+
+        AddSection(
+            "contract-management:negotiations",
+            "Negotiations & Offers",
+            market.Negotiations.Count,
+            "Opening asks, counters, comparables, and promises",
+            "Open a player to review the agent's demand, team fit, contract comparables, promises, and next negotiation action.");
+        foreach (var negotiation in market.Negotiations.OrderByDescending(item => item.IsOpen).ThenBy(item => item.DecisionDeadline ?? DateOnly.MaxValue).ThenBy(item => item.PersonName, StringComparer.Ordinal))
+        {
+            AddPerson(
+                negotiation.PersonId,
+                negotiation.PersonName,
+                $"{negotiation.Status} | {negotiation.MarketStatus}",
+                $"Ask {negotiation.Demand.AnnualSalary:C0} x {negotiation.Demand.TermYears} | deadline {negotiation.DecisionDeadline?.ToString("yyyy-MM-dd") ?? "n/a"}",
+                negotiation.NextAction);
+        }
+
+        AddSection(
+            "contract-management:free-agents",
+            "Free Agent Market",
+            market.FreeAgents.Count,
+            "Position, ask, interest, and team fit",
+            "Available free agents are shown with their opening ask, market interest, roster fit, and negotiation actions.");
+        foreach (var agent in market.FreeAgents.OrderBy(agent => agent.ContractAsk.AnnualAmount).ThenBy(agent => agent.Name, StringComparer.Ordinal))
+        {
+            AddPerson(
+                agent.PersonId,
+                agent.Name,
+                $"Free agent | {State.PositionShortText(agent.Position)} | age {agent.Age}",
+                $"Ask {agent.ContractAsk.AnnualAmount:C0} x {agent.ContractAsk.TermYears} | interest {agent.Interest.PlayerOrganizationInterest}/100",
+                $"{agent.FitSummary.RosterNeed} {agent.FitSummary.StaffRecommendation}");
+        }
+
+        AddSection(
+            "contract-management:active",
+            "Active Contracts",
+            currentSigned.Length,
+            "Sorted by nearest expiry",
+            "Every current signed contract is listed here, with the nearest expiry at the top and the longest commitments at the bottom.");
+        foreach (var contract in currentSigned)
+        {
+            AddPerson(
+                contract.PersonId,
+                FindPersonName(contract.PersonId),
+                $"Signed | expires {contract.Term.EndDate:yyyy-MM-dd}",
+                $"{contract.Money.SalaryOrStipend:C0} annually | {State.PositionShortText(State.PersonPosition(contract.PersonId))}",
+                "Review contract terms, clauses, promises, and the player's profile.");
+        }
+
+        return rows;
+    }
+
+    private UIElement BuildContractManagementDetail(SelectablePersonRow? row)
+    {
+        if (row is null || row.Kind == "ContractManagementSummary")
+        {
+            var panel = CreateDetailPanel("Contract Management", "Contracts, rights & free agency");
+            var market = State.ContractMarket;
+            AddParagraph(panel, "Use this workspace as the single starting point for every player contract decision.");
+            AddLine(panel, "Active contracts", State.ScenarioSnapshot.Contracts.Count(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate >= State.ScenarioSnapshot.CurrentDate));
+            AddLine(panel, "Expiring this year", market.ExpiringContracts.Count(contract => contract.Term.EndDate.Year == State.ScenarioSnapshot.CurrentDate.Year));
+            AddLine(panel, "Expired", market.ExpiredContracts.Count);
+            AddLine(panel, "Open negotiations", market.OpenNegotiations);
+            AddLine(panel, "Rights decisions", market.RightsDecisions.Count);
+            AddLine(panel, "Available free agents", market.FreeAgents.Count);
+            AddSubHeader(panel, "Decision order");
+            AddParagraph(panel, "Start with Expiring This Year, then review Expired / Rights Decisions. Use Negotiations & Offers for active talks and Free Agent Market for new signings.");
+            AddParagraph(panel, "Qualifying offers are one-year tenders that preserve club rights for eligible RFAs. They do not replace negotiation; the player can still accept, reject, or negotiate under the rulebook.");
+            AddActions(panel,
+                CreateDetailButton("Review Expiring", () => SelectPersonInList("Contract Management", "contract-management:expiring")),
+                CreateDetailButton("Review Rights", () => SelectPersonInList("Contract Management", "contract-management:expired")),
+                CreateDetailButton("Review Negotiations", () => SelectPersonInList("Contract Management", "contract-management:negotiations")),
+                CreateDetailButton("Review Free Agents", () => SelectPersonInList("Contract Management", "contract-management:free-agents")));
+            return panel;
+        }
+
+        if (row.Kind == "ContractManagementSection")
+        {
+            var panel = CreateDetailPanel(row.Name, row.Primary);
+            AddLine(panel, "View", row.Secondary);
+            AddParagraph(panel, row.Summary);
+            return panel;
+        }
+
+        return BuildContractMarketDetail(row);
+    }
+
     private UIElement BuildContractDetail(SelectablePersonRow? row)
     {
         if (row is null || row.Kind == "ContractSummary")
@@ -9698,7 +9857,7 @@ internal sealed class MainWindow : Window
     {
         if (row is null)
         {
-            return EmptyDetail("Contract Market", "Select a player to review demand, market status, deadlines, comparables, and negotiation history.");
+            return EmptyDetail("Contract Management", "Select a player to review contract terms, rights, demand, deadlines, comparables, and negotiation history.");
         }
 
         if (row.Kind == "ContractMarketSummary")
@@ -9710,11 +9869,18 @@ internal sealed class MainWindow : Window
         var market = State.ContractMarket;
         var negotiation = market.Negotiations.FirstOrDefault(item => item.PersonId == row.PersonId && item.IsOpen)
             ?? market.Negotiations.FirstOrDefault(item => item.PersonId == row.PersonId);
-        var contract = market.ExpiringContracts.FirstOrDefault(item => item.PersonId == row.PersonId);
+        var contract = market.ExpiringContracts.FirstOrDefault(item => item.PersonId == row.PersonId)
+            ?? market.ExpiredContracts.FirstOrDefault(item => item.PersonId == row.PersonId)
+            ?? State.ScenarioSnapshot.Contracts
+                .Concat(State.Snapshot.Contracts)
+                .DistinctBy(item => item.ContractId)
+                .Where(item => item.PersonId == row.PersonId && item.Status == ContractStatus.Signed)
+                .OrderByDescending(item => item.Term.EndDate)
+                .FirstOrDefault();
         var rights = market.RightsDecisions.FirstOrDefault(item => item.PersonId == row.PersonId);
         var freeAgent = market.FreeAgents.FirstOrDefault(item => item.PersonId == row.PersonId);
 
-        AddLine(panel, "Market status", negotiation?.MarketStatus.ToString() ?? (rights?.RightsStatus.ToString() ?? (freeAgent is null ? "Expiring / under contract" : "Free agent")));
+        AddLine(panel, "Market status", negotiation?.MarketStatus.ToString() ?? (rights?.RightsStatus.ToString() ?? (freeAgent is null ? "Under contract" : "Free agent")));
         if (contract is not null)
         {
             AddSubHeader(panel, "Current contract");
@@ -9775,6 +9941,9 @@ internal sealed class MainWindow : Window
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
             CreateDetailButton("View Dossier", () => OpenDossierFor(row.PersonId)),
             CreateDetailButton("Offer Contract", () => ShowContractOfferDialog(row.PersonId), State.CanOpenContractOffer(row.PersonId), "This player is not currently eligible for a contract offer."),
+            CreateDetailButton("Issue Qualifying Offer", () => State.QualifyRightsFor(row.PersonId), State.CanQualifyRights(row.PersonId), "A one-year qualifying offer preserves club rights for an eligible RFA."),
+            CreateDetailButton("Do Not Qualify", () => State.DeclineRightsFor(row.PersonId), State.CanDeclineRights(row.PersonId), "This releases RFA rights and may move the player to the free-agent market."),
+            CreateDetailButton("Open Contract Rights", () => OpenContractRightsFor(row.PersonId), State.HasContractRightsDecision(row.PersonId)),
             CreateDetailButton("Start Contract Talks", () => State.StartContractNegotiationFor(row.PersonId), negotiation is null || !negotiation.IsOpen),
             CreateDetailButton("Submit Market Offer", () => State.SubmitContractMarketOfferFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Open talks first or review the pending GM approval"),
             CreateDetailButton("Accept Counter", () => State.AcceptCurrentContractOfferFor(row.PersonId), negotiation?.Status == ContractNegotiationStatus.Countered, "Accept a counter by submitting its current salary and term."),
@@ -9787,10 +9956,11 @@ internal sealed class MainWindow : Window
 
     private UIElement BuildExpiringContractsQuickView()
     {
-        var panel = CreateDetailPanel("Contract Market", "Expiring Contracts Quick View");
+        var panel = CreateDetailPanel("Contract Management", "Expiring Contracts Quick View");
         var market = State.ContractMarket;
         AddParagraph(panel, "Start here for contracts that need attention soon. Select a player below to open the full negotiation workspace.");
         AddLine(panel, "Expiring within one year", market.ExpiringContracts.Count);
+        AddLine(panel, "Expired / rights review", market.ExpiredContracts.Count + market.RightsDecisions.Count);
         AddLine(panel, "Open negotiations", market.OpenNegotiations);
         AddLine(panel, "Rights decisions", market.RightsDecisions.Count);
         AddSubHeader(panel, "Expiring contracts");
@@ -9804,7 +9974,7 @@ internal sealed class MainWindow : Window
             {
                 var name = FindPersonName(contract.PersonId);
                 AddParagraph(panel, $"{name} | {contract.Money.SalaryOrStipend:C0} annually | expires {contract.Term.EndDate:yyyy-MM-dd}");
-                AddActions(panel, CreateDetailButton("Open contract", () => SelectPersonInList("Contract Market", contract.PersonId)));
+                AddActions(panel, CreateDetailButton("Open contract", () => SelectPersonInList("Contract Management", contract.PersonId)));
             }
         }
 
@@ -9867,14 +10037,14 @@ internal sealed class MainWindow : Window
 
     private void OpenContractFor(string personId)
     {
-        SelectWorkspaceScreen("Hockey Operations", "Contracts");
-        SelectPersonInList("Contracts", personId);
+        SelectWorkspaceScreen("Hockey Operations", "Contract Management");
+        SelectPersonInList("Contract Management", personId);
     }
 
     private void OpenContractRightsFor(string personId)
     {
-        SelectWorkspaceScreen("Hockey Operations", "Contract Rights");
-        SelectPersonInList("Contract Rights", personId);
+        SelectWorkspaceScreen("Hockey Operations", "Contract Management");
+        SelectPersonInList("Contract Management", personId);
     }
 
     private void SelectPersonInList(string title, string personId)
