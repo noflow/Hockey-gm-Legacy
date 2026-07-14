@@ -126,6 +126,7 @@ var alpha89OffseasonReadinessTests = new Alpha89OffseasonReadinessTests();
 var alpha810OpeningNightTests = new Alpha810OpeningNightTests();
 var alpha811ContractOfferUiTests = new Alpha811ContractOfferUiTests();
 var alpha811AgentContractNegotiationTests = new Alpha811AgentContractNegotiationTests();
+var alpha812ContractWorkflowTests = new Alpha812ContractWorkflowTests();
 var runner = new TestRunner(args);
 
 runner.Run("junior_v1 rulebook loads", tests.JuniorRulebookLoads);
@@ -1616,6 +1617,9 @@ runner.Run("alpha 8.11 RFA/UFA negotiation includes salary and term", alpha811Ag
 runner.Run("alpha 8.11 agents expose team fit and hometown discounts", alpha811AgentContractNegotiationTests.AgentPreferencesIncludeTeamFitAndHometownDiscounts);
 runner.Run("alpha 8.11 poor team fit adds rejection risk", alpha811AgentContractNegotiationTests.ContenderPreferenceAddsPoorTeamRejectionRisk);
 runner.Run("alpha 8.11 UI exposes approval and rejection controls", alpha811AgentContractNegotiationTests.ContractUiExposesNegotiationApprovalAndRejectionControls);
+runner.Run("alpha 8.12 contract summary separates active contracts", alpha812ContractWorkflowTests.ContractMarketSummaryExposesActiveContractsSeparately);
+runner.Run("alpha 8.12 unified contract workspace exposes queues and filters", alpha812ContractWorkflowTests.UnifiedContractManagementExposesDecisionQueuesAndFilters);
+runner.Run("alpha 8.12 expiry removes salary and refreshes rights", alpha812ContractWorkflowTests.ContractLifecyclePreservesRightsAndRemovesExpiredSalary);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

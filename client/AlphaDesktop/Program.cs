@@ -105,6 +105,8 @@ internal sealed class MainWindow : Window
     private ComboBox? _rosterRoleFilter;
     private ComboBox? _rosterAgeFilter;
     private readonly Dictionary<string, ComboBox> _freeAgentMarketFilters = [];
+    private TextBox? _contractManagementSearchInput;
+    private ComboBox? _contractManagementFilter;
     private TextBox? _globalSearchInput;
     private StackPanel? _inboxCategoryPanel;
     private StackPanel? _inboxListPanel;
@@ -2030,6 +2032,13 @@ internal sealed class MainWindow : Window
             Grid.SetColumnSpan(filters, 2);
             root.Children.Add(filters);
         }
+        else if (title == "Contract Management")
+        {
+            var filters = BuildContractManagementFilters();
+            Grid.SetRow(filters, 0);
+            Grid.SetColumnSpan(filters, 2);
+            root.Children.Add(filters);
+        }
 
         Grid.SetRow(list, 1);
         Grid.SetColumn(list, 0);
@@ -2177,6 +2186,72 @@ internal sealed class MainWindow : Window
         Grid.SetColumn(right, 2);
         root.Children.Add(right);
         return root;
+    }
+
+    private UIElement BuildContractManagementFilters()
+    {
+        var panel = new WrapPanel
+        {
+            Margin = new Thickness(12, 10, 12, 4),
+            Orientation = Orientation.Horizontal
+        };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Contract view",
+            FontWeight = FontWeights.SemiBold,
+            Foreground = UiTheme.Text,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 5, 8, 8)
+        });
+
+        _contractManagementFilter = new ComboBox
+        {
+            ItemsSource = new[]
+            {
+                "All Contracts",
+                "Active Contracts",
+                "Expiring This Year",
+                "Expired / Rights",
+                "Negotiations & Offers",
+                "Free Agent Market"
+            },
+            SelectedItem = "All Contracts",
+            MinWidth = 190,
+            MinHeight = 30,
+            Margin = new Thickness(0, 0, 10, 8),
+            ToolTip = "Show one contract decision queue at a time."
+        };
+        _contractManagementFilter.SelectionChanged += (_, _) =>
+        {
+            if (!_isRefreshing)
+            {
+                RefreshSelectableTab("Contract Management", BuildContractManagementRows());
+            }
+        };
+        panel.Children.Add(_contractManagementFilter);
+
+        _contractManagementSearchInput = new TextBox
+        {
+            MinWidth = 240,
+            MinHeight = 30,
+            Margin = new Thickness(0, 0, 10, 8),
+            ToolTip = "Search contract rows by player name, position, status, or expiry date."
+        };
+        _contractManagementSearchInput.TextChanged += (_, _) =>
+        {
+            if (!_isRefreshing)
+            {
+                RefreshSelectableTab("Contract Management", BuildContractManagementRows());
+            }
+        };
+        panel.Children.Add(_contractManagementSearchInput);
+        panel.Children.Add(CreateButton("Clear", () =>
+        {
+            _contractManagementSearchInput.Text = string.Empty;
+            _contractManagementFilter.SelectedItem = "All Contracts";
+            SetFeedback("Contract filters cleared.");
+        }, refreshBadges: false));
+        return panel;
     }
 
     private static ItemsPanelTemplate HorizontalWrapItemsPanel()
@@ -9639,17 +9714,7 @@ internal sealed class MainWindow : Window
     {
         var market = State.ContractMarket;
         var today = State.ScenarioSnapshot.CurrentDate;
-        var allContracts = State.ScenarioSnapshot.Contracts
-            .Concat(State.Snapshot.Contracts)
-            .DistinctBy(contract => contract.ContractId)
-            .ToArray();
-        var currentSigned = allContracts
-            .Where(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate >= today)
-            .GroupBy(contract => contract.PersonId, StringComparer.Ordinal)
-            .Select(group => group.OrderBy(contract => contract.Term.EndDate).ThenByDescending(contract => contract.SignedOn ?? contract.OfferedOn).First())
-            .OrderBy(contract => contract.Term.EndDate)
-            .ThenBy(contract => FindPersonName(contract.PersonId), StringComparer.Ordinal)
-            .ToArray();
+        var currentSigned = market.ActiveContracts;
         var expiring = market.ExpiringContracts
             .Where(contract => contract.Term.EndDate.Year == today.Year)
             .OrderBy(contract => contract.Term.EndDate)
@@ -9666,19 +9731,26 @@ internal sealed class MainWindow : Window
                 "contract-management-summary",
                 "Contract Management",
                 "ContractManagementSummary",
-                $"{currentSigned.Length} active contract(s) | {expiring.Length} expiring this year | {expired.Length} expired",
+                $"{currentSigned.Count} active contract(s) | {expiring.Length} expiring this year | {expired.Length} expired",
                 $"{market.OpenNegotiations} negotiation(s) | {market.RightsDecisions.Count} rights record(s) | {market.FreeAgents.Count} free agent(s)",
                 "One workspace for contracts, expiring decisions, RFA/UFA rights, negotiations, and the free-agent market.")
         };
 
-        void AddSection(string id, string name, int count, string secondary, string summary) =>
+        var sectionByRowId = new Dictionary<string, string>(StringComparer.Ordinal);
+        var currentSection = "summary";
+        void AddSection(string id, string name, int count, string secondary, string summary)
+        {
+            currentSection = id;
+            sectionByRowId[id] = id;
             rows.Add(new SelectablePersonRow(id, name, "ContractManagementSection", $"{count} player(s)", secondary, summary));
+        }
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
         void AddPerson(string personId, string name, string primary, string secondary, string summary)
         {
             if (seen.Add(personId))
             {
+                sectionByRowId[personId] = currentSection;
                 rows.Add(new SelectablePersonRow(personId, name, "ContractManagementPerson", primary, secondary, summary));
             }
         }
@@ -9759,7 +9831,7 @@ internal sealed class MainWindow : Window
         AddSection(
             "contract-management:active",
             "Active Contracts",
-            currentSigned.Length,
+            currentSigned.Count,
             "Sorted by nearest expiry",
             "Every current signed contract is listed here, with the nearest expiry at the top and the longest commitments at the bottom.");
         foreach (var contract in currentSigned)
@@ -9772,7 +9844,26 @@ internal sealed class MainWindow : Window
                 "Review contract terms, clauses, promises, and the player's profile.");
         }
 
-        return rows;
+        var filter = _contractManagementFilter?.SelectedItem?.ToString() ?? "All Contracts";
+        var filterSection = filter switch
+        {
+            "Active Contracts" => "contract-management:active",
+            "Expiring This Year" => "contract-management:expiring",
+            "Expired / Rights" => "contract-management:expired",
+            "Negotiations & Offers" => "contract-management:negotiations",
+            "Free Agent Market" => "contract-management:free-agents",
+            _ => "all"
+        };
+        var query = _contractManagementSearchInput?.Text.Trim() ?? string.Empty;
+        return rows
+            .Where(row => row.Kind == "ContractManagementSummary"
+                || filterSection == "all"
+                || sectionByRowId.GetValueOrDefault(row.PersonId) == filterSection)
+            .Where(row => row.Kind != "ContractManagementPerson"
+                || string.IsNullOrWhiteSpace(query)
+                || string.Join(" ", row.Name, row.Primary, row.Secondary, row.Summary)
+                    .Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
     }
 
     private UIElement BuildContractManagementDetail(SelectablePersonRow? row)
@@ -9782,7 +9873,7 @@ internal sealed class MainWindow : Window
             var panel = CreateDetailPanel("Contract Management", "Contracts, rights & free agency");
             var market = State.ContractMarket;
             AddParagraph(panel, "Use this workspace as the single starting point for every player contract decision.");
-            AddLine(panel, "Active contracts", State.ScenarioSnapshot.Contracts.Count(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate >= State.ScenarioSnapshot.CurrentDate));
+            AddLine(panel, "Active contracts", market.ActiveContracts.Count);
             AddLine(panel, "Expiring this year", market.ExpiringContracts.Count(contract => contract.Term.EndDate.Year == State.ScenarioSnapshot.CurrentDate.Year));
             AddLine(panel, "Expired", market.ExpiredContracts.Count);
             AddLine(panel, "Open negotiations", market.OpenNegotiations);

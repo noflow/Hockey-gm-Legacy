@@ -39,6 +39,11 @@ public sealed class ContractMarketService
             .OrderByDescending(contract => contract.Term.EndDate)
             .ThenBy(contract => contract.PersonId, StringComparer.Ordinal)
             .ToArray();
+        var active = latestContracts
+            .Where(contract => contract.Status == ContractStatus.Signed && contract.Term.EndDate >= prepared.CurrentDate)
+            .OrderBy(contract => contract.Term.EndDate)
+            .ThenBy(contract => contract.PersonId, StringComparer.Ordinal)
+            .ToArray();
         var rights = prepared.PlayerRightsDecisions
             .Where(decision => decision.IsOpenDecision || decision.RightsStatus is FreeAgentRightsStatus.Qualified or FreeAgentRightsStatus.RightsHeld)
             .OrderBy(decision => decision.ContractExpiryDate ?? DateOnly.MaxValue)
@@ -58,7 +63,11 @@ public sealed class ContractMarketService
             deadlines,
             prepared.CurrentOrganizationPlan,
             summary);
-        result = result with { ExpiredContracts = expired };
+        result = result with
+        {
+            ActiveContracts = active,
+            ExpiredContracts = expired
+        };
         result.Validate();
         return result;
     }
