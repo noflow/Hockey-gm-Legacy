@@ -19,10 +19,24 @@ public sealed class ContractMarketService
         ArgumentNullException.ThrowIfNull(scenario);
         var effectiveRulebook = rulebook ?? scenario.LeagueProfile.Rulebook;
         var prepared = new RfaUfaService().EnsureRights(scenario, effectiveRulebook);
-        var active = ActiveContracts(prepared);
-        var expiring = active
-            .Where(contract => contract.Term.EndDate <= prepared.CurrentDate.AddDays(365))
+        var latestContracts = prepared.Contracts
+            .Concat(prepared.AlphaSnapshot.Contracts)
+            .GroupBy(contract => contract.PersonId, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderByDescending(contract => contract.Term.EndDate)
+                .ThenByDescending(contract => contract.SignedOn ?? contract.OfferedOn)
+                .First())
+            .ToArray();
+        var expiring = latestContracts
+            .Where(contract => contract.Status == ContractStatus.Signed)
+            .Where(contract => contract.Term.EndDate >= prepared.CurrentDate && contract.Term.EndDate <= prepared.CurrentDate.AddDays(365))
             .OrderBy(contract => contract.Term.EndDate)
+            .ThenBy(contract => contract.PersonId, StringComparer.Ordinal)
+            .ToArray();
+        var expired = latestContracts
+            .Where(contract => contract.Status == ContractStatus.Expired
+                || (contract.Status == ContractStatus.Signed && contract.Term.EndDate < prepared.CurrentDate))
+            .OrderByDescending(contract => contract.Term.EndDate)
             .ThenBy(contract => contract.PersonId, StringComparer.Ordinal)
             .ToArray();
         var rights = prepared.PlayerRightsDecisions
@@ -35,7 +49,7 @@ public sealed class ContractMarketService
             .OrderBy(agent => agent.Name, StringComparer.Ordinal)
             .ToArray() ?? Array.Empty<FreeAgent>();
         var deadlines = BuildDeadlines(prepared, expiring, rights, effectiveRulebook);
-        var summary = $"{expiring.Length} contract(s) expire within a year, {rights.Length} rights decision(s) are open, and {freeAgents.Length} free agent(s) are available. {prepared.ContractNegotiations.Count(item => item.IsOpen)} negotiation(s) are active.";
+        var summary = $"{expiring.Length} contract(s) expire within a year, {expired.Length} contract(s) are expired, {rights.Length} rights decision(s) are open, and {freeAgents.Length} free agent(s) are available. {prepared.ContractNegotiations.Count(item => item.IsOpen)} negotiation(s) are active.";
         var result = new ContractMarketSummary(
             prepared.ContractNegotiations.OrderByDescending(item => item.LastUpdatedOn).ToArray(),
             expiring,
@@ -44,6 +58,7 @@ public sealed class ContractMarketService
             deadlines,
             prepared.CurrentOrganizationPlan,
             summary);
+        result = result with { ExpiredContracts = expired };
         result.Validate();
         return result;
     }

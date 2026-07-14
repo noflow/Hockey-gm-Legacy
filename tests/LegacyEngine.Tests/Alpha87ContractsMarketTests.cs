@@ -16,6 +16,67 @@ internal sealed class Alpha87ContractsMarketTests
         Assert.True(!string.IsNullOrWhiteSpace(summary.Summary), "Contract market should explain current pressure.");
     }
 
+    public void ExpiredContractsMoveToExpiredBoard()
+    {
+        var created = NewGmScenarioBootstrapper.CreateScenario();
+        var target = created.ScenarioSnapshot.Contracts.First(contract => contract.Status == ContractStatus.Signed);
+        var expired = target with
+        {
+            Term = new ContractTerm(created.ScenarioSnapshot.CurrentDate.AddYears(-2), created.ScenarioSnapshot.CurrentDate.AddDays(-1)),
+            SignedOn = created.ScenarioSnapshot.CurrentDate.AddYears(-2),
+            ExpiredOn = created.ScenarioSnapshot.CurrentDate.AddDays(-1)
+        };
+        var contracts = created.ScenarioSnapshot.Contracts
+            .Where(contract => contract.PersonId != target.PersonId)
+            .Append(expired)
+            .ToArray();
+        var scenario = created.ScenarioSnapshot with
+        {
+            Contracts = contracts,
+            AlphaSnapshot = created.ScenarioSnapshot.AlphaSnapshot with { Contracts = contracts }
+        };
+
+        var summary = new ContractMarketService().BuildSummary(scenario, created.Registry.Rulebook);
+
+        Assert.True(summary.ExpiredContracts.Any(contract => contract.PersonId == target.PersonId), "A past contract should appear on the expired board.");
+        Assert.False(summary.ExpiringContracts.Any(contract => contract.PersonId == target.PersonId), "An expired contract should not remain in the expiring queue.");
+    }
+
+    public void SignedReplacementRemovesPlayerFromExpiryBoard()
+    {
+        var created = NewGmScenarioBootstrapper.CreateScenario();
+        var target = created.ScenarioSnapshot.Contracts.First(contract => contract.Status == ContractStatus.Signed);
+        var oldContract = target with
+        {
+            ContractId = $"{target.ContractId}:old",
+            Term = new ContractTerm(created.ScenarioSnapshot.CurrentDate.AddYears(-2), created.ScenarioSnapshot.CurrentDate.AddDays(-1)),
+            SignedOn = created.ScenarioSnapshot.CurrentDate.AddYears(-2),
+            ExpiredOn = created.ScenarioSnapshot.CurrentDate.AddDays(-1),
+            Status = ContractStatus.Expired
+        };
+        var replacement = target with
+        {
+            ContractId = $"{target.ContractId}:replacement",
+            Term = new ContractTerm(created.ScenarioSnapshot.CurrentDate, created.ScenarioSnapshot.CurrentDate.AddYears(3)),
+            SignedOn = created.ScenarioSnapshot.CurrentDate
+        };
+        var contracts = created.ScenarioSnapshot.Contracts
+            .Where(contract => contract.PersonId != target.PersonId)
+            .Append(oldContract)
+            .Append(replacement)
+            .ToArray();
+        var scenario = created.ScenarioSnapshot with
+        {
+            Contracts = contracts,
+            AlphaSnapshot = created.ScenarioSnapshot.AlphaSnapshot with { Contracts = contracts }
+        };
+
+        var summary = new ContractMarketService().BuildSummary(scenario, created.Registry.Rulebook);
+
+        Assert.False(summary.ExpiredContracts.Any(contract => contract.PersonId == target.PersonId), "A signed replacement should remove the old contract from the expired board.");
+        Assert.False(summary.ExpiringContracts.Any(contract => contract.PersonId == target.PersonId), "A long replacement contract should not appear as a current-year expiry.");
+    }
+
     public void NegotiationStartsWithDemandAndDeadline()
     {
         var created = NewGmScenarioBootstrapper.CreateScenario();
@@ -177,6 +238,8 @@ internal sealed class Alpha87ContractsMarketTests
         Assert.True(source.Contains("Contract Market", StringComparison.Ordinal), "Desktop should expose the unified Contract Market workspace.");
         Assert.True(source.Contains("BuildContractMarketRows", StringComparison.Ordinal), "Desktop should expose selectable contract-market rows.");
         Assert.True(source.Contains("Start Contract Talks", StringComparison.Ordinal), "Desktop should expose contract negotiation actions.");
+        Assert.True(source.Contains("Expiring / Expired", StringComparison.Ordinal), "Desktop should expose a dedicated expiry board.");
+        Assert.True(source.Contains("Issue Qualifying Offer", StringComparison.Ordinal), "Desktop should label the RFA qualifying-offer action clearly.");
     }
 
     public void Alpha87DoesNotAddGodotOrFullCba()

@@ -236,6 +236,8 @@ public sealed record ContractMarketSummary(
     OrganizationPlan? Planning,
     string Summary)
 {
+    public IReadOnlyList<Contract> ExpiredContracts { get; init; } = Array.Empty<Contract>();
+
     public int OpenNegotiations => Negotiations.Count(item => item.IsOpen);
 
     public void Validate()
@@ -246,6 +248,11 @@ public sealed record ContractMarketSummary(
         }
 
         foreach (var contract in ExpiringContracts)
+        {
+            contract.Validate();
+        }
+
+        foreach (var contract in ExpiredContracts)
         {
             contract.Validate();
         }

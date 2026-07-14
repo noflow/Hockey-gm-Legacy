@@ -1576,6 +1576,8 @@ runner.Run("alpha 8.6 cards are clickable and advance opens daily world", alpha8
 runner.Run("alpha 8.6 multi-day briefings store urgency without duplicates", alpha86DailyHockeyWorldTests.MultiDayBriefingIsStoredWithoutDuplicatesAndPreservesUrgency);
 runner.Run("alpha 8.6 daily briefing archive survives save load", alpha86DailyHockeyWorldTests.DailyBriefingArchiveSurvivesSaveLoad);
 runner.Run("alpha 8.7 contract market summary includes decision sources", alpha87ContractsMarketTests.ContractMarketSummaryIncludesAllDecisionSources);
+runner.Run("contract expiry board moves expired contracts", alpha87ContractsMarketTests.ExpiredContractsMoveToExpiredBoard);
+runner.Run("signed replacement leaves expiry board", alpha87ContractsMarketTests.SignedReplacementRemovesPlayerFromExpiryBoard);
 runner.Run("alpha 8.7 contract negotiation starts with demand and deadline", alpha87ContractsMarketTests.NegotiationStartsWithDemandAndDeadline);
 runner.Run("alpha 8.7 accepted offer completes signing", alpha87ContractsMarketTests.AcceptedOfferCompletesSigningWithoutPendingApproval);
 runner.Run("alpha 8.7 negotiation history persists on snapshot", alpha87ContractsMarketTests.NegotiationHistorySurvivesSnapshotRoundTrip);
