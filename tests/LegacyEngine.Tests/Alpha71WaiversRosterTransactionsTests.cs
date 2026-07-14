@@ -53,6 +53,21 @@ internal sealed class Alpha71WaiversRosterTransactionsTests
         Assert.True(result.LeagueTransactions.Any(transaction => transaction.TransactionType == LeagueTransactionType.PlayerAssigned), "Affiliate assignment should feed league news.");
     }
 
+    public void AffiliateAssignmentRemovesPlayerFromActiveLineup()
+    {
+        var prepared = PrepareScenario(age: 20, seasons: 1, games: 12);
+        var before = prepared.Scenario.CurrentLineup!.Assignments.FirstOrDefault(assignment =>
+            assignment.PersonId == prepared.PersonId && assignment.Slot != LineupSlot.HealthyScratch);
+        Assert.True(before is not null, "The prepared player should begin in an active lineup slot.");
+
+        var result = new WaiverService().AssignToAffiliate(prepared.Registry, prepared.Scenario, prepared.PersonId);
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(result.ScenarioSnapshot.CurrentLineup!.Assignments.Any(assignment =>
+            assignment.PersonId == prepared.PersonId && assignment.Slot != LineupSlot.HealthyScratch),
+            "Sending a player to the affiliate must clear the active lineup assignment without auto-filling another player.");
+    }
+
     public void RequiredAssignmentPlacesPlayerOnWaivers()
     {
         var prepared = PrepareScenario(age: 27, seasons: 6, games: 260);
@@ -156,7 +171,10 @@ internal sealed class Alpha71WaiversRosterTransactionsTests
         var service = new MultiLeagueCareerService();
         var team = service.TeamsFor(LeagueExperience.Nhl).First();
         var created = service.CreateScenario(service.SelectLeagueAndTeam(LeagueExperience.Nhl, team.OrganizationId));
-        var player = created.ScenarioSnapshot.AlphaSnapshot.Roster.ActivePlayers.First(item => item.Position != RosterPosition.Goalie);
+        var player = created.ScenarioSnapshot.AlphaSnapshot.Roster.ActivePlayers.First(item =>
+            item.Position != RosterPosition.Goalie
+            && created.ScenarioSnapshot.CurrentLineup!.Assignments.Any(assignment =>
+                assignment.PersonId == item.PersonId && assignment.Slot != LineupSlot.HealthyScratch));
         var name = created.ScenarioSnapshot.AlphaSnapshot.People.First(person => person.PersonId == player.PersonId).Identity.DisplayName;
         var contract = new Contract(
             $"contract-waiver-test:{player.PersonId}:{Guid.NewGuid():N}",

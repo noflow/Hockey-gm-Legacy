@@ -74,6 +74,15 @@ public sealed class Alpha64RosterLineupTests
         Assert.True(source.Contains("Starter", StringComparison.Ordinal), "Lineup view should expose goalie depth.");
     }
 
+    public void LineupViewUsesSelectableSlotsAndManageActions()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
+
+        Assert.True(source.Contains("\"Lineup\" => BuildLineupRows()", StringComparison.Ordinal), "Lineup should use selectable lineup-slot rows instead of the ordinary roster list.");
+        Assert.True(source.Contains("Manage slot", StringComparison.Ordinal), "Each lineup slot should expose a direct management action.");
+        Assert.True(source.Contains("Assign", StringComparison.Ordinal) && source.Contains("Swap", StringComparison.Ordinal), "Lineup detail should expose assignment and swap actions.");
+    }
+
     public void RosterRowsShowLineupRole()
     {
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));

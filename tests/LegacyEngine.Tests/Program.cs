@@ -1110,6 +1110,7 @@ runner.Run("alpha 6.4 default lineup creates four forward lines", alpha64RosterL
 runner.Run("alpha 6.4 default lineup creates three defense pairs", alpha64RosterLineupTests.DefaultLineupCreatesThreeDefensePairs);
 runner.Run("alpha 6.4 default lineup creates starter and backup", alpha64RosterLineupTests.DefaultLineupCreatesStarterAndBackup);
 runner.Run("alpha 6.4 lineup view exposes line slots", alpha64RosterLineupTests.LineupViewExposesLineSlots);
+runner.Run("alpha 6.4 lineup view uses selectable slots and manage actions", alpha64RosterLineupTests.LineupViewUsesSelectableSlotsAndManageActions);
 runner.Run("alpha 6.4 roster rows show lineup role", alpha64RosterLineupTests.RosterRowsShowLineupRole);
 runner.Run("alpha 6.4 development considers lineup role", alpha64RosterLineupTests.DevelopmentConsidersLineupRole);
 runner.Run("alpha 6.4 coach recommendation generated", alpha64RosterLineupTests.CoachRecommendationGenerated);
@@ -1132,6 +1133,7 @@ runner.Run("roster depth chart shows lineup and organization context", rosterMov
 runner.Run("active player can move to reserve", rosterMovementOrganizationTests.ActivePlayerCanMoveToReserveAndIsRemovedFromLineup);
 runner.Run("roster movement options explain availability", rosterMovementOrganizationTests.ActivePlayerMovementOptionsExplainValidAndInvalidActions);
 runner.Run("desktop exposes roster depth and movement actions", rosterMovementOrganizationTests.DesktopExposesRosterDepthAndCoreMovementActions);
+runner.Run("desktop exposes NHL AHL movement workspace", rosterMovementOrganizationTests.DesktopExposesNhlAhlMovementWorkspace);
 runner.Run("alpha 6.5 forward line chemistry generated", alpha65LineChemistryTests.ForwardLineChemistryGenerated);
 runner.Run("alpha 6.5 defense pair chemistry generated", alpha65LineChemistryTests.DefensePairChemistryGenerated);
 runner.Run("alpha 6.5 goalie depth chemistry generated", alpha65LineChemistryTests.GoalieDepthChemistryGenerated);
@@ -1313,6 +1315,7 @@ runner.Run("alpha 7.1 junior rulebook disables waivers", alpha71WaiversRosterTra
 runner.Run("alpha 7.1 young signed player can be waiver exempt", alpha71WaiversRosterTransactionsTests.YoungSignedPlayerCanBeWaiverExempt);
 runner.Run("alpha 7.1 veteran signed player requires waivers", alpha71WaiversRosterTransactionsTests.VeteranSignedPlayerRequiresWaivers);
 runner.Run("alpha 7.1 exempt assignment moves player to affiliate", alpha71WaiversRosterTransactionsTests.ExemptAssignmentMovesPlayerToAffiliate);
+runner.Run("alpha 7.1 affiliate assignment removes player from active lineup", alpha71WaiversRosterTransactionsTests.AffiliateAssignmentRemovesPlayerFromActiveLineup);
 runner.Run("alpha 7.1 required assignment places player on waivers", alpha71WaiversRosterTransactionsTests.RequiredAssignmentPlacesPlayerOnWaivers);
 runner.Run("alpha 7.1 claim moves player to claiming organization", alpha71WaiversRosterTransactionsTests.ClaimMovesPlayerToClaimingOrganization);
 runner.Run("alpha 7.1 clearing waivers assigns to affiliate", alpha71WaiversRosterTransactionsTests.ClearingWaiversAssignsToAffiliate);

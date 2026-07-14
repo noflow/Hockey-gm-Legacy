@@ -65,6 +65,17 @@ internal sealed class RosterMovementOrganizationTests
         Assert.True(source.Contains("RosterMovementService", StringComparison.Ordinal), "Desktop should route roster movement through the engine service.");
     }
 
+    public void DesktopExposesNhlAhlMovementWorkspace()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
+
+        Assert.True(source.Contains("NHL / AHL Movement", StringComparison.Ordinal), "Hockey Operations should expose a dedicated NHL/AHL movement view.");
+        Assert.True(source.Contains("Open NHL / AHL Movement", StringComparison.Ordinal), "Roster depth should link directly to NHL/AHL movement.");
+        Assert.True(source.Contains("Send to AHL", StringComparison.Ordinal), "Selected NHL players should expose a send-down action.");
+        Assert.True(source.Contains("Call Up from AHL", StringComparison.Ordinal), "Selected AHL players should expose a call-up action.");
+        Assert.True(source.Contains("Place on Waivers", StringComparison.Ordinal), "Waiver-required send-downs should be visible as a separate action.");
+    }
+
     private static NewGmScenarioResult CreateNhlScenario()
     {
         var careers = new MultiLeagueCareerService();

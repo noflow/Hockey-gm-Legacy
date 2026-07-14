@@ -333,6 +333,17 @@ public sealed class WaiverService
             AssignmentHistory = record.AssignmentHistory.Append($"{scenario.CurrentDate:yyyy-MM-dd}: Assigned to {affiliateName}. {reason}").ToArray()
         } : record).ToArray();
         var next = ReplaceTransaction(scenario with { AlphaSnapshot = scenario.AlphaSnapshot with { Roster = roster }, PlayerPipeline = pipeline }, transaction);
+        var activeAssignment = next.CurrentLineup?.Assignments
+            .FirstOrDefault(assignment => assignment.PersonId == personId && assignment.Slot != LineupSlot.HealthyScratch);
+        if (activeAssignment is not null)
+        {
+            var lineupResult = new LineupService().RemovePlayerFromSlot(next, activeAssignment.Slot);
+            if (lineupResult.Success)
+            {
+                next = lineupResult.ScenarioSnapshot;
+            }
+        }
+
         return AddHistory(next, personId, playerName, historyStatus, affiliateId, affiliateName, $"{playerName} assigned to {affiliateName}. {reason}");
     }
 

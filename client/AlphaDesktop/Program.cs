@@ -2139,6 +2139,7 @@ internal sealed class MainWindow : Window
                 "Roster Overview",
                 "Roster & Depth",
                 "Lineup",
+                "NHL / AHL Movement",
                 "Depth Chart",
                 "Prospects",
                 "Development",
@@ -4798,21 +4799,26 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildCommandCenterRows()
     {
-        IReadOnlyList<SelectablePersonRow> sourceRows = _commandCenterSource switch
+        IReadOnlyList<SelectablePersonRow> sourceRows = _commandCenterView switch
         {
-            "Drafted Prospects" => BuildProspectRows(),
-            "Prospects" => BuildProspectRows(),
-            "AHL Roster" or "AHL Affiliate" => BuildOrganizationAllocationRows(OrganizationRosterGroup.AhlAffiliateRoster),
-            "All Contracted Players" => BuildOrganizationAllocationRows(),
-            "Unsigned Rights" or "Unsigned Prospects" => BuildOrganizationAllocationRows(OrganizationRosterGroup.UnsignedProspectRights),
-            "Junior / Returned Prospects" or "Junior Returns" => BuildOrganizationAllocationRows(OrganizationRosterGroup.SignedJuniorReturn),
-            "Injured Players" or "Injured / Unavailable" => BuildOrganizationAllocationRows(OrganizationRosterGroup.InjuredOrUnavailable),
-            "Waiver Wire" => BuildRosterRows()
-                .Where(row => row.Kind != "RosterSummary" && CommandCenterMatches(row, "waiver", "AHL Eligible", "exempt"))
-                .ToArray(),
-            "Free Agents" => BuildFreeAgentRows(),
-            "Trade Targets" => BuildTradeRows(),
-            _ => BuildOrganizationAllocationRows(OrganizationRosterGroup.NhlActiveRoster)
+            "Lineup" => BuildLineupRows(),
+            "NHL / AHL Movement" => BuildOrganizationAllocationRows(),
+            _ => _commandCenterSource switch
+            {
+                "Drafted Prospects" => BuildProspectRows(),
+                "Prospects" => BuildProspectRows(),
+                "AHL Roster" or "AHL Affiliate" => BuildOrganizationAllocationRows(OrganizationRosterGroup.AhlAffiliateRoster),
+                "All Contracted Players" => BuildOrganizationAllocationRows(),
+                "Unsigned Rights" or "Unsigned Prospects" => BuildOrganizationAllocationRows(OrganizationRosterGroup.UnsignedProspectRights),
+                "Junior / Returned Prospects" or "Junior Returns" => BuildOrganizationAllocationRows(OrganizationRosterGroup.SignedJuniorReturn),
+                "Injured Players" or "Injured / Unavailable" => BuildOrganizationAllocationRows(OrganizationRosterGroup.InjuredOrUnavailable),
+                "Waiver Wire" => BuildRosterRows()
+                    .Where(row => row.Kind != "RosterSummary" && CommandCenterMatches(row, "waiver", "AHL Eligible", "exempt"))
+                    .ToArray(),
+                "Free Agents" => BuildFreeAgentRows(),
+                "Trade Targets" => BuildTradeRows(),
+                _ => BuildOrganizationAllocationRows(OrganizationRosterGroup.NhlActiveRoster)
+            }
         };
 
         var query = _commandCenterSearchInput?.Text?.Trim();
@@ -4824,7 +4830,7 @@ internal sealed class MainWindow : Window
         }
 
         var position = _commandCenterPositionFilter?.SelectedItem?.ToString();
-        if (!string.IsNullOrWhiteSpace(position) && position != "All Positions")
+        if (!string.IsNullOrWhiteSpace(position) && position != "All Positions" && _commandCenterView != "Lineup")
         {
             sourceRows = sourceRows
                 .Where(row => RowPositionText(row.PersonId).Equals(position, StringComparison.OrdinalIgnoreCase)
@@ -4900,6 +4906,7 @@ internal sealed class MainWindow : Window
         {
             "Lineup" => BuildHockeyOperationsLineupBoard(),
             "Roster & Depth" => BuildHockeyOperationsRosterDepthBoard(),
+            "NHL / AHL Movement" => BuildHockeyOperationsAffiliateMovementBoard(rows),
             "Depth Chart" => BuildHockeyOperationsDepthChartBoard(),
             "Prospects" => BuildHockeyOperationsProspectPipeline(rows),
             "Development" => BuildHockeyOperationsDevelopmentBoard(rows),
@@ -4936,6 +4943,7 @@ internal sealed class MainWindow : Window
         panel.Children.Add(UiPresentation.UiAlertBanner(chart.Summary, "info"));
         AddActions(panel,
             CreateDetailButton("Open Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup")),
+            CreateDetailButton("Open NHL / AHL Movement", () => SelectWorkspaceScreen("Hockey Operations", "NHL / AHL Movement")),
             CreateDetailButton("Open Organization Roster", () => SelectWorkspaceScreen("Hockey Operations", "Roster Overview")));
 
         var grid = new UniformGrid { Columns = 3 };
@@ -4979,6 +4987,27 @@ internal sealed class MainWindow : Window
         }
 
         panel.Children.Add(grid);
+        return panel;
+    }
+
+    private UIElement BuildHockeyOperationsAffiliateMovementBoard(IReadOnlyList<SelectablePersonRow> rows)
+    {
+        var panel = new StackPanel();
+        if (string.IsNullOrWhiteSpace(State.ScenarioSnapshot.Organization.AffiliateOrganizationId))
+        {
+            return UiPresentation.UiEmptyState("No AHL affiliate configured", "This organization does not currently have an affiliate available for call-ups or send-downs.");
+        }
+
+        panel.Children.Add(UiPresentation.UiAlertBanner(
+            "Select an NHL player to send down or an AHL player to call up. Waiver-required assignments will pause for the waiver process; no move is made automatically.",
+            "info"));
+        var nhl = rows.Where(row => row.Secondary.Contains("NHL Active", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var ahl = rows.Where(row => row.Secondary.Contains("AHL Affiliate", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var grid = new UniformGrid { Columns = 2 };
+        grid.Children.Add(BuildHockeyOperationsGroupCard("NHL Roster - Send Down", nhl, row => $"{State.WaiverStatusText(row.PersonId)} | Select for Send to AHL / Waivers"));
+        grid.Children.Add(BuildHockeyOperationsGroupCard("AHL Affiliate - Call Up", ahl, row => $"{State.WaiverStatusText(row.PersonId)} | Select for Call Up"));
+        panel.Children.Add(grid);
+        panel.Children.Add(UiPresentation.UiAlertBanner("The selected player's movement buttons appear in the detail panel on the right.", "neutral"));
         return panel;
     }
 
@@ -5063,6 +5092,8 @@ internal sealed class MainWindow : Window
             panel.Children.Add(new TextBlock { Text = $"{State.InjuryStatus(personId)} | {State.PromiseStatusText(personId)}", TextWrapping = TextWrapping.Wrap, Foreground = UiTheme.MutedText });
         }
 
+        panel.Children.Add(CreateDetailButton("Manage slot", () => SelectCommandCenterLineupSlot(slot)));
+
         return new Border
         {
             Background = UiTheme.SurfaceAlt,
@@ -5073,6 +5104,26 @@ internal sealed class MainWindow : Window
             Margin = new Thickness(0, 0, 8, 0),
             Child = panel
         };
+    }
+
+    private void SelectCommandCenterLineupSlot(LineupSlot slot)
+    {
+        _selectedCommandCenterPersonId = $"lineup-slot:{slot}";
+        if (_commandCenterViewList?.SelectedItem is string selectedView && selectedView == "Lineup")
+        {
+            RefreshHockeyOperationsCommandCenter();
+            return;
+        }
+
+        if (_commandCenterViewList is not null)
+        {
+            _commandCenterViewList.SelectedItem = "Lineup";
+        }
+        else
+        {
+            _commandCenterView = "Lineup";
+            RefreshHockeyOperationsCommandCenter();
+        }
     }
 
     private static IReadOnlyList<LineupSlot> ForwardLineSlots(int line) =>
@@ -5406,6 +5457,13 @@ internal sealed class MainWindow : Window
             return;
         }
 
+        if (_commandCenterView == "Lineup"
+            && row.Kind is "LineupSummary" or "LineupSlot" or "LineChemistry" or "GameUsage")
+        {
+            _commandCenterPlayerCard.Children.Add(BuildLineupDetail(row));
+            return;
+        }
+
         var tab = CommandCenterTabForRow(row);
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock
@@ -5515,6 +5573,24 @@ internal sealed class MainWindow : Window
         yield return CreateDetailButton("Contract", () => SelectWorkspaceScreen("Hockey Operations", "Contract Management"));
         yield return CreateDetailButton("Scout", () => ShowScoutAssignmentDialog(row.PersonId), State.AvailableScoutProfiles.Count > 0, refreshBadges: false);
         yield return CreateDetailButton("Trade", () => SelectWorkspaceScreen("Hockey Operations", "Trades"));
+        if (row.Kind == "OrganizationPlayer")
+        {
+            yield return CreateDetailButton(
+                "Send to AHL",
+                () => State.AssignPlayerToAffiliateFor(row.PersonId),
+                State.CanAssignPlayerToAffiliate(row.PersonId),
+                State.WaiverStatusText(row.PersonId));
+            yield return CreateDetailButton(
+                "Place on Waivers",
+                () => State.PlacePlayerOnWaiversFor(row.PersonId),
+                State.CanPlacePlayerOnWaivers(row.PersonId),
+                State.WaiverStatusText(row.PersonId));
+            yield return CreateDetailButton(
+                "Call Up from AHL",
+                () => State.RecallPlayerFromAffiliateFor(row.PersonId),
+                State.CanRecallPlayerFromAffiliate(row.PersonId),
+                State.WaiverStatusText(row.PersonId));
+        }
         yield return CreateDetailButton("History", () => MessageBox.Show(BuildCommandCenterCareerText(row.PersonId), "Player History", MessageBoxButton.OK, MessageBoxImage.Information));
         foreach (var button in BuildPlayerActionButtons(tab, row))
         {
