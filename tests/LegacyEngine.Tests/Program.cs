@@ -1620,6 +1620,7 @@ runner.Run("alpha 8.11 UI exposes approval and rejection controls", alpha811Agen
 runner.Run("alpha 8.12 contract summary separates active contracts", alpha812ContractWorkflowTests.ContractMarketSummaryExposesActiveContractsSeparately);
 runner.Run("alpha 8.12 unified contract workspace exposes queues and filters", alpha812ContractWorkflowTests.UnifiedContractManagementExposesDecisionQueuesAndFilters);
 runner.Run("alpha 8.12 expiry removes salary and refreshes rights", alpha812ContractWorkflowTests.ContractLifecyclePreservesRightsAndRemovesExpiredSalary);
+runner.Run("alpha 8.12 signed replacement clears stale rights", alpha812ContractWorkflowTests.SignedReplacementClearsStaleRightsDecision);
 
 runner.Report();
 Environment.ExitCode = runner.FailedCount == 0 ? 0 : 1;

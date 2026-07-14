@@ -10007,10 +10007,20 @@ internal sealed class MainWindow : Window
             {
                 AddLine(panel, "Team fit", $"{negotiation.LastEvaluation.TeamFit.Label} ({negotiation.LastEvaluation.TeamFit.TeamFitScore}/100)");
                 AddLine(panel, "Team-fit risk", negotiation.LastEvaluation.TeamFit.Risk);
-                AddLine(panel, "Agent response", negotiation.LastEvaluation.AgentOpinion);
+                var agentResponse = negotiation.Status == ContractNegotiationStatus.Signed
+                    ? $"{negotiation.PersonName}'s terms were accepted and signed. No GM approval remains."
+                    : negotiation.LastEvaluation.AgentOpinion;
+                AddLine(panel, "Agent response", agentResponse);
                 AddLine(panel, "Agent concern", negotiation.LastEvaluation.AgentBiggestConcern);
             }
-            AddLine(panel, "Next action", negotiation.NextAction);
+            AddLine(panel, "Approval status", negotiation.Status == ContractNegotiationStatus.Signed
+                ? "Complete - contract signed; no approval required."
+                : negotiation.Status == ContractNegotiationStatus.AcceptedInPrinciple
+                    ? "Pending GM approval."
+                    : "No GM approval is currently pending.");
+            AddLine(panel, "Next action", negotiation.Status == ContractNegotiationStatus.Signed
+                ? "Complete. The accepted offer has been signed."
+                : negotiation.NextAction);
         }
 
         var comparables = State.ContractComparablesFor(row.PersonId);
@@ -10027,6 +10037,9 @@ internal sealed class MainWindow : Window
             }
         }
 
+        var pendingApproval = State.OpenPendingActions.Any(action =>
+            action.PersonId == row.PersonId
+            && action.ActionType == PendingGmActionType.ApproveContract);
         var actions = new List<Button>
         {
             CreateDetailButton("View Player / Profile", () => OpenUniversalPersonCard(row.PersonId)),
@@ -10039,7 +10052,7 @@ internal sealed class MainWindow : Window
             CreateDetailButton("Submit Market Offer", () => State.SubmitContractMarketOfferFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Open talks first or review the pending GM approval"),
             CreateDetailButton("Accept Counter", () => State.AcceptCurrentContractOfferFor(row.PersonId), negotiation?.Status == ContractNegotiationStatus.Countered, "Accept a counter by submitting its current salary and term."),
             CreateDetailButton("Reject / Walk Away", () => State.WithdrawContractNegotiationFor(row.PersonId), negotiation?.IsOpen == true && negotiation.Status is not ContractNegotiationStatus.AcceptedInPrinciple, "Accepted terms are waiting for GM approval; decline them from Pending Actions."),
-            CreateDetailButton("Review Approval", () => SelectWorkspaceScreen("Dashboard", "Action Center"), negotiation?.Status == ContractNegotiationStatus.AcceptedInPrinciple, "Review the pending contract decision in Action Center")
+            CreateDetailButton("Review Approval", () => SelectWorkspaceScreen("Dashboard", "Action Center"), pendingApproval || negotiation?.Status == ContractNegotiationStatus.AcceptedInPrinciple, "There is no pending GM approval for this contract")
         };
         AddActions(panel, actions.ToArray());
         return panel;

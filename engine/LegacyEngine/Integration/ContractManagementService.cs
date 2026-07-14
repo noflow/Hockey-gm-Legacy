@@ -157,6 +157,10 @@ public sealed class ContractManagementService
                     signed,
                     evaluation.Ask.PersonName,
                     SourceActionType(request.AskType));
+                next = new RfaUfaService().EnsureRights(
+                    next,
+                    registry.Rulebook ?? scenario.LeagueProfile.Rulebook);
+                next = FreeAgentMarketService.MarkSigned(next, signed.PersonId);
                 transactions.Add(new LeagueTransaction(
                     $"league-contract:{signed.ContractId}",
                     new DateTimeOffset(scenario.CurrentDate.Year, scenario.CurrentDate.Month, scenario.CurrentDate.Day, 12, 0, 0, TimeSpan.Zero),

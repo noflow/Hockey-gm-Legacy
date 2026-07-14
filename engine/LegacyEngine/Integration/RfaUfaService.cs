@@ -493,10 +493,17 @@ public sealed class RfaUfaService
             .DistinctBy(contract => contract.ContractId)
             .Where(contract => contract.OrganizationId == scenario.Organization.OrganizationId)
             .Where(contract => contract.Status is ContractStatus.Signed or ContractStatus.Expired)
+            .Where(contract => FindPerson(scenario, contract.PersonId) is not null)
+            // A replacement contract supersedes the old expiry record for rights purposes.
+            // Without this grouping, a signed extension can leave a stale RFA decision behind.
+            .GroupBy(contract => contract.PersonId, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderByDescending(contract => contract.Term.EndDate)
+                .ThenByDescending(contract => contract.SignedOn ?? contract.OfferedOn)
+                .First())
             .Where(contract => contract.Term.EndDate <= scenario.CurrentDate.AddDays(rules.ContractTenderWindowDays)
                 || contract.Term.EndDate <= scenario.CurrentDate
                 || contract.Status == ContractStatus.Expired)
-            .Where(contract => FindPerson(scenario, contract.PersonId) is not null)
             .ToArray();
 
     private static bool IsResolvedStatus(FreeAgentRightsStatus status) =>

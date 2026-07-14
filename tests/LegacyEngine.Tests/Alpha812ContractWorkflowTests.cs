@@ -26,6 +26,8 @@ internal sealed class Alpha812ContractWorkflowTests
         Assert.True(source.Contains("Negotiations & Offers", StringComparison.Ordinal), "Open negotiations should have a dedicated view.");
         Assert.True(source.Contains("Free Agent Market", StringComparison.Ordinal), "Free agents should have a dedicated view.");
         Assert.True(source.Contains("_contractManagementSearchInput", StringComparison.Ordinal), "Contract Management should support player/status search.");
+        Assert.True(source.Contains("No GM approval remains", StringComparison.Ordinal), "Completed contracts should not be described as awaiting approval.");
+        Assert.True(source.Contains("pendingApproval", StringComparison.Ordinal), "Approval actions should be driven by actual pending actions.");
     }
 
     public void ContractLifecyclePreservesRightsAndRemovesExpiredSalary()
@@ -60,6 +62,59 @@ internal sealed class Alpha812ContractWorkflowTests
         Assert.Equal(ContractStatus.Expired, updated.Contracts.Single(item => item.PersonId == player.PersonId).Status);
         Assert.True(after.CurrentCapHit < before.CurrentCapHit, "Expired salary should leave the active cap calculation.");
         Assert.True(updated.PlayerRightsDecisions.Any(item => item.PersonId == player.PersonId), "Expiry should refresh the player's RFA/UFA rights record.");
+    }
+
+    public void SignedReplacementClearsStaleRightsDecision()
+    {
+        var created = NewGmScenarioBootstrapper.CreateScenario();
+        var player = created.ScenarioSnapshot.AlphaSnapshot.Roster.ActivePlayers.First(item => item.Position != RosterPosition.Goalie);
+        var target = created.ScenarioSnapshot.Contracts.First(contract => contract.PersonId == player.PersonId && contract.Status == ContractStatus.Signed);
+        var person = created.ScenarioSnapshot.AlphaSnapshot.People.First(item => item.PersonId == target.PersonId);
+        var stale = new PlayerRightsDecision(
+            "rights:stale",
+            target.PersonId,
+            person.Identity.DisplayName,
+            player.Position,
+            person.CalculateAge(created.ScenarioSnapshot.CurrentDate),
+            1,
+            created.ScenarioSnapshot.Organization.OrganizationId,
+            created.ScenarioSnapshot.Organization.Name,
+            target.ContractId,
+            created.ScenarioSnapshot.CurrentDate.AddDays(-1),
+            FreeAgentRightsStatus.PendingRfa,
+            ContractRightsStatus.PendingRfa,
+            true,
+            null,
+            new RightsExpiryRule("stale-rule", "Qualify before the rights deadline.", created.ScenarioSnapshot.CurrentDate.AddDays(7)),
+            created.ScenarioSnapshot.Organization.OrganizationId,
+            created.ScenarioSnapshot.Organization.Name,
+            "Review the qualifying offer before the deadline.",
+            "Agent expects a qualifying offer.",
+            "Previous contract expired before the replacement was recorded.",
+            created.ScenarioSnapshot.CurrentDate.AddDays(-1),
+            created.ScenarioSnapshot.CurrentDate.AddDays(-1));
+        var replacement = target with
+        {
+            ContractId = $"{target.ContractId}:replacement",
+            Term = new ContractTerm(created.ScenarioSnapshot.CurrentDate, created.ScenarioSnapshot.CurrentDate.AddYears(4)),
+            SignedOn = created.ScenarioSnapshot.CurrentDate
+        };
+        var replacementScenario = created.ScenarioSnapshot with
+        {
+            Contracts = created.ScenarioSnapshot.Contracts
+                .Where(contract => contract.PersonId != target.PersonId)
+                .Append(replacement)
+                .ToArray(),
+            AlphaSnapshot = created.ScenarioSnapshot.AlphaSnapshot with { Contracts = created.ScenarioSnapshot.Contracts
+                .Where(contract => contract.PersonId != target.PersonId)
+                .Append(replacement)
+                .ToArray() },
+            PlayerRightsDecisions = new[] { stale }
+        };
+
+        var cleaned = new RfaUfaService().EnsureRights(replacementScenario, created.Registry.Rulebook);
+
+        Assert.False(cleaned.PlayerRightsDecisions.Any(decision => decision.PersonId == target.PersonId), "A long signed replacement must clear the stale RFA/UFA decision.");
     }
 
     private static string FindRepositoryRoot()
