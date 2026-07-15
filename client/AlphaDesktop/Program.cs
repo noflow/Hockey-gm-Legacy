@@ -104,6 +104,7 @@ internal sealed class MainWindow : Window
     private ComboBox? _rosterPlayerTypeFilter;
     private ComboBox? _rosterRoleFilter;
     private ComboBox? _rosterAgeFilter;
+    private ComboBox? _rosterLevelFilter;
     private readonly Dictionary<string, ComboBox> _freeAgentMarketFilters = [];
     private TextBox? _contractManagementSearchInput;
     private ComboBox? _contractManagementFilter;
@@ -2480,6 +2481,8 @@ internal sealed class MainWindow : Window
 
         _rosterAgeFilter = CreateRosterFilter(new[] { "All", "Under 18", "18-19", "20+", "Unknown" });
         panel.Children.Add(LabeledControl("Age", _rosterAgeFilter));
+        _rosterLevelFilter = CreateRosterFilter(new[] { "All", "NHL", "AHL", "Junior" });
+        panel.Children.Add(LabeledControl("Roster level", _rosterLevelFilter));
         panel.Children.Add(CreateDetailButton("Reset Filters", ResetRosterFilters));
 
         return panel;
@@ -2493,6 +2496,7 @@ internal sealed class MainWindow : Window
         _rosterPlayerTypeFilter!.SelectedIndex = 0;
         _rosterRoleFilter!.SelectedIndex = 0;
         _rosterAgeFilter!.SelectedIndex = 0;
+        _rosterLevelFilter!.SelectedIndex = 0;
         SetFeedback("Roster filters reset.");
         RefreshVisibleWorkspace();
     }
@@ -6477,34 +6481,140 @@ internal sealed class MainWindow : Window
 
     private IReadOnlyList<SelectablePersonRow> BuildRosterRows()
     {
+        var allocation = State.OrganizationRoster;
+        var allocationSummary = State.OrganizationRosterSummary;
         var rows = new List<SelectablePersonRow>
         {
             new(
                 "roster-summary",
                 "Roster Breakdown",
                 "RosterSummary",
-                State.RosterBreakdownTitle,
+                $"NHL {allocationSummary.NhlActiveCount}/{allocationSummary.NhlActiveMaximum} | AHL {allocationSummary.AhlCount} | Junior {allocationSummary.UnsignedRightsCount + allocationSummary.JuniorReturnCount}",
                 State.RosterBreakdownSecondary,
-                State.RosterBreakdownSummary)
+                $"{State.RosterBreakdownSummary} Select a section or player to manage lineup and movement decisions.")
         };
 
-        rows.AddRange(State.Snapshot.Roster.Players
-            .Where(PassesRosterFilters)
-            .OrderBy(player => player.Status)
-            .ThenBy(player => FindPersonName(player.PersonId), StringComparer.Ordinal)
-            .Select(player =>
-            {
-                return new SelectablePersonRow(
-                    player.PersonId,
-                    FindPersonName(player.PersonId),
-                    "RosterPlayer",
-                    $"{State.PositionShortText(player.Position)} | {State.PersonAge(player.PersonId)?.ToString() ?? player.Age?.ToString() ?? "unknown"} | {State.RatingText(player.PersonId)} | {State.RatingTrendText(player.PersonId)}",
-                    $"{State.CurrentLineupRole(player.PersonId)} | {State.CurrentLinePair(player.PersonId)} | {State.ContractRightsStatus(player.PersonId)}",
-                    $"{State.PlayerType(player.PersonId)} | {State.DevelopmentTrend(player.PersonId)} | {State.InjuryStatus(player.PersonId)}");
-            })
-            .ToArray());
+        foreach (var group in new[]
+        {
+            OrganizationRosterGroup.NhlActiveRoster,
+            OrganizationRosterGroup.AhlAffiliateRoster,
+            OrganizationRosterGroup.SignedJuniorReturn,
+            OrganizationRosterGroup.UnsignedProspectRights,
+            OrganizationRosterGroup.OtherContracted,
+            OrganizationRosterGroup.InjuredOrUnavailable
+        })
+        {
+            var players = allocation.Players
+                .Where(player => player.Group == group && PassesRosterFilters(player))
+                .OrderBy(player => player.Position)
+                .ThenBy(player => player.PlayerName, StringComparer.Ordinal)
+                .ToArray();
+            var label = RosterSectionLabel(group);
+            rows.Add(new SelectablePersonRow(
+                $"roster-section:{group}",
+                $"{label} ({players.Length})",
+                "RosterSection",
+                $"{label} section",
+                group == OrganizationRosterGroup.NhlActiveRoster
+                    ? "Players currently eligible for NHL lineup assignment."
+                    : group == OrganizationRosterGroup.AhlAffiliateRoster
+                        ? "Players assigned to the AHL affiliate. Select a player for call-up options."
+                        : group is OrganizationRosterGroup.SignedJuniorReturn or OrganizationRosterGroup.UnsignedProspectRights
+                            ? "Prospects and junior-return players remain separate from the active roster."
+                            : "Organization players outside the standard NHL/AHL groups.",
+                "Choose a player below to open the dossier, lineup, contract, or movement actions."));
+            rows.AddRange(players.Select(BuildRosterAllocationRow));
+        }
 
         return rows;
+    }
+
+    private SelectablePersonRow BuildRosterAllocationRow(OrganizationRosterPlayer player)
+    {
+        var level = RosterLevelTag(player.Group);
+        return new SelectablePersonRow(
+            player.PersonId,
+            $"{player.PlayerName} [{level}]",
+            "RosterPlayer",
+            $"{level} | {State.PositionShortText(player.Position)} | Age {player.Age} | {State.RatingText(player.PersonId)} | {State.RatingTrendText(player.PersonId)}",
+            $"{ReadableOrganizationRosterGroup(player.Group)} | {player.CurrentTeamName ?? player.CurrentLevel}",
+            $"{State.CurrentLineupRole(player.PersonId)} | {State.CurrentLinePair(player.PersonId)} | {player.ContractCountReason} {player.SlideEligibility?.Reason ?? string.Empty}".Trim());
+    }
+
+    private static string RosterSectionLabel(OrganizationRosterGroup group) => group switch
+    {
+        OrganizationRosterGroup.NhlActiveRoster => "NHL Roster",
+        OrganizationRosterGroup.AhlAffiliateRoster => "AHL Roster",
+        OrganizationRosterGroup.SignedJuniorReturn => "Junior / Returned Players",
+        OrganizationRosterGroup.UnsignedProspectRights => "Junior / Prospect Rights",
+        OrganizationRosterGroup.OtherContracted => "Other Organization Players",
+        OrganizationRosterGroup.InjuredOrUnavailable => "Injured / Unavailable",
+        _ => group.ToString()
+    };
+
+    private static string RosterLevelTag(OrganizationRosterGroup group) => group switch
+    {
+        OrganizationRosterGroup.AhlAffiliateRoster => "AHL",
+        OrganizationRosterGroup.SignedJuniorReturn or OrganizationRosterGroup.UnsignedProspectRights => "Junior",
+        _ => "NHL"
+    };
+
+    private bool PassesRosterFilters(OrganizationRosterPlayer player)
+    {
+        var search = _rosterSearchInput?.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(search) && !player.PlayerName.Contains(search, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!FilterMatches(_rosterPositionFilter, player.Position.ToString()))
+        {
+            return false;
+        }
+
+        var rosterStatus = player.Group switch
+        {
+            OrganizationRosterGroup.NhlActiveRoster => "Active",
+            OrganizationRosterGroup.AhlAffiliateRoster => "AssignedToAffiliate",
+            OrganizationRosterGroup.InjuredOrUnavailable => "InjuredReserve",
+            OrganizationRosterGroup.SignedJuniorReturn => "Junior",
+            OrganizationRosterGroup.UnsignedProspectRights => "Junior",
+            _ => "Reserve"
+        };
+        if (!FilterMatches(_rosterStatusFilter, rosterStatus))
+        {
+            return false;
+        }
+
+        if (!FilterMatches(_rosterPlayerTypeFilter, State.PlayerType(player.PersonId)))
+        {
+            return false;
+        }
+
+        var roleFilter = SelectedFilter(_rosterRoleFilter);
+        if (roleFilter != "All"
+            && !State.CurrentLineupRole(player.PersonId).Contains(roleFilter, StringComparison.OrdinalIgnoreCase)
+            && !State.PotentialLineupRole(player.PersonId).Contains(roleFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var ageFilter = SelectedFilter(_rosterAgeFilter);
+        var ageMatches = ageFilter switch
+        {
+            "Under 18" => player.Age < 18,
+            "18-19" => player.Age is >= 18 and <= 19,
+            "20+" => player.Age >= 20,
+            "Unknown" => false,
+            _ => true
+        };
+        if (!ageMatches)
+        {
+            return false;
+        }
+
+        var level = RosterLevelTag(player.Group);
+        return FilterMatches(_rosterLevelFilter, level);
     }
 
     private IReadOnlyList<SelectablePersonRow> BuildOrganizationAllocationRows(OrganizationRosterGroup? group = null)
@@ -7442,6 +7552,34 @@ internal sealed class MainWindow : Window
             return EmptyDetail(tab, "Select a player, recruit, or prospect to see valid actions.");
         }
 
+        if (row.Kind == "RosterSection")
+        {
+            var section = CreateDetailPanel(row.Name, row.Primary);
+            AddLine(section, "Roster level", row.Name);
+            AddLine(section, "What this means", row.Secondary);
+            AddParagraph(section, row.Summary);
+            AddActions(
+                section,
+                CreateDetailButton("Open Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup")),
+                CreateDetailButton("Open NHL / AHL Movement", () => SelectWorkspaceScreen("Hockey Operations", "NHL / AHL Movement")));
+            return section;
+        }
+
+        if (row.Kind == "RosterSummary")
+        {
+            var summary = CreateDetailPanel(row.Name, row.Primary);
+            AddLine(summary, "NHL / AHL / Junior", row.Primary);
+            AddLine(summary, "Position breakdown", State.RosterBreakdownSecondary);
+            AddLine(summary, "Age mix", State.RosterAgeBreakdown);
+            AddLine(summary, "Contracts", State.RosterContractBreakdown);
+            AddParagraph(summary, "Select an NHL, AHL, or Junior section, then select a player to manage lineup placement, call-ups, send-downs, contracts, and development.");
+            AddActions(
+                summary,
+                CreateDetailButton("Open Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup")),
+                CreateDetailButton("Open NHL / AHL Movement", () => SelectWorkspaceScreen("Hockey Operations", "NHL / AHL Movement")));
+            return summary;
+        }
+
         var panel = CreateDetailPanel(row.Name, row.Primary);
         AddLine(panel, "Status / role", row.Primary);
         AddLine(panel, "Context", row.Secondary);
@@ -7461,22 +7599,14 @@ internal sealed class MainWindow : Window
             AddLine(panel, "Contract year", organizationAllocation.ContractYearStatus?.Summary ?? "not applicable");
         }
 
-        if (row.Kind == "RosterSummary")
-        {
-            AddLine(panel, "Roster count", State.RosterBreakdownTitle);
-            AddLine(panel, "Position breakdown", State.RosterBreakdownSecondary);
-            AddLine(panel, "Age mix", State.RosterAgeBreakdown);
-            AddLine(panel, "Contracts", State.RosterContractBreakdown);
-            AddParagraph(panel, "Drafted prospects stay on the prospect/draft-rights list until you explicitly offer a contract, invite them to camp, return them to junior/youth while retaining rights where allowed, assign them to an affiliate where valid, or release their rights.");
-            return panel;
-        }
-
         AddLine(panel, "Ratings", State.RatingContextText(row.PersonId));
         AddLine(panel, "Asset value", State.AssetValueShortText(row.PersonId));
         AddLine(panel, "Position market", State.PositionMarketNote(row.PersonId));
 
         if (tab == "Roster")
         {
+            var allocation = State.OrganizationRoster.Players.FirstOrDefault(player => player.PersonId == row.PersonId);
+            AddLine(panel, "Roster level", allocation is null ? "NHL" : RosterLevelTag(allocation.Group));
             AddLine(panel, "Name", row.Name);
             AddLine(panel, "Position", State.PersonPosition(row.PersonId));
             AddLine(panel, "Age", State.PersonAge(row.PersonId)?.ToString() ?? "unknown");
@@ -7503,6 +7633,10 @@ internal sealed class MainWindow : Window
             AddParagraph(panel, State.HealthProfileText(row.PersonId));
             AddSubHeader(panel, "Development Plan");
             AddParagraph(panel, State.DevelopmentPlanText(row.PersonId));
+            AddActions(
+                panel,
+                CreateDetailButton("Open Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup")),
+                CreateDetailButton("Open NHL / AHL Movement", () => SelectWorkspaceScreen("Hockey Operations", "NHL / AHL Movement")));
         }
 
         if (tab == "Recruits")
@@ -8060,15 +8194,28 @@ internal sealed class MainWindow : Window
         {
             if (tab == "Roster")
             {
-                yield return CreateDetailButton("Move to Active", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Activate), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Activate), RosterMovementReason(row.PersonId, RosterMovementType.Activate));
-                yield return CreateDetailButton("Move to Reserve", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Reserve), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Reserve), RosterMovementReason(row.PersonId, RosterMovementType.Reserve));
-                yield return CreateDetailButton("Place on Injured Reserve", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.InjuredReserve), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.InjuredReserve), RosterMovementReason(row.PersonId, RosterMovementType.InjuredReserve));
-                yield return CreateDetailButton("Release Player", () => ConfirmDestructiveAction(
-                    "Release Player",
-                    $"{row.Name} will be released from the game-day roster. Continue?",
-                    () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Release)),
-                    State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Release),
-                    RosterMovementReason(row.PersonId, RosterMovementType.Release));
+                var allocation = State.OrganizationRoster.Players.FirstOrDefault(player => player.PersonId == row.PersonId);
+                var rosterPlayer = State.Snapshot.Roster.FindPlayer(row.PersonId);
+                var isAhl = allocation?.Group == OrganizationRosterGroup.AhlAffiliateRoster;
+
+                yield return CreateDetailButton("Open Lineup", () => SelectWorkspaceScreen("Hockey Operations", "Lineup"));
+                yield return CreateDetailButton("Open NHL / AHL Movement", () => SelectWorkspaceScreen("Hockey Operations", "NHL / AHL Movement"));
+
+                // AHL players must come through the explicit affiliate recall path.
+                // The generic roster movement controls are only for players currently
+                // represented by the game-day roster model.
+                if (!isAhl && rosterPlayer is not null)
+                {
+                    yield return CreateDetailButton("Move to Active", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Activate), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Activate), RosterMovementReason(row.PersonId, RosterMovementType.Activate));
+                    yield return CreateDetailButton("Move to Reserve", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Reserve), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Reserve), RosterMovementReason(row.PersonId, RosterMovementType.Reserve));
+                    yield return CreateDetailButton("Place on Injured Reserve", () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.InjuredReserve), State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.InjuredReserve), RosterMovementReason(row.PersonId, RosterMovementType.InjuredReserve));
+                    yield return CreateDetailButton("Release Player", () => ConfirmDestructiveAction(
+                        "Release Player",
+                        $"{row.Name} will be released from the game-day roster. Continue?",
+                        () => State.MoveRosterPlayer(row.PersonId, RosterMovementType.Release)),
+                        State.CanMoveRosterPlayer(row.PersonId, RosterMovementType.Release),
+                        RosterMovementReason(row.PersonId, RosterMovementType.Release));
+                }
             }
 
             yield return CreateDetailButton("Balanced Plan", () => State.SetDevelopmentPlanFor(row.PersonId, DevelopmentPlanFocus.Balanced));
@@ -8235,7 +8382,7 @@ internal sealed class MainWindow : Window
     private static bool IsLikelyPersonRow(SelectablePersonRow row) =>
         !row.PersonId.Contains(':', StringComparison.Ordinal)
         && !row.PersonId.EndsWith("-summary", StringComparison.OrdinalIgnoreCase)
-        && row.Kind is not ("RosterSummary" or "LineupSummary" or "GameUsage" or "LineChemistry" or "LineupSlot" or "TacticsSummary" or "StaffSection");
+        && row.Kind is not ("RosterSummary" or "RosterSection" or "LineupSummary" or "GameUsage" or "LineChemistry" or "LineupSlot" or "TacticsSummary" or "StaffSection");
 
     private static string StatusSemantic(string text)
     {

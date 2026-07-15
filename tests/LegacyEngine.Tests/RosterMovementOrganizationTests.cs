@@ -76,6 +76,26 @@ internal sealed class RosterMovementOrganizationTests
         Assert.True(source.Contains("Place on Waivers", StringComparison.Ordinal), "Waiver-required send-downs should be visible as a separate action.");
     }
 
+    public void DesktopRosterShowsNhlAhlJuniorSectionsAndTags()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
+
+        Assert.True(source.Contains("NHL Roster", StringComparison.Ordinal), "Roster should have a dedicated NHL section.");
+        Assert.True(source.Contains("AHL Roster", StringComparison.Ordinal), "Roster should have a dedicated AHL section.");
+        Assert.True(source.Contains("Junior / Prospect Rights", StringComparison.Ordinal), "Roster should expose junior and prospect-rights players.");
+        Assert.True(source.Contains("RosterLevelTag", StringComparison.Ordinal), "Roster rows should use explicit league-level tags.");
+        Assert.True(source.Contains("new[] { \"All\", \"NHL\", \"AHL\", \"Junior\" }", StringComparison.Ordinal), "Roster should expose a league-level filter.");
+    }
+
+    public void DesktopRosterLinksLineupAndMovementActions()
+    {
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "client", "AlphaDesktop", "Program.cs"));
+
+        Assert.True(source.Contains("Open Lineup", StringComparison.Ordinal), "A selected roster player should have a direct lineup shortcut.");
+        Assert.True(source.Contains("Open NHL / AHL Movement", StringComparison.Ordinal), "A selected roster player should have a direct movement shortcut.");
+        Assert.True(source.Contains("var isAhl = allocation?.Group == OrganizationRosterGroup.AhlAffiliateRoster", StringComparison.Ordinal), "AHL rows should use the affiliate movement path instead of generic activation.");
+    }
+
     private static NewGmScenarioResult CreateNhlScenario()
     {
         var careers = new MultiLeagueCareerService();

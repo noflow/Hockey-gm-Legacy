@@ -1134,6 +1134,8 @@ runner.Run("active player can move to reserve", rosterMovementOrganizationTests.
 runner.Run("roster movement options explain availability", rosterMovementOrganizationTests.ActivePlayerMovementOptionsExplainValidAndInvalidActions);
 runner.Run("desktop exposes roster depth and movement actions", rosterMovementOrganizationTests.DesktopExposesRosterDepthAndCoreMovementActions);
 runner.Run("desktop exposes NHL AHL movement workspace", rosterMovementOrganizationTests.DesktopExposesNhlAhlMovementWorkspace);
+runner.Run("desktop roster shows NHL AHL junior sections and tags", rosterMovementOrganizationTests.DesktopRosterShowsNhlAhlJuniorSectionsAndTags);
+runner.Run("desktop roster links lineup and movement actions", rosterMovementOrganizationTests.DesktopRosterLinksLineupAndMovementActions);
 runner.Run("alpha 6.5 forward line chemistry generated", alpha65LineChemistryTests.ForwardLineChemistryGenerated);
 runner.Run("alpha 6.5 defense pair chemistry generated", alpha65LineChemistryTests.DefensePairChemistryGenerated);
 runner.Run("alpha 6.5 goalie depth chemistry generated", alpha65LineChemistryTests.GoalieDepthChemistryGenerated);
